@@ -1,7 +1,7 @@
 ## Example command
 
 ```
-$ chisel cut -release release/ -root output/ mypkg.bins mypkg.config
+$ chisel cut --release release/ --root output/ mypkg.bins mypkg.config
 ```
 
 ## Example release configuration
@@ -31,6 +31,7 @@ slices:
             /bin/linked: {symlink: /bin/mybin}
 
     config:
+        contents:
             /etc/mypkg.conf: {text: "The configuration."}
             /etc/mypkg.d/:   {make: true}
 ```
