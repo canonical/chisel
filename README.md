@@ -1,7 +1,7 @@
 ## Example command
 
 ```
-$ chisel cut --release release/ --root output/ mypkg.bins mypkg.config
+$ chisel cut --release release/ --root output/ mypkg_bins mypkg_config
 ```
 
 ## Example release configuration
@@ -23,7 +23,7 @@ package: mypkg
 slices:
     bins:
         essential:
-            - mypkg.config
+            - mypkg_config
 
         contents:
             /bin/mybin:
