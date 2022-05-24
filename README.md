@@ -1,7 +1,7 @@
 ## Example command
 
 ```
-$ chisel -release release/ -root output/ mypkg.bins mypkg.config
+$ chisel cut -release release/ -root output/ mypkg.bins mypkg.config
 ```
 
 ## Example release configuration
@@ -48,7 +48,7 @@ slices:
 
 #### May I use arbitrary package names?
 
-No, package names must reflect the package names in the release,
+No, package names must reflect the package names in the archive,
 so that there's a single namespace to remember and respect.
 
 #### I've tried to use a different Ubuntu version and it failed?
@@ -69,9 +69,9 @@ Yes, but see below.
 
 #### Can multiple slices _output_ the same path?
 
-Yes, as long as either the path is part of the same package,
+Yes, as long as either both slices are part of the same package,
 or the path is not extracted from a package at all (not copied)
-and the explicit definitions match exactly.
+and the explicit inline definitions match exactly.
 
 #### Is file ownership preserved?
 

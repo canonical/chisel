@@ -10,18 +10,18 @@ import (
 	"github.com/canonical/chisel/internal/slicer"
 )
 
-var shortSliceHelp = "Slice the release out"
-var longSliceHelp = `
-The slice command uses the provided selection of package slices
+var shortCutHelp = "Cut a tree with selected slices"
+var longCutHelp = `
+The cut command uses the provided selection of package slices
 to create a new filesystem tree in the root location.
 `
 
-var sliceDescs = map[string]string{
+var cutDescs = map[string]string{
 	"release": "Chisel release directory",
 	"root":    "Root for generated content",
 }
 
-type cmdSlice struct {
+type cmdCut struct {
 	ReleaseDir string `long:"release" value-name:"<dir>" required:"yes"`
 	RootDir    string `long:"root" value-name:"<dir>" required:"yes"`
 
@@ -31,10 +31,10 @@ type cmdSlice struct {
 }
 
 func init() {
-	addCommand("slice", shortSliceHelp, longSliceHelp, func() flags.Commander { return &cmdSlice{} }, sliceDescs, nil)
+	addCommand("cut", shortCutHelp, longCutHelp, func() flags.Commander { return &cmdCut{} }, cutDescs, nil)
 }
 
-func (cmd *cmdSlice) Execute(args []string) error {
+func (cmd *cmdCut) Execute(args []string) error {
 	if len(args) > 0 {
 		return ErrExtraArgs
 	}
