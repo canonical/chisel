@@ -80,7 +80,7 @@ var setupTests = []setupTest{{
 						/file/path6/: {make: true}
 				myslice2:
 					essential:
-						- mypkg.myslice1
+						- mypkg_myslice1
 					contents:
 						/another/path:
 		`,
@@ -129,16 +129,16 @@ var setupTests = []setupTest{{
 			slices:
 				myslice1:
 					essential:
-						- mypkg.myslice2
+						- mypkg_myslice2
 				myslice2:
 					essential:
-						- mypkg.myslice3
+						- mypkg_myslice3
 				myslice3:
 					essential:
-						- mypkg.myslice1
+						- mypkg_myslice1
 		`,
 	},
-	relerror: `essential loop detected: mypkg.myslice1, mypkg.myslice2, mypkg.myslice3`,
+	relerror: `essential loop detected: mypkg_myslice1, mypkg_myslice2, mypkg_myslice3`,
 }, {
 	summary: "Cycles are detected across packages",
 	input: map[string]string{
@@ -147,24 +147,24 @@ var setupTests = []setupTest{{
 			slices:
 				myslice:
 					essential:
-						- mypkg2.myslice
+						- mypkg2_myslice
 		`,
 		"slices/mydir/mypkg2.yaml": `
 			package: mypkg2
 			slices:
 				myslice:
 					essential:
-						- mypkg3.myslice
+						- mypkg3_myslice
 		`,
 		"slices/mydir/mypkg3.yaml": `
 			package: mypkg3
 			slices:
 				myslice:
 					essential:
-						- mypkg1.myslice
+						- mypkg1_myslice
 		`,
 	},
-	relerror: `essential loop detected: mypkg1.myslice, mypkg2.myslice, mypkg3.myslice`,
+	relerror: `essential loop detected: mypkg1_myslice, mypkg2_myslice, mypkg3_myslice`,
 }, {
 	summary: "Missing package dependency",
 	input: map[string]string{
@@ -173,10 +173,10 @@ var setupTests = []setupTest{{
 			slices:
 				myslice:
 					essential:
-						- mypkg2.myslice
+						- mypkg2_myslice
 		`,
 	},
-	relerror: `mypkg1.myslice requires mypkg2.myslice, but slice is missing`,
+	relerror: `mypkg1_myslice requires mypkg2_myslice, but slice is missing`,
 }, {
 	summary: "Missing slice dependency",
 	input: map[string]string{
@@ -185,10 +185,10 @@ var setupTests = []setupTest{{
 			slices:
 				myslice1:
 					essential:
-						- mypkg.myslice2
+						- mypkg_myslice2
 		`,
 	},
-	relerror: `mypkg.myslice1 requires mypkg.myslice2, but slice is missing`,
+	relerror: `mypkg_myslice1 requires mypkg_myslice2, but slice is missing`,
 }, {
 	summary: "Selection with no dependencies",
 	input: map[string]string{
@@ -196,13 +196,13 @@ var setupTests = []setupTest{{
 			package: mypkg1
 			slices:
 				myslice1: {}
-				myslice2: {essential: [mypkg2.myslice1]}
+				myslice2: {essential: [mypkg2_myslice1]}
 		`,
 		"slices/mydir/mypkg2.yaml": `
 			package: mypkg2
 			slices:
 				myslice1: {}
-				myslice2: {essential: [mypkg1.myslice1]}
+				myslice2: {essential: [mypkg1_myslice1]}
 		`,
 	},
 	selslices: []setup.SliceKey{{"mypkg1", "myslice1"}},
@@ -219,13 +219,13 @@ var setupTests = []setupTest{{
 			package: mypkg1
 			slices:
 				myslice1: {}
-				myslice2: {essential: [mypkg2.myslice1]}
+				myslice2: {essential: [mypkg2_myslice1]}
 		`,
 		"slices/mydir/mypkg2.yaml": `
 			package: mypkg2
 			slices:
 				myslice1: {}
-				myslice2: {essential: [mypkg1.myslice1]}
+				myslice2: {essential: [mypkg1_myslice1]}
 		`,
 	},
 	selslices: []setup.SliceKey{{"mypkg2", "myslice2"}},
@@ -283,7 +283,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	selslices: []setup.SliceKey{{"mypkg1", "myslice1"}, {"mypkg1", "myslice2"}},
-	selerror:  "slices mypkg1.myslice1 and mypkg1.myslice2 conflict on /path1",
+	selerror:  "slices mypkg1_myslice1 and mypkg1_myslice2 conflict on /path1",
 }, {
 	summary: "Selection with conflicting paths across packages",
 	input: map[string]string{
@@ -303,7 +303,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	selslices: []setup.SliceKey{{"mypkg1", "myslice1"}, {"mypkg2", "myslice1"}},
-	selerror:  "slices mypkg1.myslice1 and mypkg2.myslice1 conflict on /path1",
+	selerror:  "slices mypkg1_myslice1 and mypkg2_myslice1 conflict on /path1",
 }, {
 	summary: "Directories must be suffixed with /",
 	input: map[string]string{
@@ -315,7 +315,7 @@ var setupTests = []setupTest{{
 						/foo: {make: true}
 		`,
 	},
-	relerror:  `slice mypkg.myslice content "/foo" must end in / for 'make' to be valid`,
+	relerror:  `slice mypkg_myslice content "/foo" must end in / for 'make' to be valid`,
 }, {
 	summary: "Slice path must be clean",
 	input: map[string]string{
@@ -327,7 +327,7 @@ var setupTests = []setupTest{{
 						/foo/../:
 		`,
 	},
-	relerror:  `slice mypkg.myslice has invalid content path: /foo/../`,
+	relerror:  `slice mypkg_myslice has invalid content path: /foo/../`,
 }, {
 	summary: "Slice path must be absolute",
 	input: map[string]string{
@@ -339,7 +339,7 @@ var setupTests = []setupTest{{
 						./foo/:
 		`,
 	},
-	relerror:  `slice mypkg.myslice has invalid content path: ./foo/`,
+	relerror:  `slice mypkg_myslice has invalid content path: ./foo/`,
 }}
 
 const defaultChiselYaml = `

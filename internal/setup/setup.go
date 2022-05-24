@@ -68,8 +68,8 @@ type SliceKey struct {
 	Slice   string
 }
 
-func (s *Slice) String() string   { return s.Package + "." + s.Name }
-func (s SliceKey) String() string { return s.Package + "." + s.Slice }
+func (s *Slice) String() string   { return s.Package + "_" + s.Name }
+func (s SliceKey) String() string { return s.Package + "_" + s.Slice }
 
 // Selection holds the required configuration to create a Build for a selection
 // of slices from a Release. It's still an abstract proposal in the sense that
@@ -156,16 +156,16 @@ func order(pkgs map[string]*Package, keys []SliceKey) ([]SliceKey, error) {
 			return nil, fmt.Errorf("essential loop detected: %s", strings.Join(names, ", "))
 		}
 		name := names[0]
-		dot := strings.IndexByte(name, '.')
+		dot := strings.IndexByte(name, '_')
 		order = append(order, SliceKey{name[:dot], name[dot+1:]})
 	}
 
 	return order, nil
 }
 
-var fnameExp = regexp.MustCompile("^([a-z0-9](?:-?[a-z0-9]){2,}).yaml$")
-var snameExp = regexp.MustCompile("^([a-z](?:-?[a-z0-9]){2,})$")
-var knameExp = regexp.MustCompile("^([a-z0-9](?:-?[a-z0-9]){2,})\\.([a-z](?:-?[a-z0-9]){2,})$")
+var fnameExp = regexp.MustCompile(`^([a-z0-9](?:-?[.a-z0-9+]){2,})\.yaml$`)
+var snameExp = regexp.MustCompile(`^([a-z](?:-?[a-z0-9]){2,})$`)
+var knameExp = regexp.MustCompile(`^([a-z0-9](?:-?[.a-z0-9+]){2,})_([a-z](?:-?[a-z0-9]){2,})$`)
 
 func ParseSliceKey(sliceKey string) (SliceKey, error) {
 	match := knameExp.FindStringSubmatch(sliceKey)
@@ -374,7 +374,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 				comparePath = comparePath[:len(comparePath)-1]
 			}
 			if !filepath.IsAbs(contPath) || filepath.Clean(contPath) != comparePath {
-				return nil, fmt.Errorf("slice %s.%s has invalid content path: %s", pkgName, sliceName, contPath)
+				return nil, fmt.Errorf("slice %s_%s has invalid content path: %s", pkgName, sliceName, contPath)
 			}
 			var kinds = make([]PathKind, 0, 3)
 			var info string
@@ -387,7 +387,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 				mutable = yamlPath.Mutable
 				if yamlPath.Dir {
 					if !strings.HasSuffix(contPath, "/") {
-						return nil, fmt.Errorf("slice %s.%s content %q must end in / for 'make' to be valid",
+						return nil, fmt.Errorf("slice %s_%s content %q must end in / for 'make' to be valid",
 							pkgName, sliceName, contPath)
 					}
 					kinds = append(kinds, DirPath)
@@ -416,7 +416,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 				for i, s := range kinds {
 					list[i] = string(s)
 				}
-				return nil, fmt.Errorf("conflict in slice %s.%s definition for path %s: %s", pkgName, sliceName, contPath, strings.Join(list, ", "))
+				return nil, fmt.Errorf("conflict in slice %s_%s definition for path %s: %s", pkgName, sliceName, contPath, strings.Join(list, ", "))
 			}
 			slice.Contents[contPath] = PathInfo{
 				Kind:    kinds[0],
