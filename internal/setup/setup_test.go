@@ -122,6 +122,39 @@ var setupTests = []setupTest{{
 		},
 	},
 }, {
+	summary: "Empty contents",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice1:
+				myslice2:
+					contents:
+		`,
+	},
+	release: &setup.Release{
+		DefaultArchive: "ubuntu",
+
+		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"main", "universe"}}},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Archive: "ubuntu",
+				Name:    "mypkg",
+				Path:    "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{
+					"myslice1": {
+						Package: "mypkg",
+						Name:    "myslice1",
+					},
+					"myslice2": {
+						Package: "mypkg",
+						Name:    "myslice2",
+					},
+				},
+			},
+		},
+	},
+}, {
 	summary: "Cycles are detected within packages",
 	input: map[string]string{
 		"slices/mydir/mypkg.yaml": `

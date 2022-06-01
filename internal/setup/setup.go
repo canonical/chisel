@@ -253,9 +253,9 @@ type yamlArchive struct {
 }
 
 type yamlPackage struct {
-	Name    string                `yaml:"package"`
-	Archive string                `yaml:"archive"`
-	Slices  map[string]*yamlSlice `yaml:"slices"`
+	Name    string               `yaml:"package"`
+	Archive string               `yaml:"archive"`
+	Slices  map[string]yamlSlice `yaml:"slices"`
 }
 
 type yamlPath struct {
@@ -424,8 +424,6 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 				Mode:    mode,
 				Mutable: mutable,
 			}
-
-			_ = info
 		}
 
 		pkg.Slices[sliceName] = slice
