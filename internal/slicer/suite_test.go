@@ -15,9 +15,11 @@ type S struct{}
 var _ = Suite(&S{})
 
 func (s *S) SetUpTest(c *C) {
+	slicer.SetDebug(true)
 	slicer.SetLogger(c)
 }
 
 func (s *S) TearDownTest(c *C) {
+	slicer.SetDebug(false)
 	slicer.SetLogger(nil)
 }

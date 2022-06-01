@@ -15,9 +15,11 @@ type S struct{}
 var _ = Suite(&S{})
 
 func (s *S) SetUpTest(c *C) {
+	deb.SetDebug(true)
 	deb.SetLogger(c)
 }
 
 func (s *S) TearDownTest(c *C) {
+	deb.SetDebug(false)
 	deb.SetLogger(nil)
 }

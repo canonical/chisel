@@ -10,10 +10,10 @@ import (
 
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/chisel/internal/testutil"
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/slicer"
+	"github.com/canonical/chisel/internal/testutil"
 )
 
 type slicerTest struct {
@@ -26,31 +26,31 @@ type slicerTest struct {
 
 var slicerTests = []slicerTest{{
 	summary: "Simple extraction",
-	slices:  []setup.SliceKey{{"run-one", "myslice"}},
+	slices:  []setup.SliceKey{{"base-files", "myslice"}},
 	release: map[string]string{
-		"slices/mydir/run-one.yaml": `
-			package: run-one
+		"slices/mydir/base-files.yaml": `
+			package: base-files
 			slices:
 				myslice:
 					contents:
-						/usr/bin/run-one:
-						/usr/bin/run-two: {copy: /usr/bin/run-one}
-						/bin/run-lnk:     {symlink: ../usr/bin/run-two}
-						/etc/passwd:      {text: data1}
-						/etc/dir/:        {make: true}
+						/usr/bin/hello:
+						/usr/bin/hallo: {copy: /usr/bin/hello}
+						/bin/hallo:     {symlink: ../usr/bin/hallo}
+						/etc/passwd:    {text: data1}
+						/etc/dir/sub/:  {make: true, mode: 01775}
 		`,
 	},
 	result: map[string]string{
-		"/usr/":            "dir 0755",
-		"/usr/bin/":        "dir 0755",
-		"/usr/bin/run-one": "file 0755 95a2a697",
-		"/usr/bin/run-two": "file 0755 95a2a697",
-		"/bin/":            "dir 0755",
-		"/bin/run-lnk":     "symlink ../usr/bin/run-two",
-		"/etc/":            "dir 0755",
-		"/etc/dir/":        "dir 0755",
-		"/etc/passwd":      "file 0644 5b41362b",
-
+		"/usr/":          "dir 0755",
+		"/usr/bin/":      "dir 0755",
+		"/usr/bin/hello": "file 0775 eaf29575",
+		"/usr/bin/hallo": "file 0775 eaf29575",
+		"/bin/":          "dir 0755",
+		"/bin/hallo":     "symlink ../usr/bin/hallo",
+		"/etc/":          "dir 0755",
+		"/etc/dir/":      "dir 0755",
+		"/etc/dir/sub/":  "dir 01775",
+		"/etc/passwd":    "file 0644 5b41362b",
 	},
 }}
 
@@ -104,7 +104,7 @@ func (s *S) TestRun(c *C) {
 		archives := map[string]archive.Archive{
 			"ubuntu": &testArchive{
 				pkgs: map[string][]byte{
-					"run-one": testutil.PackageData["run-one"],
+					"base-files": testutil.PackageData["base-files"],
 				},
 			},
 		}

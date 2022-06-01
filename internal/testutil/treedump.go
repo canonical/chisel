@@ -25,6 +25,9 @@ func TreeDump(dir string) map[string]string {
 		}
 		fperm := finfo.Mode() & fs.ModePerm
 		ftype := finfo.Mode() & fs.ModeType
+		if finfo.Mode()&fs.ModeSticky != 0 {
+			fperm |= 01000
+		}
 		fpath := filepath.Join(dir, path)
 		switch ftype {
 		case fs.ModeDir:

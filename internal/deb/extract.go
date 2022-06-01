@@ -124,6 +124,8 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 		}
 		sourceIsDir := sourcePath[len(sourcePath)-1] == '/'
 
+		//debugf("Extracting header: %#v", tarHeader)
+
 		extractInfos, ok := options.Extract[sourcePath]
 		if !ok {
 			// Base directory for extracted content. Relevant mainly to preserve
@@ -161,6 +163,10 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 			if targetMode == 0 {
 				targetMode = os.FileMode(tarHeader.Mode)
 			}
+			if targetMode&01000 != 0 {
+				targetMode ^= 01000
+				targetMode |= os.ModeSticky
+			}
 
 			switch tarHeader.Typeflag {
 			case tar.TypeDir:
@@ -181,10 +187,20 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 }
 
 func extractDir(targetPath string, mode os.FileMode) error {
-	return os.MkdirAll(targetPath, mode)
+	debugf("Extracting directory: %s (mode %#o)", targetPath, mode)
+	err := os.MkdirAll(filepath.Dir(targetPath), 0755)
+	if err != nil {
+		return err
+	}
+	err = os.Mkdir(targetPath, mode)
+	if err != nil && !os.IsExist(err) {
+		return err
+	}
+	return nil
 }
 
 func extractFile(tarReader io.Reader, targetPath string, mode os.FileMode) error {
+	debugf("Extracting file: %s (mode %#o)", targetPath, mode)
 	err := os.MkdirAll(filepath.Dir(targetPath), 0755)
 	if err != nil && !os.IsExist(err) {
 		return err
@@ -202,6 +218,7 @@ func extractFile(tarReader io.Reader, targetPath string, mode os.FileMode) error
 }
 
 func extractSymlink(symlinkPath string, targetPath string, mode os.FileMode) error {
+	debugf("Extracting symlink: %s => %s", targetPath, symlinkPath)
 	err := os.MkdirAll(filepath.Dir(targetPath), 0755)
 	if err != nil && !os.IsExist(err) {
 		return err

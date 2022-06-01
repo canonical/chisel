@@ -93,14 +93,19 @@ func Run(options *RunOptions) error {
 				} else {
 					targetMode = 0644
 				}
+			} else {
+				if targetMode&01000 != 0 {
+					targetMode ^= 01000
+					targetMode |= os.ModeSticky
+				}
 			}
 			switch pathInfo.Kind {
 			case setup.DirPath:
-				extractDir(targetPath, targetMode)
+				createDir(targetPath, targetMode)
 			case setup.TextPath:
-				extractFile([]byte(pathInfo.Info), targetPath, targetMode)
+				createFile([]byte(pathInfo.Info), targetPath, targetMode)
 			case setup.SymlinkPath:
-				extractSymlink(pathInfo.Info, targetPath, targetMode)
+				createSymlink(pathInfo.Info, targetPath, targetMode)
 			default:
 				return fmt.Errorf("internal error: cannot extract path of kind %q", pathInfo.Kind)
 			}
@@ -110,11 +115,21 @@ func Run(options *RunOptions) error {
 	return nil
 }
 
-func extractDir(targetPath string, mode os.FileMode) error {
-	return os.MkdirAll(targetPath, mode)
+func createDir(targetPath string, mode os.FileMode) error {
+	debugf("Creating directory: %s (mode %#o)", targetPath, mode)
+	err := os.MkdirAll(filepath.Dir(targetPath), 0755)
+	if err != nil {
+		return err
+	}
+	err = os.MkdirAll(targetPath, mode)
+	if err != nil && !os.IsExist(err) {
+		return err
+	}
+	return nil
 }
 
-func extractFile(data []byte, targetPath string, mode os.FileMode) error {
+func createFile(data []byte, targetPath string, mode os.FileMode) error {
+	debugf("Creating file: %s (mode %#o)", targetPath, mode)
 	err := os.MkdirAll(filepath.Dir(targetPath), 0755)
 	if err != nil && !os.IsExist(err) {
 		return err
@@ -122,7 +137,8 @@ func extractFile(data []byte, targetPath string, mode os.FileMode) error {
 	return ioutil.WriteFile(targetPath, data, mode)
 }
 
-func extractSymlink(symlinkPath string, targetPath string, mode os.FileMode) error {
+func createSymlink(symlinkPath string, targetPath string, mode os.FileMode) error {
+	debugf("Creating symlink: %s => %s", targetPath, symlinkPath)
 	err := os.MkdirAll(filepath.Dir(targetPath), 0755)
 	if err != nil && !os.IsExist(err) {
 		return err
