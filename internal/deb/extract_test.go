@@ -170,6 +170,53 @@ var extractTests = []extractTest{{
 		},
 	},
 	error: `cannot extract .*: when using wildcards source and target paths must match: /etc/d\*\*`,
+}, {
+	summary: "Missing file",
+	pkgdata: testutil.PackageData["base-files"],
+	options: deb.ExtractOptions{
+		Extract: map[string][]deb.ExtractInfo{
+			"/etc/passwd": []deb.ExtractInfo{{
+				Path: "/etc/passwd",
+			}},
+		},
+	},
+	error: `cannot extract from package "base-files": no content at /etc/passwd`,
+}, {
+	summary: "Missing directory",
+	pkgdata: testutil.PackageData["base-files"],
+	options: deb.ExtractOptions{
+		Extract: map[string][]deb.ExtractInfo{
+			"/etd/": []deb.ExtractInfo{{
+				Path: "/etd/",
+			}},
+		},
+	},
+	error: `cannot extract from package "base-files": no content at /etd/`,
+}, {
+	summary: "Missing glob",
+	pkgdata: testutil.PackageData["base-files"],
+	options: deb.ExtractOptions{
+		Extract: map[string][]deb.ExtractInfo{
+			"/etd/**": []deb.ExtractInfo{{
+				Path: "/etd/**",
+			}},
+		},
+	},
+	error: `cannot extract from package "base-files": no content at /etd/\*\*`,
+}, {
+	summary: "Missing multiple entries",
+	pkgdata: testutil.PackageData["base-files"],
+	options: deb.ExtractOptions{
+		Extract: map[string][]deb.ExtractInfo{
+			"/etc/passwd": []deb.ExtractInfo{{
+				Path: "/etc/passwd",
+			}},
+			"/etd/": []deb.ExtractInfo{{
+				Path: "/etd/",
+			}},
+		},
+	},
+	error: `cannot extract from package "base-files": no content at:\n- /etc/passwd\n- /etd/`,
 }}
 
 func (s *S) TestExtract(c *C) {

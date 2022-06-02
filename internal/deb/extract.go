@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/blakesmith/ar"
@@ -44,7 +45,7 @@ func checkExtractOptions(options *ExtractOptions) error {
 func Extract(pkgReader io.Reader, options *ExtractOptions) (err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("cannot extract files from package %q: %w", options.Package, err)
+			err = fmt.Errorf("cannot extract from package %q: %w", options.Package, err)
 		}
 	}()
 
@@ -130,6 +131,11 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 		return "", false
 	}
 
+	pendingPaths := make(map[string]bool)
+	for extractPath, _ := range options.Extract {
+		pendingPaths[extractPath] = true
+	}
+
 	tarReader := tar.NewReader(dataReader)
 	for {
 		tarHeader, err := tarReader.Next()
@@ -149,6 +155,7 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 		if !ok {
 			continue
 		}
+
 		sourceIsDir := sourcePath[len(sourcePath)-1] == '/'
 
 		//debugf("Extracting header: %#v", tarHeader)
@@ -156,12 +163,15 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 		var extractInfos []ExtractInfo
 		if globPath != "" {
 			extractInfos = options.Extract[globPath]
+			delete(pendingPaths, globPath)
 		} else {
 			extractInfos, ok = options.Extract[sourcePath]
-			if !ok {
+			if ok {
+				delete(pendingPaths, sourcePath)
+			} else {
 				// Base directory for extracted content. Relevant mainly to preserve
-				// the metadata, since the content will also create any missing
-				// directories unaccounted for in the original content.
+				// the metadata, since the extracted content itself will also create
+				// any missing directories unaccounted for in the options.
 				err := extractDir(filepath.Join(options.TargetDir, sourcePath), os.FileMode(tarHeader.Mode))
 				if err != nil {
 					return err
@@ -223,6 +233,21 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 			}
 		}
 	}
+
+	if len(pendingPaths) > 0 {
+		pendingList := make([]string, 0, len(pendingPaths))
+		for pendingPath := range pendingPaths {
+			pendingList = append(pendingList, pendingPath)
+		}
+		if len(pendingList) == 1 {
+			return fmt.Errorf("no content at %s", pendingList[0])
+		} else {
+			sort.Strings(pendingList)
+			return fmt.Errorf("no content at:\n- %s", strings.Join(pendingList, "\n- "))
+		}
+	}
+
+
 	return nil
 }
 
