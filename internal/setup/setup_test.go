@@ -302,7 +302,7 @@ var setupTests = []setupTest{{
 	},
 	selslices: []setup.SliceKey{{"mypkg1", "myslice1"}, {"mypkg1", "myslice2"}, {"mypkg2", "myslice1"}},
 }, {
-	summary: "Selection with conflicting paths across slices",
+	summary: "Conflicting paths across slices",
 	input: map[string]string{
 		"slices/mydir/mypkg1.yaml": `
 			package: mypkg1
@@ -315,10 +315,9 @@ var setupTests = []setupTest{{
 						/path1: {copy: /other}
 		`,
 	},
-	selslices: []setup.SliceKey{{"mypkg1", "myslice1"}, {"mypkg1", "myslice2"}},
-	selerror:  "slices mypkg1_myslice1 and mypkg1_myslice2 conflict on /path1",
+	relerror:  "slices mypkg1_myslice1 and mypkg1_myslice2 conflict on /path1",
 }, {
-	summary: "Selection with conflicting paths across packages",
+	summary: "Conflicting paths across packages",
 	input: map[string]string{
 		"slices/mydir/mypkg1.yaml": `
 			package: mypkg1
@@ -335,8 +334,7 @@ var setupTests = []setupTest{{
 						/path1:
 		`,
 	},
-	selslices: []setup.SliceKey{{"mypkg1", "myslice1"}, {"mypkg2", "myslice1"}},
-	selerror:  "slices mypkg1_myslice1 and mypkg2_myslice1 conflict on /path1",
+	relerror:  "slices mypkg1_myslice1 and mypkg2_myslice1 conflict on /path1",
 }, {
 	summary: "Directories must be suffixed with /",
 	input: map[string]string{

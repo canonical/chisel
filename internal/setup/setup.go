@@ -96,37 +96,26 @@ func ReadRelease(dir string) (*Release, error) {
 		return nil, err
 	}
 
-	err = release.checkCycles()
+	err = release.validate()
 	if err != nil {
 		return nil, err
 	}
-	err = release.checkGlobs()
-	if err != nil {
-		return nil, err
-	}
-
 	return release, nil
 }
 
-func (r *Release) checkCycles() error {
-	var keys []SliceKey
-	for _, pkg := range r.Packages {
-		for _, slice := range pkg.Slices {
-			keys = append(keys, SliceKey{pkg.Name, slice.Name})
-		}
-	}
-	_, err := order(r.Packages, keys)
-	return err
-}
-
-func (r *Release) checkGlobs() error {
+func (r *Release) validate() error {
+	keys := []SliceKey(nil)
 	paths := make(map[string]*Slice)
 	globs := make(map[string]*Slice)
+
+	// Check for info conflicts and prepare for following checks.
 	for _, pkg := range r.Packages {
 		for _, new := range pkg.Slices {
+			keys = append(keys, SliceKey{pkg.Name, new.Name})
 			for newPath, newInfo := range new.Contents {
 				if old, ok := paths[newPath]; ok {
-					if newInfo.Kind == GlobPath && new.Package != old.Package {
+					oldInfo := old.Contents[newPath]
+					if newInfo != oldInfo || (newInfo.Kind == CopyPath || newInfo.Kind == GlobPath) && new.Package != old.Package {
 						if old.Package > new.Package {
 							old, new = new, old
 						}
@@ -141,6 +130,14 @@ func (r *Release) checkGlobs() error {
 			}
 		}
 	}
+
+	// Check for cycles.
+	_, err := order(r.Packages, keys)
+	if err != nil {
+		return err
+	}
+
+	// Check for glob conflicts.
 	for newPath, new := range globs {
 		for oldPath, old := range paths {
 			if new.Package == old.Package {
