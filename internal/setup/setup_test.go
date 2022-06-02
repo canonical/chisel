@@ -348,7 +348,7 @@ var setupTests = []setupTest{{
 						/foo: {make: true}
 		`,
 	},
-	relerror:  `slice mypkg_myslice content "/foo" must end in / for 'make' to be valid`,
+	relerror: `slice mypkg_myslice content "/foo" must end in / for 'make' to be valid`,
 }, {
 	summary: "Slice path must be clean",
 	input: map[string]string{
@@ -360,7 +360,7 @@ var setupTests = []setupTest{{
 						/foo/../:
 		`,
 	},
-	relerror:  `slice mypkg_myslice has invalid content path: /foo/../`,
+	relerror: `slice mypkg_myslice has invalid content path: /foo/../`,
 }, {
 	summary: "Slice path must be absolute",
 	input: map[string]string{
@@ -372,7 +372,122 @@ var setupTests = []setupTest{{
 						./foo/:
 		`,
 	},
-	relerror:  `slice mypkg_myslice has invalid content path: ./foo/`,
+	relerror: `slice mypkg_myslice has invalid content path: ./foo/`,
+}, {
+	summary: "Globbing support",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice1:
+					contents:
+						/file/*:
+				myslice2:
+					contents:
+						/another/**:
+		`,
+	},
+	release: &setup.Release{
+		DefaultArchive: "ubuntu",
+
+		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"main", "universe"}}},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Archive: "ubuntu",
+				Name:    "mypkg",
+				Path:    "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{
+					"myslice1": {
+						Package: "mypkg",
+						Name:    "myslice1",
+						Contents: map[string]setup.PathInfo{
+							"/file/*": {Kind: "glob"},
+						},
+					},
+					"myslice2": {
+						Package: "mypkg",
+						Name:    "myslice2",
+						Contents: map[string]setup.PathInfo{
+							"/another/**": {Kind: "glob"},
+						},
+					},
+				},
+			},
+		},
+	},
+}, {
+	summary: "Conflicting globs",
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice:
+					contents:
+						/file/f*obar:
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+			slices:
+				myslice:
+					contents:
+						/file/foob*r:
+		`,
+	},
+	relerror:  `slices mypkg1_myslice and mypkg2_myslice conflict on /file/f\*obar and /file/foob\*r`,
+}, {
+	summary: "Conflicting globs and plain copies",
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice:
+					contents:
+						/file/foobar:
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+			slices:
+				myslice:
+					contents:
+						/file/foob*r:
+		`,
+	},
+	relerror:  `slices mypkg1_myslice and mypkg2_myslice conflict on /file/foobar and /file/foob\*r`,
+}, {
+	summary: "Conflicting matching globs",
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice:
+					contents:
+						/file/foob*r:
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+			slices:
+				myslice:
+					contents:
+						/file/foob*r:
+		`,
+	},
+	relerror:  `slices mypkg1_myslice and mypkg2_myslice conflict on /file/foob\*r`,
+}, {
+	summary: "Conflicting globs in same package is okay",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice1:
+					contents:
+						/file/foob*r:
+						/file/f*r:
+				myslice2:
+					contents:
+						/file/foob*r:
+						/file/f*obar:
+		`,
+	},
 }}
 
 const defaultChiselYaml = `

@@ -38,8 +38,7 @@ slices:
 
 ## TODO
 
-- [ ] Globbing support with no-conflict enforcement
-- [ ] Extract parent dirs from package when files inside it are copied
+- [ ] Extract parent dirs from package also when files inside it are created
 - [ ] Preserve ownerships when possible
 - [ ] GPG signature checking for archives
 - [ ] Use a fake server for the archive tests

@@ -52,6 +52,23 @@ var slicerTests = []slicerTest{{
 		"/etc/dir/sub/":  "dir 01775",
 		"/etc/passwd":    "file 0644 5b41362b",
 	},
+}, {
+	summary: "Use globs",
+	slices:  []setup.SliceKey{{"base-files", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/base-files.yaml": `
+			package: base-files
+			slices:
+				myslice:
+					contents:
+						/**/he*o:
+		`,
+	},
+	result: map[string]string{
+		"/usr/":          "dir 0755",
+		"/usr/bin/":      "dir 0755",
+		"/usr/bin/hello": "file 0775 eaf29575",
+	},
 }}
 
 const defaultChiselYaml = `

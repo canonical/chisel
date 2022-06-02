@@ -43,7 +43,7 @@ func Run(options *RunOptions) error {
 			extract[slice.Package] = extractPackage
 		}
 		for targetPath, pathInfo := range slice.Contents {
-			if pathInfo.Kind == setup.CopyPath {
+			if pathInfo.Kind == setup.CopyPath || pathInfo.Kind == setup.GlobPath {
 				sourcePath := pathInfo.Info
 				if sourcePath == "" {
 					sourcePath = targetPath
@@ -81,7 +81,7 @@ func Run(options *RunOptions) error {
 	done := make(map[string]bool)
 	for _, slice := range options.Selection.Slices {
 		for targetPath, pathInfo := range slice.Contents {
-			if done[targetPath] || pathInfo.Kind == setup.CopyPath {
+			if done[targetPath] || pathInfo.Kind == setup.CopyPath || pathInfo.Kind == setup.GlobPath {
 				continue
 			}
 			done[targetPath] = true

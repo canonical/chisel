@@ -14,6 +14,8 @@ import (
 	"github.com/blakesmith/ar"
 	"github.com/klauspost/compress/zstd"
 	"github.com/ulikunitz/xz"
+
+	"github.com/canonical/chisel/internal/strdist"
 )
 
 type ExtractOptions struct {
@@ -27,6 +29,18 @@ type ExtractInfo struct {
 	Mode uint
 }
 
+func checkExtractOptions(options *ExtractOptions) error {
+	for extractPath, extractInfos := range options.Extract {
+		isGlob := strings.ContainsAny(extractPath, "*?")
+		if isGlob {
+			if len(extractInfos) != 1 || extractInfos[0].Path != extractPath || extractInfos[0].Mode != 0 {
+				return fmt.Errorf("when using wildcards source and target paths must match: %s", extractPath)
+			}
+		}
+	}
+	return nil
+}
+
 func Extract(pkgReader io.Reader, options *ExtractOptions) (err error) {
 	defer func() {
 		if err != nil {
@@ -36,6 +50,11 @@ func Extract(pkgReader io.Reader, options *ExtractOptions) (err error) {
 
 	logf("Extracting files from package %q...", options.Package)
 
+	err = checkExtractOptions(options)
+	if err != nil {
+		return err
+	}
+
 	_, err = os.Stat(options.TargetDir)
 	if os.IsNotExist(err) {
 		return fmt.Errorf("target directory does not exist")
@@ -44,7 +63,8 @@ func Extract(pkgReader io.Reader, options *ExtractOptions) (err error) {
 	}
 
 	arReader := ar.NewReader(pkgReader)
-	for {
+	var dataReader io.Reader
+	for dataReader == nil {
 		arHeader, err := arReader.Next()
 		if err == io.EOF {
 			return fmt.Errorf("no data payload")
@@ -52,7 +72,6 @@ func Extract(pkgReader io.Reader, options *ExtractOptions) (err error) {
 		if err != nil {
 			return err
 		}
-		var dataReader io.Reader
 		switch arHeader.Name {
 		case "data.tar.gz":
 			gzipReader, err := gzip.NewReader(arReader)
@@ -75,33 +94,40 @@ func Extract(pkgReader io.Reader, options *ExtractOptions) (err error) {
 			defer zstdReader.Close()
 			dataReader = zstdReader
 		}
-		if dataReader != nil {
-			err = extractData(dataReader, options)
-			if err != nil {
-				return err
-			}
-			break
-		}
 	}
-	return nil
+	return extractData(dataReader, options)
 }
 
 func extractData(dataReader io.Reader, options *ExtractOptions) error {
 
-	extract := make(map[string]bool)
-	for path, extractInfos := range options.Extract {
-		extract[path] = true
-		for _, extractInfo := range extractInfos {
-			path := extractInfo.Path
-			for len(path) > 1 {
-				extract[path] = true
-				pos := strings.LastIndexByte(path[:len(path)-1], filepath.Separator)
-				if pos == -1 {
-					break
+	shouldExtract := func(pkgPath string) (globPath string, ok bool) {
+		if pkgPath == "" {
+			return "", false
+		}
+		pkgPathIsDir := pkgPath[len(pkgPath)-1] == '/'
+		for extractPath, extractInfos := range options.Extract {
+			if extractPath == "" {
+				continue
+			}
+			switch {
+			case strings.ContainsAny(extractPath, "*?"):
+				if strdist.GlobPath(extractPath, pkgPath) {
+					return extractPath, true
 				}
-				path = path[:pos+1]
+			case extractPath == pkgPath:
+				return "", true
+			case pkgPathIsDir:
+				if strings.HasSuffix(extractPath, pkgPath) {
+					return "", true
+				}
+				for _, extractInfo := range extractInfos {
+					if strings.HasSuffix(extractInfo.Path, pkgPath) {
+						return "", true
+					}
+				}
 			}
 		}
+		return "", false
 	}
 
 	tarReader := tar.NewReader(dataReader)
@@ -119,27 +145,33 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 			continue
 		}
 		sourcePath = sourcePath[1:]
-		if !extract[sourcePath] {
+		globPath, ok := shouldExtract(sourcePath)
+		if !ok {
 			continue
 		}
 		sourceIsDir := sourcePath[len(sourcePath)-1] == '/'
 
 		//debugf("Extracting header: %#v", tarHeader)
 
-		extractInfos, ok := options.Extract[sourcePath]
-		if !ok {
-			// Base directory for extracted content. Relevant mainly to preserve
-			// the metadata, since the content will also create any missing
-			// directories unaccounted for in the original content.
-			err := extractDir(filepath.Join(options.TargetDir, sourcePath), os.FileMode(tarHeader.Mode))
-			if err != nil {
-				return err
+		var extractInfos []ExtractInfo
+		if globPath != "" {
+			extractInfos = options.Extract[globPath]
+		} else {
+			extractInfos, ok = options.Extract[sourcePath]
+			if !ok {
+				// Base directory for extracted content. Relevant mainly to preserve
+				// the metadata, since the content will also create any missing
+				// directories unaccounted for in the original content.
+				err := extractDir(filepath.Join(options.TargetDir, sourcePath), os.FileMode(tarHeader.Mode))
+				if err != nil {
+					return err
+				}
+				continue
 			}
-			continue
 		}
 
 		var contentCache []byte
-		var contentIsCached = len(extractInfos) > 1 && !sourceIsDir
+		var contentIsCached = len(extractInfos) > 1 && !sourceIsDir && globPath == ""
 		if contentIsCached {
 			// Read and cache the content so it may be reused.
 			// As an alternative, to avoid having an entire file in
@@ -158,7 +190,12 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 			if contentIsCached {
 				pathReader = bytes.NewReader(contentCache)
 			}
-			targetPath := filepath.Join(options.TargetDir, extractInfo.Path)
+			var targetPath string
+			if globPath == "" {
+				targetPath = filepath.Join(options.TargetDir, extractInfo.Path)
+			} else {
+				targetPath = filepath.Join(options.TargetDir, sourcePath)
+			}
 			targetMode := os.FileMode(extractInfo.Mode)
 			if targetMode == 0 {
 				targetMode = os.FileMode(tarHeader.Mode)
@@ -180,6 +217,9 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 			}
 			if err != nil {
 				return err
+			}
+			if globPath != "" {
+				break
 			}
 		}
 	}

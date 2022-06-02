@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/canonical/chisel/internal/strdist"
 )
 
 // Release is a collection of package slices targeting a particular
@@ -48,6 +50,7 @@ type PathKind string
 const (
 	DirPath     PathKind = "dir"
 	CopyPath    PathKind = "copy"
+	GlobPath    PathKind = "glob"
 	TextPath    PathKind = "text"
 	SymlinkPath PathKind = "symlink"
 
@@ -97,19 +100,63 @@ func ReadRelease(dir string) (*Release, error) {
 	if err != nil {
 		return nil, err
 	}
+	err = release.checkGlobs()
+	if err != nil {
+		return nil, err
+	}
 
 	return release, nil
 }
 
-func (v *Release) checkCycles() error {
+func (r *Release) checkCycles() error {
 	var keys []SliceKey
-	for _, pkg := range v.Packages {
+	for _, pkg := range r.Packages {
 		for _, slice := range pkg.Slices {
 			keys = append(keys, SliceKey{pkg.Name, slice.Name})
 		}
 	}
-	_, err := order(v.Packages, keys)
+	_, err := order(r.Packages, keys)
 	return err
+}
+
+func (r *Release) checkGlobs() error {
+	paths := make(map[string]*Slice)
+	globs := make(map[string]*Slice)
+	for _, pkg := range r.Packages {
+		for _, new := range pkg.Slices {
+			for newPath, newInfo := range new.Contents {
+				if old, ok := paths[newPath]; ok {
+					if newInfo.Kind == GlobPath && new.Package != old.Package {
+						if old.Package > new.Package {
+							old, new = new, old
+						}
+						return fmt.Errorf("slices %s and %s conflict on %s", old, new, newPath)
+					}
+				} else {
+					if newInfo.Kind == GlobPath {
+						globs[newPath] = new
+					}
+					paths[newPath] = new
+				}
+			}
+		}
+	}
+	for newPath, new := range globs {
+		for oldPath, old := range paths {
+			if new.Package == old.Package {
+				continue
+			}
+			if strdist.GlobPath(newPath, oldPath) {
+				if old.Package > new.Package {
+					old, oldPath, new, newPath = new, newPath, old, oldPath
+				}
+				return fmt.Errorf("slices %s and %s conflict on %s and %s", old, new, oldPath, newPath)
+			}
+		}
+		paths[newPath] = new
+	}
+
+	return nil
 }
 
 func order(pkgs map[string]*Package, keys []SliceKey) ([]SliceKey, error) {
@@ -380,9 +427,14 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 			var info string
 			var mode uint
 			var mutable bool
-			if yamlPath == nil {
-				kinds = append(kinds, CopyPath)
-			} else {
+			if strings.ContainsAny(contPath, "*?") {
+				if yamlPath != nil && (yamlPath.Mode != 0 || yamlPath.Mutable) {
+					return nil, fmt.Errorf("invalid slice %s_%s definition for path %s: cannot define details when using wildcards",
+						pkgName, sliceName, contPath)
+				}
+				kinds = append(kinds, GlobPath)
+			}
+			if yamlPath != nil {
 				mode = yamlPath.Mode
 				mutable = yamlPath.Mutable
 				if yamlPath.Dir {
@@ -407,9 +459,9 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 						info = ""
 					}
 				}
-				if len(kinds) == 0 {
-					kinds = append(kinds, CopyPath)
-				}
+			}
+			if len(kinds) == 0 {
+				kinds = append(kinds, CopyPath)
 			}
 			if len(kinds) != 1 {
 				list := make([]string, len(kinds))
@@ -455,15 +507,18 @@ func Select(release *Release, slices []SliceKey) (*Selection, error) {
 
 	paths := make(map[string]*Slice)
 	for _, new := range selection.Slices {
-		for path, newInfo := range new.Contents {
-			if old, ok := paths[path]; ok {
-				oldInfo := old.Contents[path]
-				if newInfo != oldInfo || newInfo.Kind == CopyPath && new.Package != old.Package {
-					return nil, fmt.Errorf("slices %s and %s conflict on %s", old, new, path)
+		for newPath, newInfo := range new.Contents {
+			if old, ok := paths[newPath]; ok {
+				oldInfo := old.Contents[newPath]
+				if newInfo != oldInfo || (newInfo.Kind == CopyPath || newInfo.Kind == GlobPath) && new.Package != old.Package {
+					if old.Package > new.Package {
+						old, new = new, old
+					}
+					return nil, fmt.Errorf("slices %s and %s conflict on %s", old, new, newPath)
 				}
-			} else {
-				paths[path] = new
+				continue
 			}
+			paths[newPath] = new
 		}
 	}
 
