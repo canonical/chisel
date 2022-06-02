@@ -217,6 +217,45 @@ var extractTests = []extractTest{{
 		},
 	},
 	error: `cannot extract from package "base-files": no content at:\n- /etc/passwd\n- /etd/`,
+}, {
+	summary: "Optional entries may be missing",
+	pkgdata: testutil.PackageData["base-files"],
+	options: deb.ExtractOptions{
+		Extract: map[string][]deb.ExtractInfo{
+			"/etc/": []deb.ExtractInfo{{
+				Path: "/etc/",
+			}},
+			"/usr/foo/hallo": []deb.ExtractInfo{{
+				Path:     "/usr/bin/foo/hallo",
+				Optional: true,
+			}},
+			"/other/path/": []deb.ExtractInfo{{
+				Path:     "/tmp/new/path/",
+				Optional: true,
+			}},
+		},
+	},
+	result: map[string]string{
+		"/etc/":     "dir 0755",
+		"/usr/":     "dir 0755",
+		"/usr/bin/": "dir 0755",
+		"/tmp/":     "dir 01775",
+	},
+}, {
+	summary: "Optional entries mixed in cannot be missing",
+	pkgdata: testutil.PackageData["base-files"],
+	options: deb.ExtractOptions{
+		Extract: map[string][]deb.ExtractInfo{
+			"/usr/bin/hallo": []deb.ExtractInfo{{
+				Path:     "/usr/bin/hallo",
+				Optional: true,
+			}, {
+				Path:     "/usr/bin/hallow",
+				Optional: false,
+			}},
+		},
+	},
+	error: `cannot extract from package "base-files": no content at /usr/bin/hallo`,
 }}
 
 func (s *S) TestExtract(c *C) {

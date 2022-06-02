@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/deb"
@@ -43,6 +44,9 @@ func Run(options *RunOptions) error {
 			extract[slice.Package] = extractPackage
 		}
 		for targetPath, pathInfo := range slice.Contents {
+			if targetPath == "" {
+				continue
+			}
 			if pathInfo.Kind == setup.CopyPath || pathInfo.Kind == setup.GlobPath {
 				sourcePath := pathInfo.Info
 				if sourcePath == "" {
@@ -50,6 +54,16 @@ func Run(options *RunOptions) error {
 				}
 				extractPackage[sourcePath] = append(extractPackage[sourcePath], deb.ExtractInfo{
 					Path: targetPath,
+				})
+			} else {
+				targetDir := filepath.Dir(strings.TrimRight(targetPath, "/")) + "/"
+				if targetDir == "" || targetDir == "/" {
+					continue
+				}
+				debugf("Adding optional: %s", targetDir)
+				extractPackage[targetDir] = append(extractPackage[targetDir], deb.ExtractInfo{
+					Path:     targetDir,
+					Optional: true,
 				})
 			}
 		}

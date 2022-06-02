@@ -38,7 +38,6 @@ slices:
 
 ## TODO
 
-- [ ] Extract parent dirs from package also when files inside it are created
 - [ ] Preserve ownerships when possible
 - [ ] GPG signature checking for archives
 - [ ] Use a fake server for the archive tests

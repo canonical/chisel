@@ -25,7 +25,7 @@ type slicerTest struct {
 }
 
 var slicerTests = []slicerTest{{
-	summary: "Simple extraction",
+	summary: "Basic slicing",
 	slices:  []setup.SliceKey{{"base-files", "myslice"}},
 	release: map[string]string{
 		"slices/mydir/base-files.yaml": `
@@ -53,7 +53,7 @@ var slicerTests = []slicerTest{{
 		"/etc/passwd":    "file 0644 5b41362b",
 	},
 }, {
-	summary: "Use globs",
+	summary: "Glob extraction",
 	slices:  []setup.SliceKey{{"base-files", "myslice"}},
 	release: map[string]string{
 		"slices/mydir/base-files.yaml": `
@@ -68,6 +68,58 @@ var slicerTests = []slicerTest{{
 		"/usr/":          "dir 0755",
 		"/usr/bin/":      "dir 0755",
 		"/usr/bin/hello": "file 0775 eaf29575",
+	},
+}, {
+	summary: "Create new file under extracted directory",
+	slices:  []setup.SliceKey{{"base-files", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/base-files.yaml": `
+			package: base-files
+			slices:
+				myslice:
+					contents:
+						# Note the missing /tmp/ here.
+						/tmp/new: {text: data1}
+		`,
+	},
+	result: map[string]string{
+		"/tmp/":    "dir 01775", // This is the magic.
+		"/tmp/new": "file 0644 5b41362b",
+	},
+}, {
+	summary: "Create new nested file under extracted directory",
+	slices:  []setup.SliceKey{{"base-files", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/base-files.yaml": `
+			package: base-files
+			slices:
+				myslice:
+					contents:
+						# Note the missing /tmp/ here.
+						/tmp/new/sub: {text: data1}
+		`,
+	},
+	result: map[string]string{
+		"/tmp/":        "dir 01775", // This is the magic.
+		"/tmp/new/":    "dir 0755",
+		"/tmp/new/sub": "file 0644 5b41362b",
+	},
+}, {
+	summary: "Create new directory under extracted directory",
+	slices:  []setup.SliceKey{{"base-files", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/base-files.yaml": `
+			package: base-files
+			slices:
+				myslice:
+					contents:
+						# Note the missing /tmp/ here.
+						/tmp/new/: {make: true}
+		`,
+	},
+	result: map[string]string{
+		"/tmp/":     "dir 01775", // This is the magic.
+		"/tmp/new/": "dir 0755",
 	},
 }}
 

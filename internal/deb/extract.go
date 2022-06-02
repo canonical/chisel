@@ -26,8 +26,9 @@ type ExtractOptions struct {
 }
 
 type ExtractInfo struct {
-	Path string
-	Mode uint
+	Path     string
+	Mode     uint
+	Optional bool
 }
 
 func checkExtractOptions(options *ExtractOptions) error {
@@ -118,11 +119,8 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 			case extractPath == pkgPath:
 				return "", true
 			case pkgPathIsDir:
-				if strings.HasSuffix(extractPath, pkgPath) {
-					return "", true
-				}
 				for _, extractInfo := range extractInfos {
-					if strings.HasSuffix(extractInfo.Path, pkgPath) {
+					if strings.HasPrefix(extractInfo.Path, pkgPath) {
 						return "", true
 					}
 				}
@@ -132,8 +130,13 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 	}
 
 	pendingPaths := make(map[string]bool)
-	for extractPath, _ := range options.Extract {
-		pendingPaths[extractPath] = true
+	for extractPath, extractInfos := range options.Extract {
+		for _, extractInfo := range extractInfos {
+			if !extractInfo.Optional {
+				pendingPaths[extractPath] = true
+				break
+			}
+		}
 	}
 
 	tarReader := tar.NewReader(dataReader)
@@ -210,10 +213,6 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 			if targetMode == 0 {
 				targetMode = os.FileMode(tarHeader.Mode)
 			}
-			if targetMode&01000 != 0 {
-				targetMode ^= 01000
-				targetMode |= os.ModeSticky
-			}
 
 			switch tarHeader.Typeflag {
 			case tar.TypeDir:
@@ -247,7 +246,6 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 		}
 	}
 
-
 	return nil
 }
 
@@ -257,11 +255,15 @@ func extractDir(targetPath string, mode os.FileMode) error {
 	if err != nil {
 		return err
 	}
-	err = os.Mkdir(targetPath, mode)
-	if err != nil && !os.IsExist(err) {
-		return err
+	if mode&01000 != 0 {
+		mode ^= 01000
+		mode |= os.ModeSticky
 	}
-	return nil
+	err = os.Mkdir(targetPath, mode)
+	if os.IsExist(err) {
+		err = os.Chmod(targetPath, mode)
+	}
+	return err
 }
 
 func extractFile(tarReader io.Reader, targetPath string, mode os.FileMode) error {
