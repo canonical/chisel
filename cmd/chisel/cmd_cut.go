@@ -3,9 +3,13 @@ package main
 import (
 	"github.com/jessevdk/go-flags"
 
-	"path/filepath"
+	"fmt"
+	"io/ioutil"
+	"regexp"
+	"strings"
 
 	"github.com/canonical/chisel/internal/archive"
+	"github.com/canonical/chisel/internal/cache"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/slicer"
 )
@@ -22,8 +26,8 @@ var cutDescs = map[string]string{
 }
 
 type cmdCut struct {
-	ReleaseDir string `long:"release" value-name:"<dir>" required:"yes"`
-	RootDir    string `long:"root" value-name:"<dir>" required:"yes"`
+	Release string `long:"release" value-name:"<dir>"`
+	RootDir string `long:"root" value-name:"<dir>" required:"yes"`
 
 	Positional struct {
 		SliceRefs []string `positional-arg-name:"<slice names>" required:"yes"`
@@ -48,7 +52,25 @@ func (cmd *cmdCut) Execute(args []string) error {
 		sliceKeys[i] = sliceKey
 	}
 
-	release, err := setup.ReadRelease(cmd.ReleaseDir)
+	var release *setup.Release
+	var err error
+	if strings.Contains(cmd.Release, "/") {
+		release, err = setup.ReadRelease(cmd.Release)
+	} else {
+		var label, version string
+		if cmd.Release == "" {
+			label, version, err = readReleaseInfo()
+		} else {
+			label, version, err = parseReleaseInfo(cmd.Release)
+		}
+		if err != nil {
+			return err
+		}
+		release, err = setup.FetchRelease(&setup.FetchOptions{
+			Label:   label,
+			Version: version,
+		})
+	}
 	if err != nil {
 		return err
 	}
@@ -63,7 +85,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 		openArchive, err := archive.Open(&archive.Options{
 			Label:    archiveName,
 			Version:  archiveInfo.Version,
-			CacheDir: filepath.Join(cmd.ReleaseDir, ".cache"),
+			CacheDir: cache.DefaultDir("chisel"),
 			Arch:     "amd64", // TODO Option for this, implied from running system
 		})
 		if err != nil {
@@ -79,4 +101,36 @@ func (cmd *cmdCut) Execute(args []string) error {
 	})
 
 	return printVersions()
+}
+
+// TODO These need testing, and maybe moving into a common file.
+
+var releaseExp = regexp.MustCompile(`^([a-z](?:-?[a-z0-9]){2,})-([0-9]+(?:\.?[0-9])+)$`)
+
+func parseReleaseInfo(release string) (label, version string, err error) {
+	match := releaseExp.FindStringSubmatch(release)
+	if match == nil {
+		return "", "", fmt.Errorf("invalid release reference: %q", release)
+	}
+	return match[1], match[2], nil
+}
+
+func readReleaseInfo() (label, version string, err error) {
+	data, err := ioutil.ReadFile("/etc/lsb-release")
+	if err == nil {
+		const labelPrefix = "DISTRIB_ID="
+		const versionPrefix = "DISTRIB_RELEASE="
+		for _, line := range strings.Split(string(data), "\n") {
+			switch {
+			case strings.HasPrefix(line, labelPrefix):
+				label = strings.ToLower(line[len(labelPrefix):])
+			case strings.HasPrefix(line, versionPrefix):
+				version = line[len(versionPrefix):]
+			}
+			if label != "" && version != "" {
+				return label, version, nil
+			}
+		}
+	}
+	return "", "", fmt.Errorf("cannot infer release via /etc/lsb-release, see the --release option")
 }

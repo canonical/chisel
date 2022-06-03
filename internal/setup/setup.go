@@ -84,7 +84,11 @@ type Selection struct {
 }
 
 func ReadRelease(dir string) (*Release, error) {
-	logf("Reading release: %s", dir)
+	logDir := dir
+	if strings.Contains(dir, "/.cache/") {
+		logDir = filepath.Base(dir)
+	}
+	logf("Processing %s release...", logDir)
 
 	release := &Release{
 		Path:     dir,
@@ -116,7 +120,7 @@ func (r *Release) validate() error {
 				if old, ok := paths[newPath]; ok {
 					oldInfo := old.Contents[newPath]
 					if newInfo != oldInfo || (newInfo.Kind == CopyPath || newInfo.Kind == GlobPath) && new.Package != old.Package {
-						if old.Package > new.Package {
+						if old.Package > new.Package || old.Package == new.Package && old.Name > new.Name {
 							old, new = new, old
 						}
 						return fmt.Errorf("slices %s and %s conflict on %s", old, new, newPath)
@@ -144,7 +148,7 @@ func (r *Release) validate() error {
 				continue
 			}
 			if strdist.GlobPath(newPath, oldPath) {
-				if old.Package > new.Package {
+				if old.Package > new.Package || old.Package == new.Package && old.Name > new.Name {
 					old, oldPath, new, newPath = new, newPath, old, oldPath
 				}
 				return fmt.Errorf("slices %s and %s conflict on %s and %s", old, new, oldPath, newPath)
@@ -508,7 +512,7 @@ func Select(release *Release, slices []SliceKey) (*Selection, error) {
 			if old, ok := paths[newPath]; ok {
 				oldInfo := old.Contents[newPath]
 				if newInfo != oldInfo || (newInfo.Kind == CopyPath || newInfo.Kind == GlobPath) && new.Package != old.Package {
-					if old.Package > new.Package {
+					if old.Package > new.Package || old.Package == new.Package && old.Name > new.Name {
 						old, new = new, old
 					}
 					return nil, fmt.Errorf("slices %s and %s conflict on %s", old, new, newPath)

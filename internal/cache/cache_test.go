@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/canonical/chisel/internal/cache"
@@ -16,6 +17,31 @@ const (
 	data2Digest = "d98cf53e0c8b77c14a96358d5b69584225b4bb9026423cbc2f7b0161894c402c"
 	data3Digest = "f60f2d65da046fcaaf8a10bd96b5630104b629e111aff46ce89792e1caa11b18"
 )
+
+func (s *S) TestDefaultDir(c *C) {
+	oldA := os.Getenv("HOME")
+	oldB := os.Getenv("XDG_CACHE_HOME")
+	defer func() {
+		os.Setenv("HOME", oldA)
+		os.Setenv("XDG_CACHE_HOME", oldB)
+	}()
+
+	os.Setenv("HOME", "/home/user")
+	os.Setenv("XDG_CACHE_HOME", "")
+	c.Assert(cache.DefaultDir("foo/bar"), Equals, "/home/user/.cache/foo/bar")
+
+	os.Setenv("HOME", "/home/user")
+	os.Setenv("XDG_CACHE_HOME", "/xdg/cache")
+	c.Assert(cache.DefaultDir("foo/bar"), Equals, "/xdg/cache/foo/bar")
+
+	os.Setenv("HOME", "")
+	os.Setenv("XDG_CACHE_HOME", "")
+	defaultDir := cache.DefaultDir("foo/bar")
+	c.Assert(strings.HasPrefix(defaultDir, os.TempDir()), Equals, true)
+	c.Assert(strings.Contains(defaultDir, "/cache-"), Equals, true)
+	c.Assert(strings.HasSuffix(defaultDir, "/foo/bar"), Equals, true)
+}
+
 
 func (s *S) TestCacheEmpty(c *C) {
 	cc := cache.Cache{c.MkDir()}

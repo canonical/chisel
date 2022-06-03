@@ -12,6 +12,23 @@ import (
 	"time"
 )
 
+func DefaultDir(suffix string) string {
+	cacheDir := os.Getenv("XDG_CACHE_HOME")
+	if cacheDir == "" {
+		homeDir := os.Getenv("HOME")
+		if homeDir != "" {
+			cacheDir = filepath.Join(homeDir, ".cache")
+		} else {
+			var err error
+			cacheDir, err = os.MkdirTemp("", "cache-*")
+			if err != nil {
+				panic("no proper location for cache: " + err.Error())
+			}
+		}
+	}
+	return filepath.Join(cacheDir, suffix)
+}
+
 type Cache struct {
 	Dir string
 }
