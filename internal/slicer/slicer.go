@@ -1,15 +1,16 @@
 package slicer
 
 import (
+	"archive/tar"
+	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/deb"
+	"github.com/canonical/chisel/internal/fsutil"
 	"github.com/canonical/chisel/internal/setup"
 )
 
@@ -100,62 +101,43 @@ func Run(options *RunOptions) error {
 			}
 			done[targetPath] = true
 			targetPath = filepath.Join(options.TargetDir, targetPath)
-			targetMode := os.FileMode(pathInfo.Mode)
+			targetMode := pathInfo.Mode
 			if targetMode == 0 {
 				if pathInfo.Kind == setup.DirPath {
 					targetMode = 0755
 				} else {
 					targetMode = 0644
 				}
-			} else {
-				if targetMode&01000 != 0 {
-					targetMode ^= 01000
-					targetMode |= os.ModeSticky
-				}
 			}
+
+			// Leverage tar handling of mode bits.
+			tarHeader := tar.Header{Mode: int64(targetMode)}
+			var fileContent io.Reader
+			var linkTarget string
 			switch pathInfo.Kind {
-			case setup.DirPath:
-				createDir(targetPath, targetMode)
 			case setup.TextPath:
-				createFile([]byte(pathInfo.Info), targetPath, targetMode)
+				tarHeader.Typeflag = tar.TypeReg
+				fileContent = bytes.NewBufferString(pathInfo.Info)
+			case setup.DirPath:
+				tarHeader.Typeflag = tar.TypeDir
 			case setup.SymlinkPath:
-				createSymlink(pathInfo.Info, targetPath, targetMode)
+				tarHeader.Typeflag = tar.TypeSymlink
+				linkTarget = pathInfo.Info
 			default:
 				return fmt.Errorf("internal error: cannot extract path of kind %q", pathInfo.Kind)
+			}
+
+			err := fsutil.Create(&fsutil.CreateOptions{
+				Path: targetPath,
+				Mode: tarHeader.FileInfo().Mode(),
+				Data: fileContent,
+				Link: linkTarget,
+			})
+			if err != nil {
+				return err
 			}
 		}
 	}
 
 	return nil
-}
-
-func createDir(targetPath string, mode os.FileMode) error {
-	debugf("Creating directory: %s (mode %#o)", targetPath, mode)
-	err := os.MkdirAll(filepath.Dir(targetPath), 0755)
-	if err != nil {
-		return err
-	}
-	err = os.MkdirAll(targetPath, mode)
-	if err != nil && !os.IsExist(err) {
-		return err
-	}
-	return nil
-}
-
-func createFile(data []byte, targetPath string, mode os.FileMode) error {
-	debugf("Creating file: %s (mode %#o)", targetPath, mode)
-	err := os.MkdirAll(filepath.Dir(targetPath), 0755)
-	if err != nil && !os.IsExist(err) {
-		return err
-	}
-	return ioutil.WriteFile(targetPath, data, mode)
-}
-
-func createSymlink(symlinkPath string, targetPath string, mode os.FileMode) error {
-	debugf("Creating symlink: %s => %s", targetPath, symlinkPath)
-	err := os.MkdirAll(filepath.Dir(targetPath), 0755)
-	if err != nil && !os.IsExist(err) {
-		return err
-	}
-	return os.Symlink(symlinkPath, targetPath)
 }

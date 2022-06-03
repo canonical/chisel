@@ -16,6 +16,7 @@ import (
 	"github.com/klauspost/compress/zstd"
 	"github.com/ulikunitz/xz"
 
+	"github.com/canonical/chisel/internal/fsutil"
 	"github.com/canonical/chisel/internal/strdist"
 )
 
@@ -175,7 +176,10 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 				// Base directory for extracted content. Relevant mainly to preserve
 				// the metadata, since the extracted content itself will also create
 				// any missing directories unaccounted for in the options.
-				err := extractDir(filepath.Join(options.TargetDir, sourcePath), os.FileMode(tarHeader.Mode))
+				err := fsutil.Create(&fsutil.CreateOptions{
+					Path: filepath.Join(options.TargetDir, sourcePath),
+					Mode: tarHeader.FileInfo().Mode(),
+				})
 				if err != nil {
 					return err
 				}
@@ -209,21 +213,15 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 			} else {
 				targetPath = filepath.Join(options.TargetDir, sourcePath)
 			}
-			targetMode := os.FileMode(extractInfo.Mode)
-			if targetMode == 0 {
-				targetMode = os.FileMode(tarHeader.Mode)
+			if extractInfo.Mode != 0 {
+				tarHeader.Mode = int64(extractInfo.Mode)
 			}
-
-			switch tarHeader.Typeflag {
-			case tar.TypeDir:
-				err = extractDir(targetPath, targetMode)
-			case tar.TypeReg:
-				err = extractFile(pathReader, targetPath, targetMode)
-			case tar.TypeSymlink:
-				err = extractSymlink(tarHeader.Linkname, targetPath, targetMode)
-			default:
-				err = fmt.Errorf("unsupported file type: %s", sourcePath)
-			}
+			err := fsutil.Create(&fsutil.CreateOptions{
+				Path: targetPath,
+				Mode: tarHeader.FileInfo().Mode(),
+				Data: pathReader,
+				Link: tarHeader.Linkname,
+			})
 			if err != nil {
 				return err
 			}
@@ -247,48 +245,4 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 	}
 
 	return nil
-}
-
-func extractDir(targetPath string, mode os.FileMode) error {
-	debugf("Extracting directory: %s (mode %#o)", targetPath, mode)
-	err := os.MkdirAll(filepath.Dir(targetPath), 0755)
-	if err != nil {
-		return err
-	}
-	if mode&01000 != 0 {
-		mode ^= 01000
-		mode |= os.ModeSticky
-	}
-	err = os.Mkdir(targetPath, mode)
-	if os.IsExist(err) {
-		err = os.Chmod(targetPath, mode)
-	}
-	return err
-}
-
-func extractFile(tarReader io.Reader, targetPath string, mode os.FileMode) error {
-	debugf("Extracting file: %s (mode %#o)", targetPath, mode)
-	err := os.MkdirAll(filepath.Dir(targetPath), 0755)
-	if err != nil && !os.IsExist(err) {
-		return err
-	}
-	targetFile, err := os.OpenFile(targetPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, mode)
-	if err != nil {
-		return err
-	}
-	_, copyErr := io.Copy(targetFile, tarReader)
-	err = targetFile.Close()
-	if copyErr != nil {
-		return copyErr
-	}
-	return err
-}
-
-func extractSymlink(symlinkPath string, targetPath string, mode os.FileMode) error {
-	debugf("Extracting symlink: %s => %s", targetPath, symlinkPath)
-	err := os.MkdirAll(filepath.Dir(targetPath), 0755)
-	if err != nil && !os.IsExist(err) {
-		return err
-	}
-	return os.Symlink(symlinkPath, targetPath)
 }
