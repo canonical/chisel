@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -43,6 +44,11 @@ type Slice struct {
 	Name      string
 	Essential []SliceKey
 	Contents  map[string]PathInfo
+	Scripts   SliceScripts
+}
+
+type SliceScripts struct {
+	Mutate string
 }
 
 type PathKind string
@@ -244,7 +250,7 @@ func readRelease(baseDir string) (*Release, error) {
 func readSlices(release *Release, baseDir, dirName string) error {
 	finfos, err := ioutil.ReadDir(dirName)
 	if err != nil {
-		return fmt.Errorf("cannot read %s/ directory", stripBase(baseDir, dirName))
+		return fmt.Errorf("cannot read %s%c directory", stripBase(baseDir, dirName), filepath.Separator)
 	}
 
 	for _, finfo := range finfos {
@@ -318,6 +324,7 @@ type yamlPath struct {
 type yamlSlice struct {
 	Essential []string             `yaml:"essential"`
 	Contents  map[string]*yamlPath `yaml:"contents"`
+	Mutate    string               `yaml:"mutate"`
 }
 
 func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
@@ -403,6 +410,9 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 		slice := &Slice{
 			Package: pkgName,
 			Name:    sliceName,
+			Scripts: SliceScripts{
+				Mutate: yamlSlice.Mutate,
+			},
 		}
 
 		for _, refName := range yamlSlice.Essential {
@@ -417,11 +427,12 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 			slice.Contents = make(map[string]PathInfo, len(yamlSlice.Contents))
 		}
 		for contPath, yamlPath := range yamlSlice.Contents {
+			isDir := strings.HasSuffix(contPath, "/")
 			comparePath := contPath
-			if len(comparePath) > 0 && comparePath[len(comparePath)-1] == filepath.Separator {
+			if isDir {
 				comparePath = comparePath[:len(comparePath)-1]
 			}
-			if !filepath.IsAbs(contPath) || filepath.Clean(contPath) != comparePath {
+			if !path.IsAbs(contPath) || path.Clean(contPath) != comparePath {
 				return nil, fmt.Errorf("slice %s_%s has invalid content path: %s", pkgName, sliceName, contPath)
 			}
 			var kinds = make([]PathKind, 0, 3)
@@ -470,6 +481,9 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 					list[i] = string(s)
 				}
 				return nil, fmt.Errorf("conflict in slice %s_%s definition for path %s: %s", pkgName, sliceName, contPath, strings.Join(list, ", "))
+			}
+			if mutable && kinds[0] != TextPath && (kinds[0] != CopyPath || isDir) {
+				return nil, fmt.Errorf("slice %s_%s mutable is not a regular file: %s", pkgName, sliceName, contPath)
 			}
 			slice.Contents[contPath] = PathInfo{
 				Kind:    kinds[0],

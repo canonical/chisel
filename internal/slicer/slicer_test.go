@@ -121,6 +121,61 @@ var slicerTests = []slicerTest{{
 		"/tmp/":     "dir 01775", // This is the magic.
 		"/tmp/new/": "dir 0755",
 	},
+}, {
+	summary: "Script: write a file",
+	slices:  []setup.SliceKey{{"base-files", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/base-files.yaml": `
+			package: base-files
+			slices:
+				myslice:
+					contents:
+						/tmp/file1: {text: data1, mutable: true}
+					mutate: |
+						content.write("/tmp/file1", "data2")
+		`,
+	},
+	result: map[string]string{
+		"/tmp/":      "dir 01775",
+		"/tmp/file1": "file 0644 d98cf53e",
+	},
+}, {
+	summary: "Script: read a file",
+	slices:  []setup.SliceKey{{"base-files", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/base-files.yaml": `
+			package: base-files
+			slices:
+				myslice:
+					contents:
+						/tmp/file1: {text: data1, mutable: true}
+						/foo/file2: {text: data2, mutable: true}
+					mutate: |
+						data = content.read("/tmp/file1")
+						content.write("/foo/file2", data)
+		`,
+	},
+	result: map[string]string{
+		"/tmp/":      "dir 01775",
+		"/tmp/file1": "file 0644 5b41362b",
+		"/foo/":      "dir 0755",
+		"/foo/file2": "file 0644 5b41362b",
+	},
+}, {
+	summary: "Script: cannot write non-mutable files",
+	slices:  []setup.SliceKey{{"base-files", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/base-files.yaml": `
+			package: base-files
+			slices:
+				myslice:
+					contents:
+						/tmp/file1: {text: data1}
+					mutate: |
+						content.write("/tmp/file1", "data2")
+		`,
+	},
+	error: `path /tmp/file1 is not mutable`,
 }}
 
 const defaultChiselYaml = `

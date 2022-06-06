@@ -83,6 +83,8 @@ var setupTests = []setupTest{{
 						- mypkg_myslice1
 					contents:
 						/another/path:
+				myslice3:
+					mutate: something
 		`,
 	},
 	release: &setup.Release{
@@ -115,6 +117,13 @@ var setupTests = []setupTest{{
 						},
 						Contents: map[string]setup.PathInfo{
 							"/another/path": {Kind: "copy"},
+						},
+					},
+					"myslice3": {
+						Package: "mypkg",
+						Name:    "myslice3",
+						Scripts: setup.SliceScripts{
+							Mutate: "something",
 						},
 					},
 				},
@@ -486,6 +495,42 @@ var setupTests = []setupTest{{
 						/file/f*obar:
 		`,
 	},
+}, {
+	summary: "Mutable does not work for directories extractions",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+					contents:
+						/path/: {mutable: true}
+		`,
+	},
+	relerror:  `slice mypkg_myslice mutable is not a regular file: /path/`,
+}, {
+	summary: "Mutable does not work for directory making",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+					contents:
+						/path/: {make: true, mutable: true}
+		`,
+	},
+	relerror:  `slice mypkg_myslice mutable is not a regular file: /path/`,
+}, {
+	summary: "Mutable does not work for symlinks",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+					contents:
+						/path: {symlink: /other, mutable: true}
+		`,
+	},
+	relerror:  `slice mypkg_myslice mutable is not a regular file: /path`,
 }}
 
 const defaultChiselYaml = `
