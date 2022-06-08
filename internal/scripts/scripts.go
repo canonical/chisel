@@ -105,6 +105,17 @@ func (c *ContentValue) realPath(path starlark.String, checkWhat int) (string, er
 	if !filepath.IsAbs(rpath) || rpath != c.RootDir && !strings.HasPrefix(rpath, c.RootDir+string(filepath.Separator)) {
 		return "", fmt.Errorf("invalid content path: %s", path.GoString())
 	}
+	if lname, err := os.Readlink(rpath); err == nil {
+		lpath := filepath.Join(filepath.Dir(rpath), lname)
+		lrel, err := filepath.Rel(c.RootDir, lpath)
+		if err != nil || !filepath.IsAbs(lpath) || lpath != c.RootDir && !strings.HasPrefix(lpath, c.RootDir+string(filepath.Separator)) {
+			return "", fmt.Errorf("invalid content symlink: %s", path.GoString())
+		}
+		_, err = c.realPath(starlark.String("/" + lrel), checkWhat)
+		if err != nil {
+			return "", err
+		}
+	}
 	return rpath, nil
 }
 

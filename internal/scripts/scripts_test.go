@@ -15,6 +15,7 @@ import (
 type scriptsTest struct {
 	summary string
 	content map[string]string
+	hackdir func(c *C, dir string)
 	script  string
 	result  map[string]string
 	checkr  func(path string) error
@@ -89,6 +90,21 @@ var scriptsTests = []scriptsTest{{
 	`,
 	error: `invalid content path: /foo/../../file1.txt`,
 }, {
+	summary: "Forbid leaving the content via bad symlinks",
+	content: map[string]string{
+		"foo/file3.txt": ``,
+	},
+	hackdir: func(c *C, dir string) {
+		fpath1 := filepath.Join(dir, "foo/file1.txt")
+		fpath2 := filepath.Join(dir, "foo/file2.txt")
+		c.Assert(os.Symlink("file2.txt", fpath1), IsNil)
+		c.Assert(os.Symlink("../../bar", fpath2), IsNil)
+	},
+	script: `
+		content.read("/foo/file1.txt")
+	`,
+	error: `invalid content symlink: /foo/file2.txt`,
+}, {
 	summary: "Path errors refer to the root",
 	content: map[string]string{},
 	script: `
@@ -128,6 +144,44 @@ var scriptsTests = []scriptsTest{{
 	`,
 	checkr: func(p string) error { return fmt.Errorf("no read: %s", p) },
 	error:  `no read: /bar`,
+}, {
+	summary: "Check reads on symlinks",
+	content: map[string]string{
+		"foo/file2.txt": ``,
+	},
+	hackdir: func(c *C, dir string) {
+		fpath1 := filepath.Join(dir, "foo/file1.txt")
+		c.Assert(os.Symlink("file2.txt", fpath1), IsNil)
+	},
+	script: `
+		content.read("/foo/file1.txt")
+	`,
+	checkr: func(p string) error {
+		if p == "/foo/file2.txt" {
+			return fmt.Errorf("no read: %s", p)
+		}
+		return nil
+	},
+	error: `no read: /foo/file2.txt`,
+}, {
+	summary: "Check writes on symlinks",
+	content: map[string]string{
+		"foo/file2.txt": ``,
+	},
+	hackdir: func(c *C, dir string) {
+		fpath1 := filepath.Join(dir, "foo/file1.txt")
+		c.Assert(os.Symlink("file2.txt", fpath1), IsNil)
+	},
+	script: `
+		content.write("/foo/file1.txt", "")
+	`,
+	checkw: func(p string) error {
+		if p == "/foo/file2.txt" {
+			return fmt.Errorf("no write: %s", p)
+		}
+		return nil
+	},
+	error: `no write: /foo/file2.txt`,
 }}
 
 func (s *S) TestScripts(c *C) {
@@ -141,6 +195,9 @@ func (s *S) TestScripts(c *C) {
 			c.Assert(err, IsNil)
 			err = ioutil.WriteFile(fpath, []byte(data), 0644)
 			c.Assert(err, IsNil)
+		}
+		if test.hackdir != nil {
+			test.hackdir(c, rootDir)
 		}
 
 		content := &scripts.ContentValue{
