@@ -61,15 +61,17 @@ var _ starlark.HasAttrs = new(ContentValue)
 func (c *ContentValue) Attr(name string) (Value, error) {
 	switch name {
 	case "read":
-		return starlark.NewBuiltin("content.read", c.Read), nil
+		return starlark.NewBuiltin("Content.read", c.Read), nil
 	case "write":
-		return starlark.NewBuiltin("content.write", c.Write), nil
+		return starlark.NewBuiltin("Content.write", c.Write), nil
+	case "list":
+		return starlark.NewBuiltin("Content.list", c.List), nil
 	}
 	return nil, nil
 }
 
 func (c *ContentValue) AttrNames() []string {
-	return []string{"read", "write"}
+	return []string{"read", "write", "list"}
 }
 
 // Content methods
@@ -100,7 +102,7 @@ func (c *ContentValue) realPath(path starlark.String, checkWhat int) (string, er
 		}
 	}
 	rpath := filepath.Join(c.RootDir, fpath)
-	if !filepath.IsAbs(rpath) || !strings.HasPrefix(rpath, c.RootDir+string(filepath.Separator)) {
+	if !filepath.IsAbs(rpath) || rpath != c.RootDir && !strings.HasPrefix(rpath, c.RootDir+string(filepath.Separator)) {
 		return "", fmt.Errorf("invalid content path: %s", path.GoString())
 	}
 	return rpath, nil
@@ -113,7 +115,7 @@ func (c *ContentValue) polishError(path starlark.String, err error) error {
 	return err
 }
 
-func (c *ContentValue) Read(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+func (c *ContentValue) Read(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (Value, error) {
 	var path starlark.String
 	err := starlark.UnpackArgs("Content.read", args, kwargs, "path", &path)
 	if err != nil {
@@ -131,7 +133,7 @@ func (c *ContentValue) Read(thread *starlark.Thread, fn *starlark.Builtin, args 
 	return starlark.String(data), nil
 }
 
-func (c *ContentValue) Write(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+func (c *ContentValue) Write(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (Value, error) {
 	var path starlark.String
 	var data starlark.String
 	err := starlark.UnpackArgs("Content.write", args, kwargs, "path", &path, "data", &data)
@@ -152,4 +154,30 @@ func (c *ContentValue) Write(thread *starlark.Thread, fn *starlark.Builtin, args
 		return nil, c.polishError(path, err)
 	}
 	return starlark.None, nil
+}
+
+func (c *ContentValue) List(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (Value, error) {
+	var path starlark.String
+	err := starlark.UnpackArgs("Content.list", args, kwargs, "path", &path)
+	if err != nil {
+		return nil, err
+	}
+
+	fpath, err := c.realPath(path, checkRead)
+	if err != nil {
+		return nil, err
+	}
+	entries, err := ioutil.ReadDir(fpath)
+	if err != nil {
+		return nil, c.polishError(path, err)
+	}
+	values := make([]Value, len(entries))
+	for i, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() {
+			name += "/"
+		}
+		values[i] = starlark.String(name)
+	}
+	return starlark.NewList(values), nil
 }

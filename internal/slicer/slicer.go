@@ -63,7 +63,6 @@ func Run(options *RunOptions) error {
 				if targetDir == "" || targetDir == "/" {
 					continue
 				}
-				debugf("Adding optional: %s", targetDir)
 				extractPackage[targetDir] = append(extractPackage[targetDir], deb.ExtractInfo{
 					Path:     targetDir,
 					Optional: true,

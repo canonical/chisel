@@ -53,6 +53,24 @@ var scriptsTests = []scriptsTest{{
 		"/foo/file2.txt": "file 0644 5b41362b",
 	},
 }, {
+	summary: "List a directory",
+	content: map[string]string{
+		"foo/file1.txt": `data1`,
+		"foo/file2.txt": `data1`,
+		"bar/file3.txt": `data1`,
+	},
+	script: `
+		content.write("/foo/file1.txt", ",".join(content.list("/foo")))
+		content.write("/foo/file2.txt", ",".join(content.list("/")))
+	`,
+	result: map[string]string{
+		"/foo/":          "dir 0755",
+		"/foo/file1.txt": "file 0644 98139a06", // "file1.txt,file2.txt"
+		"/foo/file2.txt": "file 0644 47c22b01", // "bar/,foo/"
+		"/bar/":          "dir 0755",
+		"/bar/file3.txt": "file 0644 5b41362b",
+	},
+}, {
 	summary: "Forbid relative paths",
 	content: map[string]string{
 		"foo/file1.txt": `data1`,
@@ -87,7 +105,7 @@ var scriptsTests = []scriptsTest{{
 		content.read("/foo/../bar/file2.txt")
 	`,
 	checkr: func(p string) error { return fmt.Errorf("no read: %s", p) },
-	error: `no read: /bar/file2.txt`,
+	error:  `no read: /bar/file2.txt`,
 }, {
 	summary: "Check writes",
 	content: map[string]string{
@@ -98,7 +116,18 @@ var scriptsTests = []scriptsTest{{
 		content.write("/foo/../bar/file1.txt", "data1")
 	`,
 	checkw: func(p string) error { return fmt.Errorf("no write: %s", p) },
-	error: `no write: /bar/file1.txt`,
+	error:  `no write: /bar/file1.txt`,
+}, {
+	summary: "Check lists",
+	content: map[string]string{
+		"bar/file1.txt": `data1`,
+	},
+	script: `
+		content.write("/foo/../bar/file2.txt", "data2")
+		content.list("/foo/../bar/")
+	`,
+	checkr: func(p string) error { return fmt.Errorf("no read: %s", p) },
+	error:  `no read: /bar`,
 }}
 
 func (s *S) TestScripts(c *C) {
