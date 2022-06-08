@@ -175,7 +175,23 @@ var slicerTests = []slicerTest{{
 						content.write("/tmp/file1", "data2")
 		`,
 	},
-	error: `path /tmp/file1 is not mutable`,
+	error: `slice base-files_myslice: cannot write file not mutable: /tmp/file1`,
+}, {
+	summary: "Script: cannot read unlisted content",
+	slices:  []setup.SliceKey{{"base-files", "myslice2"}},
+	release: map[string]string{
+		"slices/mydir/base-files.yaml": `
+			package: base-files
+			slices:
+				myslice1:
+					contents:
+						/tmp/file1: {text: data1}
+				myslice2:
+					mutate: |
+						content.read("/tmp/file1")
+		`,
+	},
+	error: `slice base-files_myslice2: cannot read file not selected: /tmp/file1`,
 }}
 
 const defaultChiselYaml = `

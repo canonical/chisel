@@ -49,9 +49,7 @@ func Run(options *RunOptions) error {
 			if targetPath == "" {
 				continue
 			}
-			if pathInfo.Mutable {
-				mutable[targetPath] = true
-			}
+			mutable[targetPath] = pathInfo.Mutable
 			if pathInfo.Kind == setup.CopyPath || pathInfo.Kind == setup.GlobPath {
 				sourcePath := pathInfo.Info
 				if sourcePath == "" {
@@ -157,7 +155,13 @@ func Run(options *RunOptions) error {
 	// dependencies must run before dependents.
 	checkWrite := func(path string) error {
 		if !mutable[path] {
-			return fmt.Errorf("path %s is not mutable", path)
+			return fmt.Errorf("cannot write file not mutable: %s", path)
+		}
+		return nil
+	}
+	checkRead := func(path string) error {
+		if _, ok := mutable[path]; !ok {
+			return fmt.Errorf("cannot read file not selected: %s", path)
 		}
 		return nil
 	}
@@ -165,6 +169,7 @@ func Run(options *RunOptions) error {
 		content := &scripts.ContentValue{
 			RootDir:    options.TargetDir,
 			CheckWrite: checkWrite,
+			CheckRead:  checkRead,
 		}
 		opts := scripts.RunOptions{
 			Label:  "mutate",
@@ -175,7 +180,7 @@ func Run(options *RunOptions) error {
 		}
 		err := scripts.Run(&opts)
 		if err != nil {
-			return err
+			return fmt.Errorf("slice %s: %w", slice, err)
 		}
 	}
 
