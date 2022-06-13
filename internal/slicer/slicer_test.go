@@ -148,7 +148,7 @@ var slicerTests = []slicerTest{{
 			slices:
 				myslice:
 					contents:
-						/tmp/file1: {text: data1, mutable: true}
+						/tmp/file1: {text: data1}
 						/foo/file2: {text: data2, mutable: true}
 					mutate: |
 						data = content.read("/tmp/file1")
@@ -158,6 +158,27 @@ var slicerTests = []slicerTest{{
 	result: map[string]string{
 		"/tmp/":      "dir 01775",
 		"/tmp/file1": "file 0644 5b41362b",
+		"/foo/":      "dir 0755",
+		"/foo/file2": "file 0644 5b41362b",
+	},
+}, {
+	summary: "Script: use 'until' to remove file after mutate",
+	slices:  []setup.SliceKey{{"base-files", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/base-files.yaml": `
+			package: base-files
+			slices:
+				myslice:
+					contents:
+						/tmp/file1: {text: data1, until: mutate}
+						/foo/file2: {text: data2, mutable: true}
+					mutate: |
+						data = content.read("/tmp/file1")
+						content.write("/foo/file2", data)
+		`,
+	},
+	result: map[string]string{
+		"/tmp/":      "dir 01775",
 		"/foo/":      "dir 0755",
 		"/foo/file2": "file 0644 5b41362b",
 	},

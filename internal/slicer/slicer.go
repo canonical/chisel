@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -25,7 +26,7 @@ func Run(options *RunOptions) error {
 
 	archives := make(map[string]archive.Archive)
 	extract := make(map[string]map[string][]deb.ExtractInfo)
-	mutable := make(map[string]bool)
+	pathInfos := make(map[string]setup.PathInfo)
 
 	release := options.Selection.Release
 
@@ -49,7 +50,7 @@ func Run(options *RunOptions) error {
 			if targetPath == "" {
 				continue
 			}
-			mutable[targetPath] = pathInfo.Mutable
+			pathInfos[targetPath] = pathInfo
 			if pathInfo.Kind == setup.CopyPath || pathInfo.Kind == setup.GlobPath {
 				sourcePath := pathInfo.Info
 				if sourcePath == "" {
@@ -153,23 +154,23 @@ func Run(options *RunOptions) error {
 	// Run mutation scripts. Order is fundamental here as
 	// dependencies must run before dependents.
 	checkWrite := func(path string) error {
-		if !mutable[path] {
+		if !pathInfos[path].Mutable {
 			return fmt.Errorf("cannot write file not mutable: %s", path)
 		}
 		return nil
 	}
 	checkRead := func(path string) error {
-		if _, ok := mutable[path]; !ok {
+		if _, ok := pathInfos[path]; !ok {
 			return fmt.Errorf("cannot read file not selected: %s", path)
 		}
 		return nil
 	}
+	content := &scripts.ContentValue{
+		RootDir:    options.TargetDir,
+		CheckWrite: checkWrite,
+		CheckRead:  checkRead,
+	}
 	for _, slice := range options.Selection.Slices {
-		content := &scripts.ContentValue{
-			RootDir:    options.TargetDir,
-			CheckWrite: checkWrite,
-			CheckRead:  checkRead,
-		}
 		opts := scripts.RunOptions{
 			Label:  "mutate",
 			Script: slice.Scripts.Mutate,
@@ -180,6 +181,18 @@ func Run(options *RunOptions) error {
 		err := scripts.Run(&opts)
 		if err != nil {
 			return fmt.Errorf("slice %s: %w", slice, err)
+		}
+	}
+
+	for targetPath, pathInfo := range pathInfos {
+		if pathInfo.Until == setup.UntilMutate {
+			path, err := content.RealPath(targetPath, scripts.CheckRead)
+			if err == nil {
+				err = os.Remove(path)
+			}
+			if err != nil {
+				return fmt.Errorf("cannot perform 'until' removal: %w", err)
+			}
 		}
 	}
 

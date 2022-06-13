@@ -64,12 +64,20 @@ const (
 	//Base64Path PathKind = "base64"
 )
 
+type PathUntil string
+
+const (
+	UntilNone   PathUntil = ""
+	UntilMutate PathUntil = "mutate"
+)
+
 type PathInfo struct {
 	Kind PathKind
 	Info string
 	Mode uint
 
 	Mutable bool
+	Until   PathUntil
 }
 
 type SliceKey struct {
@@ -313,12 +321,13 @@ type yamlPackage struct {
 }
 
 type yamlPath struct {
-	Dir     bool   `yaml:"make"`
-	Mode    uint   `yaml:"mode"`
-	Copy    string `yaml:"copy"`
-	Text    string `yaml:"text"`
-	Symlink string `yaml:"symlink"`
-	Mutable bool   `yaml:"mutable"`
+	Dir     bool      `yaml:"make"`
+	Mode    uint      `yaml:"mode"`
+	Copy    string    `yaml:"copy"`
+	Text    string    `yaml:"text"`
+	Symlink string    `yaml:"symlink"`
+	Mutable bool      `yaml:"mutable"`
+	Until   PathUntil `yaml:"until"`
 }
 
 type yamlSlice struct {
@@ -439,6 +448,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 			var info string
 			var mode uint
 			var mutable bool
+			var until PathUntil
 			if strings.ContainsAny(contPath, "*?") {
 				if yamlPath != nil && (yamlPath.Mode != 0 || yamlPath.Mutable) {
 					return nil, fmt.Errorf("invalid slice %s_%s definition for path %s: cannot define details when using wildcards",
@@ -471,6 +481,16 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 						info = ""
 					}
 				}
+				until = yamlPath.Until
+				switch until {
+				case UntilNone:
+				case UntilMutate:
+					if strings.HasSuffix(contPath, "/") {
+						return nil, fmt.Errorf("slice %s_%s has 'until' on a directory: %s", pkgName, sliceName, contPath)
+					}
+				default:
+					return nil, fmt.Errorf("slice %s_%s has invalid 'until' for path %s: %q", pkgName, sliceName, contPath, until)
+				}
 			}
 			if len(kinds) == 0 {
 				kinds = append(kinds, CopyPath)
@@ -490,6 +510,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 				Info:    info,
 				Mode:    mode,
 				Mutable: mutable,
+				Until:   until,
 			}
 		}
 

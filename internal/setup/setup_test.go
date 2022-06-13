@@ -75,7 +75,7 @@ var setupTests = []setupTest{{
 						/file/path1:
 						/file/path2: {copy: /other/path}
 						/file/path3: {symlink: /other/path}
-						/file/path4: {text: "content"}
+						/file/path4: {text: content, until: mutate}
 						/file/path5: {mode: 0755, mutable: true}
 						/file/path6/: {make: true}
 				myslice2:
@@ -104,7 +104,7 @@ var setupTests = []setupTest{{
 							"/file/path1":  {Kind: "copy"},
 							"/file/path2":  {Kind: "copy", Info: "/other/path"},
 							"/file/path3":  {Kind: "symlink", Info: "/other/path"},
-							"/file/path4":  {Kind: "text", Info: "content"},
+							"/file/path4":  {Kind: "text", Info: "content", Until: "mutate"},
 							"/file/path5":  {Kind: "copy", Mode: 0755, Mutable: true},
 							"/file/path6/": {Kind: "dir"},
 						},
@@ -531,6 +531,30 @@ var setupTests = []setupTest{{
 		`,
 	},
 	relerror:  `slice mypkg_myslice mutable is not a regular file: /path`,
+}, {
+	summary: "Until does not work for directories",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+					contents:
+						/path/: {until: mutate}
+		`,
+	},
+	relerror:  `slice mypkg_myslice has 'until' on a directory: /path/`,
+}, {
+	summary: "Until checks its value for validity",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+					contents:
+						/path: {until: foo}
+		`,
+	},
+	relerror:  `slice mypkg_myslice has invalid 'until' for path /path: "foo"`,
 }}
 
 const defaultChiselYaml = `

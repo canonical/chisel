@@ -13,9 +13,9 @@ import (
 type Value = starlark.Value
 
 type RunOptions struct {
-	Label      string
-	Namespace  map[string]Value
-	Script     string
+	Label     string
+	Namespace map[string]Value
+	Script    string
 }
 
 func Run(opts *RunOptions) error {
@@ -77,41 +77,42 @@ func (c *ContentValue) AttrNames() []string {
 // Content methods
 // --------------------------------------------------------------------------
 
+type Check uint
+
 const (
-	checkNone  = 0
-	checkWrite = 1
-	checkRead  = 2
+	CheckNone = 0
+	CheckRead = 1 << iota
+	CheckWrite
 )
 
-func (c *ContentValue) realPath(path starlark.String, checkWhat int) (string, error) {
-	fpath := path.GoString()
-	if !filepath.IsAbs(fpath) {
-		return "", fmt.Errorf("content path must be absolute, got: %s", path.GoString())
+func (c *ContentValue) RealPath(path string, what Check) (string, error) {
+	if !filepath.IsAbs(path) {
+		return "", fmt.Errorf("content path must be absolute, got: %s", path)
 	}
-	cpath := filepath.Clean(fpath)
-	if c.CheckRead != nil && checkWhat&checkRead != 0 {
+	cpath := filepath.Clean(path)
+	if c.CheckRead != nil && what&CheckRead != 0 {
 		err := c.CheckRead(cpath)
 		if err != nil {
 			return "", err
 		}
 	}
-	if c.CheckWrite != nil && checkWhat&checkWrite != 0 {
+	if c.CheckWrite != nil && what&CheckWrite != 0 {
 		err := c.CheckWrite(cpath)
 		if err != nil {
 			return "", err
 		}
 	}
-	rpath := filepath.Join(c.RootDir, fpath)
+	rpath := filepath.Join(c.RootDir, path)
 	if !filepath.IsAbs(rpath) || rpath != c.RootDir && !strings.HasPrefix(rpath, c.RootDir+string(filepath.Separator)) {
-		return "", fmt.Errorf("invalid content path: %s", path.GoString())
+		return "", fmt.Errorf("invalid content path: %s", path)
 	}
 	if lname, err := os.Readlink(rpath); err == nil {
 		lpath := filepath.Join(filepath.Dir(rpath), lname)
 		lrel, err := filepath.Rel(c.RootDir, lpath)
 		if err != nil || !filepath.IsAbs(lpath) || lpath != c.RootDir && !strings.HasPrefix(lpath, c.RootDir+string(filepath.Separator)) {
-			return "", fmt.Errorf("invalid content symlink: %s", path.GoString())
+			return "", fmt.Errorf("invalid content symlink: %s", path)
 		}
-		_, err = c.realPath(starlark.String("/" + lrel), checkWhat)
+		_, err = c.RealPath("/"+lrel, what)
 		if err != nil {
 			return "", err
 		}
@@ -133,7 +134,7 @@ func (c *ContentValue) Read(thread *starlark.Thread, fn *starlark.Builtin, args 
 		return nil, err
 	}
 
-	fpath, err := c.realPath(path, checkRead)
+	fpath, err := c.RealPath(path.GoString(), CheckRead)
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +153,7 @@ func (c *ContentValue) Write(thread *starlark.Thread, fn *starlark.Builtin, args
 		return nil, err
 	}
 
-	fpath, err := c.realPath(path, checkWrite)
+	fpath, err := c.RealPath(path.GoString(), CheckWrite)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +175,7 @@ func (c *ContentValue) List(thread *starlark.Thread, fn *starlark.Builtin, args 
 		return nil, err
 	}
 
-	fpath, err := c.realPath(path, checkRead)
+	fpath, err := c.RealPath(path.GoString(), CheckRead)
 	if err != nil {
 		return nil, err
 	}
