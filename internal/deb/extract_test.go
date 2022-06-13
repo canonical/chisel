@@ -13,6 +13,7 @@ type extractTest struct {
 	summary string
 	pkgdata []byte
 	options deb.ExtractOptions
+	globbed map[string][]string
 	result  map[string]string
 	error   string
 }
@@ -59,21 +60,6 @@ var extractTests = []extractTest{{
 		"/etc/os-release":     "symlink ../usr/lib/os-release",
 	},
 }, {
-	summary: "Globbing a single dir level",
-	pkgdata: testutil.PackageData["base-files"],
-	options: deb.ExtractOptions{
-		Extract: map[string][]deb.ExtractInfo{
-			"/etc/d*/": []deb.ExtractInfo{{
-				Path: "/etc/d*/",
-			}},
-		},
-	},
-	result: map[string]string{
-		"/etc/":         "dir 0755",
-		"/etc/dpkg/":    "dir 0755",
-		"/etc/default/": "dir 0755",
-	},
-}, {
 
 	summary: "Copy a couple of entries elsewhere",
 	pkgdata: testutil.PackageData["base-files"],
@@ -116,6 +102,21 @@ var extractTests = []extractTest{{
 		"/usr/bin/hallo": "file 0775 eaf29575",
 	},
 }, {
+	summary: "Globbing a single dir level",
+	pkgdata: testutil.PackageData["base-files"],
+	options: deb.ExtractOptions{
+		Extract: map[string][]deb.ExtractInfo{
+			"/etc/d*/": []deb.ExtractInfo{{
+				Path: "/etc/d*/",
+			}},
+		},
+	},
+	result: map[string]string{
+		"/etc/":         "dir 0755",
+		"/etc/dpkg/":    "dir 0755",
+		"/etc/default/": "dir 0755",
+	},
+}, {
 	summary: "Globbing for files with multiple levels at once",
 	pkgdata: testutil.PackageData["base-files"],
 	options: deb.ExtractOptions{
@@ -133,6 +134,29 @@ var extractTests = []extractTest{{
 		"/etc/dpkg/origins/ubuntu": "file 0644 d2537b95",
 		"/etc/default/":            "dir 0755",
 		"/etc/debian_version":      "file 0644 cce26cfe",
+	},
+}, {
+	summary: "Globbing with reporting of globbed paths",
+	pkgdata: testutil.PackageData["base-files"],
+	options: deb.ExtractOptions{
+		Extract: map[string][]deb.ExtractInfo{
+			"/etc/de**": []deb.ExtractInfo{{
+				Path: "/etc/de**",
+			}},
+			"/etc/dp*/": []deb.ExtractInfo{{
+				Path: "/etc/dp*/",
+			}},
+		},
+	},
+	result: map[string]string{
+		"/etc/":                    "dir 0755",
+		"/etc/dpkg/":               "dir 0755",
+		"/etc/default/":            "dir 0755",
+		"/etc/debian_version":      "file 0644 cce26cfe",
+	},
+	globbed: map[string][]string{
+		"/etc/dp*/": []string{"/etc/dpkg/"},
+		"/etc/de**": []string{"/etc/debian_version", "/etc/default/"},
 	},
 }, {
 	summary: "Globbing must have matching source and target",
@@ -267,12 +291,20 @@ func (s *S) TestExtract(c *C) {
 		options.Package = "base-files"
 		options.TargetDir = dir
 
+		if test.globbed != nil {
+			options.Globbed = make(map[string][]string)
+		}
+
 		err := deb.Extract(bytes.NewBuffer(test.pkgdata), &options)
 		if test.error != "" {
 			c.Assert(err, ErrorMatches, test.error)
 			continue
 		} else {
 			c.Assert(err, IsNil)
+		}
+
+		if test.globbed != nil {
+			c.Assert(options.Globbed, DeepEquals, test.globbed)
 		}
 
 		result := testutil.TreeDump(dir)

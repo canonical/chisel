@@ -355,7 +355,7 @@ var setupTests = []setupTest{{
 						/foo: {make: true}
 		`,
 	},
-	relerror: `slice mypkg_myslice content "/foo" must end in / for 'make' to be valid`,
+	relerror: `slice mypkg_myslice path /foo must end in / for 'make' to be valid`,
 }, {
 	summary: "Slice path must be clean",
 	input: map[string]string{
@@ -496,6 +496,29 @@ var setupTests = []setupTest{{
 		`,
 	},
 }, {
+	summary: "Invalid glob options",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+					contents:
+						/file/foob*r: {text: foo}
+		`,
+	},
+	relerror:  `slice mypkg_myslice path /file/foob\*r has invalid wildcard options`,
+}, {
+	summary: "Until is an okay option for globs",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+					contents:
+						/file/foob*r: {until: mutate}
+		`,
+	},
+}, {
 	summary: "Mutable does not work for directories extractions",
 	input: map[string]string{
 		"slices/mydir/mypkg.yaml": `
@@ -531,18 +554,6 @@ var setupTests = []setupTest{{
 		`,
 	},
 	relerror:  `slice mypkg_myslice mutable is not a regular file: /path`,
-}, {
-	summary: "Until does not work for directories",
-	input: map[string]string{
-		"slices/mydir/mypkg.yaml": `
-			package: mypkg
-			slices:
-				myslice:
-					contents:
-						/path/: {until: mutate}
-		`,
-	},
-	relerror:  `slice mypkg_myslice has 'until' on a directory: /path/`,
 }, {
 	summary: "Until checks its value for validity",
 	input: map[string]string{

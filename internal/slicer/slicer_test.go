@@ -183,6 +183,41 @@ var slicerTests = []slicerTest{{
 		"/foo/file2": "file 0644 5b41362b",
 	},
 }, {
+	summary: "Script: use 'until' to remove wildcard after mutate",
+	slices:  []setup.SliceKey{{"base-files", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/base-files.yaml": `
+			package: base-files
+			slices:
+				myslice:
+					contents:
+						/usr/bin**:  {until: mutate}
+						/etc/passwd: {until: mutate, text: data1}
+		`,
+	},
+	result: map[string]string{
+		"/usr/": "dir 0755",
+		"/etc/": "dir 0755",
+	},
+}, {
+	summary: "Script: 'until' does not remove non-empty directories",
+	slices:  []setup.SliceKey{{"base-files", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/base-files.yaml": `
+			package: base-files
+			slices:
+				myslice:
+					contents:
+						/usr/bin/: {until: mutate}
+						/usr/bin/hallo: {copy: /usr/bin/hello}
+		`,
+	},
+	result: map[string]string{
+		"/usr/":          "dir 0755",
+		"/usr/bin/":      "dir 0755",
+		"/usr/bin/hallo": "file 0775 eaf29575",
+	},
+}, {
 	summary: "Script: cannot write non-mutable files",
 	slices:  []setup.SliceKey{{"base-files", "myslice"}},
 	release: map[string]string{
@@ -196,7 +231,7 @@ var slicerTests = []slicerTest{{
 						content.write("/tmp/file1", "data2")
 		`,
 	},
-	error: `slice base-files_myslice: cannot write file not mutable: /tmp/file1`,
+	error: `slice base-files_myslice: cannot write file which is not mutable: /tmp/file1`,
 }, {
 	summary: "Script: cannot read unlisted content",
 	slices:  []setup.SliceKey{{"base-files", "myslice2"}},
@@ -212,7 +247,22 @@ var slicerTests = []slicerTest{{
 						content.read("/tmp/file1")
 		`,
 	},
-	error: `slice base-files_myslice2: cannot read file not selected: /tmp/file1`,
+	error: `slice base-files_myslice2: cannot read file which is not selected: /tmp/file1`,
+}, {
+	summary: "Script: can read globbed content",
+	slices:  []setup.SliceKey{{"base-files", "myslice1"}, {"base-files", "myslice2"}},
+	release: map[string]string{
+		"slices/mydir/base-files.yaml": `
+			package: base-files
+			slices:
+				myslice1:
+					contents:
+						/usr/bin/*:
+				myslice2:
+					mutate: |
+						content.read("/usr/bin/hello")
+		`,
+	},
 }}
 
 const defaultChiselYaml = `
@@ -284,6 +334,8 @@ func (s *S) TestRun(c *C) {
 			continue
 		}
 
-		c.Assert(testutil.TreeDump(targetDir), DeepEquals, test.result)
+		if test.result != nil {
+			c.Assert(testutil.TreeDump(targetDir), DeepEquals, test.result)
+		}
 	}
 }

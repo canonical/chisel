@@ -410,6 +410,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 	}
 	pkg.Archive = yamlPkg.Archive
 
+	zeroPath := yamlPath{}
 	for sliceName, yamlSlice := range yamlPkg.Slices {
 		match := snameExp.FindStringSubmatch(sliceName)
 		if match == nil {
@@ -450,9 +451,13 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 			var mutable bool
 			var until PathUntil
 			if strings.ContainsAny(contPath, "*?") {
-				if yamlPath != nil && (yamlPath.Mode != 0 || yamlPath.Mutable) {
-					return nil, fmt.Errorf("invalid slice %s_%s definition for path %s: cannot define details when using wildcards",
-						pkgName, sliceName, contPath)
+				if yamlPath != nil {
+					copy := *yamlPath
+					copy.Until = ""
+					if copy != zeroPath {
+						return nil, fmt.Errorf("slice %s_%s path %s has invalid wildcard options",
+							pkgName, sliceName, contPath)
+					}
 				}
 				kinds = append(kinds, GlobPath)
 			}
@@ -461,7 +466,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 				mutable = yamlPath.Mutable
 				if yamlPath.Dir {
 					if !strings.HasSuffix(contPath, "/") {
-						return nil, fmt.Errorf("slice %s_%s content %q must end in / for 'make' to be valid",
+						return nil, fmt.Errorf("slice %s_%s path %s must end in / for 'make' to be valid",
 							pkgName, sliceName, contPath)
 					}
 					kinds = append(kinds, DirPath)
@@ -483,11 +488,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 				}
 				until = yamlPath.Until
 				switch until {
-				case UntilNone:
-				case UntilMutate:
-					if strings.HasSuffix(contPath, "/") {
-						return nil, fmt.Errorf("slice %s_%s has 'until' on a directory: %s", pkgName, sliceName, contPath)
-					}
+				case UntilNone, UntilMutate:
 				default:
 					return nil, fmt.Errorf("slice %s_%s has invalid 'until' for path %s: %q", pkgName, sliceName, contPath, until)
 				}

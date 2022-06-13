@@ -24,6 +24,7 @@ type ExtractOptions struct {
 	Package   string
 	TargetDir string
 	Extract   map[string][]ExtractInfo
+	Globbed   map[string][]string
 }
 
 type ExtractInfo struct {
@@ -168,6 +169,9 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 		if globPath != "" {
 			extractInfos = options.Extract[globPath]
 			delete(pendingPaths, globPath)
+			if options.Globbed != nil {
+				options.Globbed[globPath] = append(options.Globbed[globPath], sourcePath)
+			}
 		} else {
 			extractInfos, ok = options.Extract[sourcePath]
 			if ok {

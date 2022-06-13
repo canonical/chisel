@@ -90,6 +90,9 @@ func (c *ContentValue) RealPath(path string, what Check) (string, error) {
 		return "", fmt.Errorf("content path must be absolute, got: %s", path)
 	}
 	cpath := filepath.Clean(path)
+	if strings.HasSuffix(path, "/") {
+		cpath += "/"
+	}
 	if c.CheckRead != nil && what&CheckRead != 0 {
 		err := c.CheckRead(cpath)
 		if err != nil {
@@ -175,7 +178,11 @@ func (c *ContentValue) List(thread *starlark.Thread, fn *starlark.Builtin, args 
 		return nil, err
 	}
 
-	fpath, err := c.RealPath(path.GoString(), CheckRead)
+	dpath := path.GoString()
+	if !strings.HasSuffix(dpath, "/") {
+		dpath += "/"
+	}
+	fpath, err := c.RealPath(dpath, CheckRead)
 	if err != nil {
 		return nil, err
 	}

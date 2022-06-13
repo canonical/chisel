@@ -143,7 +143,18 @@ var scriptsTests = []scriptsTest{{
 		content.list("/foo/../bar/")
 	`,
 	checkr: func(p string) error { return fmt.Errorf("no read: %s", p) },
-	error:  `no read: /bar`,
+	error:  `no read: /bar/`,
+}, {
+	summary: "Check lists",
+	content: map[string]string{
+		"bar/file1.txt": `data1`,
+	},
+	script: `
+		content.write("/foo/../bar/file2.txt", "data2")
+		content.list("/foo/../bar")
+	`,
+	checkr: func(p string) error { return fmt.Errorf("no read: %s", p) },
+	error:  `no read: /bar/`,
 }, {
 	summary: "Check reads on symlinks",
 	content: map[string]string{

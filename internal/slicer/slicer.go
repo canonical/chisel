@@ -14,6 +14,7 @@ import (
 	"github.com/canonical/chisel/internal/fsutil"
 	"github.com/canonical/chisel/internal/scripts"
 	"github.com/canonical/chisel/internal/setup"
+	"github.com/canonical/chisel/internal/strdist"
 )
 
 type RunOptions struct {
@@ -28,6 +29,7 @@ func Run(options *RunOptions) error {
 	extract := make(map[string]map[string][]deb.ExtractInfo)
 	pathInfos := make(map[string]setup.PathInfo)
 
+	targetDir := filepath.Clean(options.TargetDir)
 	release := options.Selection.Release
 
 	// Build information to process the selection.
@@ -86,6 +88,8 @@ func Run(options *RunOptions) error {
 		packages[slice.Package] = reader
 	}
 
+	globbedPaths := make(map[string][]string)
+
 	// Extract all packages, also using the selection order.
 	for _, slice := range options.Selection.Slices {
 		reader := packages[slice.Package]
@@ -95,7 +99,8 @@ func Run(options *RunOptions) error {
 		err := deb.Extract(reader, &deb.ExtractOptions{
 			Package:   slice.Package,
 			Extract:   extract[slice.Package],
-			TargetDir: options.TargetDir,
+			TargetDir: targetDir,
+			Globbed:   globbedPaths,
 		})
 		reader.Close()
 		packages[slice.Package] = nil
@@ -112,7 +117,7 @@ func Run(options *RunOptions) error {
 				continue
 			}
 			done[targetPath] = true
-			targetPath = filepath.Join(options.TargetDir, targetPath)
+			targetPath = filepath.Join(targetDir, targetPath)
 			targetMode := pathInfo.Mode
 			if targetMode == 0 {
 				if pathInfo.Kind == setup.DirPath {
@@ -155,18 +160,23 @@ func Run(options *RunOptions) error {
 	// dependencies must run before dependents.
 	checkWrite := func(path string) error {
 		if !pathInfos[path].Mutable {
-			return fmt.Errorf("cannot write file not mutable: %s", path)
+			return fmt.Errorf("cannot write file which is not mutable: %s", path)
 		}
 		return nil
 	}
 	checkRead := func(path string) error {
 		if _, ok := pathInfos[path]; !ok {
-			return fmt.Errorf("cannot read file not selected: %s", path)
+			for globPath := range globbedPaths {
+				if strdist.GlobPath(globPath, path) {
+					return nil
+				}
+			}
+			return fmt.Errorf("cannot read file which is not selected: %s", path)
 		}
 		return nil
 	}
 	content := &scripts.ContentValue{
-		RootDir:    options.TargetDir,
+		RootDir:    targetDir,
 		CheckWrite: checkWrite,
 		CheckRead:  checkRead,
 	}
@@ -184,15 +194,35 @@ func Run(options *RunOptions) error {
 		}
 	}
 
+	var untilDirs []string
 	for targetPath, pathInfo := range pathInfos {
 		if pathInfo.Until == setup.UntilMutate {
-			path, err := content.RealPath(targetPath, scripts.CheckRead)
-			if err == nil {
-				err = os.Remove(path)
+			var targetPaths []string
+			if pathInfo.Kind == setup.GlobPath {
+				targetPaths = globbedPaths[targetPath]
+			} else {
+				targetPaths = []string{targetPath}
 			}
-			if err != nil {
-				return fmt.Errorf("cannot perform 'until' removal: %w", err)
+			for _, targetPath := range targetPaths {
+				realPath, err := content.RealPath(targetPath, scripts.CheckRead)
+				if err == nil {
+					if strings.HasSuffix(targetPath, "/") {
+						untilDirs = append(untilDirs, realPath)
+					} else {
+						err = os.Remove(realPath)
+					}
+				}
+				if err != nil {
+					return fmt.Errorf("cannot perform 'until' removal: %w", err)
+				}
 			}
+		}
+	}
+	for _, realPath := range untilDirs {
+		err := os.Remove(realPath)
+		// The non-empty directory error is caught by IsExist as well.
+		if err != nil && !os.IsExist(err) {
+			return fmt.Errorf("cannot perform 'until' removal: %#v", err)
 		}
 	}
 
