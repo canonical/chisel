@@ -24,6 +24,13 @@ type scriptsTest struct {
 }
 
 var scriptsTests = []scriptsTest{{
+	summary: "Allow reassignment (non-standard Starlark)",
+	script: `
+		data = 1
+		data = 2
+	`,
+	result: map[string]string{},
+}, {
 	summary: "Overwrite a couple of files",
 	content: map[string]string{
 		"foo/file1.txt": ``,

@@ -2,6 +2,7 @@ package scripts
 
 import (
 	"go.starlark.net/starlark"
+	"go.starlark.net/resolve"
 
 	"fmt"
 	"io/ioutil"
@@ -9,6 +10,10 @@ import (
 	"path/filepath"
 	"strings"
 )
+
+func init() {
+	resolve.AllowGlobalReassign = true
+}
 
 type Value = starlark.Value
 
