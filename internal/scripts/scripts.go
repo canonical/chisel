@@ -86,6 +86,9 @@ const (
 )
 
 func (c *ContentValue) RealPath(path string, what Check) (string, error) {
+	if !filepath.IsAbs(c.RootDir) {
+		return "", fmt.Errorf("internal error: content defined with relative root: %s", c.RootDir)
+	}
 	if !filepath.IsAbs(path) {
 		return "", fmt.Errorf("content path must be absolute, got: %s", path)
 	}

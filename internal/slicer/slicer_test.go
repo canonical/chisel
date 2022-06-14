@@ -20,6 +20,7 @@ type slicerTest struct {
 	summary string
 	release map[string]string
 	slices  []setup.SliceKey
+	hackopt func(c *C, opts *slicer.RunOptions)
 	result  map[string]string
 	error   string
 }
@@ -263,6 +264,26 @@ var slicerTests = []slicerTest{{
 						content.read("/usr/bin/hello")
 		`,
 	},
+}, {
+	summary: "Relative content root directory must not error",
+	slices:  []setup.SliceKey{{"base-files", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/base-files.yaml": `
+			package: base-files
+			slices:
+				myslice:
+					contents:
+						/tmp/file1: {text: data1}
+					mutate: |
+						content.read("/tmp/file1")
+		`,
+	},
+	hackopt: func(c *C, opts *slicer.RunOptions) {
+		dir, err := os.Getwd()
+		c.Assert(err, IsNil)
+		opts.TargetDir, err = filepath.Rel(dir, opts.TargetDir)
+		c.Assert(err, IsNil)
+	},
 }}
 
 const defaultChiselYaml = `
@@ -325,6 +346,9 @@ func (s *S) TestRun(c *C) {
 			Selection: selection,
 			Archives:  archives,
 			TargetDir: targetDir,
+		}
+		if test.hackopt != nil {
+			test.hackopt(c, &options)
 		}
 		err = slicer.Run(&options)
 		if test.error == "" {

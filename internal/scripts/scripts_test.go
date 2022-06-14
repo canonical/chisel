@@ -233,3 +233,9 @@ func (s *S) TestScripts(c *C) {
 		c.Assert(testutil.TreeDump(rootDir), DeepEquals, test.result)
 	}
 }
+
+func (s *S) TestContentRelative(c *C) {
+	content := scripts.ContentValue{RootDir: "foo"}
+	_, err := content.RealPath("/bar", scripts.CheckNone)
+	c.Assert(err, ErrorMatches, "internal error: content defined with relative root: foo")
+}

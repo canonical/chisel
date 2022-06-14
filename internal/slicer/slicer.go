@@ -29,8 +29,16 @@ func Run(options *RunOptions) error {
 	extract := make(map[string]map[string][]deb.ExtractInfo)
 	pathInfos := make(map[string]setup.PathInfo)
 
-	targetDir := filepath.Clean(options.TargetDir)
 	release := options.Selection.Release
+	targetDir := filepath.Clean(options.TargetDir)
+	targetDirAbs := targetDir
+	if !filepath.IsAbs(targetDirAbs) {
+		dir, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("cannot obtain current directory: %w", err)
+		}
+		targetDirAbs = filepath.Join(dir, targetDir)
+	}
 
 	// Build information to process the selection.
 	for _, slice := range options.Selection.Slices {
@@ -176,7 +184,7 @@ func Run(options *RunOptions) error {
 		return nil
 	}
 	content := &scripts.ContentValue{
-		RootDir:    targetDir,
+		RootDir:    targetDirAbs,
 		CheckWrite: checkWrite,
 		CheckRead:  checkRead,
 	}
