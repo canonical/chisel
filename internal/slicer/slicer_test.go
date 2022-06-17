@@ -38,7 +38,7 @@ var slicerTests = []slicerTest{{
 						/usr/bin/hallo: {copy: /usr/bin/hello}
 						/bin/hallo:     {symlink: ../usr/bin/hallo}
 						/etc/passwd:    {text: data1}
-						/etc/dir/sub/:  {make: true, mode: 01775}
+						/etc/dir/sub/:  {make: true, mode: 01777}
 		`,
 	},
 	result: map[string]string{
@@ -50,7 +50,7 @@ var slicerTests = []slicerTest{{
 		"/bin/hallo":     "symlink ../usr/bin/hallo",
 		"/etc/":          "dir 0755",
 		"/etc/dir/":      "dir 0755",
-		"/etc/dir/sub/":  "dir 01775",
+		"/etc/dir/sub/":  "dir 01777",
 		"/etc/passwd":    "file 0644 5b41362b",
 	},
 }, {
@@ -84,7 +84,7 @@ var slicerTests = []slicerTest{{
 		`,
 	},
 	result: map[string]string{
-		"/tmp/":    "dir 01775", // This is the magic.
+		"/tmp/":    "dir 01777", // This is the magic.
 		"/tmp/new": "file 0644 5b41362b",
 	},
 }, {
@@ -101,7 +101,7 @@ var slicerTests = []slicerTest{{
 		`,
 	},
 	result: map[string]string{
-		"/tmp/":        "dir 01775", // This is the magic.
+		"/tmp/":        "dir 01777", // This is the magic.
 		"/tmp/new/":    "dir 0755",
 		"/tmp/new/sub": "file 0644 5b41362b",
 	},
@@ -119,7 +119,7 @@ var slicerTests = []slicerTest{{
 		`,
 	},
 	result: map[string]string{
-		"/tmp/":     "dir 01775", // This is the magic.
+		"/tmp/":     "dir 01777", // This is the magic.
 		"/tmp/new/": "dir 0755",
 	},
 }, {
@@ -137,7 +137,7 @@ var slicerTests = []slicerTest{{
 		`,
 	},
 	result: map[string]string{
-		"/tmp/":      "dir 01775",
+		"/tmp/":      "dir 01777",
 		"/tmp/file1": "file 0644 d98cf53e",
 	},
 }, {
@@ -157,7 +157,7 @@ var slicerTests = []slicerTest{{
 		`,
 	},
 	result: map[string]string{
-		"/tmp/":      "dir 01775",
+		"/tmp/":      "dir 01777",
 		"/tmp/file1": "file 0644 5b41362b",
 		"/foo/":      "dir 0755",
 		"/foo/file2": "file 0644 5b41362b",
@@ -179,7 +179,7 @@ var slicerTests = []slicerTest{{
 		`,
 	},
 	result: map[string]string{
-		"/tmp/":      "dir 01775",
+		"/tmp/":      "dir 01777",
 		"/foo/":      "dir 0755",
 		"/foo/file2": "file 0644 5b41362b",
 	},

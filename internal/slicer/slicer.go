@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/deb"
@@ -28,6 +29,11 @@ func Run(options *RunOptions) error {
 	archives := make(map[string]archive.Archive)
 	extract := make(map[string]map[string][]deb.ExtractInfo)
 	pathInfos := make(map[string]setup.PathInfo)
+
+	oldUmask := syscall.Umask(0)
+	defer func() {
+		syscall.Umask(oldUmask)
+	}()
 
 	release := options.Selection.Release
 	targetDir := filepath.Clean(options.TargetDir)
