@@ -46,6 +46,7 @@ var ubuntuAnimals = map[string]string{
 	"18.04": "bionic",
 	"20.04": "focal",
 	"22.04": "jammy",
+	"22.10": "kinetic",
 }
 
 type ubuntuArchive struct {
