@@ -15,8 +15,8 @@ import (
 
 func (s *S) TestOpenArchive(c *C) {
 	options := archive.Options{
-		Label:   "ubuntu",
-		Version: "22.04",
+		Label:    "ubuntu",
+		Version:  "22.04",
 		CacheDir: c.MkDir(),
 		Arch:     "amd64",
 	}
@@ -26,14 +26,14 @@ func (s *S) TestOpenArchive(c *C) {
 
 	extractDir := c.MkDir()
 
-	pkg, err := archive.Fetch("run-one")
+	pkg, err := archive.Fetch("hostname")
 	c.Assert(err, IsNil)
 
 	err = deb.Extract(pkg, &deb.ExtractOptions{
-		Package:   "run-one",
+		Package:   "hostname",
 		TargetDir: extractDir,
 		Extract: map[string][]deb.ExtractInfo{
-			"/usr/share/doc/run-one/copyright": {
+			"/usr/share/doc/hostname/copyright": {
 				{Path: "/copyright"},
 			},
 		},
@@ -43,5 +43,6 @@ func (s *S) TestOpenArchive(c *C) {
 	data, err := ioutil.ReadFile(filepath.Join(extractDir, "copyright"))
 	c.Assert(err, IsNil)
 
-	c.Assert(strings.Contains(string(data), "Upstream-Name: run-one"), Equals, true)
+	copyrightTop := "This package was written by Peter Tobias <tobias@et-inf.fho-emden.de>\non Thu, 16 Jan 1997 01:00:34 +0100."
+	c.Assert(strings.HasPrefix(string(data), copyrightTop), Equals, true)
 }
