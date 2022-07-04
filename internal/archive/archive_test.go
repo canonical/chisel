@@ -13,12 +13,12 @@ import (
 
 // TODO Implement local test server instead of using live archive.
 
-func (s *S) TestOpenArchive(c *C) {
+func (s *S) testOpenArchiveArch(c *C, arch string) {
 	options := archive.Options{
 		Label:    "ubuntu",
 		Version:  "22.04",
 		CacheDir: c.MkDir(),
-		Arch:     "amd64",
+		Arch:     arch,
 	}
 
 	archive, err := archive.Open(&options)
@@ -45,4 +45,9 @@ func (s *S) TestOpenArchive(c *C) {
 
 	copyrightTop := "This package was written by Peter Tobias <tobias@et-inf.fho-emden.de>\non Thu, 16 Jan 1997 01:00:34 +0100."
 	c.Assert(strings.HasPrefix(string(data), copyrightTop), Equals, true)
+}
+
+func (s *S) TestOpenArchive(c *C) {
+	s.testOpenArchiveArch(c, "amd64")
+	s.testOpenArchiveArch(c, "arm64")
 }

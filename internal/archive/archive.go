@@ -52,11 +52,15 @@ var ubuntuAnimals = map[string]string{
 type ubuntuArchive struct {
 	animal     string
 	options    Options
+	baseURL    string
 	release    control.Section
 	components []string
 	packages   map[string]control.File
 	cache      cache.Cache
 }
+
+const ubuntuURL = "http://archive.ubuntu.com/ubuntu/"
+const ubuntuPortsURL = "http://ports.ubuntu.com/ubuntu-ports/"
 
 func openUbuntu(options *Options) (Archive, error) {
 	animal := ubuntuAnimals[options.Version]
@@ -64,9 +68,18 @@ func openUbuntu(options *Options) (Archive, error) {
 		return nil, fmt.Errorf("no data about Ubuntu version %s", options.Version)
 	}
 
+	var baseURL string
+	switch options.Arch {
+	case "amd64", "i386":
+		baseURL = ubuntuURL
+	default:
+		baseURL = ubuntuPortsURL
+	}
+
 	archive := &ubuntuArchive{
 		animal:  animal,
 		options: *options,
+		baseURL: baseURL,
 		cache: cache.Cache{
 			Dir: options.CacheDir,
 		},
@@ -142,8 +155,6 @@ func (a *ubuntuArchive) Fetch(pkg string) (io.ReadCloser, error) {
 	return nil, fmt.Errorf("cannot find package %q in archive", pkg)
 }
 
-const ubuntuURL = "http://archive.ubuntu.com/ubuntu/"
-
 func (a *ubuntuArchive) fetch(suffix, digest string) (io.ReadCloser, error) {
 	reader, err := a.cache.Open(digest)
 	if err == nil {
@@ -154,9 +165,9 @@ func (a *ubuntuArchive) fetch(suffix, digest string) (io.ReadCloser, error) {
 
 	var url string
 	if strings.HasPrefix(suffix, "pool/") {
-		url = ubuntuURL + suffix
+		url = a.baseURL + suffix
 	} else {
-		url = ubuntuURL + "dists/" + a.animal + "/" + suffix
+		url = a.baseURL + "dists/" + a.animal + "/" + suffix
 	}
 
 	resp, err := httpClient.Get(url)
