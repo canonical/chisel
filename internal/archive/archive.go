@@ -10,6 +10,7 @@ import (
 
 	"github.com/canonical/chisel/internal/cache"
 	"github.com/canonical/chisel/internal/control"
+	"github.com/canonical/chisel/internal/deb"
 )
 
 type Archive interface {
@@ -28,8 +29,14 @@ func Open(options *Options) (Archive, error) {
 	if options.Label != "ubuntu" {
 		return nil, fmt.Errorf("non-ubuntu archives are not supported yet")
 	}
+	var err error
 	if options.Arch == "" {
-		return nil, fmt.Errorf("archive architecture is missing")
+		options.Arch, err = deb.InferArch()
+	} else {
+		err = deb.ValidateArch(options.Arch)
+	}
+	if err != nil {
+		return nil, err
 	}
 	return openUbuntu(options)
 }
