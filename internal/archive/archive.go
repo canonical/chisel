@@ -10,6 +10,7 @@ import (
 
 	"github.com/canonical/chisel/internal/cache"
 	"github.com/canonical/chisel/internal/control"
+	"github.com/canonical/chisel/internal/deb"
 )
 
 type Archive interface {
@@ -28,8 +29,14 @@ func Open(options *Options) (Archive, error) {
 	if options.Label != "ubuntu" {
 		return nil, fmt.Errorf("non-ubuntu archives are not supported yet")
 	}
+	var err error
 	if options.Arch == "" {
-		return nil, fmt.Errorf("archive architecture is missing")
+		options.Arch, err = deb.InferArch()
+	} else {
+		err = deb.ValidateArch(options.Arch)
+	}
+	if err != nil {
+		return nil, err
 	}
 	return openUbuntu(options)
 }
@@ -46,16 +53,21 @@ var ubuntuAnimals = map[string]string{
 	"18.04": "bionic",
 	"20.04": "focal",
 	"22.04": "jammy",
+	"22.10": "kinetic",
 }
 
 type ubuntuArchive struct {
 	animal     string
 	options    Options
+	baseURL    string
 	release    control.Section
 	components []string
 	packages   map[string]control.File
 	cache      cache.Cache
 }
+
+const ubuntuURL = "http://archive.ubuntu.com/ubuntu/"
+const ubuntuPortsURL = "http://ports.ubuntu.com/ubuntu-ports/"
 
 func openUbuntu(options *Options) (Archive, error) {
 	animal := ubuntuAnimals[options.Version]
@@ -63,9 +75,18 @@ func openUbuntu(options *Options) (Archive, error) {
 		return nil, fmt.Errorf("no data about Ubuntu version %s", options.Version)
 	}
 
+	var baseURL string
+	switch options.Arch {
+	case "amd64", "i386":
+		baseURL = ubuntuURL
+	default:
+		baseURL = ubuntuPortsURL
+	}
+
 	archive := &ubuntuArchive{
 		animal:  animal,
 		options: *options,
+		baseURL: baseURL,
 		cache: cache.Cache{
 			Dir: options.CacheDir,
 		},
@@ -141,8 +162,6 @@ func (a *ubuntuArchive) Fetch(pkg string) (io.ReadCloser, error) {
 	return nil, fmt.Errorf("cannot find package %q in archive", pkg)
 }
 
-const ubuntuURL = "http://archive.ubuntu.com/ubuntu/"
-
 func (a *ubuntuArchive) fetch(suffix, digest string) (io.ReadCloser, error) {
 	reader, err := a.cache.Open(digest)
 	if err == nil {
@@ -153,9 +172,9 @@ func (a *ubuntuArchive) fetch(suffix, digest string) (io.ReadCloser, error) {
 
 	var url string
 	if strings.HasPrefix(suffix, "pool/") {
-		url = ubuntuURL + suffix
+		url = a.baseURL + suffix
 	} else {
-		url = ubuntuURL + "dists/" + a.animal + "/" + suffix
+		url = a.baseURL + "dists/" + a.animal + "/" + suffix
 	}
 
 	resp, err := httpClient.Get(url)

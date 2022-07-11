@@ -23,11 +23,13 @@ to create a new filesystem tree in the root location.
 var cutDescs = map[string]string{
 	"release": "Chisel release directory",
 	"root":    "Root for generated content",
+	"arch":    "Package architecture",
 }
 
 type cmdCut struct {
 	Release string `long:"release" value-name:"<dir>"`
 	RootDir string `long:"root" value-name:"<dir>" required:"yes"`
+	Arch    string `long:"arch" value-name:"<arch>"`
 
 	Positional struct {
 		SliceRefs []string `positional-arg-name:"<slice names>" required:"yes"`
@@ -86,7 +88,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 			Label:    archiveName,
 			Version:  archiveInfo.Version,
 			CacheDir: cache.DefaultDir("chisel"),
-			Arch:     "amd64", // TODO Option for this, implied from running system
+			Arch:     cmd.Arch,
 		})
 		if err != nil {
 			return err
