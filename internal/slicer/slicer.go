@@ -63,6 +63,8 @@ func Run(options *RunOptions) error {
 			extract[slice.Package] = extractPackage
 		}
 		arch := archives[slice.Package].Options().Arch
+		copyrightPath := "/usr/share/doc/" + slice.Package + "/copyright"
+		hasCopyright := false
 		for targetPath, pathInfo := range slice.Contents {
 			if targetPath == "" {
 				continue
@@ -79,6 +81,9 @@ func Run(options *RunOptions) error {
 				extractPackage[sourcePath] = append(extractPackage[sourcePath], deb.ExtractInfo{
 					Path: targetPath,
 				})
+				if sourcePath == copyrightPath && targetPath == copyrightPath {
+					hasCopyright = true
+				}
 			} else {
 				targetDir := filepath.Dir(strings.TrimRight(targetPath, "/")) + "/"
 				if targetDir == "" || targetDir == "/" {
@@ -89,6 +94,12 @@ func Run(options *RunOptions) error {
 					Optional: true,
 				})
 			}
+		}
+		if !hasCopyright {
+			extractPackage[copyrightPath] = append(extractPackage[copyrightPath], deb.ExtractInfo{
+				Path:     copyrightPath,
+				Optional: true,
+			})
 		}
 	}
 
