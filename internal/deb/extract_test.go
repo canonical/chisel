@@ -2,6 +2,7 @@ package deb_test
 
 import (
 	"bytes"
+	"syscall"
 
 	. "gopkg.in/check.v1"
 
@@ -283,6 +284,10 @@ var extractTests = []extractTest{{
 }}
 
 func (s *S) TestExtract(c *C) {
+	oldUmask := syscall.Umask(02)
+	defer func() {
+		syscall.Umask(oldUmask)
+	}()
 
 	for _, test := range extractTests {
 		c.Logf("Test: %s", test.summary)
