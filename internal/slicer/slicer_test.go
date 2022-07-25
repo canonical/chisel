@@ -11,6 +11,7 @@ import (
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/chisel/internal/archive"
+	"github.com/canonical/chisel/internal/deb"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/slicer"
 	"github.com/canonical/chisel/internal/testutil"
@@ -18,6 +19,7 @@ import (
 
 type slicerTest struct {
 	summary string
+	arch    string
 	release map[string]string
 	slices  []setup.SliceKey
 	hackopt func(c *C, opts *slicer.RunOptions)
@@ -121,6 +123,33 @@ var slicerTests = []slicerTest{{
 	result: map[string]string{
 		"/tmp/":     "dir 01777", // This is the magic.
 		"/tmp/new/": "dir 0755",
+	},
+}, {
+	summary: "Conditional architecture",
+	arch:    "amd64",
+	slices:  []setup.SliceKey{{"base-files", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/base-files.yaml": `
+			package: base-files
+			slices:
+				myslice:
+					contents:
+						/tmp/file1: {text: data1, arch: amd64}
+						/tmp/file2: {text: data1, arch: i386}
+						/tmp/file3: {text: data1, arch: [i386, amd64]}
+						/usr/bin/hello1: {copy: /usr/bin/hello, arch: amd64}
+						/usr/bin/hello2: {copy: /usr/bin/hello, arch: i386}
+						/usr/bin/hello3: {copy: /usr/bin/hello, arch: [i386, amd64]}
+		`,
+	},
+	result: map[string]string{
+		"/tmp/":           "dir 01777",
+		"/tmp/file1":      "file 0644 5b41362b",
+		"/tmp/file3":      "file 0644 5b41362b",
+		"/usr/":           "dir 0755",
+		"/usr/bin/":       "dir 0755",
+		"/usr/bin/hello1": "file 0775 eaf29575",
+		"/usr/bin/hello3": "file 0775 eaf29575",
 	},
 }, {
 	summary: "Script: write a file",
@@ -311,7 +340,12 @@ func (a *testArchive) Exists(pkg string) bool {
 }
 
 func (s *S) TestRun(c *C) {
+	arch, _ := deb.InferArch()
 	for _, test := range slicerTests {
+		if test.arch != "" && test.arch != arch {
+			continue
+		}
+
 		c.Logf("Summary: %s", test.summary)
 
 		if _, ok := test.release["chisel.yaml"]; !ok {

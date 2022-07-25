@@ -65,7 +65,7 @@ var setupTests = []setupTest{{
 	},
 	relerror: `slices/mydir/mypkg.yaml: filename and 'package' field \("myotherpkg"\) disagree`,
 }, {
-	summary: "Simple example",
+	summary: "Coverage of multiple path kinds",
 	input: map[string]string{
 		"slices/mydir/mypkg.yaml": `
 			package: mypkg
@@ -566,6 +566,94 @@ var setupTests = []setupTest{{
 		`,
 	},
 	relerror:  `slice mypkg_myslice has invalid 'until' for path /path: "foo"`,
+}, {
+	summary: "Arch checks its value for validity",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+					contents:
+						/path: {arch: foo}
+		`,
+	},
+	relerror:  `slice mypkg_myslice has invalid 'arch' for path /path: "foo"`,
+}, {
+	summary: "Arch checks its value for validity",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+					contents:
+						/path: {arch: [i386, foo]}
+		`,
+	},
+	relerror:  `slice mypkg_myslice has invalid 'arch' for path /path: "foo"`,
+}, {
+	summary: "Single architecture selection",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+					contents:
+						/path: {arch: i386}
+		`,
+	},
+	release: &setup.Release{
+		DefaultArchive: "ubuntu",
+
+		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"main", "universe"}}},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Archive: "ubuntu",
+				Name:    "mypkg",
+				Path:    "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{
+					"myslice": {
+						Package: "mypkg",
+						Name:    "myslice",
+						Contents: map[string]setup.PathInfo{
+							"/path": {Kind: "copy", Arch: []string{"i386"}},
+						},
+					},
+				},
+			},
+		},
+	},
+}, {
+	summary: "Multiple architecture selection",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+					contents:
+						/path: {arch: [i386, amd64]}
+		`,
+	},
+	release: &setup.Release{
+		DefaultArchive: "ubuntu",
+
+		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"main", "universe"}}},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Archive: "ubuntu",
+				Name:    "mypkg",
+				Path:    "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{
+					"myslice": {
+						Package: "mypkg",
+						Name:    "myslice",
+						Contents: map[string]setup.PathInfo{
+							"/path": {Kind: "copy", Arch: []string{"i386", "amd64"}},
+						},
+					},
+				},
+			},
+		},
+	},
 }}
 
 const defaultChiselYaml = `

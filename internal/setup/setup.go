@@ -11,6 +11,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/canonical/chisel/internal/deb"
 	"github.com/canonical/chisel/internal/strdist"
 )
 
@@ -78,6 +79,18 @@ type PathInfo struct {
 
 	Mutable bool
 	Until   PathUntil
+	Arch    []string
+}
+
+// SameContent returns whether the path has the same content properties as some
+// other path. In other words, the resulting file/dir entry is the same. It
+// also returns true if the file is Mutable, as in that case both entries
+// would agree that the actual content is not well defined upfront.
+func (pi *PathInfo) SameContent(other *PathInfo) bool {
+	return (pi.Kind == other.Kind &&
+		pi.Info == other.Info &&
+		pi.Mode == other.Mode &&
+		pi.Mutable == other.Mutable)
 }
 
 type SliceKey struct {
@@ -133,7 +146,7 @@ func (r *Release) validate() error {
 			for newPath, newInfo := range new.Contents {
 				if old, ok := paths[newPath]; ok {
 					oldInfo := old.Contents[newPath]
-					if newInfo != oldInfo || (newInfo.Kind == CopyPath || newInfo.Kind == GlobPath) && new.Package != old.Package {
+					if !newInfo.SameContent(&oldInfo) || (newInfo.Kind == CopyPath || newInfo.Kind == GlobPath) && new.Package != old.Package {
 						if old.Package > new.Package || old.Package == new.Package && old.Name > new.Name {
 							old, new = new, old
 						}
@@ -321,13 +334,46 @@ type yamlPackage struct {
 }
 
 type yamlPath struct {
-	Dir     bool      `yaml:"make"`
-	Mode    uint      `yaml:"mode"`
-	Copy    string    `yaml:"copy"`
-	Text    string    `yaml:"text"`
-	Symlink string    `yaml:"symlink"`
-	Mutable bool      `yaml:"mutable"`
-	Until   PathUntil `yaml:"until"`
+	Dir     bool   `yaml:"make"`
+	Mode    uint   `yaml:"mode"`
+	Copy    string `yaml:"copy"`
+	Text    string `yaml:"text"`
+	Symlink string `yaml:"symlink"`
+	Mutable bool   `yaml:"mutable"`
+
+	Until PathUntil `yaml:"until"`
+	Arch  yamlArch  `yaml:"arch"`
+}
+
+// SameContent returns whether the path has the same content properties as some
+// other path. In other words, the resulting file/dir entry is the same. It
+// also returns true if the file is Mutable, as in that case both entries
+// would agree that the actual content is not well defined upfront.
+func (yp *yamlPath) SameContent(other *yamlPath) bool {
+	return (yp.Dir == other.Dir &&
+		yp.Mode == other.Mode &&
+		yp.Copy == other.Copy &&
+		yp.Text == other.Text &&
+		yp.Symlink == other.Symlink &&
+		yp.Mutable == other.Mutable)
+}
+
+type yamlArch struct {
+	list []string
+}
+
+func (ya *yamlArch) UnmarshalYAML(value *yaml.Node) error {
+	var s string
+	var l []string
+	if value.Decode(&s) == nil {
+		ya.list = []string{s}
+	} else if value.Decode(&l) == nil {
+		ya.list = l
+	} else {
+		return fmt.Errorf("cannot decode arch")
+	}
+	// Validate arch correctness later for a better error message.
+	return nil
 }
 
 type yamlSlice struct {
@@ -450,11 +496,10 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 			var mode uint
 			var mutable bool
 			var until PathUntil
+			var arch []string
 			if strings.ContainsAny(contPath, "*?") {
 				if yamlPath != nil {
-					copy := *yamlPath
-					copy.Until = ""
-					if copy != zeroPath {
+					if !yamlPath.SameContent(&zeroPath) {
 						return nil, fmt.Errorf("slice %s_%s path %s has invalid wildcard options",
 							pkgName, sliceName, contPath)
 					}
@@ -492,6 +537,12 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 				default:
 					return nil, fmt.Errorf("slice %s_%s has invalid 'until' for path %s: %q", pkgName, sliceName, contPath, until)
 				}
+				arch = yamlPath.Arch.list
+				for _, s := range arch {
+					if deb.ValidateArch(s) != nil {
+						return nil, fmt.Errorf("slice %s_%s has invalid 'arch' for path %s: %q", pkgName, sliceName, contPath, s)
+					}
+				}
 			}
 			if len(kinds) == 0 {
 				kinds = append(kinds, CopyPath)
@@ -512,6 +563,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 				Mode:    mode,
 				Mutable: mutable,
 				Until:   until,
+				Arch:    arch,
 			}
 		}
 
@@ -547,7 +599,7 @@ func Select(release *Release, slices []SliceKey) (*Selection, error) {
 		for newPath, newInfo := range new.Contents {
 			if old, ok := paths[newPath]; ok {
 				oldInfo := old.Contents[newPath]
-				if newInfo != oldInfo || (newInfo.Kind == CopyPath || newInfo.Kind == GlobPath) && new.Package != old.Package {
+				if !newInfo.SameContent(&oldInfo) || (newInfo.Kind == CopyPath || newInfo.Kind == GlobPath) && new.Package != old.Package {
 					if old.Package > new.Package || old.Package == new.Package && old.Name > new.Name {
 						old, new = new, old
 					}
