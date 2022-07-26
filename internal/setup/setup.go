@@ -83,9 +83,9 @@ type PathInfo struct {
 }
 
 // SameContent returns whether the path has the same content properties as some
-// other path. In other words, the resulting file/dir entry is the same. It
-// also returns true if the file is Mutable, as in that case both entries
-// would agree that the actual content is not well defined upfront.
+// other path. In other words, the resulting file/dir entry is the same. The
+// Mutable flag must also match, as that's a common agreement that the actual
+// content is not well defined upfront.
 func (pi *PathInfo) SameContent(other *PathInfo) bool {
 	return (pi.Kind == other.Kind &&
 		pi.Info == other.Info &&
@@ -346,9 +346,9 @@ type yamlPath struct {
 }
 
 // SameContent returns whether the path has the same content properties as some
-// other path. In other words, the resulting file/dir entry is the same. It
-// also returns true if the file is Mutable, as in that case both entries
-// would agree that the actual content is not well defined upfront.
+// other path. In other words, the resulting file/dir entry is the same. The
+// Mutable flag must also match, as that's a common agreement that the actual
+// content is not well defined upfront.
 func (yp *yamlPath) SameContent(other *yamlPath) bool {
 	return (yp.Dir == other.Dir &&
 		yp.Mode == other.Mode &&

@@ -46,12 +46,6 @@ func Run(options *RunOptions) error {
 		targetDirAbs = filepath.Join(dir, targetDir)
 	}
 
-	// TODO Move this function to setup as this is becoming part of chisel itself.
-	arch, err := deb.InferArch()
-	if err != nil {
-		return err
-	}
-
 	// Build information to process the selection.
 	for _, slice := range options.Selection.Slices {
 		extractPackage := extract[slice.Package]
@@ -68,6 +62,7 @@ func Run(options *RunOptions) error {
 			extractPackage = make(map[string][]deb.ExtractInfo)
 			extract[slice.Package] = extractPackage
 		}
+		arch := archives[slice.Package].Options().Arch
 		for targetPath, pathInfo := range slice.Contents {
 			if targetPath == "" {
 				continue
@@ -135,6 +130,7 @@ func Run(options *RunOptions) error {
 	// Create new content not coming from packages.
 	done := make(map[string]bool)
 	for _, slice := range options.Selection.Slices {
+		arch := archives[slice.Package].Options().Arch
 		for targetPath, pathInfo := range slice.Contents {
 			if len(pathInfo.Arch) > 0 && !contains(pathInfo.Arch, arch) {
 				continue

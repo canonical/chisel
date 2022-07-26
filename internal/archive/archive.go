@@ -14,6 +14,7 @@ import (
 )
 
 type Archive interface {
+	Options() *Options
 	Fetch(pkg string) (io.ReadCloser, error)
 	Exists(pkg string) bool
 }
@@ -64,6 +65,10 @@ type ubuntuArchive struct {
 	components []string
 	packages   map[string]control.File
 	cache      cache.Cache
+}
+
+func (a *ubuntuArchive) Options() *Options {
+	return &a.options
 }
 
 const ubuntuURL = "http://archive.ubuntu.com/ubuntu/"

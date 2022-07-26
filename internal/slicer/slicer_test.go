@@ -11,7 +11,6 @@ import (
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/chisel/internal/archive"
-	"github.com/canonical/chisel/internal/deb"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/slicer"
 	"github.com/canonical/chisel/internal/testutil"
@@ -324,7 +323,12 @@ const defaultChiselYaml = `
 `
 
 type testArchive struct {
+	arch string
 	pkgs map[string][]byte
+}
+
+func (a *testArchive) Options() *archive.Options {
+	return &archive.Options{Arch: a.arch}
 }
 
 func (a *testArchive) Fetch(pkg string) (io.ReadCloser, error) {
@@ -340,12 +344,7 @@ func (a *testArchive) Exists(pkg string) bool {
 }
 
 func (s *S) TestRun(c *C) {
-	arch, _ := deb.InferArch()
 	for _, test := range slicerTests {
-		if test.arch != "" && test.arch != arch {
-			continue
-		}
-
 		c.Logf("Summary: %s", test.summary)
 
 		if _, ok := test.release["chisel.yaml"]; !ok {
@@ -369,6 +368,7 @@ func (s *S) TestRun(c *C) {
 
 		archives := map[string]archive.Archive{
 			"ubuntu": &testArchive{
+				arch: test.arch,
 				pkgs: map[string][]byte{
 					"base-files": testutil.PackageData["base-files"],
 				},
