@@ -64,7 +64,7 @@ type ubuntuArchive struct {
 	baseURL    string
 	release    control.Section
 	components []string
-	packages   map[string]control.File
+	packages   map[string][]control.File
 	cache      cache.Cache
 }
 
@@ -106,41 +106,44 @@ func openUbuntu(options *Options) (Archive, error) {
 	}
 
 	logf("Fetching %s %s archive details...", options.Label, options.Version)
-	reader, err := archive.fetch("Release", "")
-	if err != nil {
-		return nil, err
-	}
 
-	ctrl, err := control.ParseReader("Label", reader)
-	if err != nil {
-		return nil, fmt.Errorf("parsing archive Release file: %v", err)
-	}
-	section := ctrl.Section("Ubuntu")
-	if section == nil {
-		return nil, fmt.Errorf("corrupted archive Release file: no Ubuntu section")
-	}
-	logf("Release date: %s", section.Get("Date"))
-
-	archive.release = section
-	archive.packages = make(map[string]control.File)
+	archive.packages = make(map[string][]control.File)
 	//archive.components = strings.Fields(section.Get("Components"))
 	archive.components = []string{"main", "universe"}
-
-	digests := archive.release.Get("SHA256")
-	for _, component := range archive.components {
-		packagesPath := fmt.Sprintf("%s/binary-%s/Packages", component, options.Arch)
-		digest, _, _ := control.ParsePathInfo(digests, packagesPath)
-		logf("Fetching %s %s %s component...", options.Label, options.Version, component)
-		reader, err = archive.fetch(packagesPath+".gz", digest)
+	for _, suite := range archive.suites {
+		reader, err := archive.fetch(suite, "Release", "")
 		if err != nil {
 			return nil, err
 		}
 
-		ctrl, err := control.ParseReader("Package", reader)
+		ctrl, err := control.ParseReader("Label", reader)
 		if err != nil {
-			return nil, fmt.Errorf("parsing archive Package file: %v", err)
+			return nil, fmt.Errorf("parsing archive Release file: %v", err)
 		}
-		archive.packages[component] = ctrl
+		section := ctrl.Section("Ubuntu")
+		if section == nil {
+			return nil, fmt.Errorf("corrupted archive Release file: no Ubuntu section")
+		}
+		logf("Release date for %s: %s", suite, section.Get("Date"))
+
+		archive.release = section
+
+		digests := archive.release.Get("SHA256")
+		for _, component := range archive.components {
+			packagesPath := fmt.Sprintf("%s/binary-%s/Packages", component, options.Arch)
+			digest, _, _ := control.ParsePathInfo(digests, packagesPath)
+			logf("Fetching %s %s %s %s component...", options.Label, options.Version, suite, component)
+			reader, err = archive.fetch(suite, packagesPath+".gz", digest)
+			if err != nil {
+				return nil, err
+			}
+
+			ctrl, err := control.ParseReader("Package", reader)
+			if err != nil {
+				return nil, fmt.Errorf("parsing archive Package file: %v", err)
+			}
+			archive.packages[component] = append(archive.packages[component], ctrl)
+		}
 	}
 
 	return archive, nil
@@ -148,34 +151,38 @@ func openUbuntu(options *Options) (Archive, error) {
 
 func (a *ubuntuArchive) Exists(pkg string) bool {
 	for _, component := range a.components {
-		section := a.packages[component].Section(pkg)
-		if section != nil && section.Get("Filename") != "" {
-			return true
+		for suite_index := 0; suite_index < len(a.packages[component]); suite_index++ {
+			section := a.packages[component][suite_index].Section(pkg)
+			if section != nil && section.Get("Filename") != "" {
+				return true
+			}
 		}
 	}
 	return false
 }
 
 func (a *ubuntuArchive) Fetch(pkg string) (io.ReadCloser, error) {
-	for _, component := range a.components {
-		section := a.packages[component].Section(pkg)
-		if section != nil {
-			suffix := section.Get("Filename")
-			if suffix == "" {
-				return nil, fmt.Errorf("package %q has no filename in archive", pkg)
+	for i, suite := range a.suites {
+		for _, component := range a.components {
+			section := a.packages[component][i].Section(pkg)
+			if section != nil {
+				suffix := section.Get("Filename")
+				if suffix == "" {
+					return nil, fmt.Errorf("package %q has no filename in archive", pkg)
+				}
+				logf("Fetching %s...", suffix)
+				reader, err := a.fetch(suite, "../../"+suffix, section.Get("SHA256"))
+				if err != nil {
+					return nil, err
+				}
+				return reader, nil
 			}
-			logf("Fetching %s...", suffix)
-			reader, err := a.fetch("../../"+suffix, section.Get("SHA256"))
-			if err != nil {
-				return nil, err
-			}
-			return reader, nil
 		}
 	}
 	return nil, fmt.Errorf("cannot find package %q in archive", pkg)
 }
 
-func (a *ubuntuArchive) fetch(suffix, digest string) (io.ReadCloser, error) {
+func (a *ubuntuArchive) fetch(suite, suffix, digest string) (io.ReadCloser, error) {
 	reader, err := a.cache.Open(digest)
 	if err == nil {
 		return reader, nil
@@ -183,51 +190,48 @@ func (a *ubuntuArchive) fetch(suffix, digest string) (io.ReadCloser, error) {
 		return nil, err
 	}
 
-	var urls []string
+	var url string
 	if strings.HasPrefix(suffix, "pool/") {
-		urls = append(urls, a.baseURL+suffix)
+		url = a.baseURL + suffix
 	} else {
-		for _, suite := range a.suites {
-			urls = append(urls, a.baseURL+"dists/"+suite+"/"+suffix)
+		url = a.baseURL + "dists/" + suite + "/" + suffix
+	}
+
+	resp, err := httpClient.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("cannot talk to archive: %v", err)
+	}
+	defer resp.Body.Close()
+
+	switch resp.StatusCode {
+	case 200:
+		// ok
+	case 401, 404:
+		return nil, fmt.Errorf("cannot find archive data")
+	default:
+		return nil, fmt.Errorf("error from archive: %v", resp.Status)
+	}
+
+	body := resp.Body
+	if strings.HasSuffix(suffix, ".gz") {
+		reader, err := gzip.NewReader(body)
+		if err != nil {
+			return nil, fmt.Errorf("cannot decompress data: %v", err)
 		}
+		defer reader.Close()
+		body = reader
 	}
 
 	writer := a.cache.Create(digest)
 	defer writer.Close()
-	for _, url := range urls {
-		resp, err := httpClient.Get(url)
-		if err != nil {
-			return nil, fmt.Errorf("cannot talk to archive: %v", err)
-		}
-		defer resp.Body.Close()
 
-		switch resp.StatusCode {
-		case 200:
-			// ok
-		case 401, 404:
-			return nil, fmt.Errorf("cannot find archive data")
-		default:
-			return nil, fmt.Errorf("error from archive: %v", resp.Status)
-		}
-
-		body := resp.Body
-		if strings.HasSuffix(suffix, ".gz") {
-			reader, err := gzip.NewReader(body)
-			if err != nil {
-				return nil, fmt.Errorf("cannot decompress data: %v", err)
-			}
-			defer reader.Close()
-			body = reader
-		}
-
-		_, err = io.Copy(writer, body)
-
-		if err != nil {
-			return nil, fmt.Errorf("cannot fetch from archive: %v", err)
-		}
-	}
+	_, err = io.Copy(writer, body)
 	if err == nil {
 		err = writer.Close()
 	}
+	if err != nil {
+		return nil, fmt.Errorf("cannot fetch from archive: %v", err)
+	}
+
 	return a.cache.Open(writer.Digest())
 }
