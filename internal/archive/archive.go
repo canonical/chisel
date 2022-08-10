@@ -59,6 +59,7 @@ var ubuntuAnimals = map[string]string{
 
 type ubuntuArchive struct {
 	animal     string
+	suites     []string
 	options    Options
 	baseURL    string
 	release    control.Section
@@ -80,6 +81,12 @@ func openUbuntu(options *Options) (Archive, error) {
 		return nil, fmt.Errorf("no data about Ubuntu version %s", options.Version)
 	}
 
+	suites := []string{animal}
+	suite_suffixes := []string{"updates", "security"}
+	for _, suite_suffix := range suite_suffixes {
+		suites = append(suites, animal+"-"+suite_suffix)
+	}
+
 	var baseURL string
 	switch options.Arch {
 	case "amd64", "i386":
@@ -90,6 +97,7 @@ func openUbuntu(options *Options) (Archive, error) {
 
 	archive := &ubuntuArchive{
 		animal:  animal,
+		suites:  suites,
 		options: *options,
 		baseURL: baseURL,
 		cache: cache.Cache{
@@ -175,48 +183,51 @@ func (a *ubuntuArchive) fetch(suffix, digest string) (io.ReadCloser, error) {
 		return nil, err
 	}
 
-	var url string
+	var urls []string
 	if strings.HasPrefix(suffix, "pool/") {
-		url = a.baseURL + suffix
+		urls = append(urls, a.baseURL+suffix)
 	} else {
-		url = a.baseURL + "dists/" + a.animal + "/" + suffix
-	}
-
-	resp, err := httpClient.Get(url)
-	if err != nil {
-		return nil, fmt.Errorf("cannot talk to archive: %v", err)
-	}
-	defer resp.Body.Close()
-
-	switch resp.StatusCode {
-	case 200:
-		// ok
-	case 401, 404:
-		return nil, fmt.Errorf("cannot find archive data")
-	default:
-		return nil, fmt.Errorf("error from archive: %v", resp.Status)
-	}
-
-	body := resp.Body
-	if strings.HasSuffix(suffix, ".gz") {
-		reader, err := gzip.NewReader(body)
-		if err != nil {
-			return nil, fmt.Errorf("cannot decompress data: %v", err)
+		for _, suite := range a.suites {
+			urls = append(urls, a.baseURL+"dists/"+suite+"/"+suffix)
 		}
-		defer reader.Close()
-		body = reader
 	}
 
 	writer := a.cache.Create(digest)
 	defer writer.Close()
+	for _, url := range urls {
+		resp, err := httpClient.Get(url)
+		if err != nil {
+			return nil, fmt.Errorf("cannot talk to archive: %v", err)
+		}
+		defer resp.Body.Close()
 
-	_, err = io.Copy(writer, body)
+		switch resp.StatusCode {
+		case 200:
+			// ok
+		case 401, 404:
+			return nil, fmt.Errorf("cannot find archive data")
+		default:
+			return nil, fmt.Errorf("error from archive: %v", resp.Status)
+		}
+
+		body := resp.Body
+		if strings.HasSuffix(suffix, ".gz") {
+			reader, err := gzip.NewReader(body)
+			if err != nil {
+				return nil, fmt.Errorf("cannot decompress data: %v", err)
+			}
+			defer reader.Close()
+			body = reader
+		}
+
+		_, err = io.Copy(writer, body)
+
+		if err != nil {
+			return nil, fmt.Errorf("cannot fetch from archive: %v", err)
+		}
+	}
 	if err == nil {
 		err = writer.Close()
 	}
-	if err != nil {
-		return nil, fmt.Errorf("cannot fetch from archive: %v", err)
-	}
-
 	return a.cache.Open(writer.Digest())
 }
