@@ -158,7 +158,7 @@ var helpCategories = []helpCategory{{
 }, {
 	Label:       "Action",
 	Description: "make things happen",
-	Commands:    []string{"slice"},
+	Commands:    []string{"cut"},
 }}
 
 var (
