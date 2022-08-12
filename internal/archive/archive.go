@@ -11,6 +11,7 @@ import (
 	"github.com/canonical/chisel/internal/cache"
 	"github.com/canonical/chisel/internal/control"
 	"github.com/canonical/chisel/internal/deb"
+	"pault.ag/go/debian/version"
 )
 
 type Archive interface {
@@ -162,24 +163,54 @@ func (a *ubuntuArchive) Exists(pkg string) bool {
 }
 
 func (a *ubuntuArchive) Fetch(pkg string) (io.ReadCloser, error) {
-	for i, suite := range a.suites {
+	var maxVersion *version.Version
+	var suite, filename, digest string
+	var archiveStr string
+
+	for i, candidateSuite := range a.suites {
 		for _, component := range a.components {
 			section := a.packages[component][i].Section(pkg)
 			if section != nil {
-				suffix := section.Get("Filename")
-				if suffix == "" {
-					return nil, fmt.Errorf("package %q has no filename in archive", pkg)
+				archiveStr = fmt.Sprintf("%s/%s/%s", a.options.Label, candidateSuite, component)
+				candidateVersionStr := section.Get("Version")
+				if candidateVersionStr == "" {
+					logf("package %s has no version in %s", pkg, archiveStr)
+					continue
 				}
-				logf("Fetching %s...", suffix)
-				reader, err := a.fetch(suite, "../../"+suffix, section.Get("SHA256"))
+				candidateVersion, err := version.Parse(candidateVersionStr)
 				if err != nil {
-					return nil, err
+					logf("package %s has invalid version in %s: %v", pkg, archiveStr, err)
+					continue
 				}
-				return reader, nil
+				if maxVersion != nil && version.Compare(*maxVersion, candidateVersion) >= 0 {
+					continue
+				}
+				candidateFilename := section.Get("Filename")
+				if candidateFilename == "" {
+					logf("package %s has no filename in %s", pkg, archiveStr)
+					continue
+				}
+				candidateDigest := section.Get("SHA256")
+				if candidateDigest == "" {
+					logf("package %s has no SHA256 digest in %s", pkg, archiveStr)
+					continue
+				}
+
+				maxVersion = &candidateVersion
+				suite = candidateSuite
+				filename = candidateFilename
+				digest = candidateDigest
 			}
 		}
 	}
-	return nil, fmt.Errorf("cannot find package %q in archive", pkg)
+
+	if maxVersion == nil {
+		return nil, fmt.Errorf("cannot find package %q in archive %s", pkg, a.options.Label)
+	}
+
+	logf("Found package %s in %s", pkg, archiveStr)
+	logf("Fetching %s", filename)
+	return a.fetch(suite, "../../"+filename, digest)
 }
 
 func (a *ubuntuArchive) fetch(suite, suffix, digest string) (io.ReadCloser, error) {
