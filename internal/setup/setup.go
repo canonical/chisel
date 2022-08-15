@@ -28,6 +28,7 @@ type Release struct {
 type Archive struct {
 	Name       string
 	Version    string
+	Suites     []string
 	Components []string
 }
 
@@ -323,6 +324,7 @@ const yamlReleaseFormat = "chisel-v1"
 
 type yamlArchive struct {
 	Version    string   `yaml:"version"`
+	Suites     []string `yaml:"suites"`
 	Components []string `yaml:"components"`
 	Default    bool     `yaml:"default"`
 }
@@ -382,6 +384,13 @@ type yamlSlice struct {
 	Mutate    string               `yaml:"mutate"`
 }
 
+var ubuntuAnimals = map[string]string{
+	"18.04": "bionic",
+	"20.04": "focal",
+	"22.04": "jammy",
+	"22.10": "kinetic",
+}
+
 func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 	release := &Release{
 		Path:     baseDir,
@@ -416,6 +425,13 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		if details.Version == "" {
 			return nil, fmt.Errorf("%s: archive %q missing version field", fileName, archiveName)
 		}
+		if len(details.Suites) == 0 {
+			animal := ubuntuAnimals[details.Version]
+			if animal == "" {
+				return nil, fmt.Errorf("%s: archive %q missing suites field", fileName, archiveName)
+			}
+			details.Suites = []string{animal}
+		}
 		if len(details.Components) == 0 {
 			return nil, fmt.Errorf("%s: archive %q missing components field", fileName, archiveName)
 		}
@@ -430,6 +446,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		release.Archives[archiveName] = &Archive{
 			Name:       archiveName,
 			Version:    details.Version,
+			Suites:     details.Suites,
 			Components: details.Components,
 		}
 	}

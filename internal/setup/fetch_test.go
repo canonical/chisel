@@ -17,7 +17,6 @@ func (s *S) TestFetch(c *C) {
 		Label: "ubuntu",
 		Version: "22.04",
 		CacheDir: c.MkDir(),
-
 	}
 
 	for fetch := 0; fetch < 3; fetch++ {

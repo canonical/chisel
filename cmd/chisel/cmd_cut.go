@@ -85,10 +85,12 @@ func (cmd *cmdCut) Execute(args []string) error {
 	archives := make(map[string]archive.Archive)
 	for archiveName, archiveInfo := range release.Archives {
 		openArchive, err := archive.Open(&archive.Options{
-			Label:    archiveName,
-			Version:  archiveInfo.Version,
-			CacheDir: cache.DefaultDir("chisel"),
-			Arch:     cmd.Arch,
+			Label:      archiveName,
+			Version:    archiveInfo.Version,
+			Arch:       cmd.Arch,
+			Suites:     archiveInfo.Suites,
+			Components: archiveInfo.Components,
+			CacheDir:   cache.DefaultDir("chisel"),
 		})
 		if err != nil {
 			return err

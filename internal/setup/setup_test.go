@@ -65,6 +65,34 @@ var setupTests = []setupTest{{
 	},
 	relerror: `slices/mydir/mypkg.yaml: filename and 'package' field \("myotherpkg"\) disagree`,
 }, {
+	summary: "Archive with multiple suites",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: chisel-v1
+			archives:
+				ubuntu:
+					version: 22.04
+					components: [main, other]
+					suites: [jammy, jammy-security]
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	release: &setup.Release{
+		DefaultArchive: "ubuntu",
+
+		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy", "jammy-security"}, []string{"main", "other"}}},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Archive: "ubuntu",
+				Name:    "mypkg",
+				Path:    "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{},
+			},
+		},
+	},
+}, {
 	summary: "Coverage of multiple path kinds",
 	input: map[string]string{
 		"slices/mydir/mypkg.yaml": `
@@ -90,7 +118,7 @@ var setupTests = []setupTest{{
 	release: &setup.Release{
 		DefaultArchive: "ubuntu",
 
-		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"main", "universe"}}},
+		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}}},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
 				Archive: "ubuntu",
@@ -144,7 +172,7 @@ var setupTests = []setupTest{{
 	release: &setup.Release{
 		DefaultArchive: "ubuntu",
 
-		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"main", "universe"}}},
+		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}}},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
 				Archive: "ubuntu",
@@ -397,7 +425,7 @@ var setupTests = []setupTest{{
 	release: &setup.Release{
 		DefaultArchive: "ubuntu",
 
-		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"main", "universe"}}},
+		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}}},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
 				Archive: "ubuntu",
@@ -604,7 +632,7 @@ var setupTests = []setupTest{{
 	release: &setup.Release{
 		DefaultArchive: "ubuntu",
 
-		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"main", "universe"}}},
+		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}}},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
 				Archive: "ubuntu",
@@ -636,7 +664,7 @@ var setupTests = []setupTest{{
 	release: &setup.Release{
 		DefaultArchive: "ubuntu",
 
-		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"main", "universe"}}},
+		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}}},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
 				Archive: "ubuntu",
