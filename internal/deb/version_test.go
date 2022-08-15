@@ -20,8 +20,6 @@
 package deb_test
 
 import (
-	"fmt"
-
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/chisel/internal/deb"
@@ -96,16 +94,14 @@ func (s *VersionTestSuite) TestVersionCompare(c *C) {
 		{"1.4+OOo3.0.0~", "1.4+OOo3.0.0-4", -1, nil}, // another tilde check
 		{"2.4.7-1", "2.4.7-z", -1, nil},              // revision comparing
 		{"1.002-1+b2", "1.00", 1, nil},               // whatever...
-
-		// broken
-		{"0--0", "0", 0, fmt.Errorf(`invalid version "0--0"`)},
+		{"12-20220319-1ubuntu1", "12-20220319-1ubuntu2", -1, nil}, // libgcc-s1
 	} {
 		res, err := deb.VersionCompare(t.A, t.B)
 		if t.err != nil {
-			c.Check(err, DeepEquals, t.err)
+			c.Assert(err, DeepEquals, t.err)
 		} else {
-			c.Check(err, IsNil)
-			c.Check(res, Equals, t.res, Commentf("%#v %#v: %v but got %v", t.A, t.B, res, t.res))
+			c.Assert(err, IsNil)
+			c.Assert(res, Equals, t.res, Commentf("%#v %#v: %v but got %v", t.A, t.B, res, t.res))
 		}
 	}
 }
@@ -118,7 +114,7 @@ func (s *VersionTestSuite) TestVersionInvalid(c *C) {
 		{"1:2", false},
 		{"12:34", false},
 		{"1234:", false},
-		{"1--1", false},
+		//{"1--1", false}, // libgcc-s1 has two dashes
 		{"1.0", true},
 		{"1234", true},
 	} {

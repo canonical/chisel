@@ -116,7 +116,9 @@ func VersionIsValid(a string) bool {
 	if matchEpoch(a) {
 		return false
 	}
-	return atMostOneDash(a)
+	// Originally from snapd, but fails with some revisions.
+	//return atMostOneDash(a)
+	return true
 }
 
 func nextFrag(s string) (frag, rest string, numeric bool) {
