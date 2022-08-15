@@ -90,11 +90,7 @@ func (a *ubuntuArchive) selectPackage(pkg string) (control.Section, *ubuntuIndex
 		section := index.packages.Section(pkg)
 		if section != nil && section.Get("Filename") != "" {
 			version := section.Get("Version")
-			res, err := deb.VersionCompare(selectedVersion, version)
-			if err != nil {
-				return nil, nil, fmt.Errorf("package %q has invalid version: %q", pkg, version)
-			}
-			if selectedVersion == "" || res < 0 {
+			if selectedVersion == "" || deb.CompareVersions(selectedVersion, version) < 0 {
 				selectedVersion = version
 				selectedSection = section
 				selectedIndex = index

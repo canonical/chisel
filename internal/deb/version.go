@@ -20,7 +20,6 @@
 package deb
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -110,17 +109,6 @@ func atMostOneDash(a string) bool {
 	return true
 }
 
-// VersionIsValid returns true if the given string is a valid
-// version number according to the debian policy
-func VersionIsValid(a string) bool {
-	if matchEpoch(a) {
-		return false
-	}
-	// Originally from snapd, but fails with some revisions.
-	//return atMostOneDash(a)
-	return true
-}
-
 func nextFrag(s string) (frag, rest string, numeric bool) {
 	if len(s) == 0 {
 		return "", "", false
@@ -159,21 +147,13 @@ func compareSubversion(va, vb string) int {
 	return res
 }
 
-// VersionCompare compare two version strings that follow the debian
+// CompareVersions compare two version strings that follow the debian
 // version policy and
 // Returns:
 //   -1 if a is smaller than b
 //    0 if a equals b
 //   +1 if a is bigger than b
-func VersionCompare(va, vb string) (res int, err error) {
-	// FIXME: return err here instead
-	if !VersionIsValid(va) {
-		return 0, fmt.Errorf("invalid version %q", va)
-	}
-	if !VersionIsValid(vb) {
-		return 0, fmt.Errorf("invalid version %q", vb)
-	}
-
+func CompareVersions(va, vb string) int {
 	var sa, sb string
 	if ia := strings.IndexByte(va, '-'); ia < 0 {
 		sa = "0"
@@ -187,11 +167,11 @@ func VersionCompare(va, vb string) (res int, err error) {
 	}
 
 	// the main version number (before the "-")
-	res = compareSubversion(va, vb)
+	res := compareSubversion(va, vb)
 	if res != 0 {
-		return res, nil
+		return res
 	}
 
 	// the subversion revision behind the "-"
-	return compareSubversion(sa, sb), nil
+	return compareSubversion(sa, sb)
 }
