@@ -14,7 +14,6 @@ import (
 
 	"github.com/juju/fslock"
 
-	"github.com/canonical/chisel/internal/cache"
 	"github.com/canonical/chisel/internal/fsutil"
 )
 
@@ -33,15 +32,10 @@ const baseURL = "https://codeload.github.com/canonical/chisel-releases/tar.gz/re
 func FetchRelease(options *FetchOptions) (*Release, error) {
 	logf("Consulting release repository...")
 
-	cacheDir := options.CacheDir
-	if cacheDir == "" {
-		cacheDir = cache.DefaultDir("chisel")
-	}
-
-	dirName := filepath.Join(cacheDir, "releases", options.Label + "-" + options.Version)
+	dirName := filepath.Join(options.CacheDir, "releases", options.Label+"-"+options.Version)
 	err := os.MkdirAll(dirName, 0755)
 	if err == nil {
-		lockFile := fslock.New(filepath.Join(cacheDir, "releases", ".lock"))
+		lockFile := fslock.New(filepath.Join(options.CacheDir, "releases", ".lock"))
 		err = lockFile.LockWithTimeout(10 * time.Second)
 		if err == nil {
 			defer lockFile.Unlock()

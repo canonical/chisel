@@ -21,15 +21,17 @@ to create a new filesystem tree in the root location.
 `
 
 var cutDescs = map[string]string{
-	"release": "Chisel release directory",
-	"root":    "Root for generated content",
-	"arch":    "Package architecture",
+	"release":   "Chisel release directory",
+	"root":      "Root for generated content",
+	"arch":      "Package architecture",
+	"cache-dir": "Cache directory",
 }
 
 type cmdCut struct {
-	Release string `long:"release" value-name:"<dir>"`
-	RootDir string `long:"root" value-name:"<dir>" required:"yes"`
-	Arch    string `long:"arch" value-name:"<arch>"`
+	Release  string `long:"release" value-name:"<dir>"`
+	RootDir  string `long:"root" value-name:"<dir>" required:"yes"`
+	Arch     string `long:"arch" value-name:"<arch>"`
+	CacheDir string `long:"cache-dir" value-name:"<cache-dir>"`
 
 	Positional struct {
 		SliceRefs []string `positional-arg-name:"<slice names>" required:"yes"`
@@ -54,6 +56,11 @@ func (cmd *cmdCut) Execute(args []string) error {
 		sliceKeys[i] = sliceKey
 	}
 
+	cacheDir := cmd.CacheDir
+	if cacheDir == "" {
+		cacheDir = cache.DefaultDir("chisel")
+	}
+
 	var release *setup.Release
 	var err error
 	if strings.Contains(cmd.Release, "/") {
@@ -69,8 +76,9 @@ func (cmd *cmdCut) Execute(args []string) error {
 			return err
 		}
 		release, err = setup.FetchRelease(&setup.FetchOptions{
-			Label:   label,
-			Version: version,
+			Label:    label,
+			Version:  version,
+			CacheDir: cacheDir,
 		})
 	}
 	if err != nil {
@@ -90,7 +98,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 			Arch:       cmd.Arch,
 			Suites:     archiveInfo.Suites,
 			Components: archiveInfo.Components,
-			CacheDir:   cache.DefaultDir("chisel"),
+			CacheDir:   cacheDir,
 		})
 		if err != nil {
 			return err
