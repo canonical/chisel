@@ -77,9 +77,18 @@ func (cmd *cmdCut) Execute(args []string) error {
 		return err
 	}
 
+	err = setup.ReadInstalledSlices(cmd.RootDir)
+	if err != nil {
+		return err
+	}
+
 	selection, err := setup.Select(release, sliceKeys)
 	if err != nil {
 		return err
+	}
+
+	if len(selection.Slices) == 0 {
+		return nil
 	}
 
 	archives := make(map[string]archive.Archive)
@@ -98,11 +107,17 @@ func (cmd *cmdCut) Execute(args []string) error {
 		archives[archiveName] = openArchive
 	}
 
-	return slicer.Run(&slicer.RunOptions{
+	err = slicer.Run(&slicer.RunOptions{
 		Selection: selection,
 		Archives:  archives,
 		TargetDir: cmd.RootDir,
 	})
+	if err != nil {
+		return err
+	}
+
+	err = setup.WriteInstalledSlices(cmd.RootDir, selection.Slices)
+	return err
 
 	return printVersions()
 }

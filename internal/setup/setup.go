@@ -239,6 +239,18 @@ func order(pkgs map[string]*Package, keys []SliceKey) ([]SliceKey, error) {
 	return order, nil
 }
 
+func ignoreInstalledSlices(slices []SliceKey) ([]SliceKey) {
+	var pruned []SliceKey
+	for _, slice := range slices {
+		if !IsSliceInstalled(slice) {
+			pruned = append(pruned, slice)
+		} else {
+			logf("Slice \"%v\" is already installed, skipping...", slice)
+		}
+	}
+	return pruned
+}
+
 var fnameExp = regexp.MustCompile(`^([a-z0-9](?:-?[.a-z0-9+]){2,})\.yaml$`)
 var snameExp = regexp.MustCompile(`^([a-z](?:-?[a-z0-9]){2,})$`)
 var knameExp = regexp.MustCompile(`^([a-z0-9](?:-?[.a-z0-9+]){2,})_([a-z](?:-?[a-z0-9]){2,})$`)
@@ -606,8 +618,11 @@ func Select(release *Release, slices []SliceKey) (*Selection, error) {
 	if err != nil {
 		return nil, err
 	}
-	selection.Slices = make([]*Slice, len(sorted))
-	for i, key := range sorted {
+
+	pruned := ignoreInstalledSlices(sorted)
+
+	selection.Slices = make([]*Slice, len(pruned))
+	for i, key := range pruned {
 		selection.Slices[i] = release.Packages[key.Package].Slices[key.Slice]
 	}
 
