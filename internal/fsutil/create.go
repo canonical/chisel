@@ -67,5 +67,13 @@ func createSymlink(o *CreateOptions) error {
 	if err != nil && !os.IsExist(err) {
 		return err
 	}
+	// check if symlink exists, remove if it does
+	_, err = os.Lstat(o.Path)
+	if err == nil {
+		err = os.Remove(o.Path)
+		if err != nil {
+			return err
+		}
+	}
 	return os.Symlink(o.Link, o.Path)
 }
