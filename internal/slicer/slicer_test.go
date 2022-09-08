@@ -363,7 +363,7 @@ func (s *S) TestRun(c *C) {
 		release, err := setup.ReadRelease(releaseDir)
 		c.Assert(err, IsNil)
 
-		selection, err := setup.Select(release, test.slices)
+		selection, err := setup.Select(release, test.slices, &setup.ChiselDB{})
 		c.Assert(err, IsNil)
 
 		archives := map[string]archive.Archive{

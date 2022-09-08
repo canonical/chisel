@@ -239,10 +239,10 @@ func order(pkgs map[string]*Package, keys []SliceKey) ([]SliceKey, error) {
 	return order, nil
 }
 
-func ignoreInstalledSlices(slices []SliceKey) ([]SliceKey) {
+func ignoreInstalledSlices(slices []SliceKey, db *ChiselDB) ([]SliceKey) {
 	var pruned []SliceKey
 	for _, slice := range slices {
-		if !IsSliceInstalled(slice) {
+		if !db.IsSliceInstalled(slice) {
 			pruned = append(pruned, slice)
 		} else {
 			logf("Slice \"%v\" is already installed, skipping...", slice)
@@ -607,7 +607,7 @@ func stripBase(baseDir, path string) string {
 	return strings.TrimPrefix(path, baseDir+string(filepath.Separator))
 }
 
-func Select(release *Release, slices []SliceKey) (*Selection, error) {
+func Select(release *Release, slices []SliceKey, db *ChiselDB) (*Selection, error) {
 	logf("Selecting slices...")
 
 	selection := &Selection{
@@ -619,7 +619,7 @@ func Select(release *Release, slices []SliceKey) (*Selection, error) {
 		return nil, err
 	}
 
-	pruned := ignoreInstalledSlices(sorted)
+	pruned := ignoreInstalledSlices(sorted, db)
 
 	selection.Slices = make([]*Slice, len(pruned))
 	for i, key := range pruned {

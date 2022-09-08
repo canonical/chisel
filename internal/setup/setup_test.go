@@ -727,7 +727,7 @@ func (s *S) TestParseRelease(c *C) {
 		}
 
 		if test.selslices != nil {
-			selection, err := setup.Select(release, test.selslices)
+			selection, err := setup.Select(release, test.selslices, &setup.ChiselDB{})
 			if test.selerror != "" {
 				c.Assert(err, ErrorMatches, test.selerror)
 				continue

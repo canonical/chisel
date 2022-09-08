@@ -10,34 +10,39 @@ import (
 
 const slicesDBPath = "/var/lib/chisel/chisel.db"
 
-// Read and store the slices that have been already installed
-var installedSlices []SliceKey
+type ChiselDB struct {
+	installedSlices []SliceKey
+}
 
-func ReadInstalledSlices(rootdir string) (error) {
+// Read and store the slices that have been already installed
+func ReadDB(rootdir string) (*ChiselDB, error) {
 	file, err := os.Open(path.Join(rootdir, slicesDBPath))
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil
+			return &ChiselDB{}, nil
 		}
-		return err
+		return nil, err
 	}
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
+	db := ChiselDB{}
+
 	for scanner.Scan() {
 		line := scanner.Text()
 		sliceKey, err := ParseSliceKey(line)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		installedSlices = append(installedSlices, sliceKey)
+		db.installedSlices = append(db.installedSlices, sliceKey)
 	}
 
-	return nil
+	return &db, nil
 }
 
-func IsSliceInstalled(slice SliceKey) (bool) {
-	for _, installedSlice := range installedSlices {
+// check if a slice has already been installed
+func (db* ChiselDB) IsSliceInstalled(slice SliceKey) (bool) {
+	for _, installedSlice := range db.installedSlices {
 		if reflect.DeepEqual(installedSlice, slice) {
 			return true
 		}
@@ -45,7 +50,8 @@ func IsSliceInstalled(slice SliceKey) (bool) {
 	return false
 }
 
-func WriteInstalledSlices(rootdir string, slices []*Slice) (error) {
+// append newly installed slices to the file and update the database
+func (db *ChiselDB) WriteInstalledSlices(rootdir string, slices []*Slice) (error) {
 	dbPath := path.Join(rootdir, slicesDBPath)
 
 	err := os.MkdirAll(filepath.Dir(dbPath), 0755)
@@ -67,6 +73,12 @@ func WriteInstalledSlices(rootdir string, slices []*Slice) (error) {
 		if err != nil {
 			return err
 		}
+
+		sliceKey, err := ParseSliceKey(slice.String())
+		if err != nil {
+			return err
+		}
+		db.installedSlices = append(db.installedSlices, sliceKey)
 	}
 
 	return nil

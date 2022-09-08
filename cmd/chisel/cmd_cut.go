@@ -77,12 +77,12 @@ func (cmd *cmdCut) Execute(args []string) error {
 		return err
 	}
 
-	err = setup.ReadInstalledSlices(cmd.RootDir)
+	db, err := setup.ReadDB(cmd.RootDir)
 	if err != nil {
 		return err
 	}
 
-	selection, err := setup.Select(release, sliceKeys)
+	selection, err := setup.Select(release, sliceKeys, db)
 	if err != nil {
 		return err
 	}
@@ -116,10 +116,10 @@ func (cmd *cmdCut) Execute(args []string) error {
 		return err
 	}
 
-	err = setup.WriteInstalledSlices(cmd.RootDir, selection.Slices)
+	err = db.WriteInstalledSlices(cmd.RootDir, selection.Slices)
 	return err
 
-	return printVersions()
+	// return printVersions()
 }
 
 // TODO These need testing, and maybe moving into a common file.

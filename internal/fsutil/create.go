@@ -70,9 +70,12 @@ func createSymlink(o *CreateOptions) error {
 	// check if symlink exists, remove if it does
 	_, err = os.Lstat(o.Path)
 	if err == nil {
-		err = os.Remove(o.Path)
-		if err != nil {
-			return err
+		link, err := os.Readlink(o.Path)
+		if err == nil && link == o.Link {
+			err = os.Remove(o.Path)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return os.Symlink(o.Link, o.Path)
