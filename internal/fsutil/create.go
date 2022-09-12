@@ -67,5 +67,23 @@ func createSymlink(o *CreateOptions) error {
 	if err != nil && !os.IsExist(err) {
 		return err
 	}
+	fileinfo, err := os.Lstat(o.Path)
+	if err == nil {
+		if (fileinfo.Mode() & os.ModeSymlink) != 0 {
+			link, err := os.Readlink(o.Path)
+			if err != nil {
+				return err
+			}
+			if link == o.Link {
+				return nil
+			}
+		}
+		err = os.Remove(o.Path)
+		if err != nil {
+			return err
+		}
+	} else if !os.IsNotExist(err) {
+		return err
+	}
 	return os.Symlink(o.Link, o.Path)
 }
