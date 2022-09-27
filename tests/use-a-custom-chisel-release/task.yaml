@@ -1,0 +1,35 @@
+summary: Use a custom Chisel release
+
+environment:
+    RELEASE/jammy: 22.04
+    RELEASE/kinetic: 22.10
+
+execute: |
+  rootfs_folder=rootfs_${RELEASE}
+  mkdir -p $rootfs_folder
+
+  chisel_release="./release_${RELEASE}"
+  mkdir -p ${chisel_release}/slices
+  
+  ref_chisel_release="ref-chisel-release_${RELEASE}"
+  git clone --depth=1 -b ${OS}-${RELEASE} \
+    https://github.com/canonical/chisel-releases $ref_chisel_release
+
+  cp ${ref_chisel_release}/chisel.yaml ${chisel_release}/chisel.yaml
+  
+  cat >>${chisel_release}/slices/base-files.yaml <<EOF
+    package: base-files
+
+    slices:
+      myslice:
+        contents:
+          /etc/:
+  EOF
+
+  chisel cut --release $chisel_release --root $rootfs_folder base-files_myslice
+  
+  # make sure $rootfs_folder is not empty
+  ls ${rootfs_folder}/*
+
+  # make sure the custom slice has been installed
+  test -d ${rootfs_folder}/etc
