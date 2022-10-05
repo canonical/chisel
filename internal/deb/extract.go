@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 
 	"github.com/blakesmith/ar"
 	"github.com/klauspost/compress/zstd"
@@ -103,6 +104,11 @@ func Extract(pkgReader io.Reader, options *ExtractOptions) (err error) {
 }
 
 func extractData(dataReader io.Reader, options *ExtractOptions) error {
+
+	oldUmask := syscall.Umask(0)
+	defer func() {
+		syscall.Umask(oldUmask)
+	}()
 
 	shouldExtract := func(pkgPath string) (globPath string, ok bool) {
 		if pkgPath == "" {
