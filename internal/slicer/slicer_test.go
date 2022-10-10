@@ -26,6 +26,16 @@ type slicerTest struct {
 	error   string
 }
 
+// filesystem entries of copyright file from base-files package that will be
+// automatically injected into every slice
+var copyrightEntries = map[string]string{
+	"/usr/":                               "dir 0755",
+	"/usr/share/":                         "dir 0755",
+	"/usr/share/doc/":                     "dir 0755",
+	"/usr/share/doc/base-files/":          "dir 0755",
+	"/usr/share/doc/base-files/copyright": "file 0644 cdb5461d",
+}
+
 var slicerTests = []slicerTest{{
 	summary: "Basic slicing",
 	slices:  []setup.SliceKey{{"base-files", "myslice"}},
@@ -393,7 +403,14 @@ func (s *S) TestRun(c *C) {
 		}
 
 		if test.result != nil {
-			c.Assert(testutil.TreeDump(targetDir), DeepEquals, test.result)
+			result := make(map[string]string, len(copyrightEntries)+len(test.result))
+			for k, v := range copyrightEntries {
+				result[k] = v
+			}
+			for k, v := range test.result {
+				result[k] = v
+			}
+			c.Assert(testutil.TreeDump(targetDir), DeepEquals, result)
 		}
 	}
 }
