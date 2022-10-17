@@ -1,6 +1,7 @@
 package slicer_test
 
 import (
+	"archive/tar"
 	"bytes"
 	"fmt"
 	"io"
@@ -24,6 +25,33 @@ type slicerTest struct {
 	hackopt func(c *C, opts *slicer.RunOptions)
 	result  map[string]string
 	error   string
+}
+
+var packageEntries = map[string][]testutil.TarEntry{
+	"copyright-symlink-libssl3": {
+		{Header: tar.Header{Name: "./"}},
+		{Header: tar.Header{Name: "./usr/"}},
+		{Header: tar.Header{Name: "./usr/lib/"}},
+		{Header: tar.Header{Name: "./usr/lib/x86_64-linux-gnu/"}},
+		{Header: tar.Header{Name: "./usr/lib/x86_64-linux-gnu/libssl.so.3", Mode: 00755}},
+		{Header: tar.Header{Name: "./usr/share/"}},
+		{Header: tar.Header{Name: "./usr/share/doc/"}},
+		{Header: tar.Header{Name: "./usr/share/doc/copyright-symlink-libssl3/"}},
+		{Header: tar.Header{Name: "./usr/share/doc/copyright-symlink-libssl3/copyright"}},
+	},
+	"copyright-symlink-openssl": {
+		{Header: tar.Header{Name: "./"}},
+		{Header: tar.Header{Name: "./etc/"}},
+		{Header: tar.Header{Name: "./etc/ssl/"}},
+		{Header: tar.Header{Name: "./etc/ssl/openssl.cnf"}},
+		{Header: tar.Header{Name: "./usr/"}},
+		{Header: tar.Header{Name: "./usr/bin/"}},
+		{Header: tar.Header{Name: "./usr/bin/openssl", Mode: 00755}},
+		{Header: tar.Header{Name: "./usr/share/"}},
+		{Header: tar.Header{Name: "./usr/share/doc/"}},
+		{Header: tar.Header{Name: "./usr/share/doc/copyright-symlink-openssl/"}},
+		{Header: tar.Header{Name: "./usr/share/doc/copyright-symlink-openssl/copyright", Linkname: "../libssl3/copyright"}},
+	},
 }
 
 // filesystem entries of copyright file from base-files package that will be
@@ -400,6 +428,31 @@ var slicerTests = []slicerTest{{
 		`,
 	},
 	error: `slice base-files_myslice: cannot read file which is not selected: /etc`,
+}, {
+	summary: "Duplicate copyright symlink is ignored",
+	slices:  []setup.SliceKey{{"copyright-symlink-openssl", "bins"}},
+	release: map[string]string{
+		"slices/mydir/copyright-symlink-libssl3.yaml": `
+			package: copyright-symlink-libssl3
+			slices:
+				libs:
+					contents:
+						/usr/lib/x86_64-linux-gnu/libssl.so.3:
+		`,
+		"slices/mydir/copyright-symlink-openssl.yaml": `
+			package: copyright-symlink-openssl
+			slices:
+				bins:
+					essential:
+						- copyright-symlink-libssl3_libs
+						- copyright-symlink-openssl_config
+					contents:
+						/usr/bin/openssl:
+				config:
+					contents:
+						/etc/ssl/openssl.cnf:
+		`,
+	},
 }}
 
 const defaultChiselYaml = `
@@ -454,12 +507,18 @@ func (s *S) TestRun(c *C) {
 		selection, err := setup.Select(release, test.slices)
 		c.Assert(err, IsNil)
 
+		pkgs := map[string][]byte{
+			"base-files": testutil.PackageData["base-files"],
+		}
+		for name, entries := range packageEntries {
+			deb, err := testutil.MakeDeb(entries)
+			c.Assert(err, IsNil)
+			pkgs[name] = deb
+		}
 		archives := map[string]archive.Archive{
 			"ubuntu": &testArchive{
 				arch: test.arch,
-				pkgs: map[string][]byte{
-					"base-files": testutil.PackageData["base-files"],
-				},
+				pkgs: pkgs,
 			},
 		}
 
