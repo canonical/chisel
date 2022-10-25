@@ -18,8 +18,8 @@ type scriptsTest struct {
 	hackdir func(c *C, dir string)
 	script  string
 	result  map[string]string
-	checkr  func(path string) error
-	checkw  func(path string) error
+	checkr  func(_ *scripts.ContentValue, path string) error
+	checkw  func(_ *scripts.ContentValue, path string) error
 	error   string
 }
 
@@ -127,7 +127,7 @@ var scriptsTests = []scriptsTest{{
 		content.write("/foo/../bar/file2.txt", "data2")
 		content.read("/foo/../bar/file2.txt")
 	`,
-	checkr: func(p string) error { return fmt.Errorf("no read: %s", p) },
+	checkr: func(_ *scripts.ContentValue, p string) error { return fmt.Errorf("no read: %s", p) },
 	error:  `no read: /bar/file2.txt`,
 }, {
 	summary: "Check writes",
@@ -138,7 +138,7 @@ var scriptsTests = []scriptsTest{{
 		content.read("/foo/../bar/file1.txt")
 		content.write("/foo/../bar/file1.txt", "data1")
 	`,
-	checkw: func(p string) error { return fmt.Errorf("no write: %s", p) },
+	checkw: func(_ *scripts.ContentValue, p string) error { return fmt.Errorf("no write: %s", p) },
 	error:  `no write: /bar/file1.txt`,
 }, {
 	summary: "Check lists",
@@ -149,7 +149,7 @@ var scriptsTests = []scriptsTest{{
 		content.write("/foo/../bar/file2.txt", "data2")
 		content.list("/foo/../bar/")
 	`,
-	checkr: func(p string) error { return fmt.Errorf("no read: %s", p) },
+	checkr: func(_ *scripts.ContentValue, p string) error { return fmt.Errorf("no read: %s", p) },
 	error:  `no read: /bar/`,
 }, {
 	summary: "Check lists",
@@ -160,7 +160,7 @@ var scriptsTests = []scriptsTest{{
 		content.write("/foo/../bar/file2.txt", "data2")
 		content.list("/foo/../bar")
 	`,
-	checkr: func(p string) error { return fmt.Errorf("no read: %s", p) },
+	checkr: func(_ *scripts.ContentValue, p string) error { return fmt.Errorf("no read: %s", p) },
 	error:  `no read: /bar/`,
 }, {
 	summary: "Check reads on symlinks",
@@ -174,7 +174,7 @@ var scriptsTests = []scriptsTest{{
 	script: `
 		content.read("/foo/file1.txt")
 	`,
-	checkr: func(p string) error {
+	checkr: func(_ *scripts.ContentValue, p string) error {
 		if p == "/foo/file2.txt" {
 			return fmt.Errorf("no read: %s", p)
 		}
@@ -193,7 +193,7 @@ var scriptsTests = []scriptsTest{{
 	script: `
 		content.write("/foo/file1.txt", "")
 	`,
-	checkw: func(p string) error {
+	checkw: func(_ *scripts.ContentValue, p string) error {
 		if p == "/foo/file2.txt" {
 			return fmt.Errorf("no write: %s", p)
 		}
@@ -243,6 +243,6 @@ func (s *S) TestScripts(c *C) {
 
 func (s *S) TestContentRelative(c *C) {
 	content := scripts.ContentValue{RootDir: "foo"}
-	_, err := content.RealPath("/bar", scripts.CheckNone)
+	_, err := content.RealPath("/bar", nil)
 	c.Assert(err, ErrorMatches, "internal error: content defined with relative root: foo")
 }

@@ -1,8 +1,8 @@
 package scripts
 
 import (
-	"go.starlark.net/starlark"
 	"go.starlark.net/resolve"
+	"go.starlark.net/starlark"
 
 	"fmt"
 	"io/ioutil"
@@ -30,10 +30,12 @@ func Run(opts *RunOptions) error {
 	return err
 }
 
+type checkPathFunc func(c *ContentValue, path string) error
+
 type ContentValue struct {
 	RootDir    string
-	CheckRead  func(path string) error
-	CheckWrite func(path string) error
+	CheckRead  checkPathFunc
+	CheckWrite checkPathFunc
 }
 
 // Content starlark.Value interface
@@ -82,15 +84,7 @@ func (c *ContentValue) AttrNames() []string {
 // Content methods
 // --------------------------------------------------------------------------
 
-type Check uint
-
-const (
-	CheckNone = 0
-	CheckRead = 1 << iota
-	CheckWrite
-)
-
-func (c *ContentValue) RealPath(path string, what Check) (string, error) {
+func (c *ContentValue) RealPath(path string, checkPath checkPathFunc) (string, error) {
 	if !filepath.IsAbs(c.RootDir) {
 		return "", fmt.Errorf("internal error: content defined with relative root: %s", c.RootDir)
 	}
@@ -101,15 +95,8 @@ func (c *ContentValue) RealPath(path string, what Check) (string, error) {
 	if strings.HasSuffix(path, "/") {
 		cpath += "/"
 	}
-	if c.CheckRead != nil && what&CheckRead != 0 {
-		err := c.CheckRead(cpath)
-		if err != nil {
-			return "", err
-		}
-	}
-	if c.CheckWrite != nil && what&CheckWrite != 0 {
-		err := c.CheckWrite(cpath)
-		if err != nil {
+	if checkPath != nil {
+		if err := checkPath(c, cpath); err != nil {
 			return "", err
 		}
 	}
@@ -123,7 +110,7 @@ func (c *ContentValue) RealPath(path string, what Check) (string, error) {
 		if err != nil || !filepath.IsAbs(lpath) || lpath != c.RootDir && !strings.HasPrefix(lpath, c.RootDir+string(filepath.Separator)) {
 			return "", fmt.Errorf("invalid content symlink: %s", path)
 		}
-		_, err = c.RealPath("/"+lrel, what)
+		_, err = c.RealPath("/"+lrel, checkPath)
 		if err != nil {
 			return "", err
 		}
@@ -145,7 +132,7 @@ func (c *ContentValue) Read(thread *starlark.Thread, fn *starlark.Builtin, args 
 		return nil, err
 	}
 
-	fpath, err := c.RealPath(path.GoString(), CheckRead)
+	fpath, err := c.RealPath(path.GoString(), c.CheckRead)
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +151,7 @@ func (c *ContentValue) Write(thread *starlark.Thread, fn *starlark.Builtin, args
 		return nil, err
 	}
 
-	fpath, err := c.RealPath(path.GoString(), CheckWrite)
+	fpath, err := c.RealPath(path.GoString(), c.CheckWrite)
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +177,7 @@ func (c *ContentValue) List(thread *starlark.Thread, fn *starlark.Builtin, args 
 	if !strings.HasSuffix(dpath, "/") {
 		dpath += "/"
 	}
-	fpath, err := c.RealPath(dpath, CheckRead)
+	fpath, err := c.RealPath(dpath, c.CheckRead)
 	if err != nil {
 		return nil, err
 	}

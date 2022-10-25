@@ -191,13 +191,13 @@ func Run(options *RunOptions) error {
 
 	// Run mutation scripts. Order is fundamental here as
 	// dependencies must run before dependents.
-	checkWrite := func(path string) error {
+	checkWrite := func(_ *scripts.ContentValue, path string) error {
 		if !pathInfos[path].Mutable {
 			return fmt.Errorf("cannot write file which is not mutable: %s", path)
 		}
 		return nil
 	}
-	checkRead := func(path string) error {
+	checkRead := func(_ *scripts.ContentValue, path string) error {
 		if _, ok := pathInfos[path]; !ok {
 			for globPath := range globbedPaths {
 				if strdist.GlobPath(globPath, path) {
@@ -237,7 +237,7 @@ func Run(options *RunOptions) error {
 				targetPaths = []string{targetPath}
 			}
 			for _, targetPath := range targetPaths {
-				realPath, err := content.RealPath(targetPath, scripts.CheckRead)
+				realPath, err := content.RealPath(targetPath, content.CheckRead)
 				if err == nil {
 					if strings.HasSuffix(targetPath, "/") {
 						untilDirs = append(untilDirs, realPath)
