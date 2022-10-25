@@ -200,6 +200,26 @@ var scriptsTests = []scriptsTest{{
 		return nil
 	},
 	error: `no write: /foo/file2.txt`,
+}, {
+	summary: "Create a symlink",
+	content: map[string]string{
+		"foo/file1.txt": `data1`,
+		"bar/file2.txt": `data2`,
+	},
+	script: `
+		content.symlink("file1.txt", "/foo/file1.link.txt")
+		content.symlink("/foo/file1.txt", "/bar/file1.link.txt")
+		content.symlink("bar/", "/bar.link")
+	`,
+	result: map[string]string{
+		"/foo/":               "dir 0755",
+		"/foo/file1.txt":      "file 0644 5b41362b",
+		"/foo/file1.link.txt": "symlink file1.txt",
+		"/bar/":               "dir 0755",
+		"/bar/file1.link.txt": "symlink /foo/file1.txt",
+		"/bar/file2.txt":      "file 0644 d98cf53e",
+		"/bar.link":           "symlink bar/",
+	},
 }}
 
 func (s *S) TestScripts(c *C) {

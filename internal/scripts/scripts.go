@@ -73,6 +73,8 @@ func (c *ContentValue) Attr(name string) (Value, error) {
 		return starlark.NewBuiltin("Content.write", c.Write), nil
 	case "list":
 		return starlark.NewBuiltin("Content.list", c.List), nil
+	case "symlink":
+		return starlark.NewBuiltin("Content.symlink", c.Symlink), nil
 	}
 	return nil, nil
 }
@@ -194,4 +196,24 @@ func (c *ContentValue) List(thread *starlark.Thread, fn *starlark.Builtin, args 
 		values[i] = starlark.String(name)
 	}
 	return starlark.NewList(values), nil
+}
+
+func (c *ContentValue) Symlink(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (Value, error) {
+	var slTarget, slLinkPath starlark.String
+	err := starlark.UnpackArgs("Content.symlink", args, kwargs, "target", &slTarget, "linkpath", &slLinkPath)
+	if err != nil {
+		return nil, err
+	}
+
+	target := slTarget.GoString()
+	linkPath := slLinkPath.GoString()
+	linkPath, err = c.RealPath(linkPath, nil)
+	if err != nil {
+		return nil, c.polishError(slLinkPath, err)
+	}
+	err = os.Symlink(target, linkPath)
+	if err != nil {
+		return nil, c.polishError(slLinkPath, err)
+	}
+	return starlark.None, nil
 }
