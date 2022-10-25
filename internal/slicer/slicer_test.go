@@ -322,6 +322,84 @@ var slicerTests = []slicerTest{{
 		opts.TargetDir, err = filepath.Rel(dir, opts.TargetDir)
 		c.Assert(err, IsNil)
 	},
+}, {
+	summary: "Can list parent directories of normal paths",
+	slices:  []setup.SliceKey{{"base-files", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/base-files.yaml": `
+			package: base-files
+			slices:
+				myslice:
+					contents:
+						/a/b/c: {text: foo}
+						/x/y/: {make: true}
+					mutate: |
+						content.list("/")
+						content.list("/a")
+						content.list("/a/b")
+						content.list("/x")
+						content.list("/x/y")
+		`,
+	},
+}, {
+	summary: "Cannot list unselected directory",
+	slices:  []setup.SliceKey{{"base-files", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/base-files.yaml": `
+			package: base-files
+			slices:
+				myslice:
+					contents:
+						/a/b/c: {text: foo}
+					mutate: |
+						content.list("/a/d")
+		`,
+	},
+	error: `slice base-files_myslice: cannot read file which is not selected: /a/d`,
+}, {
+	summary: "Cannot list file path as a directory",
+	slices:  []setup.SliceKey{{"base-files", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/base-files.yaml": `
+			package: base-files
+			slices:
+				myslice:
+					contents:
+						/a/b/c: {text: foo}
+					mutate: |
+						content.list("/a/b/c")
+		`,
+	},
+	error: `slice base-files_myslice: readdirent /a/b/c: not a directory`,
+}, {
+	summary: "Can list parent directories of globs",
+	slices:  []setup.SliceKey{{"base-files", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/base-files.yaml": `
+			package: base-files
+			slices:
+				myslice:
+					contents:
+						/**/bin/h?llo:
+					mutate: |
+						content.list("/usr/bin")
+		`,
+	},
+}, {
+	summary: "Cannot list directories not matched by glob",
+	slices:  []setup.SliceKey{{"base-files", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/base-files.yaml": `
+			package: base-files
+			slices:
+				myslice:
+					contents:
+						/**/bin/h?llo:
+					mutate: |
+						content.list("/etc")
+		`,
+	},
+	error: `slice base-files_myslice: cannot read file which is not selected: /etc`,
 }}
 
 const defaultChiselYaml = `
