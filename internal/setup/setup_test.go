@@ -682,6 +682,40 @@ var setupTests = []setupTest{{
 			},
 		},
 	},
+}, {
+	summary: "Text can be empty",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+					contents:
+						/nonempty: {text: "foo"}
+						/empty: {text: ""}
+		`,
+	},
+	release: &setup.Release{
+		DefaultArchive: "ubuntu",
+
+		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}}},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Archive: "ubuntu",
+				Name:    "mypkg",
+				Path:    "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{
+					"myslice": {
+						Package: "mypkg",
+						Name:    "myslice",
+						Contents: map[string]setup.PathInfo{
+							"/nonempty": {Kind: "text", Info: "foo"},
+							"/empty":    {Kind: "text", Info: ""},
+						},
+					},
+				},
+			},
+		},
+	},
 }}
 
 const defaultChiselYaml = `
