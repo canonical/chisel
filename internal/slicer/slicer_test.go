@@ -379,9 +379,7 @@ func (s *S) TestRun(c *C) {
 		archives := map[string]archive.Archive{
 			"ubuntu": &testArchive{
 				arch: test.arch,
-				pkgs: map[string][]byte{
-					"base-files": testutil.PackageData["base-files"],
-				},
+				pkgs: testutil.PackageData,
 			},
 		}
 
