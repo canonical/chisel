@@ -322,6 +322,31 @@ var slicerTests = []slicerTest{{
 		opts.TargetDir, err = filepath.Rel(dir, opts.TargetDir)
 		c.Assert(err, IsNil)
 	},
+}, {
+	summary: "Copyright is included in at most one slice of a package",
+	slices:  []setup.SliceKey{{"copyright-symlink-openssl", "bins"}},
+	release: map[string]string{
+		"slices/mydir/copyright-symlink-libssl3.yaml": `
+			package: copyright-symlink-libssl3
+			slices:
+				libs:
+					contents:
+						/usr/lib/x86_64-linux-gnu/libssl.so.3:
+		`,
+		"slices/mydir/copyright-symlink-openssl.yaml": `
+			package: copyright-symlink-openssl
+			slices:
+				bins:
+					essential:
+						- copyright-symlink-libssl3_libs
+						- copyright-symlink-openssl_config
+					contents:
+						/usr/bin/openssl:
+				config:
+					contents:
+						/etc/ssl/openssl.cnf:
+		`,
+	},
 }}
 
 const defaultChiselYaml = `

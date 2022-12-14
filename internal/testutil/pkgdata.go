@@ -129,6 +129,34 @@ var pkgs = map[string]pkgDef{
 			{name: "./etc/os-release", linkname: "../usr/lib/os-release"},
 		},
 	},
+	"copyright-symlink-libssl3": pkgDef{
+		entries: []tarEntry{
+			{name: "./"},
+			{name: "./usr/"},
+			{name: "./usr/lib/"},
+			{name: "./usr/lib/x86_64-linux-gnu/"},
+			{name: "./usr/lib/x86_64-linux-gnu/libssl.so.3", mode: 00755, content: []byte{}},
+			{name: "./usr/share/"},
+			{name: "./usr/share/doc/"},
+			{name: "./usr/share/doc/copyright-symlink-libssl3/"},
+			{name: "./usr/share/doc/copyright-symlink-libssl3/copyright", content: []byte{}},
+		},
+	},
+	"copyright-symlink-openssl": pkgDef{
+		entries: []tarEntry{
+			{name: "./"},
+			{name: "./etc/"},
+			{name: "./etc/ssl/"},
+			{name: "./etc/ssl/openssl.cnf", content: []byte{}},
+			{name: "./usr/"},
+			{name: "./usr/bin/"},
+			{name: "./usr/bin/openssl", mode: 00755, content: []byte{}},
+			{name: "./usr/share/"},
+			{name: "./usr/share/doc/"},
+			{name: "./usr/share/doc/copyright-symlink-openssl/"},
+			{name: "./usr/share/doc/copyright-symlink-openssl/copyright", linkname: "../libssl3/copyright"},
+		},
+	},
 }
 
 //go:embed all:pkgdata
