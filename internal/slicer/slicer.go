@@ -15,7 +15,6 @@ import (
 	"github.com/canonical/chisel/internal/fsutil"
 	"github.com/canonical/chisel/internal/scripts"
 	"github.com/canonical/chisel/internal/setup"
-	"github.com/canonical/chisel/internal/strdist"
 )
 
 type RunOptions struct {
@@ -29,6 +28,27 @@ func Run(options *RunOptions) error {
 	archives := make(map[string]archive.Archive)
 	extract := make(map[string]map[string][]deb.ExtractInfo)
 	pathInfos := make(map[string]setup.PathInfo)
+	knownPaths := make(map[string]bool)
+
+	knownPaths["/"] = true
+
+	addKnownPath := func(path string) {
+		path = filepath.Clean(path)
+		if path[0] != '/' {
+			panic("bug: tried to add relative path to known paths")
+		}
+		for {
+			if _, ok := knownPaths[path]; ok {
+				break
+			}
+			knownPaths[path] = true
+			path = filepath.Dir(path)
+			if path == "/" {
+				break
+			}
+			path += "/"
+		}
+	}
 
 	oldUmask := syscall.Umask(0)
 	defer func() {
@@ -72,6 +92,7 @@ func Run(options *RunOptions) error {
 			if len(pathInfo.Arch) > 0 && !contains(pathInfo.Arch, arch) {
 				continue
 			}
+			addKnownPath(targetPath)
 			pathInfos[targetPath] = pathInfo
 			if pathInfo.Kind == setup.CopyPath || pathInfo.Kind == setup.GlobPath {
 				sourcePath := pathInfo.Info
@@ -138,6 +159,12 @@ func Run(options *RunOptions) error {
 		}
 	}
 
+	for _, expandedPaths := range globbedPaths {
+		for _, path := range expandedPaths {
+			addKnownPath(path)
+		}
+	}
+
 	// Create new content not coming from packages.
 	done := make(map[string]bool)
 	for _, slice := range options.Selection.Slices {
@@ -198,12 +225,7 @@ func Run(options *RunOptions) error {
 		return nil
 	}
 	checkRead := func(path string) error {
-		if _, ok := pathInfos[path]; !ok {
-			for globPath := range globbedPaths {
-				if strdist.GlobPath(globPath, path) {
-					return nil
-				}
-			}
+		if !knownPaths[path] {
 			return fmt.Errorf("cannot read file which is not selected: %s", path)
 		}
 		return nil
