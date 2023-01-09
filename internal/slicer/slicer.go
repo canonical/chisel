@@ -92,7 +92,9 @@ func Run(options *RunOptions) error {
 			if len(pathInfo.Arch) > 0 && !contains(pathInfo.Arch, arch) {
 				continue
 			}
-			addKnownPath(targetPath)
+			if pathInfo.Kind != setup.GlobPath {
+				addKnownPath(targetPath)
+			}
 			pathInfos[targetPath] = pathInfo
 			if pathInfo.Kind == setup.CopyPath || pathInfo.Kind == setup.GlobPath {
 				sourcePath := pathInfo.Info
