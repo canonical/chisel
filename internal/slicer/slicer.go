@@ -84,6 +84,7 @@ func Run(options *RunOptions) error {
 		}
 		arch := archives[slice.Package].Options().Arch
 		copyrightPath := "/usr/share/doc/" + slice.Package + "/copyright"
+		addKnownPath(copyrightPath)
 		hasCopyright := false
 		for targetPath, pathInfo := range slice.Contents {
 			if targetPath == "" {
