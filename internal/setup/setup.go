@@ -336,12 +336,12 @@ type yamlPackage struct {
 }
 
 type yamlPath struct {
-	Dir     bool   `yaml:"make"`
-	Mode    uint   `yaml:"mode"`
-	Copy    string `yaml:"copy"`
-	Text    string `yaml:"text"`
-	Symlink string `yaml:"symlink"`
-	Mutable bool   `yaml:"mutable"`
+	Dir     bool    `yaml:"make"`
+	Mode    uint    `yaml:"mode"`
+	Copy    string  `yaml:"copy"`
+	Text    *string `yaml:"text"`
+	Symlink string  `yaml:"symlink"`
+	Mutable bool    `yaml:"mutable"`
 
 	Until PathUntil `yaml:"until"`
 	Arch  yamlArch  `yaml:"arch"`
@@ -533,9 +533,9 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 					}
 					kinds = append(kinds, DirPath)
 				}
-				if len(yamlPath.Text) > 0 {
+				if yamlPath.Text != nil {
 					kinds = append(kinds, TextPath)
-					info = yamlPath.Text
+					info = *yamlPath.Text
 				}
 				if len(yamlPath.Symlink) > 0 {
 					kinds = append(kinds, SymlinkPath)
