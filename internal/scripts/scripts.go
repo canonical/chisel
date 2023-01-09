@@ -1,8 +1,8 @@
 package scripts
 
 import (
-	"go.starlark.net/starlark"
 	"go.starlark.net/resolve"
+	"go.starlark.net/starlark"
 
 	"fmt"
 	"io/ioutil"
@@ -98,7 +98,7 @@ func (c *ContentValue) RealPath(path string, what Check) (string, error) {
 		return "", fmt.Errorf("content path must be absolute, got: %s", path)
 	}
 	cpath := filepath.Clean(path)
-	if strings.HasSuffix(path, "/") {
+	if cpath != "/" && strings.HasSuffix(path, "/") {
 		cpath += "/"
 	}
 	if c.CheckRead != nil && what&CheckRead != 0 {
