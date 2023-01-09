@@ -1,0 +1,45 @@
+name: Tests
+
+on:
+  workflow_dispatch:
+  push:
+    paths-ignore:
+      - '**.md'
+  pull_request:
+    branches: [main]
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-22.04
+    name: Unit Tests
+    env:
+      TEST_COVERAGE_FILE: test-coverage.out
+      TEST_COVERAGE_HTML_FILE: test-coverage.html
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-go@v3
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Run unit tests
+        run: go test -v -cover -coverprofile=${TEST_COVERAGE_FILE} ./...
+
+      - name: Convert test coverage to HTML
+        if: always()
+        continue-on-error: true
+        run: |
+          set -eu
+          if [ -f ${TEST_COVERAGE_FILE} ]
+          then
+            go tool cover -html=${TEST_COVERAGE_FILE} \
+              -o=${TEST_COVERAGE_HTML_FILE}
+          fi
+
+      - name: Upload HTML test coverage
+        uses: actions/upload-artifact@v3
+        if: always()
+        continue-on-error: true
+        with:
+          name: chisel-test-coverage.html
+          path: ./*.html
