@@ -1,0 +1,46 @@
+name: Build
+
+on:
+  workflow_dispatch:
+  push:
+    paths-ignore:
+      - '**.md'
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-chisel:
+    name: Build Chisel
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: 'amd64'
+            machine_arch: 'X86-64'
+          - arch: 'arm'
+            machine_arch: 'ARM'
+          - arch: 'arm64'
+            machine_arch: 'AArch64'
+          - arch: 'ppc64le'
+            machine_arch: 'PowerPC64'
+          - arch: 'riscv64'
+            machine_arch: 'RISC-V'
+          - arch: 's390x'
+            machine_arch: 'S/390'
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-go@v3
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Build Chisel for linux/${{ matrix.arch }}
+        run: GOARCH=${{ matrix.arch }} go build ./cmd/chisel/
+
+      - name: Test if is executable
+        run: test -x ./chisel
+
+      - name: Test if binary has the right machine architecture
+        run: |
+          [ "$(readelf -h chisel | grep 'Machine:' | awk -F' ' '{print $NF}')" == "${{ matrix.machine_arch }}" ]
