@@ -453,6 +453,25 @@ var slicerTests = []slicerTest{{
 						/etc/ssl/openssl.cnf:
 		`,
 	},
+}, {
+	summary: "Can list unclean directory paths",
+	slices:  []setup.SliceKey{{"base-files", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/base-files.yaml": `
+			package: base-files
+			slices:
+				myslice:
+					contents:
+						/a/b/c: {text: foo}
+						/x/y/: {make: true}
+					mutate: |
+						content.list("/////")
+						content.list("/a/")
+						content.list("/a/b/../b/")
+						content.list("/x///")
+						content.list("/x/./././y")
+		`,
+	},
 }}
 
 const defaultChiselYaml = `
