@@ -1,7 +1,13 @@
 package testutil
 
 import (
+	"archive/tar"
+	"bytes"
 	"encoding/base64"
+	"time"
+
+	"github.com/blakesmith/ar"
+	"github.com/klauspost/compress/zstd"
 )
 
 var PackageData = map[string][]byte{}
@@ -150,3 +156,112 @@ BIsAGAJD+LGgIzDiD2ntudH6JU80wD0rklyRGBV2dEx8VJG5LVwpcXb8PI0lMdi+wwUPoBkQGEIN
 7UwLQKMDjg8YkdmAmRrEgCSRRhMWBgBBSuI7S4BVs7zODfj1ja0TF+KbjdQDGANIcRlZhwzQSlla
 abj2Z7KoYMBXz9dwNNP2Aw13FguKkogezW5cqy4lCg==
 `
+
+type TarEntry struct {
+	Header  tar.Header
+	NoFixup bool
+	Content []byte
+}
+
+var zeroTime time.Time
+var epochStartTime time.Time = time.Unix(0, 0)
+
+func fixupTarEntry(entry *TarEntry) {
+	if entry.NoFixup {
+		return
+	}
+	hdr := &entry.Header
+	if hdr.Typeflag == 0 {
+		if hdr.Linkname != "" {
+			hdr.Typeflag = tar.TypeSymlink
+		} else if hdr.Name[len(hdr.Name)-1] == '/' {
+			hdr.Typeflag = tar.TypeDir
+		} else {
+			hdr.Typeflag = tar.TypeReg
+		}
+	}
+	if hdr.Mode == 0 {
+		switch hdr.Typeflag {
+		case tar.TypeDir:
+			hdr.Mode = 0755
+		case tar.TypeSymlink:
+			hdr.Mode = 0777
+		default:
+			hdr.Mode = 0644
+		}
+	}
+	if hdr.Size == 0 && entry.Content != nil {
+		hdr.Size = int64(len(entry.Content))
+	}
+	if hdr.Uid == 0 && hdr.Uname == "" {
+		hdr.Uname = "root"
+	}
+	if hdr.Gid == 0 && hdr.Gname == "" {
+		hdr.Gname = "root"
+	}
+	if hdr.ModTime == zeroTime {
+		hdr.ModTime = epochStartTime
+	}
+	if hdr.Format == 0 {
+		hdr.Format = tar.FormatGNU
+	}
+}
+
+func makeTar(entries []TarEntry) ([]byte, error) {
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+	for _, entry := range entries {
+		fixupTarEntry(&entry)
+		if err := tw.WriteHeader(&entry.Header); err != nil {
+			return nil, err
+		}
+		if entry.Content != nil {
+			if _, err := tw.Write(entry.Content); err != nil {
+				return nil, err
+			}
+		}
+	}
+	return buf.Bytes(), nil
+}
+
+func compressBytesZstd(input []byte) ([]byte, error) {
+	var buf bytes.Buffer
+	writer, err := zstd.NewWriter(&buf)
+	if _, err = writer.Write(input); err != nil {
+		return nil, err
+	}
+	if err = writer.Close(); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func MakeDeb(entries []TarEntry) ([]byte, error) {
+	var buf bytes.Buffer
+
+	tarData, err := makeTar(entries)
+	if err != nil {
+		return nil, err
+	}
+	compTarData, err := compressBytesZstd(tarData)
+	if err != nil {
+		return nil, err
+	}
+
+	writer := ar.NewWriter(&buf)
+	if err := writer.WriteGlobalHeader(); err != nil {
+		return nil, err
+	}
+	dataHeader := ar.Header{
+		Name: "data.tar.zst",
+		Mode: 0644,
+		Size: int64(len(compTarData)),
+	}
+	if err := writer.WriteHeader(&dataHeader); err != nil {
+		return nil, err
+	}
+	if _, err = writer.Write(compTarData); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
