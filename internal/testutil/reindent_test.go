@@ -55,13 +55,11 @@ func (s *S) TestReindent(c *C) {
 func (*S) testReindent(c *C, test reindentTest) {
 	defer func() {
 		if err := recover(); err != nil {
-			msg, ok := err.(string)
+			errMsg, ok := err.(string)
 			if !ok {
 				panic(err)
 			}
-			if msg != test.err {
-				c.Errorf("Unexpected error: %#v", err)
-			}
+			c.Assert(errMsg, Equals, test.err)
 		}
 	}()
 
