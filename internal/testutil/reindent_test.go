@@ -8,42 +8,42 @@ import (
 )
 
 type reindentTest struct {
-	src, expect, err string
+	raw, result, error string
 }
 
 var reindentTests = []reindentTest{{
-	src:    "a\nb",
-	expect: "a\nb",
+	raw:    "a\nb",
+	result: "a\nb",
 }, {
-	src:    "\ta\n\tb",
-	expect: "a\nb",
+	raw:    "\ta\n\tb",
+	result: "a\nb",
 }, {
-	src:    "    a\n    b",
-	expect: "    a\n    b",
+	raw:    "    a\n    b",
+	result: "    a\n    b",
 }, {
-	src:    "a\n\tb\nc",
-	expect: "a\n    b\nc",
+	raw:    "a\n\tb\nc",
+	result: "a\n    b\nc",
 }, {
-	src:    "a\n  b\nc",
-	expect: "a\n  b\nc",
+	raw:    "a\n  b\nc",
+	result: "a\n  b\nc",
 }, {
-	src:    "\ta\n\t\tb\n\tc",
-	expect: "a\n    b\nc",
+	raw:    "\ta\n\t\tb\n\tc",
+	result: "a\n    b\nc",
 }, {
-	src:    "  a\n    b\n  c",
-	expect: "  a\n    b\n  c",
+	raw:    "  a\n    b\n  c",
+	result: "  a\n    b\n  c",
 }, {
-	src:    "    a\n    \tb\n    c",
-	expect: "    a\n        b\n    c",
+	raw:    "    a\n    \tb\n    c",
+	result: "    a\n        b\n    c",
 }, {
-	src: "\t  a",
-	err: "Tabs and spaces mixed early on string:\n\t  a",
+	raw:   "\t  a",
+	error: "Tabs and spaces mixed early on string:\n\t  a",
 }, {
-	src: "\t  a\n\t    b\n\t  c",
-	err: "Tabs and spaces mixed early on string:\n\t  a\n\t    b\n\t  c",
+	raw:   "\t  a\n\t    b\n\t  c",
+	error: "Tabs and spaces mixed early on string:\n\t  a\n\t    b\n\t  c",
 }, {
-	src: "\ta\nb",
-	err: "Line not indented consistently:\nb",
+	raw:   "\ta\nb",
+	error: "Line not indented consistently:\nb",
 }}
 
 func (s *S) TestReindent(c *C) {
@@ -59,20 +59,20 @@ func (*S) testReindent(c *C, test reindentTest) {
 			if !ok {
 				panic(err)
 			}
-			c.Assert(errMsg, Equals, test.err)
+			c.Assert(errMsg, Equals, test.error)
 		}
 	}()
 
 	c.Logf("Test: %#v", test)
 
-	if !strings.HasSuffix(test.expect, "\n") {
-		test.expect += "\n"
+	if !strings.HasSuffix(test.result, "\n") {
+		test.result += "\n"
 	}
 
-	reindented := testutil.Reindent(test.src)
-	if test.err != "" {
-		c.Errorf("Expected panic with message '%#v'", test.err)
+	reindented := testutil.Reindent(test.raw)
+	if test.error != "" {
+		c.Errorf("Expected panic with message '%#v'", test.error)
 		return
 	}
-	c.Assert(string(reindented), Equals, test.expect)
+	c.Assert(string(reindented), Equals, test.result)
 }
