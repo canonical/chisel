@@ -8,10 +8,6 @@ import (
 // Reindent deindents the provided strings and replace tabs by spaces,
 // so yaml inlined into tests work properly when decoded.
 func Reindent(in string) []byte {
-	if in != "" && in[0] != '\t' {
-		return []uint8(strings.ReplaceAll(in, "\t", "    ") + "\n")
-	}
-
 	var buf bytes.Buffer
 	var trim string
 	var trimSet bool
@@ -26,6 +22,10 @@ func Reindent(in string) []byte {
 			}
 			trim = line[:len(line)-len(trimmed)]
 			trimSet = true
+
+			if trim == "" {
+				return []uint8(strings.ReplaceAll(in, "\t", "    ") + "\n")
+			}
 		}
 		trimmed := strings.TrimPrefix(line, trim)
 		if len(trimmed) == len(line) && strings.TrimLeft(line, "\t ") != "" {
