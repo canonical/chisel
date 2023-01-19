@@ -24,7 +24,7 @@ func Reindent(in string) []byte {
 			trimSet = true
 		}
 		trimmed := strings.TrimPrefix(line, trim)
-		if len(trimmed) == len(line) && trim != "" && strings.Trim(line, "\t ") != "" {
+		if len(trimmed) == len(line) && trim != "" && strings.TrimLeft(line, "\t ") != "" {
 			panic("Line not indented consistently:\n" + line)
 		}
 		trimmed = strings.ReplaceAll(trimmed, "\t", "    ")
