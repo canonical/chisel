@@ -17,9 +17,10 @@ func Reindent(in string) []byte {
 			if trimmed == "" {
 				continue
 			}
-			if len(trimmed) != len(line) && trimmed[0] == ' ' {
-				panic("Tabs and spaces mixed early on string:\n" + in)
+			if trimmed[0] == ' ' {
+				panic("Space used in indent early in string:\n" + in)
 			}
+
 			trim = line[:len(line)-len(trimmed)]
 			trimSet = true
 

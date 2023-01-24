@@ -18,9 +18,6 @@ var reindentTests = []reindentTest{{
 	raw:    "\ta\n\tb",
 	result: "a\nb",
 }, {
-	raw:    "    a\n    b",
-	result: "    a\n    b",
-}, {
 	raw:    "a\n\tb\nc",
 	result: "a\n    b\nc",
 }, {
@@ -30,17 +27,14 @@ var reindentTests = []reindentTest{{
 	raw:    "\ta\n\t\tb\n\tc",
 	result: "a\n    b\nc",
 }, {
-	raw:    "  a\n    b\n  c",
-	result: "  a\n    b\n  c",
-}, {
-	raw:    "    a\n    \tb\n    c",
-	result: "    a\n        b\n    c",
-}, {
 	raw:   "\t  a",
-	error: "Tabs and spaces mixed early on string:\n\t  a",
+	error: "Space used in indent early in string:\n\t  a",
 }, {
 	raw:   "\t  a\n\t    b\n\t  c",
-	error: "Tabs and spaces mixed early on string:\n\t  a\n\t    b\n\t  c",
+	error: "Space used in indent early in string:\n\t  a\n\t    b\n\t  c",
+}, {
+	raw:   "    a\nb",
+	error: "Space used in indent early in string:\n    a\nb",
 }, {
 	raw:   "\ta\nb",
 	error: "Line not indented consistently:\nb",
