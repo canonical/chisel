@@ -5,8 +5,8 @@ import (
 	"strings"
 )
 
-// Reindent deindents the provided string and replaces tabs with spaces
-// so yaml inlined into tests works properly when decoded.
+// Reindent deindents the provided strings and replace tabs by spaces,
+// so yaml inlined into tests work properly when decoded.
 func Reindent(in string) []byte {
 	var buf bytes.Buffer
 	var trim string
