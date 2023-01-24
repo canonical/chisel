@@ -33,20 +33,24 @@ func Run(options *RunOptions) error {
 	knownPaths["/"] = true
 
 	addKnownPath := func(path string) {
-		path = filepath.Clean(path)
 		if path[0] != '/' {
 			panic("bug: tried to add relative path to known paths")
 		}
+		cleanPath := filepath.Clean(path)
+		slashPath := cleanPath
+		if path[len(path)-1] == '/' && cleanPath != "/" {
+			slashPath += "/"
+		}
 		for {
-			if _, ok := knownPaths[path]; ok {
+			if _, ok := knownPaths[slashPath]; ok {
 				break
 			}
-			knownPaths[path] = true
-			path = filepath.Dir(path)
-			if path == "/" {
+			knownPaths[slashPath] = true
+			cleanPath = filepath.Dir(cleanPath)
+			if cleanPath == "/" {
 				break
 			}
-			path += "/"
+			slashPath = cleanPath + "/"
 		}
 	}
 
