@@ -232,10 +232,27 @@ func Run(options *RunOptions) error {
 		return nil
 	}
 	checkRead := func(path string) error {
+		var err error
 		if !knownPaths[path] {
-			return fmt.Errorf("cannot read file which is not selected: %s", path)
+			// we assume that path is clean and ends with slash if it designates a directory
+			if path[len(path)-1] == '/' {
+				if path == "/" {
+					panic("internal error: content root (\"/\") is not selected")
+				}
+				if knownPaths[path[:len(path)-1]] {
+					err = fmt.Errorf("content is not a directory: %s", path[:len(path)-1])
+				} else {
+					err = fmt.Errorf("cannot list directory which is not selected: %s", path)
+				}
+			} else {
+				if knownPaths[path+"/"] {
+					err = fmt.Errorf("content is not a file: %s", path)
+				} else {
+					err = fmt.Errorf("cannot read file which is not selected: %s", path)
+				}
+			}
 		}
-		return nil
+		return err
 	}
 	content := &scripts.ContentValue{
 		RootDir:    targetDirAbs,
