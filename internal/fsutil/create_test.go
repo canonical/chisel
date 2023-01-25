@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io/fs"
 	"path/filepath"
+	"syscall"
 
 	. "gopkg.in/check.v1"
 
@@ -57,6 +58,10 @@ var createTests = []createTest{{
 }}
 
 func (s *S) TestCreate(c *C) {
+	oldUmask := syscall.Umask(0)
+	defer func() {
+		syscall.Umask(oldUmask)
+	}()
 
 	for _, test := range createTests {
 		c.Logf("Options: %v", test.options)
