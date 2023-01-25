@@ -383,7 +383,7 @@ var slicerTests = []slicerTest{{
 						content.list("/a/d")
 		`,
 	},
-	error: `slice base-files_myslice: cannot read file which is not selected: /a/d`,
+	error: `slice base-files_myslice: cannot list directory which is not selected: /a/d/`,
 }, {
 	summary: "Cannot list file path as a directory",
 	slices:  []setup.SliceKey{{"base-files", "myslice"}},
@@ -398,7 +398,7 @@ var slicerTests = []slicerTest{{
 						content.list("/a/b/c")
 		`,
 	},
-	error: `slice base-files_myslice: readdirent /a/b/c: not a directory`,
+	error: `slice base-files_myslice: content is not a directory: /a/b/c`,
 }, {
 	summary: "Can list parent directories of globs",
 	slices:  []setup.SliceKey{{"base-files", "myslice"}},
@@ -427,7 +427,7 @@ var slicerTests = []slicerTest{{
 						content.list("/etc")
 		`,
 	},
-	error: `slice base-files_myslice: cannot read file which is not selected: /etc`,
+	error: `slice base-files_myslice: cannot list directory which is not selected: /etc/`,
 }, {
 	summary: "Duplicate copyright symlink is ignored",
 	slices:  []setup.SliceKey{{"copyright-symlink-openssl", "bins"}},
@@ -453,6 +453,40 @@ var slicerTests = []slicerTest{{
 						/etc/ssl/openssl.cnf:
 		`,
 	},
+}, {
+	summary: "Can list unclean directory paths",
+	slices:  []setup.SliceKey{{"base-files", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/base-files.yaml": `
+			package: base-files
+			slices:
+				myslice:
+					contents:
+						/a/b/c: {text: foo}
+						/x/y/: {make: true}
+					mutate: |
+						content.list("/////")
+						content.list("/a/")
+						content.list("/a/b/../b/")
+						content.list("/x///")
+						content.list("/x/./././y")
+		`,
+	},
+}, {
+	summary: "Cannot read directories",
+	slices:  []setup.SliceKey{{"base-files", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/base-files.yaml": `
+			package: base-files
+			slices:
+				myslice:
+					contents:
+						/x/y/: {make: true}
+					mutate: |
+						content.read("/x/y")
+		`,
+	},
+	error: `slice base-files_myslice: content is not a file: /x/y`,
 }}
 
 const defaultChiselYaml = `

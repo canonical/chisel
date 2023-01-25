@@ -33,20 +33,24 @@ func Run(options *RunOptions) error {
 	knownPaths["/"] = true
 
 	addKnownPath := func(path string) {
-		path = filepath.Clean(path)
 		if path[0] != '/' {
 			panic("bug: tried to add relative path to known paths")
 		}
+		cleanPath := filepath.Clean(path)
+		slashPath := cleanPath
+		if path[len(path)-1] == '/' && cleanPath != "/" {
+			slashPath += "/"
+		}
 		for {
-			if _, ok := knownPaths[path]; ok {
+			if _, ok := knownPaths[slashPath]; ok {
 				break
 			}
-			knownPaths[path] = true
-			path = filepath.Dir(path)
-			if path == "/" {
+			knownPaths[slashPath] = true
+			cleanPath = filepath.Dir(cleanPath)
+			if cleanPath == "/" {
 				break
 			}
-			path += "/"
+			slashPath = cleanPath + "/"
 		}
 	}
 
@@ -84,6 +88,7 @@ func Run(options *RunOptions) error {
 		}
 		arch := archives[slice.Package].Options().Arch
 		copyrightPath := "/usr/share/doc/" + slice.Package + "/copyright"
+		addKnownPath(copyrightPath)
 		hasCopyright := false
 		for targetPath, pathInfo := range slice.Contents {
 			if targetPath == "" {
@@ -92,7 +97,9 @@ func Run(options *RunOptions) error {
 			if len(pathInfo.Arch) > 0 && !contains(pathInfo.Arch, arch) {
 				continue
 			}
-			addKnownPath(targetPath)
+			if pathInfo.Kind != setup.GlobPath {
+				addKnownPath(targetPath)
+			}
 			pathInfos[targetPath] = pathInfo
 			if pathInfo.Kind == setup.CopyPath || pathInfo.Kind == setup.GlobPath {
 				sourcePath := pathInfo.Info
@@ -225,10 +232,27 @@ func Run(options *RunOptions) error {
 		return nil
 	}
 	checkRead := func(path string) error {
+		var err error
 		if !knownPaths[path] {
-			return fmt.Errorf("cannot read file which is not selected: %s", path)
+			// we assume that path is clean and ends with slash if it designates a directory
+			if path[len(path)-1] == '/' {
+				if path == "/" {
+					panic("internal error: content root (\"/\") is not selected")
+				}
+				if knownPaths[path[:len(path)-1]] {
+					err = fmt.Errorf("content is not a directory: %s", path[:len(path)-1])
+				} else {
+					err = fmt.Errorf("cannot list directory which is not selected: %s", path)
+				}
+			} else {
+				if knownPaths[path+"/"] {
+					err = fmt.Errorf("content is not a file: %s", path)
+				} else {
+					err = fmt.Errorf("cannot read file which is not selected: %s", path)
+				}
+			}
 		}
-		return nil
+		return err
 	}
 	content := &scripts.ContentValue{
 		RootDir:    targetDirAbs,
