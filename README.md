@@ -188,8 +188,47 @@ slices:
             /etc/mypkg.d/:   {make: true}
 ```
 
-To find more examples of real slice definitios files (and contribute your own),
+To find more examples of real slice definitions files (and contribute your own),
 please go to <https://github.com/canonical/chisel-releases>.
+
+##### Path kinds
+
+As depicted in the example above, the paths listed under a slice's contents can
+have additional information for identifying the kind of content to expect:
+
+ - **make**: a `true` or `false` boolean value to specify whether the path must
+ be created or not. Example: `/etc/mypkg.d/: {make: true}` instructs Chisel to
+ create the directory "/etc/mypkg.d/" (with parent directories). NOTE: the
+ provided path must end with "/" for `make` to be valid.
+ - **mode**: a 32-bit unsigned integer representing the path mode. Example:
+ `/etc/dir/sub/: {make: true, mode: 01777}` instructs Chisel to create the
+ directory "/etc/dir/sub/" with mode "01777".
+ - **copy**: a string referring to the original path of the content being
+ copied. Example: `/bin/moved:  {copy: /bin/original}` instructs Chisel to copy
+ the package's "/bin/original" file onto "/bin/moved".
+ - **text**: a sequence of characters to be written to the provided file path.
+ Example: `/tmp/file1: {text: data1}` will instruct Chisel to write "data1"
+ into the file "/tmp/file1".
+ - **symlink**: a string referring to the original path (source) of the content
+ being linked. Example: `/bin/linked: {symlink: /bin/mybin}` will instruct
+ Chisel to create the symlink "/bin/linked", which points to an existing file
+ "/bin/mybin".
+ - **mutable**: a `true` or `false` boolean value to specify whether the content
+ is mutable, i.e. it can be changed after being extracted from the deb. Example:
+ `/tmp/file1: {text: data1, mutable: true}` instructs Chisel to populate
+ "/tmp/file1" with "data1", while also letting Chisel know that this file's
+ content can be mutated via a mutation script.
+ - **until**: accepts a "mutate" value to say that the specified content
+ shall be removed by Chisel after the mutation scripts are executed. Example:
+ `/tmp/file1: {text: data1, until: mutate}` instructs Chisel to populate the
+ file "/tmp/file1" with "data1" at installation time, but to then remove it
+ right after the slice's mutation scripts are executed. NOTE: while this
+ option can be combined with globs (eg. `/tmp/file*: {until: mutate}`), it
+ cannot be used to remove non-empty directories.
+ - **arch**: accepts a list of known architectures for identifying contents
+ which are only available for certain architetctures. Example:
+ `/usr/bin/hello: {arch: amd64}` will instruct Chisel to extract and install
+ the "/usr/bin/hello" file only when chiselling an amd64 filesystem.
 
 ## TODO
 
