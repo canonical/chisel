@@ -62,8 +62,6 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		DefaultArchive: "ubuntu",
-
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -74,10 +72,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Archive: "ubuntu",
-				Name:    "mypkg",
-				Path:    "slices/mydir/mypkg.yaml",
-				Slices:  map[string]*setup.Slice{},
+				Name:   "mypkg",
+				Path:   "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{},
 			},
 		},
 	},
@@ -105,8 +102,6 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		DefaultArchive: "ubuntu",
-
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -117,9 +112,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Archive: "ubuntu",
-				Name:    "mypkg",
-				Path:    "slices/mydir/mypkg.yaml",
+				Name: "mypkg",
+				Path: "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice1": {
 						Package: "mypkg",
@@ -166,8 +160,6 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		DefaultArchive: "ubuntu",
-
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -178,9 +170,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Archive: "ubuntu",
-				Name:    "mypkg",
-				Path:    "slices/mydir/mypkg.yaml",
+				Name: "mypkg",
+				Path: "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice1": {
 						Package: "mypkg",
@@ -426,8 +417,6 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		DefaultArchive: "ubuntu",
-
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -438,9 +427,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Archive: "ubuntu",
-				Name:    "mypkg",
-				Path:    "slices/mydir/mypkg.yaml",
+				Name: "mypkg",
+				Path: "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice1": {
 						Package: "mypkg",
@@ -640,8 +628,6 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		DefaultArchive: "ubuntu",
-
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -652,9 +638,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Archive: "ubuntu",
-				Name:    "mypkg",
-				Path:    "slices/mydir/mypkg.yaml",
+				Name: "mypkg",
+				Path: "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg",
@@ -679,8 +664,6 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		DefaultArchive: "ubuntu",
-
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -691,9 +674,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Archive: "ubuntu",
-				Name:    "mypkg",
-				Path:    "slices/mydir/mypkg.yaml",
+				Name: "mypkg",
+				Path: "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg",
@@ -719,8 +701,6 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		DefaultArchive: "ubuntu",
-
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -731,9 +711,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Archive: "ubuntu",
-				Name:    "mypkg",
-				Path:    "slices/mydir/mypkg.yaml",
+				Name: "mypkg",
+				Path: "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg",
@@ -757,7 +736,6 @@ var setupTests = []setupTest{{
 					version: 22.04
 					components: [main, universe]
 					suites: [jammy]
-					default: true
 				bar:
 					version: 22.04
 					components: [universe]
@@ -768,8 +746,6 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		DefaultArchive: "foo",
-
 		Archives: map[string]*setup.Archive{
 			"foo": {
 				Name:       "foo",
@@ -786,10 +762,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Archive: "foo",
-				Name:    "mypkg",
-				Path:    "slices/mydir/mypkg.yaml",
-				Slices:  map[string]*setup.Slice{},
+				Name:   "mypkg",
+				Path:   "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{},
 			},
 		},
 	},

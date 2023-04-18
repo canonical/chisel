@@ -16,7 +16,7 @@ import (
 type Archive interface {
 	Options() *Options
 	Fetch(pkg string) (io.ReadCloser, error)
-	Exists(pkg string) bool
+	Version(pkg string) string
 }
 
 type Options struct {
@@ -74,12 +74,12 @@ func (a *ubuntuArchive) Options() *Options {
 	return &a.options
 }
 
-func (a *ubuntuArchive) Exists(pkg string) bool {
-	_, _, err := a.selectPackage(pkg)
-	return err == nil
+func (a *ubuntuArchive) Version(pkg string) string {
+	_, _, version := a.selectPackage(pkg)
+	return version
 }
 
-func (a *ubuntuArchive) selectPackage(pkg string) (control.Section, *ubuntuIndex, error) {
+func (a *ubuntuArchive) selectPackage(pkg string) (control.Section, *ubuntuIndex, string) {
 	var selectedVersion string
 	var selectedSection control.Section
 	var selectedIndex *ubuntuIndex
@@ -95,15 +95,15 @@ func (a *ubuntuArchive) selectPackage(pkg string) (control.Section, *ubuntuIndex
 		}
 	}
 	if selectedVersion == "" {
-		return nil, nil, fmt.Errorf("cannot find package %q in archive", pkg)
+		return nil, nil, ""
 	}
-	return selectedSection, selectedIndex, nil
+	return selectedSection, selectedIndex, selectedVersion
 }
 
 func (a *ubuntuArchive) Fetch(pkg string) (io.ReadCloser, error) {
-	section, index, err := a.selectPackage(pkg)
-	if err != nil {
-		return nil, err
+	section, index, _ := a.selectPackage(pkg)
+	if section == nil {
+		return nil, fmt.Errorf("cannot find package %q in archive", pkg)
 	}
 	suffix := section.Get("Filename")
 	logf("Fetching %s...", suffix)
