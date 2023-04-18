@@ -30,6 +30,7 @@ type Archive struct {
 	Version    string
 	Suites     []string
 	Components []string
+	Pro        string
 }
 
 // Package holds a collection of slices that represent parts of themselves.
@@ -323,10 +324,11 @@ type yamlRelease struct {
 const yamlReleaseFormat = "chisel-v1"
 
 type yamlArchive struct {
-	Version    string   `yaml:"version"`
-	Suites     []string `yaml:"suites"`
-	Components []string `yaml:"components"`
-	Default    bool     `yaml:"default"`
+	Version    string     `yaml:"version"`
+	Suites     []string   `yaml:"suites"`
+	Components []string   `yaml:"components"`
+	Default    bool       `yaml:"default"`
+	Pro        string     `yaml:"pro"`
 }
 
 type yamlPackage struct {
@@ -428,6 +430,11 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		if len(details.Components) == 0 {
 			return nil, fmt.Errorf("%s: archive %q missing components field", fileName, archiveName)
 		}
+		switch details.Pro {
+		case "", "fips", "fips-updates":
+		default:
+			return nil, fmt.Errorf("%s: archive %q has invalid pro value: %q", fileName, archiveName, details.Pro)
+		}
 		if len(yamlVar.Archives) == 1 {
 			details.Default = true
 		} else if details.Default && release.DefaultArchive != "" {
@@ -441,6 +448,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 			Version:    details.Version,
 			Suites:     details.Suites,
 			Components: details.Components,
+			Pro:        details.Pro,
 		}
 	}
 

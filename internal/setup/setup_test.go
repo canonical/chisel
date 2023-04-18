@@ -64,7 +64,7 @@ var setupTests = []setupTest{{
 	release: &setup.Release{
 		DefaultArchive: "ubuntu",
 
-		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy", "jammy-security"}, []string{"main", "other"}}},
+		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy", "jammy-security"}, []string{"main", "other"}, ""}},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
 				Archive: "ubuntu",
@@ -100,7 +100,7 @@ var setupTests = []setupTest{{
 	release: &setup.Release{
 		DefaultArchive: "ubuntu",
 
-		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}}},
+		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}, ""}},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
 				Archive: "ubuntu",
@@ -154,7 +154,7 @@ var setupTests = []setupTest{{
 	release: &setup.Release{
 		DefaultArchive: "ubuntu",
 
-		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}}},
+		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}, ""}},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
 				Archive: "ubuntu",
@@ -407,7 +407,7 @@ var setupTests = []setupTest{{
 	release: &setup.Release{
 		DefaultArchive: "ubuntu",
 
-		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}}},
+		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}, ""}},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
 				Archive: "ubuntu",
@@ -614,7 +614,7 @@ var setupTests = []setupTest{{
 	release: &setup.Release{
 		DefaultArchive: "ubuntu",
 
-		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}}},
+		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}, ""}},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
 				Archive: "ubuntu",
@@ -646,7 +646,7 @@ var setupTests = []setupTest{{
 	release: &setup.Release{
 		DefaultArchive: "ubuntu",
 
-		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}}},
+		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}, ""}},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
 				Archive: "ubuntu",
@@ -679,7 +679,7 @@ var setupTests = []setupTest{{
 	release: &setup.Release{
 		DefaultArchive: "ubuntu",
 
-		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}}},
+		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}, ""}},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
 				Archive: "ubuntu",
@@ -722,12 +722,49 @@ var setupTests = []setupTest{{
 		DefaultArchive: "foo",
 
 		Archives: map[string]*setup.Archive{
-			"foo": {"foo", "22.04", []string{"jammy"}, []string{"main", "universe"}},
-			"bar": {"bar", "22.04", []string{"jammy-updates"}, []string{"universe"}},
+			"foo": {"foo", "22.04", []string{"jammy"}, []string{"main", "universe"}, ""},
+			"bar": {"bar", "22.04", []string{"jammy-updates"}, []string{"universe"}, ""},
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
 				Archive: "foo",
+				Name:    "mypkg",
+				Path:    "slices/mydir/mypkg.yaml",
+				Slices:  map[string]*setup.Slice{},
+			},
+		},
+	},
+}, {
+	summary: "Archive with pro property",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: chisel-v1
+			archives:
+				ubuntu:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy, jammy-updates, jammy-security]
+					default: true
+				ubuntu-fips:
+					pro: fips
+					version: 22.04
+					components: [main]
+					suites: [jammy]
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	release: &setup.Release{
+		DefaultArchive: "ubuntu",
+
+		Archives: map[string]*setup.Archive{
+			"ubuntu":      {"ubuntu", "22.04", []string{"jammy", "jammy-updates", "jammy-security"}, []string{"main", "universe"}, ""},
+			"ubuntu-fips": {"ubuntu-fips", "22.04", []string{"jammy"}, []string{"main"}, "fips"},
+		},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Archive: "ubuntu",
 				Name:    "mypkg",
 				Path:    "slices/mydir/mypkg.yaml",
 				Slices:  map[string]*setup.Slice{},
