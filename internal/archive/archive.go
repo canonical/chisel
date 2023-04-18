@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -35,6 +36,7 @@ type Options struct {
 	Components []string
 	CacheDir   string
 	Priority   int32
+	Pro        string
 }
 
 func Open(options *Options) (Archive, error) {
@@ -73,6 +75,8 @@ type ubuntuArchive struct {
 	options Options
 	indexes []*ubuntuIndex
 	cache   *cache.Cache
+	baseURL string
+	auth    string
 }
 
 type ubuntuIndex struct {
@@ -83,7 +87,7 @@ type ubuntuIndex struct {
 	component string
 	release   control.Section
 	packages  control.File
-	cache     *cache.Cache
+	archive   *ubuntuArchive
 }
 
 func (a *ubuntuArchive) Options() *Options {
@@ -148,6 +152,52 @@ func (a *ubuntuArchive) Fetch(pkg string) (io.ReadCloser, error) {
 
 const ubuntuURL = "http://archive.ubuntu.com/ubuntu/"
 const ubuntuPortsURL = "http://ports.ubuntu.com/ubuntu-ports/"
+const ubuntuProURL = "https://esm.ubuntu.com/"
+
+// keep it sorted
+var validPro = []string{
+	"fips",
+	"fips-updates",
+}
+
+func initProArchive(pro string, archive *ubuntuArchive) error {
+	if i := sort.SearchStrings(validPro, pro); !(i < len(validPro) && validPro[i] == pro) {
+		strvals := strings.Join(validPro, ", ")
+		return fmt.Errorf("invalid pro type, supported types: %s", strvals)
+	}
+
+	baseURL := ubuntuProURL + pro + "/ubuntu/"
+	creds, err := findCredentials(baseURL)
+	if err != nil {
+		return err
+	}
+
+	// Check that credentials are valid.
+	// It appears that only pool/ URLs are protected.
+	req, err := http.NewRequest("HEAD", baseURL+"pool/", nil)
+	if err != nil {
+		return fmt.Errorf("cannot create HTTP request: %w", err)
+	}
+	req.SetBasicAuth(creds.Username, creds.Password)
+
+	resp, err := httpDo(req)
+	if err != nil {
+		return fmt.Errorf("cannot talk to the archive: %w", err)
+	}
+	resp.Body.Close()
+	switch resp.StatusCode {
+	case 200: // ok
+	case 401:
+		return fmt.Errorf("cannot authenticate to the archive")
+	default:
+		return fmt.Errorf("error from the archive: %v", resp.Status)
+	}
+
+	archive.baseURL = baseURL
+	archive.auth = req.Header.Get("Authorization")
+
+	return nil
+}
 
 func openUbuntu(options *Options) (Archive, error) {
 	if len(options.Components) == 0 {
@@ -167,6 +217,18 @@ func openUbuntu(options *Options) (Archive, error) {
 		},
 	}
 
+	if options.Pro != "" {
+		if err := initProArchive(options.Pro, archive); err != nil {
+			return nil, err
+		}
+	} else {
+		if options.Arch == "amd64" || options.Arch == "i386" {
+			archive.baseURL = ubuntuURL
+		} else {
+			archive.baseURL = ubuntuPortsURL
+		}
+	}
+
 	for _, suite := range options.Suites {
 		var release control.Section
 		for _, component := range options.Components {
@@ -177,7 +239,7 @@ func openUbuntu(options *Options) (Archive, error) {
 				suite:     suite,
 				component: component,
 				release:   release,
-				cache:     archive.cache,
+				archive:   archive,
 			}
 			if release == nil {
 				err := index.fetchRelease()
@@ -265,28 +327,26 @@ func (index *ubuntuIndex) checkComponents(components []string) error {
 }
 
 func (index *ubuntuIndex) fetch(suffix, digest string, flags fetchFlags) (io.ReadCloser, error) {
-	reader, err := index.cache.Open(digest)
+	reader, err := index.archive.cache.Open(digest)
 	if err == nil {
 		return reader, nil
 	} else if err != cache.MissErr {
 		return nil, err
 	}
 
-	baseURL := ubuntuURL
-	if index.arch != "amd64" && index.arch != "i386" {
-		baseURL = ubuntuPortsURL
-	}
-
 	var url string
 	if strings.HasPrefix(suffix, "pool/") {
-		url = baseURL + suffix
+		url = index.archive.baseURL + suffix
 	} else {
-		url = baseURL + "dists/" + index.suite + "/" + suffix
+		url = index.archive.baseURL + "dists/" + index.suite + "/" + suffix
 	}
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create HTTP request: %v", err)
+	}
+	if index.archive.auth != "" {
+		req.Header.Set("Authorization", index.archive.auth)
 	}
 	var resp *http.Response
 	if flags&fetchBulk != 0 {
@@ -302,7 +362,7 @@ func (index *ubuntuIndex) fetch(suffix, digest string, flags fetchFlags) (io.Rea
 	switch resp.StatusCode {
 	case 200:
 		// ok
-	case 401, 404:
+	case 404:
 		return nil, fmt.Errorf("cannot find archive data")
 	default:
 		return nil, fmt.Errorf("error from archive: %v", resp.Status)
@@ -318,7 +378,7 @@ func (index *ubuntuIndex) fetch(suffix, digest string, flags fetchFlags) (io.Rea
 		body = reader
 	}
 
-	writer := index.cache.Create(digest)
+	writer := index.archive.cache.Create(digest)
 	defer writer.Close()
 
 	_, err = io.Copy(writer, body)
@@ -329,5 +389,5 @@ func (index *ubuntuIndex) fetch(suffix, digest string, flags fetchFlags) (io.Rea
 		return nil, fmt.Errorf("cannot fetch from archive: %v", err)
 	}
 
-	return index.cache.Open(writer.Digest())
+	return index.archive.cache.Open(writer.Digest())
 }

@@ -365,6 +365,59 @@ func (s *httpSuite) TestPackageInfo(c *C) {
 	c.Assert(info99, IsNil)
 }
 
+func (s *httpSuite) TestFetchProPackage(c *C) {
+	var err error
+
+	credsDir := c.MkDir()
+	restore := fakeEnv("CHISEL_AUTH_DIR", credsDir)
+	defer restore()
+
+	s.base = "https://esm.ubuntu.com/fips/ubuntu/"
+	s.prepareArchive("jammy", "22.04", "amd64", []string{"main", "universe"})
+
+	invalidOptions := archive.Options{
+		Label:      "ubuntu",
+		Version:    "22.04",
+		Arch:       "amd64",
+		Suites:     []string{"jammy"},
+		Components: []string{"main", "universe"},
+		CacheDir:   c.MkDir(),
+		Pro:        "invalid",
+	}
+
+	_, err = archive.Open(&invalidOptions)
+	c.Assert(err, ErrorMatches, "invalid pro type, supported types: fips, fips-updates")
+
+	fipsOptions := archive.Options{
+		Label:      "ubuntu",
+		Version:    "22.04",
+		Arch:       "amd64",
+		Suites:     []string{"jammy"},
+		Components: []string{"main", "universe"},
+		CacheDir:   c.MkDir(),
+		Pro:        "fips",
+	}
+
+	_, err = archive.Open(&fipsOptions)
+	c.Assert(err, Equals, archive.ErrCredentialsNotFound)
+
+	credsFile := filepath.Join(credsDir, "90ubuntu-advantage")
+	credsData := "machine https://esm.ubuntu.com/fips/ubuntu/ login user password pw\n"
+	err = os.WriteFile(credsFile, []byte(credsData), 0600)
+	c.Assert(err, IsNil)
+
+	archive, err := archive.Open(&fipsOptions)
+	c.Assert(err, IsNil)
+
+	pkg, err := archive.Fetch("mypkg1")
+	c.Assert(err, IsNil)
+	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
+
+	pkg, err = archive.Fetch("mypkg4")
+	c.Assert(err, IsNil)
+	c.Assert(read(pkg), Equals, "mypkg4 1.4 data")
+}
+
 func read(r io.Reader) string {
 	data, err := io.ReadAll(r)
 	if err != nil {

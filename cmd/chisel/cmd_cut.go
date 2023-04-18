@@ -92,11 +92,19 @@ func (cmd *cmdCut) Execute(args []string) error {
 			Components: archiveInfo.Components,
 			CacheDir:   cache.DefaultDir("chisel"),
 			Priority:   archiveInfo.Priority,
+			Pro:        archiveInfo.Pro,
 		})
 		if err != nil {
-			return err
+			if err != archive.ErrCredentialsNotFound {
+				return err
+			}
+		} else {
+			archives[archiveName] = openArchive
 		}
-		archives[archiveName] = openArchive
+	}
+
+	if len(archives) == 0 {
+		return fmt.Errorf("no valid archives (%d skipped)", len(release.Archives))
 	}
 
 	return slicer.Run(&slicer.RunOptions{

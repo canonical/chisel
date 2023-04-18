@@ -790,6 +790,50 @@ var setupTests = []setupTest{{
 		`,
 	},
 	relerror: "(?s).*\\bcannot unmarshal !!int `2147483648` into int32\\b.*",
+}, {
+	summary: "Pro property",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: chisel-v1
+			archives:
+				ubuntu:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy, jammy-updates, jammy-security]
+				ubuntu-fips:
+					pro: fips
+					version: 22.04
+					components: [main]
+					suites: [jammy]
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	release: &setup.Release{
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "22.04",
+				Suites:     []string{"jammy", "jammy-updates", "jammy-security"},
+				Components: []string{"main", "universe"},
+			},
+			"ubuntu-fips": {
+				Name:       "ubuntu-fips",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main"},
+				Pro:        "fips",
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Name:   "mypkg",
+				Path:   "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{},
+			},
+		},
+	},
 }}
 
 const defaultChiselYaml = `

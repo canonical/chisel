@@ -30,6 +30,7 @@ type Archive struct {
 	Suites     []string
 	Components []string
 	Priority   int32
+	Pro        string
 }
 
 // Package holds a collection of slices that represent parts of themselves.
@@ -323,6 +324,7 @@ type yamlArchive struct {
 	Suites     []string `yaml:"suites"`
 	Components []string `yaml:"components"`
 	Priority   int32    `yaml:"priority"`
+	Pro        string   `yaml:"pro"`
 }
 
 type yamlPackage struct {
@@ -430,6 +432,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 			Suites:     details.Suites,
 			Components: details.Components,
 			Priority:   details.Priority,
+			Pro:        details.Pro,
 		}
 	}
 
