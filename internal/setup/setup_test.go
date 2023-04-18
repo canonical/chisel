@@ -62,12 +62,9 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		DefaultArchive: "ubuntu",
-
 		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy", "jammy-security"}, []string{"main", "other"}, ""}},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Archive: "ubuntu",
 				Name:    "mypkg",
 				Path:    "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{},
@@ -98,12 +95,9 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		DefaultArchive: "ubuntu",
-
 		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}, ""}},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Archive: "ubuntu",
 				Name:    "mypkg",
 				Path:    "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
@@ -152,12 +146,9 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		DefaultArchive: "ubuntu",
-
 		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}, ""}},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Archive: "ubuntu",
 				Name:    "mypkg",
 				Path:    "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
@@ -405,12 +396,9 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		DefaultArchive: "ubuntu",
-
 		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}, ""}},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Archive: "ubuntu",
 				Name:    "mypkg",
 				Path:    "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
@@ -612,12 +600,9 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		DefaultArchive: "ubuntu",
-
 		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}, ""}},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Archive: "ubuntu",
 				Name:    "mypkg",
 				Path:    "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
@@ -644,12 +629,9 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		DefaultArchive: "ubuntu",
-
 		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}, ""}},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Archive: "ubuntu",
 				Name:    "mypkg",
 				Path:    "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
@@ -677,12 +659,9 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		DefaultArchive: "ubuntu",
-
 		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}, ""}},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Archive: "ubuntu",
 				Name:    "mypkg",
 				Path:    "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
@@ -708,7 +687,6 @@ var setupTests = []setupTest{{
 					version: 22.04
 					components: [main, universe]
 					suites: [jammy]
-					default: true
 				bar:
 					version: 22.04
 					components: [universe]
@@ -719,15 +697,12 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		DefaultArchive: "foo",
-
 		Archives: map[string]*setup.Archive{
 			"foo": {"foo", "22.04", []string{"jammy"}, []string{"main", "universe"}, ""},
 			"bar": {"bar", "22.04", []string{"jammy-updates"}, []string{"universe"}, ""},
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Archive: "foo",
 				Name:    "mypkg",
 				Path:    "slices/mydir/mypkg.yaml",
 				Slices:  map[string]*setup.Slice{},
@@ -744,7 +719,6 @@ var setupTests = []setupTest{{
 					version: 22.04
 					components: [main, universe]
 					suites: [jammy, jammy-updates, jammy-security]
-					default: true
 				ubuntu-fips:
 					pro: fips
 					version: 22.04
@@ -756,15 +730,12 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		DefaultArchive: "ubuntu",
-
 		Archives: map[string]*setup.Archive{
 			"ubuntu":      {"ubuntu", "22.04", []string{"jammy", "jammy-updates", "jammy-security"}, []string{"main", "universe"}, ""},
 			"ubuntu-fips": {"ubuntu-fips", "22.04", []string{"jammy"}, []string{"main"}, "fips"},
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Archive: "ubuntu",
 				Name:    "mypkg",
 				Path:    "slices/mydir/mypkg.yaml",
 				Slices:  map[string]*setup.Slice{},

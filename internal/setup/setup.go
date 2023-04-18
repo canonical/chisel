@@ -21,7 +21,6 @@ type Release struct {
 	Path           string
 	Packages       map[string]*Package
 	Archives       map[string]*Archive
-	DefaultArchive string
 }
 
 // Archive is the location from which binary packages are obtained.
@@ -37,7 +36,6 @@ type Archive struct {
 type Package struct {
 	Name    string
 	Path    string
-	Archive string
 	Slices  map[string]*Slice
 }
 
@@ -307,9 +305,6 @@ func readSlices(release *Release, baseDir, dirName string) error {
 		if err != nil {
 			return err
 		}
-		if pkg.Archive == "" {
-			pkg.Archive = release.DefaultArchive
-		}
 
 		release.Packages[pkg.Name] = pkg
 	}
@@ -327,7 +322,6 @@ type yamlArchive struct {
 	Version    string     `yaml:"version"`
 	Suites     []string   `yaml:"suites"`
 	Components []string   `yaml:"components"`
-	Default    bool       `yaml:"default"`
 	Pro        string     `yaml:"pro"`
 }
 
@@ -435,14 +429,6 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		default:
 			return nil, fmt.Errorf("%s: archive %q has invalid pro value: %q", fileName, archiveName, details.Pro)
 		}
-		if len(yamlVar.Archives) == 1 {
-			details.Default = true
-		} else if details.Default && release.DefaultArchive != "" {
-			return nil, fmt.Errorf("%s: more than one default archive: %s, %s", fileName, release.DefaultArchive, archiveName)
-		}
-		if details.Default {
-			release.DefaultArchive = archiveName
-		}
 		release.Archives[archiveName] = &Archive{
 			Name:       archiveName,
 			Version:    details.Version,
@@ -472,7 +458,6 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 	if yamlPkg.Name != pkg.Name {
 		return nil, fmt.Errorf("%s: filename and 'package' field (%q) disagree", pkgPath, yamlPkg.Name)
 	}
-	pkg.Archive = yamlPkg.Archive
 
 	zeroPath := yamlPath{}
 	for sliceName, yamlSlice := range yamlPkg.Slices {

@@ -17,6 +17,13 @@ import (
 	"github.com/canonical/chisel/internal/testutil"
 )
 
+type testPackageInfo struct {
+	name    string
+	version string
+	archive string
+	content []testutil.TarEntry
+}
+
 type slicerTest struct {
 	summary string
 	arch    string
@@ -25,6 +32,7 @@ type slicerTest struct {
 	hackopt func(c *C, opts *slicer.RunOptions)
 	result  map[string]string
 	error   string
+	pkgs    []testPackageInfo
 }
 
 var packageEntries = map[string][]testutil.TarEntry{
@@ -487,6 +495,180 @@ var slicerTests = []slicerTest{{
 		`,
 	},
 	error: `slice base-files_myslice: content is not a file: /x/y`,
+}, {
+	summary: "Can install packages from multiple archives",
+	pkgs: []testPackageInfo{
+		{
+			name:    "electron",
+			version: "1.897",
+			archive: "leptons",
+			content: []testutil.TarEntry{
+				{Header: tar.Header{Name: "./"}},
+				{Header: tar.Header{Name: "./mass/"}},
+				{
+					Header:  tar.Header{Name: "./mass/electron"},
+					Content: []byte("9.1093837015E−31 kg\n"),
+				},
+				{Header: tar.Header{Name: "./usr/"}},
+				{Header: tar.Header{Name: "./usr/share/"}},
+				{Header: tar.Header{Name: "./usr/share/doc/"}},
+				{Header: tar.Header{Name: "./usr/share/doc/electron/"}},
+				{Header: tar.Header{Name: "./usr/share/doc/electron/copyright"}},
+			},
+		},
+		{
+			name:    "proton",
+			version: "1.886",
+			archive: "hadrons",
+			content: []testutil.TarEntry{
+				{Header: tar.Header{Name: "./"}},
+				{Header: tar.Header{Name: "./mass/"}},
+				{
+					Header:  tar.Header{Name: "./mass/proton"},
+					Content: []byte("1.67262192369E−27 kg\n"),
+				},
+			},
+		},
+	},
+	release: map[string]string{
+		"chisel.yaml": `
+			format: chisel-v1
+			archives:
+				leptons:
+					version: 1
+					suites: [main]
+					components: [main, universe]
+				hadrons:
+					version: 1
+					suites: [main]
+					components: [main]
+		`,
+		"slices/mydir/electron.yaml": `
+			package: electron
+			slices:
+				mass:
+					contents:
+						/mass/electron:
+		`,
+		"slices/mydir/proton.yaml": `
+			package: proton
+			slices:
+				mass:
+					contents:
+						/mass/proton:
+		`,
+	},
+	slices: []setup.SliceKey{
+		{"electron", "mass"},
+		{"proton", "mass"},
+	},
+	result: map[string]string{
+		"/mass/":                            "dir 0755",
+		"/mass/electron":                    "file 0644 a1258e30",
+		"/mass/proton":                      "file 0644 a2390d10",
+		"/usr/":                             "dir 0755",
+		"/usr/share/":                       "dir 0755",
+		"/usr/share/doc/":                   "dir 0755",
+		"/usr/share/doc/electron/":          "dir 0755",
+		"/usr/share/doc/electron/copyright": "file 0644 empty",
+	},
+}, {
+	summary: "Can pick latest packages from multiple archives",
+	pkgs: []testPackageInfo{
+		{
+			name:    "cheetah",
+			version: "109.4",
+			archive: "vertebrates",
+			content: []testutil.TarEntry{
+				{Header: tar.Header{Name: "./"}},
+				{Header: tar.Header{Name: "./speed/"}},
+				{
+					Header:  tar.Header{Name: "./speed/cheetah"},
+					Content: []byte("109.4 km/h\n"),
+				},
+			},
+		},
+		{
+			name:    "ostrich",
+			version: "100.0",
+			archive: "vertebrates",
+			content: []testutil.TarEntry{
+				{Header: tar.Header{Name: "./"}},
+				{Header: tar.Header{Name: "./speed/"}},
+				{
+					Header:  tar.Header{Name: "./speed/ostrich"},
+					Content: []byte("100.0 km/h\n"),
+				},
+			},
+		},
+		{
+			name:    "cheetah",
+			version: "120.7",
+			archive: "mammals",
+			content: []testutil.TarEntry{
+				{Header: tar.Header{Name: "./"}},
+				{Header: tar.Header{Name: "./speed/"}},
+				{
+					Header:  tar.Header{Name: "./speed/cheetah"},
+					Content: []byte("120.7 km/h\n"),
+				},
+			},
+		},
+		{
+			name:    "ostrich",
+			version: "90.0",
+			archive: "birds",
+			content: []testutil.TarEntry{
+				{Header: tar.Header{Name: "./"}},
+				{Header: tar.Header{Name: "./speed/"}},
+				{
+					Header:  tar.Header{Name: "./speed/ostrich"},
+					Content: []byte("90.0 km/h\n"),
+				},
+			},
+		},
+	},
+	slices: []setup.SliceKey{
+		{"cheetah", "speed"},
+		{"ostrich", "speed"},
+	},
+	release: map[string]string{
+		"chisel.yaml": `
+			format: chisel-v1
+			archives:
+				vertebrates:
+					version: 1
+					suites: [main]
+					components: [main, universe]
+				mammals:
+					version: 1
+					suites: [main]
+					components: [main]
+				birds:
+					version: 1
+					suites: [main]
+					components: [main]
+		`,
+		"slices/mydir/cheetah.yaml": `
+			package: cheetah
+			slices:
+				speed:
+					contents:
+						/speed/cheetah:
+		`,
+		"slices/mydir/ostrich.yaml": `
+			package: ostrich
+			slices:
+				speed:
+					contents:
+						/speed/ostrich:
+		`,
+	},
+	result: map[string]string{
+		"/speed/":        "dir 0755",
+		"/speed/cheetah": "file 0644 e98b0879",
+		"/speed/ostrich": "file 0644 c8fa2806",
+	},
 }}
 
 const defaultChiselYaml = `
@@ -497,9 +679,14 @@ const defaultChiselYaml = `
 			components: [main, universe]
 `
 
+type testPackage struct {
+	version string
+	content []byte
+}
+
 type testArchive struct {
 	arch string
-	pkgs map[string][]byte
+	pkgs map[string]testPackage
 }
 
 func (a *testArchive) Options() *archive.Options {
@@ -508,14 +695,16 @@ func (a *testArchive) Options() *archive.Options {
 
 func (a *testArchive) Fetch(pkg string) (io.ReadCloser, error) {
 	if data, ok := a.pkgs[pkg]; ok {
-		return ioutil.NopCloser(bytes.NewBuffer(data)), nil
+		return ioutil.NopCloser(bytes.NewBuffer(data.content)), nil
 	}
 	return nil, fmt.Errorf("attempted to open %q package", pkg)
 }
 
-func (a *testArchive) Exists(pkg string) bool {
-	_, ok := a.pkgs[pkg]
-	return ok
+func (a *testArchive) Version(pkg string) string {
+	if data, ok := a.pkgs[pkg]; ok {
+		return data.version
+	}
+	return ""
 }
 
 func (s *S) TestRun(c *C) {
@@ -541,19 +730,35 @@ func (s *S) TestRun(c *C) {
 		selection, err := setup.Select(release, test.slices)
 		c.Assert(err, IsNil)
 
-		pkgs := map[string][]byte{
-			"base-files": testutil.PackageData["base-files"],
-		}
-		for name, entries := range packageEntries {
-			deb, err := testutil.MakeDeb(entries)
-			c.Assert(err, IsNil)
-			pkgs[name] = deb
-		}
-		archives := map[string]archive.Archive{
-			"ubuntu": &testArchive{
+		archives := map[string]archive.Archive{}
+
+		if test.pkgs != nil {
+			for _, pkgInfo := range test.pkgs {
+				archive, ok := archives[pkgInfo.archive].(*testArchive)
+				if !ok {
+					archive = &testArchive{
+						arch: test.arch,
+						pkgs: map[string]testPackage{},
+					}
+					archives[pkgInfo.archive] = archive
+				}
+				deb, err := testutil.MakeDeb(pkgInfo.content)
+				c.Assert(err, IsNil)
+				archive.pkgs[pkgInfo.name] = testPackage{pkgInfo.version, deb}
+			}
+		} else {
+			pkgs := map[string]testPackage{
+				"base-files": testPackage{"1", testutil.PackageData["base-files"]},
+			}
+			for name, entries := range packageEntries {
+				deb, err := testutil.MakeDeb(entries)
+				c.Assert(err, IsNil)
+				pkgs[name] = testPackage{"1", deb}
+			}
+			archives["ubuntu"] = &testArchive{
 				arch: test.arch,
 				pkgs: pkgs,
-			},
+			}
 		}
 
 		targetDir := c.MkDir()
@@ -575,8 +780,10 @@ func (s *S) TestRun(c *C) {
 
 		if test.result != nil {
 			result := make(map[string]string, len(copyrightEntries)+len(test.result))
-			for k, v := range copyrightEntries {
-				result[k] = v
+			if test.pkgs == nil {
+				for k, v := range copyrightEntries {
+					result[k] = v
+				}
 			}
 			for k, v := range test.result {
 				result[k] = v
