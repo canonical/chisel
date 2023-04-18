@@ -29,9 +29,6 @@ type Options struct {
 }
 
 func Open(options *Options) (Archive, error) {
-	if options.Label != "ubuntu" {
-		return nil, fmt.Errorf("non-ubuntu archives are not supported yet")
-	}
 	var err error
 	if options.Arch == "" {
 		options.Arch, err = deb.InferArch()

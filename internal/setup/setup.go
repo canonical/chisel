@@ -413,15 +413,8 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 	if len(yamlVar.Archives) == 0 {
 		return nil, fmt.Errorf("%s: no archives defined", fileName)
 	}
-	if len(yamlVar.Archives) > 1 {
-		return nil, fmt.Errorf("%s: multiple archives not yet supported", fileName)
-	}
 
 	for archiveName, details := range yamlVar.Archives {
-		const ubuntuArchive = "ubuntu"
-		if archiveName != ubuntuArchive {
-			return nil, fmt.Errorf("%s: only %q archives are supported for now", fileName, ubuntuArchive)
-		}
 		if details.Version == "" {
 			return nil, fmt.Errorf("%s: archive %q missing version field", fileName, archiveName)
 		}
