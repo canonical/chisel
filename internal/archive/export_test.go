@@ -14,3 +14,6 @@ func FakeDo(do func(req *http.Request) (*http.Response, error)) (restore func())
 		bulkDo = _bulkDo
 	}
 }
+
+type Credentials = credentials
+var FindCredentialsDir = findCredentialsDir
