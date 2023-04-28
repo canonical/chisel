@@ -91,11 +91,14 @@ func (cmd *cmdCut) Execute(args []string) error {
 			Suites:     archiveInfo.Suites,
 			Components: archiveInfo.Components,
 			CacheDir:   cache.DefaultDir("chisel"),
+			Pro:        archiveInfo.Pro,
 		})
 		if err != nil {
 			return err
 		}
-		archives[archiveName] = openArchive
+		if openArchive != nil {
+			archives[archiveName] = openArchive
+		}
 	}
 
 	return slicer.Run(&slicer.RunOptions{
