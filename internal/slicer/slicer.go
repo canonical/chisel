@@ -5,8 +5,10 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"syscall"
 
@@ -69,13 +71,48 @@ func Run(options *RunOptions) error {
 		targetDirAbs = filepath.Join(dir, targetDir)
 	}
 
+	// Archives are ordered in descending order by priority. The
+	// default priority is 0 and the maximum allowed priority is
+	// the upper limit of int.
+	//
+	// If a package to be downloaded exists in archive A and
+	// archive B, and archive A has higher priority than archive
+	// B, the package is downloaded from archive A even if archive
+	// B has a newer version.
+	//
+	// If two or more archives have the same priority, the most
+	// recent version of the package from all of them is selected,
+	// if any. Otherwise, archives with lower priority are tried,
+	// if any.
+	//
+	// If two or more archives with the same priority contain the
+	// package with the same version, the first archive from the
+	// options.Archives iterator is used. In effect, the choice is
+	// random.
+	orderedArchives := make([]archive.Archive, 0, len(options.Archives))
+	for _, archive := range options.Archives {
+		orderedArchives = append(orderedArchives, archive)
+	}
+	sort.Slice(orderedArchives, func(a, b int) bool {
+		prioA := orderedArchives[a].Options().Priority
+		prioB := orderedArchives[b].Options().Priority
+		return prioA > prioB
+	})
+
 	// Build information to process the selection.
 	for _, slice := range options.Selection.Slices {
 		extractPackage := extract[slice.Package]
 		if extractPackage == nil {
 			var selectedVersion string
 			var selectedArchive archive.Archive
-			for _, currentArchive := range options.Archives {
+			currentPrio := math.MaxInt
+			for _, currentArchive := range orderedArchives {
+				if prio := currentArchive.Options().Priority; prio < currentPrio {
+					if selectedVersion != "" {
+						break
+					}
+					currentPrio = prio
+				}
 				pkgInfo := currentArchive.Info(slice.Package)
 				if pkgInfo == nil {
 					continue

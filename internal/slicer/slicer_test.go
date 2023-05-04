@@ -686,6 +686,92 @@ var slicerTests = []slicerTest{{
 		"/speed/cheetah": "file 0644 e98b0879",
 		"/speed/ostrich": "file 0644 c8fa2806",
 	},
+}, {
+	summary: "Pick package from archive with highest priority",
+	pkgs: map[string]map[string]testPackage{
+		"edge": {
+			"hello": testPackage{
+				info: map[string]string{
+					"Version": "2.0-beta",
+				},
+				content: testutil.MustMakeDeb([]testutil.TarEntry{
+					Dir(0755, "./"),
+					Reg(0644, "./hello", "Hello, The Edge\n"),
+				}),
+			},
+		},
+		"candidate": {
+			"hello": testPackage{
+				info: map[string]string{
+					"Version": "1.8",
+				},
+				content: testutil.MustMakeDeb([]testutil.TarEntry{
+					Dir(0755, "./"),
+					Reg(0644, "./hello", "Hello, The Candidate\n"),
+				}),
+			},
+		},
+		"stable": {
+			"hello": testPackage{
+				info: map[string]string{
+					"Version": "1.2",
+				},
+				content: testutil.MustMakeDeb([]testutil.TarEntry{
+					Dir(0755, "./"),
+					Reg(0644, "./hello", "Hello, The Stable\n"),
+				}),
+			},
+		},
+		"obsolete": {
+			"hello": testPackage{
+				info: map[string]string{
+					"Version": "1.0",
+				},
+				content: testutil.MustMakeDeb([]testutil.TarEntry{
+					Dir(0755, "./"),
+					Reg(0644, "./hello", "Hello, The Obsolete\n"),
+				}),
+			},
+		},
+	},
+	release: map[string]string{
+		"chisel.yaml": `
+			format: chisel-v1
+			archives:
+				edge:
+					version: 1
+					suites: [main]
+					components: [main]
+				candidate:
+					version: 1
+					suites: [main]
+					components: [main]
+					priority: 5
+				stable:
+					version: 1
+					suites: [main]
+					components: [main]
+					priority: 10
+				obsolete:
+					version: 1
+					suites: [main]
+					components: [main]
+					priority: 10
+		`,
+		"slices/mydir/hello.yaml": `
+			package: hello
+			slices:
+				all:
+					contents:
+						/hello:
+		`,
+	},
+	slices: []setup.SliceKey{
+		{"hello", "all"},
+	},
+	result: map[string]string{
+		"/hello": "file 0644 b5621b65",
+	},
 }}
 
 const defaultChiselYaml = `
@@ -791,6 +877,7 @@ func (s *S) TestRun(c *C) {
 					Version:    setupArchive.Version,
 					Suites:     setupArchive.Suites,
 					Components: setupArchive.Components,
+					Priority:   setupArchive.Priority,
 					Arch:       test.arch,
 				},
 				pkgs: archivePkgs,

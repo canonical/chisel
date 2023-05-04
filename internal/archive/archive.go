@@ -34,6 +34,7 @@ type Options struct {
 	Suites     []string
 	Components []string
 	CacheDir   string
+	Priority   int
 }
 
 func Open(options *Options) (Archive, error) {
