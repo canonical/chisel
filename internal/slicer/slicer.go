@@ -5,8 +5,10 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"syscall"
 
@@ -69,13 +71,30 @@ func Run(options *RunOptions) error {
 		targetDirAbs = filepath.Join(dir, targetDir)
 	}
 
+	orderedArchives := make([]archive.Archive, 0, len(options.Archives))
+	for _, archive := range options.Archives {
+		orderedArchives = append(orderedArchives, archive)
+	}
+	sort.Slice(orderedArchives, func(a, b int) bool {
+		prioA := orderedArchives[a].Options().Priority
+		prioB := orderedArchives[b].Options().Priority
+		return prioA > prioB
+	})
+
 	// Build information to process the selection.
 	for _, slice := range options.Selection.Slices {
 		extractPackage := extract[slice.Package]
 		if extractPackage == nil {
 			var selectedVersion string
 			var selectedArchive archive.Archive
-			for _, archive := range options.Archives {
+			currentPrio := math.MaxInt
+			for _, archive := range orderedArchives {
+				if prio := archive.Options().Priority; prio < currentPrio {
+					if selectedVersion != "" {
+						break
+					}
+					currentPrio = prio
+				}
 				version := archive.Version(slice.Package)
 				if version == "" {
 					continue

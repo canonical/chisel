@@ -62,7 +62,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy", "jammy-security"}, []string{"main", "other"}, ""}},
+		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy", "jammy-security"}, []string{"main", "other"}, "", 0}},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
 				Name:    "mypkg",
@@ -95,7 +95,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}, ""}},
+		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}, "", 0}},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
 				Name:    "mypkg",
@@ -146,7 +146,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}, ""}},
+		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}, "", 0}},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
 				Name:    "mypkg",
@@ -396,7 +396,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}, ""}},
+		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}, "", 0}},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
 				Name:    "mypkg",
@@ -600,7 +600,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}, ""}},
+		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}, "", 0}},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
 				Name:    "mypkg",
@@ -629,7 +629,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}, ""}},
+		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}, "", 0}},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
 				Name:    "mypkg",
@@ -659,7 +659,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}, ""}},
+		Archives: map[string]*setup.Archive{"ubuntu": {"ubuntu", "22.04", []string{"jammy"}, []string{"main", "universe"}, "", 0}},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
 				Name:    "mypkg",
@@ -698,8 +698,8 @@ var setupTests = []setupTest{{
 	},
 	release: &setup.Release{
 		Archives: map[string]*setup.Archive{
-			"foo": {"foo", "22.04", []string{"jammy"}, []string{"main", "universe"}, ""},
-			"bar": {"bar", "22.04", []string{"jammy-updates"}, []string{"universe"}, ""},
+			"foo": {"foo", "22.04", []string{"jammy"}, []string{"main", "universe"}, "", 0},
+			"bar": {"bar", "22.04", []string{"jammy-updates"}, []string{"universe"}, "", 0},
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
@@ -731,8 +731,8 @@ var setupTests = []setupTest{{
 	},
 	release: &setup.Release{
 		Archives: map[string]*setup.Archive{
-			"ubuntu":      {"ubuntu", "22.04", []string{"jammy", "jammy-updates", "jammy-security"}, []string{"main", "universe"}, ""},
-			"ubuntu-fips": {"ubuntu-fips", "22.04", []string{"jammy"}, []string{"main"}, "fips"},
+			"ubuntu":      {"ubuntu", "22.04", []string{"jammy", "jammy-updates", "jammy-security"}, []string{"main", "universe"}, "", 0},
+			"ubuntu-fips": {"ubuntu-fips", "22.04", []string{"jammy"}, []string{"main"}, "fips", 0},
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {

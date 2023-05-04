@@ -28,6 +28,7 @@ type Options struct {
 	Components []string
 	CacheDir   string
 	Pro        string
+	Priority   int
 }
 
 func Open(options *Options) (Archive, error) {

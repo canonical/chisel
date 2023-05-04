@@ -669,6 +669,84 @@ var slicerTests = []slicerTest{{
 		"/speed/cheetah": "file 0644 e98b0879",
 		"/speed/ostrich": "file 0644 c8fa2806",
 	},
+}, {
+	summary: "Pick package from archive with highest priority",
+	pkgs: []testPackageInfo{
+		{
+			name:    "hello",
+			version: "2.0-beta",
+			archive: "edge",
+			content: []testutil.TarEntry{
+				{Header: tar.Header{Name: "./"}},
+				{Header: tar.Header{Name: "./hello"}, Content: []byte("Hello, The Edge\n")},
+			},
+		},
+		{
+			name:    "hello",
+			version: "1.8",
+			archive: "candidate",
+			content: []testutil.TarEntry{
+				{Header: tar.Header{Name: "./"}},
+				{Header: tar.Header{Name: "./hello"}, Content: []byte("Hello, The Candidate\n")},
+			},
+		},
+		{
+			name:    "hello",
+			version: "1.2",
+			archive: "stable",
+			content: []testutil.TarEntry{
+				{Header: tar.Header{Name: "./"}},
+				{Header: tar.Header{Name: "./hello"}, Content: []byte("Hello, The Stable\n")},
+			},
+		},
+		{
+			name:    "hello",
+			version: "1.0",
+			archive: "obsolete",
+			content: []testutil.TarEntry{
+				{Header: tar.Header{Name: "./"}},
+				{Header: tar.Header{Name: "./hello"}, Content: []byte("Hello, The Obsolete\n")},
+			},
+		},
+	},
+	release: map[string]string{
+		"chisel.yaml": `
+			format: chisel-v1
+			archives:
+				edge:
+					version: 1
+					suites: [main]
+					components: [main]
+				candidate:
+					version: 1
+					suites: [main]
+					components: [main]
+					priority: 5
+				stable:
+					version: 1
+					suites: [main]
+					components: [main]
+					priority: 10
+				obsolete:
+					version: 1
+					suites: [main]
+					components: [main]
+					priority: 10
+		`,
+		"slices/mydir/hello.yaml": `
+			package: hello
+			slices:
+				all:
+					contents:
+						/hello:
+		`,
+	},
+	slices: []setup.SliceKey{
+		{"hello", "all"},
+	},
+	result: map[string]string{
+		"/hello": "file 0644 b5621b65",
+	},
 }}
 
 const defaultChiselYaml = `
@@ -685,12 +763,12 @@ type testPackage struct {
 }
 
 type testArchive struct {
-	arch string
-	pkgs map[string]testPackage
+	options archive.Options
+	pkgs    map[string]testPackage
 }
 
 func (a *testArchive) Options() *archive.Options {
-	return &archive.Options{Arch: a.arch}
+	return &a.options
 }
 
 func (a *testArchive) Fetch(pkg string) (io.ReadCloser, error) {
@@ -731,17 +809,28 @@ func (s *S) TestRun(c *C) {
 		c.Assert(err, IsNil)
 
 		archives := map[string]archive.Archive{}
+		for name, setupArchive := range release.Archives {
+			archive := &testArchive{
+				options: archive.Options{
+					Label:      setupArchive.Name,
+					Version:    setupArchive.Version,
+					Arch:       test.arch,
+					Suites:     setupArchive.Suites,
+					Components: setupArchive.Components,
+					Pro:        setupArchive.Pro,
+					Priority:   setupArchive.Priority,
+				},
+			}
+			if test.pkgs != nil {
+				archive.pkgs = map[string]testPackage{}
+			}
+			archives[name] = archive
+		}
 
 		if test.pkgs != nil {
 			for _, pkgInfo := range test.pkgs {
-				archive, ok := archives[pkgInfo.archive].(*testArchive)
-				if !ok {
-					archive = &testArchive{
-						arch: test.arch,
-						pkgs: map[string]testPackage{},
-					}
-					archives[pkgInfo.archive] = archive
-				}
+				archive := archives[pkgInfo.archive].(*testArchive)
+				c.Assert(archive, NotNil)
 				deb, err := testutil.MakeDeb(pkgInfo.content)
 				c.Assert(err, IsNil)
 				archive.pkgs[pkgInfo.name] = testPackage{pkgInfo.version, deb}
@@ -755,10 +844,9 @@ func (s *S) TestRun(c *C) {
 				c.Assert(err, IsNil)
 				pkgs[name] = testPackage{"1", deb}
 			}
-			archives["ubuntu"] = &testArchive{
-				arch: test.arch,
-				pkgs: pkgs,
-			}
+			archive := archives["ubuntu"].(*testArchive)
+			c.Assert(archive, NotNil)
+			archive.pkgs = pkgs
 		}
 
 		targetDir := c.MkDir()
