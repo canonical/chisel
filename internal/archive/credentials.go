@@ -17,8 +17,8 @@ import (
 // credentials in Apt configuration, see
 // https://manpages.debian.org/testing/apt/apt_auth.conf.5.en.html.
 
-// credentials represents matched Username and Password if Username is
-// non-empty or unsuccessful search otherwise.
+// credentials contains matched non-empty Username and Password.
+// Username is left empty if the search is unsuccessful.
 type credentials struct {
 	Username string
 	Password string
