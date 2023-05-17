@@ -38,8 +38,10 @@ func checkExtractOptions(options *ExtractOptions) error {
 	for extractPath, extractInfos := range options.Extract {
 		isGlob := strings.ContainsAny(extractPath, "*?")
 		if isGlob {
-			if len(extractInfos) != 1 || extractInfos[0].Path != extractPath || extractInfos[0].Mode != 0 {
-				return fmt.Errorf("when using wildcards source and target paths must match: %s", extractPath)
+			for _, info := range extractInfos {
+				if info.Path != extractPath || info.Mode != 0 {
+					return fmt.Errorf("when using wildcards source and target paths must match: %s", extractPath)
+				}
 			}
 		}
 	}

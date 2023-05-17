@@ -170,7 +170,7 @@ var extractTests = []extractTest{{
 	},
 	error: `cannot extract .*: when using wildcards source and target paths must match: /etc/d\*\*`,
 }, {
-	summary: "Globbing must also have a single target",
+	summary: "Two slices can declare the same glob",
 	pkgdata: testutil.PackageData["base-files"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
@@ -181,7 +181,25 @@ var extractTests = []extractTest{{
 			}},
 		},
 	},
-	error: `cannot extract .*: when using wildcards source and target paths must match: /etc/d\*\*`,
+	result: map[string]string{
+		"/etc/": "dir 0755",
+		"/etc/debian_version": "file 0644 cce26cfe",
+		"/etc/default/": "dir 0755",
+		"/etc/dpkg/": "dir 0755",
+		"/etc/dpkg/origins/": "dir 0755",
+		"/etc/dpkg/origins/debian": "file 0644 50f35af8",
+		"/etc/dpkg/origins/ubuntu": "file 0644 d2537b95",
+	},
+	globbed: map[string][]string{
+		"/etc/d**": []string{
+			"/etc/debian_version",
+			"/etc/default/",
+			"/etc/dpkg/",
+			"/etc/dpkg/origins/",
+			"/etc/dpkg/origins/debian",
+			"/etc/dpkg/origins/ubuntu",
+		},
+	},
 }, {
 	summary: "Globbing cannot change modes",
 	pkgdata: testutil.PackageData["base-files"],
