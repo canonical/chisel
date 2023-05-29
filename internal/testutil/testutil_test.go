@@ -25,6 +25,10 @@ func Test(t *testing.T) {
 	check.TestingT(t)
 }
 
+type S struct{}
+
+var _ = check.Suite(&S{})
+
 func testInfo(c *check.C, checker check.Checker, name string, paramNames []string) {
 	info := checker.Info()
 	if info.Name != name {
