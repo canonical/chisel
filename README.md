@@ -67,21 +67,6 @@ folder, according to the slice definitions available in the
 
 ## Reference
 
-### Chisel commands
-
-#### help
-
-Show basic help summary. Can also be used to display command details.
-
-#### version
-
-Displays the Chisel version.
-
-#### cut
-
-Uses the provided selection of package slices, for the given release, to create
-a new filesystem tree in the root location.
-
 ### Chisel releases
 
 As mentioned above, Chisel relies on **Package Slices**. These slices need to
