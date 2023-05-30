@@ -5,7 +5,7 @@
 
 **Chisel** is a software tool for carving and cutting Debian packages!
 
-It is built on the idea of **Package Slices** - minimal, complimentary and
+It is built on the idea of **package slices** - minimal, complimentary and
 loosely coupled sets of files, based on the package’s metadata and content.
 Slices are basically subsets of the Debian packages, with their own content and
 set of dependencies to other internal and external slices.
@@ -69,17 +69,29 @@ folder, according to the slice definitions available in the
 
 ### Chisel releases
 
-As mentioned above, Chisel relies on **Package Slices**. These slices need to
+As mentioned above, Chisel relies on **package slices**. These slices need to
 be defined prior to the execution of the `chisel` command.
 
 By default, Chisel will look into its central [chisel-releases](https://github.com/canonical/chisel-releases)
-database, where package slices are defined and indexed by Ubuntu release.
+database, where package slices are defined and indexed by Ubuntu release. A
+release is identified by the branch name. For example:
 
-One can, however, also point Chisel to a custom and local Chisel release (i.e.
-`chisel cut --release ubuntu-22.10 ...` will fetch the package slices from
-the upstream central database of slices, whilst
-`chisel cut --release release/ ...` will make Chisel fetch the package slices
-from the local path "./release/").
+```bash
+chisel cut --release ubuntu-22.10 ...
+```
+
+will tell Chisel to look for a `chisel.yaml` file in the "ubuntu-22.10" branch
+of the [chisel-releases](https://github.com/canonical/chisel-releases)
+repository. This file will in turn instruct Chisel to fetch the requested
+package slices, as defined in the same branch, from the corresponding Kinetic
+release in the Ubuntu archives.
+
+Alternatively, one can also point Chisel to a custom and local Chisel release
+by specifying a path instead of a branch name. For example:
+
+```bash
+chisel cut --release release/ ...
+```
 
 #### Chisel release configuration
 
@@ -207,7 +219,7 @@ have additional information for identifying the kind of content to expect:
  `/tmp/file1: {text: data1, mutable: true}` instructs Chisel to populate
  "/tmp/file1" with "data1", while also letting Chisel know that this file's
  content can be mutated via a mutation script.
- - **until**: accepts a "mutate" value to say that the specified content
+ - **until**: accepts a `mutate` value to say that the specified content
  shall be removed by Chisel after the mutation scripts are executed. Example:
  `/tmp/file1: {text: data1, until: mutate}` instructs Chisel to populate the
  file "/tmp/file1" with "data1" at installation time, but to then remove it
@@ -215,7 +227,7 @@ have additional information for identifying the kind of content to expect:
  option can be combined with globs (eg. `/tmp/file*: {until: mutate}`), it
  cannot be used to remove non-empty directories.
  - **arch**: accepts a list of known architectures for identifying contents
- which are only available for certain architetctures. Example:
+ which are only available for certain architectures. Example:
  `/usr/bin/hello: {arch: amd64}` will instruct Chisel to extract and install
  the "/usr/bin/hello" file only when chiselling an amd64 filesystem.
 
