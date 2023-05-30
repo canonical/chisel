@@ -130,42 +130,42 @@ archives:
 
 There can be only **one slice definitions file** for each Ubuntu package, per
 Chisel release. All of the slice definitions files must be placed under a
-"slices" folder, and follow the same structure:
+"slices" folder, and follow the same structure. For example:
 
-*slices/\<pkgName\>.yaml*:
+*slices/B.yaml*:
 
 ```yaml
 # (req) Name of the package.
 # The slice definition file should be named accordingly (eg. "openssl.yaml")
 
-package: <package-name>
+package: B
 
 # (req) List of slices
 slices:
 
     # (req) Name of the slice
-    <slice-name>:
+    slice2:
 
         # (opt) Optional list of slices that this slice depends on
         essential:
-          - <pkgA_slice-name>
-          - ...
+          - A_slice1
 
         # (req) The list of files, from the package, that this slice will install
         contents:
-            </path/to/content>:
-            </path/to/another/multiple*/content/**>:
-            </path/to/moved/content>: {copy: /bin/original}
-            </path/to/link>: {symlink: /bin/mybin}
-            </path/to/new/dir>: {make: true}
-            </path/to/file/with/text>: {text: "Some text"}
-            </path/to/mutable/file/with/default/text>: {text: FIXME, mutable: true}
-            </path/to/temporary/content>: {until: mutate}
+            /path/to/content:
+            /path/to/another/multiple*/content/**:
+            /path/to/moved/content: {copy: /bin/original}
+            /path/to/link: {symlink: /bin/mybin}
+            /path/to/new/dir: {make: true}
+            /path/to/file/with/text: {text: "Some text"}
+            /path/to/mutable/file/with/default/text: {text: FIXME, mutable: true}
+            /path/to/temporary/content: {until: mutate}
 
         # (opt) Mutation scripts, to allow for the reproduction of maintainer scripts,
         # based on Starlark (https://github.com/canonical/starlark)
         mutate: |
-            ...
+            foo = content.read("/path/to/temporary/content")
+            content.write("/path/to/mutable/file/with/default/text", foo)
 ```
 
 Example:
