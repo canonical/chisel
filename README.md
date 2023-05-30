@@ -10,10 +10,14 @@ loosely coupled sets of files, based on the package’s metadata and content.
 Slices are basically subsets of the Debian packages, with their own content and
 set of dependencies to other internal and external slices.
 
-![pkg-slices](https://canonical-rockcraft.readthedocs-hosted.com/en/latest/_images/package-slices.png)
+<center>
+
+![pkg-slices](docs/_static/package-slices.svg)
 
 ---
-![a-slice-of-ubuntu](https://canonical-rockcraft.readthedocs-hosted.com/en/latest/_images/slice-of-ubuntu.png)
+![a-slice-of-ubuntu](docs/_static/slice-of-ubuntu.png)
+
+</center>
 
 This image depicts a simple case, where both packages A and B are deconstructed
 into multiple slices. At a package level, B depends on A, but in reality, there
