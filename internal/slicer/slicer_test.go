@@ -772,6 +772,76 @@ var slicerTests = []slicerTest{{
 	result: map[string]string{
 		"/hello": "file 0644 b5621b65",
 	},
+}, {
+	summary: "Archive with lexicographically greatest label wins on stalemate",
+	pkgs: map[string]map[string]testPackage{
+		"10-official": {
+			"hello": testPackage{
+				info: map[string]string{
+					"Version": "1.2",
+				},
+				content: testutil.MustMakeDeb([]testutil.TarEntry{
+					Dir(0755, "./"),
+					Reg(0644, "./hello", "Hello, The Official 1.2\n"),
+				}),
+			},
+		},
+		"50-thirdparty": {
+			"hello": testPackage{
+				info: map[string]string{
+					"Version": "1.2",
+				},
+				content: testutil.MustMakeDeb([]testutil.TarEntry{
+					Dir(0755, "./"),
+					Reg(0644, "./hello", "Hello, The Third-party 1.2\n"),
+				}),
+			},
+		},
+		"99-testing": {
+			"hello": testPackage{
+				info: map[string]string{
+					"Version": "1.3",
+				},
+				content: testutil.MustMakeDeb([]testutil.TarEntry{
+					Dir(0755, "./"),
+					Reg(0644, "./hello", "Hello, The Testing 1.3\n"),
+				}),
+			},
+		},
+	},
+	release: map[string]string{
+		"chisel.yaml": `
+			format: chisel-v1
+			archives:
+				10-official:
+					version: 1
+					suites: [main]
+					components: [main]
+					priority: 10
+				50-thirdparty:
+					version: 1
+					suites: [main]
+					components: [main]
+					priority: 10
+				99-testing:
+					version: 1
+					suites: [main]
+					components: [main]
+		`,
+		"slices/mydir/hello.yaml": `
+			package: hello
+			slices:
+				all:
+					contents:
+						/hello:
+		`,
+	},
+	slices: []setup.SliceKey{
+		{"hello", "all"},
+	},
+	result: map[string]string{
+		"/hello": "file 0644 d538d7b8", // "Hello, The Testing 1.3\n"
+	},
 }}
 
 const defaultChiselYaml = `

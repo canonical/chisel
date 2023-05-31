@@ -86,17 +86,23 @@ func Run(options *RunOptions) error {
 	// if any.
 	//
 	// If two or more archives with the same priority contain the
-	// package with the same version, the first archive from the
-	// options.Archives iterator is used. In effect, the choice is
-	// random.
+	// package with the same version, the archive with
+	// lexicographically greatest label is used. Since archive
+	// labels are used as keys in YAML map, they should be unique.
 	orderedArchives := make([]archive.Archive, 0, len(options.Archives))
 	for _, archive := range options.Archives {
 		orderedArchives = append(orderedArchives, archive)
 	}
-	sort.Slice(orderedArchives, func(a, b int) bool {
-		prioA := orderedArchives[a].Options().Priority
-		prioB := orderedArchives[b].Options().Priority
-		return prioA > prioB
+	sort.Slice(orderedArchives, func(i, j int) bool {
+		a := orderedArchives[i].Options()
+		b := orderedArchives[j].Options()
+		if a.Priority == b.Priority {
+			if a.Label == b.Label {
+				panic("internal error: archive labels are not unique")
+			}
+			return a.Label > b.Label
+		}
+		return a.Priority > b.Priority
 	})
 
 	// Build information to process the selection.
@@ -109,7 +115,7 @@ func Run(options *RunOptions) error {
 			for _, currentArchive := range orderedArchives {
 				if prio := currentArchive.Options().Priority; prio < currentPrio {
 					if selectedVersion != "" {
-						break
+						break // already have a package from a higher priority archive
 					}
 					currentPrio = prio
 				}
