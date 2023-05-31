@@ -72,8 +72,8 @@ func Run(options *RunOptions) error {
 	}
 
 	// Archives are ordered in descending order by priority. The
-	// default priority is 0 and the maximum allowed priority is
-	// the upper limit of int.
+	// default priority is 0 and the range of allowed priorities
+	// is the same as the range of the int32 data type.
 	//
 	// If a package to be downloaded exists in archive A and
 	// archive B, and archive A has higher priority than archive
@@ -111,7 +111,7 @@ func Run(options *RunOptions) error {
 		if extractPackage == nil {
 			var selectedVersion string
 			var selectedArchive archive.Archive
-			currentPrio := math.MaxInt
+			var currentPrio int32 = math.MaxInt32
 			for _, currentArchive := range orderedArchives {
 				if prio := currentArchive.Options().Priority; prio < currentPrio {
 					if selectedVersion != "" {

@@ -766,6 +766,30 @@ var setupTests = []setupTest{{
 			},
 		},
 	},
+}, {
+	summary: "Maximum priority",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: chisel-v1
+			archives:
+				upper-limit:
+					version: 1
+					suites: [main]
+					components: [main]
+					priority: 2147483647
+				lower-limit:
+					version: 1
+					suites: [main]
+					components: [main]
+					priority: -2147483648
+				over-limit:
+					version: 1
+					suites: [main]
+					components: [main]
+					priority: 2147483648
+		`,
+	},
+	relerror: "(?s).*\\bcannot unmarshal !!int `2147483648` into int32\\b.*",
 }}
 
 const defaultChiselYaml = `

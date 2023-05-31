@@ -29,7 +29,7 @@ type Archive struct {
 	Version    string
 	Suites     []string
 	Components []string
-	Priority   int
+	Priority   int32
 }
 
 // Package holds a collection of slices that represent parts of themselves.
@@ -322,7 +322,7 @@ type yamlArchive struct {
 	Version    string   `yaml:"version"`
 	Suites     []string `yaml:"suites"`
 	Components []string `yaml:"components"`
-	Priority   int      `yaml:"priority"`
+	Priority   int32    `yaml:"priority"`
 }
 
 type yamlPackage struct {
