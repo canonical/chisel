@@ -260,10 +260,7 @@ var extractTests = []extractTest{{
 		},
 	},
 	result: map[string]string{
-		"/etc/":     "dir 0755",
-		"/usr/":     "dir 0755",
-		"/usr/bin/": "dir 0755",
-		"/tmp/":     "dir 01777",
+		"/etc/": "dir 0755",
 	},
 }, {
 	summary: "Optional entries mixed in cannot be missing",

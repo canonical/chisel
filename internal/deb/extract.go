@@ -114,24 +114,16 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 		if pkgPath == "" {
 			return "", false
 		}
-		pkgPathIsDir := pkgPath[len(pkgPath)-1] == '/'
-		for extractPath, extractInfos := range options.Extract {
-			if extractPath == "" {
+		if _, ok := options.Extract[pkgPath]; ok {
+			return "", true
+
+		}
+		for extractPath, _ := range options.Extract {
+			if !strings.ContainsAny(extractPath, "*?") {
 				continue
 			}
-			switch {
-			case strings.ContainsAny(extractPath, "*?"):
-				if strdist.GlobPath(extractPath, pkgPath) {
-					return extractPath, true
-				}
-			case extractPath == pkgPath:
-				return "", true
-			case pkgPathIsDir:
-				for _, extractInfo := range extractInfos {
-					if strings.HasPrefix(extractInfo.Path, pkgPath) {
-						return "", true
-					}
-				}
+			if strdist.GlobPath(extractPath, pkgPath) {
+				return extractPath, true
 			}
 		}
 		return "", false
@@ -179,22 +171,8 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 				options.Globbed[globPath] = append(options.Globbed[globPath], sourcePath)
 			}
 		} else {
-			extractInfos, ok = options.Extract[sourcePath]
-			if ok {
-				delete(pendingPaths, sourcePath)
-			} else {
-				// Base directory for extracted content. Relevant mainly to preserve
-				// the metadata, since the extracted content itself will also create
-				// any missing directories unaccounted for in the options.
-				err := fsutil.Create(&fsutil.CreateOptions{
-					Path: filepath.Join(options.TargetDir, sourcePath),
-					Mode: tarHeader.FileInfo().Mode(),
-				})
-				if err != nil {
-					return err
-				}
-				continue
-			}
+			extractInfos = options.Extract[sourcePath]
+			delete(pendingPaths, sourcePath)
 		}
 
 		var contentCache []byte
