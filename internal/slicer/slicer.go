@@ -36,21 +36,15 @@ func Run(options *RunOptions) error {
 		if path[0] != '/' {
 			panic("bug: tried to add relative path to known paths")
 		}
-		cleanPath := filepath.Clean(path)
-		slashPath := cleanPath
-		if path[len(path)-1] == '/' && cleanPath != "/" {
-			slashPath += "/"
-		}
+		path = fsutil.Clean(path)
 		for {
-			if _, ok := knownPaths[slashPath]; ok {
+			if _, ok := knownPaths[path]; ok {
 				break
 			}
-			knownPaths[slashPath] = true
-			cleanPath = filepath.Dir(cleanPath)
-			if cleanPath == "/" {
+			knownPaths[path] = true
+			if path = fsutil.Dir(path); path == "/" {
 				break
 			}
-			slashPath = cleanPath + "/"
 		}
 	}
 
@@ -113,7 +107,7 @@ func Run(options *RunOptions) error {
 					hasCopyright = true
 				}
 			} else {
-				targetDir := filepath.Dir(strings.TrimRight(targetPath, "/")) + "/"
+				targetDir := fsutil.Dir(targetPath)
 				if targetDir == "" || targetDir == "/" {
 					continue
 				}
