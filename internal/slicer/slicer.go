@@ -115,17 +115,17 @@ func Run(options *RunOptions) error {
 						sourcePath: sourcePath,
 					}
 				}
-			} else {
-				targetDir := fsutil.Dir(targetPath)
-				if targetDir == "" || targetDir == "/" {
-					continue
-				}
-				if _, ok := packageTargetInfos[targetDir]; ok {
-					continue
-				}
-				packageTargetInfos[targetDir] = &targetPathInfo{
-					sourcePath: targetDir,
-					optional: true,
+			}
+			if pathInfo.Kind != setup.GlobPath {
+				parent := fsutil.Dir(targetPath)
+				for ; parent != "/"; parent = fsutil.Dir(parent) {
+					if _, ok := packageTargetInfos[parent]; ok {
+						break
+					}
+					packageTargetInfos[parent] = &targetPathInfo{
+						sourcePath: parent,
+						optional:   true,
+					}
 				}
 			}
 		}
