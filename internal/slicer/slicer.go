@@ -32,25 +32,21 @@ func Run(options *RunOptions) error {
 
 	knownPaths["/"] = true
 
+	// addKnownPath path adds path and all its directory parent paths into
+	// knownPaths set.
 	addKnownPath := func(path string) {
 		if path[0] != '/' {
 			panic("bug: tried to add relative path to known paths")
 		}
-		cleanPath := filepath.Clean(path)
-		slashPath := cleanPath
-		if path[len(path)-1] == '/' && cleanPath != "/" {
-			slashPath += "/"
-		}
+		path = fsutil.SlashedPathClean(path)
 		for {
-			if _, ok := knownPaths[slashPath]; ok {
+			if _, ok := knownPaths[path]; ok {
 				break
 			}
-			knownPaths[slashPath] = true
-			cleanPath = filepath.Dir(cleanPath)
-			if cleanPath == "/" {
+			knownPaths[path] = true
+			if path = fsutil.SlashedPathDir(path); path == "/" {
 				break
 			}
-			slashPath = cleanPath + "/"
 		}
 	}
 
@@ -113,7 +109,7 @@ func Run(options *RunOptions) error {
 					hasCopyright = true
 				}
 			} else {
-				targetDir := filepath.Dir(strings.TrimRight(targetPath, "/")) + "/"
+				targetDir := fsutil.SlashedPathDir(targetPath)
 				if targetDir == "" || targetDir == "/" {
 					continue
 				}
