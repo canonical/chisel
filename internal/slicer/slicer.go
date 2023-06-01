@@ -26,7 +26,6 @@ type RunOptions struct {
 func Run(options *RunOptions) error {
 
 	archives := make(map[string]archive.Archive)
-	extract := make(map[string]map[string][]deb.ExtractInfo)
 	pathInfos := make(map[string]setup.PathInfo)
 	knownPaths := make(map[string]bool)
 
@@ -64,10 +63,16 @@ func Run(options *RunOptions) error {
 		targetDirAbs = filepath.Join(dir, targetDir)
 	}
 
+	type targetPathInfo struct {
+		sourcePath string
+		optional   bool
+	}
+	targetInfos := make(map[string]map[string]*targetPathInfo)
+
 	// Build information to process the selection.
 	for _, slice := range options.Selection.Slices {
-		extractPackage := extract[slice.Package]
-		if extractPackage == nil {
+		packageTargetInfos := targetInfos[slice.Package]
+		if packageTargetInfos == nil {
 			archiveName := release.Packages[slice.Package].Archive
 			archive := options.Archives[archiveName]
 			if archive == nil {
@@ -77,13 +82,10 @@ func Run(options *RunOptions) error {
 				return fmt.Errorf("slice package %q missing from archive", slice.Package)
 			}
 			archives[slice.Package] = archive
-			extractPackage = make(map[string][]deb.ExtractInfo)
-			extract[slice.Package] = extractPackage
+			packageTargetInfos = make(map[string]*targetPathInfo)
+			targetInfos[slice.Package] = packageTargetInfos
 		}
 		arch := archives[slice.Package].Options().Arch
-		copyrightPath := "/usr/share/doc/" + slice.Package + "/copyright"
-		addKnownPath(copyrightPath)
-		hasCopyright := false
 		for targetPath, pathInfo := range slice.Contents {
 			if targetPath == "" {
 				continue
@@ -100,28 +102,39 @@ func Run(options *RunOptions) error {
 				if sourcePath == "" {
 					sourcePath = targetPath
 				}
-				extractPackage[sourcePath] = append(extractPackage[sourcePath], deb.ExtractInfo{
-					Path: targetPath,
-				})
-				if sourcePath == copyrightPath && targetPath == copyrightPath {
-					hasCopyright = true
+				targetInfo := packageTargetInfos[targetPath]
+				if targetInfo != nil {
+					if targetInfo.sourcePath != sourcePath {
+						panic("internal error: target path with multiple distinct sources")
+					}
+					if targetInfo.optional {
+						targetInfo.optional = false
+					}
+				} else {
+					packageTargetInfos[targetPath] = &targetPathInfo{
+						sourcePath: sourcePath,
+					}
 				}
 			} else {
 				targetDir := fsutil.Dir(targetPath)
 				if targetDir == "" || targetDir == "/" {
 					continue
 				}
-				extractPackage[targetDir] = append(extractPackage[targetDir], deb.ExtractInfo{
-					Path:     targetDir,
-					Optional: true,
-				})
+				if _, ok := packageTargetInfos[targetDir]; ok {
+					continue
+				}
+				packageTargetInfos[targetDir] = &targetPathInfo{
+					sourcePath: targetDir,
+					optional: true,
+				}
 			}
 		}
-		if !hasCopyright {
-			extractPackage[copyrightPath] = append(extractPackage[copyrightPath], deb.ExtractInfo{
-				Path:     copyrightPath,
-				Optional: true,
-			})
+		copyrightPath := "/usr/share/doc/" + slice.Package + "/copyright"
+		if _, ok := packageTargetInfos[copyrightPath]; !ok {
+			packageTargetInfos[copyrightPath] = &targetPathInfo{
+				sourcePath: copyrightPath,
+				optional:   true,
+			}
 		}
 	}
 
@@ -143,13 +156,21 @@ func Run(options *RunOptions) error {
 
 	// Extract all packages, also using the selection order.
 	for _, slice := range options.Selection.Slices {
+		extractPackage := make(map[string][]deb.ExtractInfo)
+		packageTargetInfo := targetInfos[slice.Package]
+		for targetPath, targetInfo := range packageTargetInfo {
+			extractPackage[targetInfo.sourcePath] = append(extractPackage[targetInfo.sourcePath], deb.ExtractInfo{
+				Path:     targetPath,
+				Optional: targetInfo.optional,
+			})
+		}
 		reader := packages[slice.Package]
 		if reader == nil {
 			continue
 		}
 		err := deb.Extract(reader, &deb.ExtractOptions{
 			Package:   slice.Package,
-			Extract:   extract[slice.Package],
+			Extract:   extractPackage,
 			TargetDir: targetDir,
 			Globbed:   globbedPaths,
 		})
