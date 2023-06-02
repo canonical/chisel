@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -125,6 +126,32 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 	}
 	sort.Strings(globs)
 
+	// A visitInfo contains information about an associated package path in
+	// the visitedPaths map.
+	//
+	// When created is true, it was created, either because it was matched
+	// in the extract map or because it was a parent of a matched path.
+	// When it is false, the path was skipped, but we still want to keep it
+	// in the visitedPaths map, because later when a glob matches a path
+	// below this path, we want to create this path with the metadata from
+	// the header, in which case, we will set created to true.
+	//
+	// The header is a tar header associated with the path. When it is nil,
+	// then created must be true and this visitInfo represents a "future
+	// visit". This may happen if we match a package path that's to be
+	// copied to a different target path. The target path directory parents
+	// may not yet exist though, so we create them with 0755 mode and
+	// associate with them visitInfo structures with nil header in
+	// visitedPaths map. Later, when we encounter the directories in the
+	// package and we find the associated visitInfo structures with nil
+	// headers, we use the new tar headers to adjust modes of the
+	// previously created directories.
+	type visitInfo struct {
+		created bool
+		header  *tar.Header
+	}
+	visitedPaths := make(map[string]*visitInfo)
+
 	tarReader := tar.NewReader(dataReader)
 	for {
 		tarHeader, err := tarReader.Next()
@@ -141,6 +168,16 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 		}
 		sourcePath = sourcePath[1:]
 
+		sourceIsDir := sourcePath[len(sourcePath)-1] == '/'
+
+		visit := visitedPaths[sourcePath]
+		if visit == nil {
+			visit = &visitInfo{header: tarHeader}
+			visitedPaths[sourcePath] = visit
+		} else if !sourceIsDir || visit.header != nil {
+			panic("internal error: visited a file for the second time")
+		}
+
 		globPath := ""
 		extractInfos, want := options.Extract[sourcePath]
 		if !want {
@@ -149,12 +186,22 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 					break
 				}
 			}
-			if !want {
-				continue
-			}
 		}
 
-		sourceIsDir := sourcePath[len(sourcePath)-1] == '/'
+		if !want {
+			if visit.header != nil {
+				// This visit was created above in this
+				// iteration and it is not a wanted path, so
+				// skip it.
+				continue
+			}
+			// This is a "future visit" representing previously
+			// created parent directory for which we didn't have a
+			// tar header yet. We have it now. Continue as if it's
+			// wanted so that fsutil.Create() can adjust its mode.
+			visit.header = tarHeader
+			extractInfos = []ExtractInfo{{Path: sourcePath}}
+		}
 
 		if globPath != "" {
 			extractInfos = []ExtractInfo{{Path: globPath}}
@@ -164,6 +211,44 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 			delete(pendingPaths, globPath)
 		} else {
 			delete(pendingPaths, sourcePath)
+		}
+
+		var createParents func(path string) error
+		createParents = func(path string) error {
+			dir := fsutil.Dir(path)
+			if dir == "/" {
+				return nil
+			}
+			visit := visitedPaths[dir]
+			if visit == nil {
+				// We didn't see nor create this directory
+				// before.
+				visit = &visitInfo{}
+				visitedPaths[dir] = visit
+			} else if visit.created {
+				// This directory was either in the extract map
+				// or it was created by this function before.
+				return nil
+			}
+			// Create parents first.
+			if err := createParents(dir); err != nil {
+				return err
+			}
+			create := fsutil.CreateOptions{
+				Path: filepath.Join(options.TargetDir, dir),
+				Mode: fs.ModeDir | 0755,
+			}
+			if visit.header != nil {
+				// This directory was already encountered in
+				// the package but it wasn't in the extract map
+				// so it wasn't created.
+				create.Mode = visit.header.FileInfo().Mode()
+			}
+			if err := fsutil.Create(&create); err != nil {
+				return err
+			}
+			visit.created = true
+			return nil
 		}
 
 		var contentCache []byte
@@ -188,15 +273,18 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 			}
 			var targetPath string
 			if globPath == "" {
-				targetPath = filepath.Join(options.TargetDir, extractInfo.Path)
+				targetPath = extractInfo.Path
 			} else {
-				targetPath = filepath.Join(options.TargetDir, sourcePath)
+				targetPath = sourcePath
+			}
+			if err := createParents(targetPath); err != nil {
+				return err
 			}
 			if extractInfo.Mode != 0 {
 				tarHeader.Mode = int64(extractInfo.Mode)
 			}
 			err := fsutil.Create(&fsutil.CreateOptions{
-				Path: targetPath,
+				Path: filepath.Join(options.TargetDir, targetPath),
 				Mode: tarHeader.FileInfo().Mode(),
 				Data: pathReader,
 				Link: tarHeader.Linkname,
@@ -208,6 +296,7 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 				break
 			}
 		}
+		visit.created = true
 	}
 
 	if len(pendingPaths) > 0 {

@@ -1,6 +1,7 @@
 package deb_test
 
 import (
+	"archive/tar"
 	"bytes"
 
 	. "gopkg.in/check.v1"
@@ -16,6 +17,14 @@ type extractTest struct {
 	globbed map[string][]string
 	result  map[string]string
 	error   string
+}
+
+func makeDeb(entries []testutil.TarEntry) []byte {
+	data, err := testutil.MakeDeb(entries)
+	if err != nil {
+		panic(err)
+	}
+	return data
 }
 
 var extractTests = []extractTest{{
@@ -277,6 +286,89 @@ var extractTests = []extractTest{{
 		},
 	},
 	error: `cannot extract from package "base-files": no content at /usr/bin/hallo`,
+}, {
+	summary: "Implicit parent directories with different target path",
+	pkgdata: makeDeb([]testutil.TarEntry{{
+		Header: tar.Header{
+			Name: "./a/",
+			Mode: 0701,
+		},
+	}, {
+		Header: tar.Header{
+			Name: "./b/",
+			Mode: 0702,
+		},
+	}, {
+		Header: tar.Header{
+			Name: "./b/x",
+			Mode: 0601,
+		},
+		Content: []byte("shark"),
+	}, {
+		Header: tar.Header{
+			Name: "./c/",
+			Mode: 0703,
+		},
+	}, {
+		Header: tar.Header{
+			Name: "./c/y",
+			Mode: 0602,
+		},
+		Content: []byte("octopus"),
+	}, {
+		Header: tar.Header{
+			Name: "./d/",
+			Mode: 0704,
+		},
+	}}),
+	options: deb.ExtractOptions{
+		Extract: map[string][]deb.ExtractInfo{
+			"/b/x": []deb.ExtractInfo{{Path: "/a/x"}},
+			"/c/y": []deb.ExtractInfo{{Path: "/d/y"}},
+		},
+	},
+	result: map[string]string{
+		"/a/":  "dir 0701",
+		"/a/x": "file 0601 31fc1594",
+		"/d/":  "dir 0704",
+		"/d/y": "file 0602 5633c9b8",
+	},
+}, {
+	summary: "Implicit parent directories with globs",
+	pkgdata: makeDeb([]testutil.TarEntry{{
+		Header: tar.Header{
+			Name: "./a/",
+			Mode: 0701,
+		},
+	}, {
+		Header: tar.Header{
+			Name: "./a/aa/",
+			Mode: 0702,
+		},
+	}, {
+		Header: tar.Header{
+			Name: "./a/aa/aaa/",
+			Mode: 0703,
+		},
+	}, {
+		Header: tar.Header{
+			Name: "./a/aa/aaa/ffff",
+			Mode: 0601,
+		},
+	}}),
+	options: deb.ExtractOptions{
+		Extract: map[string][]deb.ExtractInfo{
+			"/a/aa/a**": []deb.ExtractInfo{{
+				Path: "/a/aa/a**",
+			}},
+		},
+	},
+	result: map[string]string{
+		"/a/":            "dir 0701",
+		"/a/aa/":         "dir 0702",
+		"/a/aa/aaa/":     "dir 0703",
+		"/a/aa/aaa/ffff": "file 0601 empty",
+	},
 }}
 
 func (s *S) TestExtract(c *C) {
