@@ -109,7 +109,7 @@ func (dbw *DBWriter) writeHeader(w io.Writer, count int) (int, error) {
 		Count:   count,
 	})
 	if err != nil {
-		return 0, fmt.Errorf("internal error: cannot marshal database header")
+		return 0, fmt.Errorf("internal error: cannot marshal database header: %w", err)
 	}
 	return w.Write(append(data, '\n'))
 }
@@ -118,10 +118,10 @@ func (dbw *DBWriter) writeHeader(w io.Writer, count int) (int, error) {
 func (dbw *DBWriter) WriteTo(w io.Writer) (n int64, err error) {
 	m, err := dbw.writeHeader(w, len(dbw.entries)+1)
 	n += int64(m)
-	sort.Sort(sortableEntries(dbw.entries))
 	if err != nil {
 		return n, err
 	}
+	sort.Sort(sortableEntries(dbw.entries))
 	for _, entry := range dbw.entries {
 		m, err := w.Write(entry)
 		n += int64(m)
@@ -165,11 +165,12 @@ func ReadDB(r io.Reader) (*DB, error) {
 	db := &DB{schema: header.Schema, data: data}
 	db.index = make([]int, 0, header.Count)
 	for i := range data {
-		if data[i] == '\n' {
+		if data[i] == '\n' && i+1 < len(data) && data[i+1] == '{' {
 			db.index = append(db.index, i+1)
 		}
 	}
-	db.count = len(db.index) - 1 // Last item is end of buffer.
+	db.count = len(db.index)
+	db.index = append(db.index, len(db.data))
 	return db, nil
 }
 
@@ -199,8 +200,6 @@ func (db *DB) prefix(value any) ([]byte, error) {
 
 var ErrNotFound = fmt.Errorf("value not found in database")
 
-const notFound = -2
-
 func (db *DB) search(prefix []byte) (i int, err error) {
 	i = sort.Search(db.count, func(i int) bool {
 		res := bytes.Compare(db.data[db.index[i]:], prefix) >= 0
@@ -209,7 +208,7 @@ func (db *DB) search(prefix []byte) (i int, err error) {
 	if db.match(i, prefix) {
 		return i, nil
 	}
-	return notFound, ErrNotFound
+	return -1, ErrNotFound
 }
 
 func (db *DB) iterate(prefix []byte) *Iterator {

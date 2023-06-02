@@ -121,6 +121,34 @@ var dataTypeTests = []struct {
 		result: &DataType{A: "foo", B: "1"},
 	}},
 }, {
+	summary: "Extra newlines and spaces",
+	database: `` +
+		`{"jsonwall":"1.0","count":2}` + " \n \n \n" +
+		`{"a":"bar","b":"1"}` + " \n \n \n" +
+		`{"a":"foo","b":"2"}` + " \n \n \n" +
+		``,
+	getOps: []dataTypeGet{{
+		get:    &DataType{A: "foo"},
+		result: &DataType{A: "foo", B: "2"},
+	}, {
+		get:    &DataType{A: "bar"},
+		result: &DataType{A: "bar", B: "1"},
+	}},
+}, {
+	summary: "No trailing newline",
+	database: `` +
+		`{"jsonwall":"1.0","count":2}` + "\n" +
+		`{"a":"bar","b":"1"}` + "\n" +
+		`{"a":"foo","b":"2"}` +
+		``,
+	getOps: []dataTypeGet{{
+		get:    &DataType{A: "foo"},
+		result: &DataType{A: "foo", B: "2"},
+	}, {
+		get:    &DataType{A: "bar"},
+		result: &DataType{A: "bar", B: "1"},
+	}},
+}, {
 	summary: "Invalid add request",
 	values:  []any{
 		42,
