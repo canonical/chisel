@@ -110,26 +110,8 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 		syscall.Umask(oldUmask)
 	}()
 
-	shouldExtract := func(pkgPath string) (globPath string, ok bool) {
-		if pkgPath == "" {
-			return "", false
-		}
-		if _, ok := options.Extract[pkgPath]; ok {
-			return "", true
-
-		}
-		for extractPath, _ := range options.Extract {
-			if !strings.ContainsAny(extractPath, "*?") {
-				continue
-			}
-			if strdist.GlobPath(extractPath, pkgPath) {
-				return extractPath, true
-			}
-		}
-		return "", false
-	}
-
 	pendingPaths := make(map[string]bool)
+	var globs []string
 	for extractPath, extractInfos := range options.Extract {
 		for _, extractInfo := range extractInfos {
 			if !extractInfo.Optional {
@@ -137,7 +119,11 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 				break
 			}
 		}
+		if strings.ContainsAny(extractPath, "*?") {
+			globs = append(globs, extractInfos[0].Path)
+		}
 	}
+	sort.Strings(globs)
 
 	tarReader := tar.NewReader(dataReader)
 	for {
@@ -154,24 +140,29 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 			continue
 		}
 		sourcePath = sourcePath[1:]
-		globPath, ok := shouldExtract(sourcePath)
-		if !ok {
-			continue
+
+		globPath := ""
+		extractInfos, want := options.Extract[sourcePath]
+		if !want {
+			for _, globPath = range globs {
+				if want = strdist.GlobPath(globPath, sourcePath); want {
+					break
+				}
+			}
+			if !want {
+				continue
+			}
 		}
 
 		sourceIsDir := sourcePath[len(sourcePath)-1] == '/'
 
-		//debugf("Extracting header: %#v", tarHeader)
-
-		var extractInfos []ExtractInfo
 		if globPath != "" {
-			extractInfos = options.Extract[globPath]
-			delete(pendingPaths, globPath)
+			extractInfos = []ExtractInfo{{Path: globPath}}
 			if options.Globbed != nil {
 				options.Globbed[globPath] = append(options.Globbed[globPath], sourcePath)
 			}
+			delete(pendingPaths, globPath)
 		} else {
-			extractInfos = options.Extract[sourcePath]
 			delete(pendingPaths, sourcePath)
 		}
 
