@@ -39,24 +39,6 @@ var setupTests = []setupTest{{
 	},
 	relerror: `chisel.yaml: no archives defined`,
 }, {
-	summary: "Multiple archives",
-	input: map[string]string{
-		"chisel.yaml": `
-			format: chisel-v1
-			archives: {one: {version: 1}, two: {version: two}}
-		`,
-	},
-	relerror: `chisel.yaml: multiple archives not yet supported`,
-}, {
-	summary: "Only ubuntu archives for now",
-	input: map[string]string{
-		"chisel.yaml": `
-			format: chisel-v1
-			archives: {other: {version: 1}}
-		`,
-	},
-	relerror: `chisel.yaml: only "ubuntu" archives are supported for now`,
-}, {
 	summary: "Enforce matching filename and package name",
 	input: map[string]string{
 		"slices/mydir/mypkg.yaml": `
@@ -762,6 +744,52 @@ var setupTests = []setupTest{{
 						},
 					},
 				},
+			},
+		},
+	},
+}, {
+	summary: "Multiple archives",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: chisel-v1
+			archives:
+				foo:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					default: true
+				bar:
+					version: 22.04
+					components: [universe]
+					suites: [jammy-updates]
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	release: &setup.Release{
+		DefaultArchive: "foo",
+
+		Archives: map[string]*setup.Archive{
+			"foo": {
+				Name:       "foo",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main", "universe"},
+			},
+			"bar": {
+				Name:       "bar",
+				Version:    "22.04",
+				Suites:     []string{"jammy-updates"},
+				Components: []string{"universe"},
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Archive: "foo",
+				Name:    "mypkg",
+				Path:    "slices/mydir/mypkg.yaml",
+				Slices:  map[string]*setup.Slice{},
 			},
 		},
 	},
