@@ -700,11 +700,16 @@ func (a *testArchive) Fetch(pkg string) (io.ReadCloser, error) {
 	return nil, fmt.Errorf("attempted to open %q package", pkg)
 }
 
-func (a *testArchive) Version(pkg string) string {
+func (a *testArchive) Version(pkg string) (string, error) {
 	if data, ok := a.pkgs[pkg]; ok {
-		return data.version
+		return data.version, nil
 	}
-	return ""
+	return "", archive.NotFoundError
+}
+
+func (a *testArchive) Exists(pkg string) bool {
+	_, ok := a.pkgs[pkg]
+	return ok
 }
 
 func (s *S) TestRun(c *C) {

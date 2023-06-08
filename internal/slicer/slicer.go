@@ -75,14 +75,16 @@ func Run(options *RunOptions) error {
 		if extractPackage == nil {
 			var selectedVersion string
 			var selectedArchive archive.Archive
-			for _, archive := range options.Archives {
-				version := archive.Version(slice.Package)
-				if version == "" {
+			for _, currentArchive := range options.Archives {
+				currentVersion, err := currentArchive.Version(slice.Package)
+				if err == archive.NotFoundError {
 					continue
+				} else if err != nil {
+					return err
 				}
-				if selectedVersion == "" || deb.CompareVersions(selectedVersion, version) < 0 {
-					selectedVersion = version
-					selectedArchive = archive
+				if selectedVersion == "" || deb.CompareVersions(selectedVersion, currentVersion) < 0 {
+					selectedVersion = currentVersion
+					selectedArchive = currentArchive
 				}
 			}
 			if selectedVersion == "" {
