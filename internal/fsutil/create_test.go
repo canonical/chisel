@@ -23,6 +23,7 @@ var createTests = []createTest{{
 		Path: "foo/bar",
 		Data: bytes.NewBufferString("data1"),
 		Mode: 0444,
+		Dirs: true,
 	},
 	result: map[string]string{
 		"/foo/":    "dir 0755",
@@ -33,6 +34,7 @@ var createTests = []createTest{{
 		Path: "foo/bar",
 		Link: "../baz",
 		Mode: fs.ModeSymlink,
+		Dirs: true,
 	},
 	result: map[string]string{
 		"/foo/":    "dir 0755",
@@ -42,6 +44,7 @@ var createTests = []createTest{{
 	options: fsutil.CreateOptions{
 		Path: "foo/bar",
 		Mode: fs.ModeDir | 0444,
+		Dirs: true,
 	},
 	result: map[string]string{
 		"/foo/":     "dir 0755",
@@ -55,6 +58,12 @@ var createTests = []createTest{{
 	result: map[string]string{
 		"/tmp/":     "dir 01775",
 	},
+}, {
+	options: fsutil.CreateOptions{
+		Path: "foo/bar",
+		Mode: fs.ModeDir | 0775,
+	},
+	error: `.*: no such file or directory`,
 }}
 
 func (s *S) TestCreate(c *C) {

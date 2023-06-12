@@ -143,6 +143,7 @@ func extractTar(dataReader io.Reader, targetDir string) error {
 			Mode: tarHeader.FileInfo().Mode(),
 			Data: tarReader,
 			Link: tarHeader.Linkname,
+			Dirs: true,
 		})
 		if err != nil {
 			return err

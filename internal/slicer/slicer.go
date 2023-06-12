@@ -216,6 +216,7 @@ func Run(options *RunOptions) error {
 				Mode: tarHeader.FileInfo().Mode(),
 				Data: fileContent,
 				Link: linkTarget,
+				Dirs: true,
 			})
 			if err != nil {
 				return err

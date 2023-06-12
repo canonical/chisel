@@ -189,6 +189,7 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 				err := fsutil.Create(&fsutil.CreateOptions{
 					Path: filepath.Join(options.TargetDir, sourcePath),
 					Mode: tarHeader.FileInfo().Mode(),
+					Dirs: true,
 				})
 				if err != nil {
 					return err
@@ -231,6 +232,7 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 				Mode: tarHeader.FileInfo().Mode(),
 				Data: pathReader,
 				Link: tarHeader.Linkname,
+				Dirs: true,
 			})
 			if err != nil {
 				return err
