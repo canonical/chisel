@@ -9,6 +9,12 @@ import (
 	"github.com/canonical/chisel/internal/testutil"
 )
 
+var (
+	Reg = testutil.Reg
+	Dir = testutil.Dir
+	Lnk = testutil.Lnk
+)
+
 type extractTest struct {
 	summary string
 	pkgdata []byte
@@ -260,10 +266,7 @@ var extractTests = []extractTest{{
 		},
 	},
 	result: map[string]string{
-		"/etc/":     "dir 0755",
-		"/usr/":     "dir 0755",
-		"/usr/bin/": "dir 0755",
-		"/tmp/":     "dir 01777",
+		"/etc/": "dir 0755",
 	},
 }, {
 	summary: "Optional entries mixed in cannot be missing",
@@ -280,6 +283,136 @@ var extractTests = []extractTest{{
 		},
 	},
 	error: `cannot extract from package "base-files": no content at /usr/bin/hallo`,
+}, {
+	summary: "Implicit parent directories",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		Dir(0701, "./a/"),
+		Dir(0702, "./a/b/"),
+		Reg(0601, "./a/b/c", ""),
+	}),
+	options: deb.ExtractOptions{
+		Extract: map[string][]deb.ExtractInfo{
+			"/a/b/c": []deb.ExtractInfo{{Path: "/a/b/c"}},
+		},
+	},
+	result: map[string]string{
+		"/a/":    "dir 0701",
+		"/a/b/":  "dir 0702",
+		"/a/b/c": "file 0601 empty",
+	},
+}, {
+	summary: "Implicit parent directories with different target path",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		Dir(0701, "./a/"),
+		Dir(0702, "./b/"),
+		Reg(0601, "./b/x", "shark"),
+		Dir(0703, "./c/"),
+		Reg(0602, "./c/y", "octopus"),
+		Dir(0704, "./d/"),
+	}),
+	options: deb.ExtractOptions{
+		Extract: map[string][]deb.ExtractInfo{
+			"/b/x": []deb.ExtractInfo{{Path: "/a/x"}},
+			"/c/y": []deb.ExtractInfo{{Path: "/d/y"}},
+		},
+	},
+	result: map[string]string{
+		"/a/":  "dir 0701",
+		"/a/x": "file 0601 31fc1594",
+		"/d/":  "dir 0704",
+		"/d/y": "file 0602 5633c9b8",
+	},
+}, {
+	summary: "Implicit parent directories with a glob",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		Dir(0701, "./a/"),
+		Dir(0702, "./a/aa/"),
+		Dir(0703, "./a/aa/aaa/"),
+		Reg(0601, "./a/aa/aaa/ffff", ""),
+	}),
+	options: deb.ExtractOptions{
+		Extract: map[string][]deb.ExtractInfo{
+			"/a/aa/a**": []deb.ExtractInfo{{
+				Path: "/a/aa/a**",
+			}},
+		},
+	},
+	result: map[string]string{
+		"/a/":            "dir 0701",
+		"/a/aa/":         "dir 0702",
+		"/a/aa/aaa/":     "dir 0703",
+		"/a/aa/aaa/ffff": "file 0601 empty",
+	},
+}, {
+	summary: "Implicit parent directories with a glob and non-sorted tarball",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		Reg(0601, "./a/b/c/d", ""),
+		Dir(0702, "./a/b/"),
+		Dir(0703, "./a/b/c/"),
+		Dir(0701, "./a/"),
+	}),
+	options: deb.ExtractOptions{
+		Extract: map[string][]deb.ExtractInfo{
+			"/a/b/c/*": []deb.ExtractInfo{{
+				Path: "/a/b/c/*",
+			}},
+		},
+	},
+	result: map[string]string{
+		"/a/":      "dir 0701",
+		"/a/b/":    "dir 0702",
+		"/a/b/c/":  "dir 0703",
+		"/a/b/c/d": "file 0601 empty",
+	},
+}, {
+	summary: "Implicit parent directories with a glob and some parents missing in the tarball",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		Reg(0601, "./a/b/c/d", ""),
+		Dir(0702, "./a/b/"),
+	}),
+	options: deb.ExtractOptions{
+		Extract: map[string][]deb.ExtractInfo{
+			"/a/b/c/*": []deb.ExtractInfo{{
+				Path: "/a/b/c/*",
+			}},
+		},
+	},
+	result: map[string]string{
+		"/a/":      "dir 0755",
+		"/a/b/":    "dir 0702",
+		"/a/b/c/":  "dir 0755",
+		"/a/b/c/d": "file 0601 empty",
+	},
+}, {
+	summary: "Implicit parent directories with copied dirs and different modes",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		Dir(0701, "./a/"),
+		Dir(0702, "./a/b/"),
+		Dir(0703, "./a/b/c/"),
+		Reg(0601, "./a/b/c/d", ""),
+		Dir(0704, "./e/"),
+		Dir(0705, "./e/f/"),
+	}),
+	options: deb.ExtractOptions{
+		Extract: map[string][]deb.ExtractInfo{
+			"/a/b/**": []deb.ExtractInfo{{
+				Path: "/a/b/**",
+			}},
+			"/e/f/": []deb.ExtractInfo{{
+				Path: "/a/",
+			}},
+			"/e/": []deb.ExtractInfo{{
+				Path: "/a/b/c/",
+				Mode: 0706,
+			}},
+		},
+	},
+	result: map[string]string{
+		"/a/":      "dir 0705",
+		"/a/b/":    "dir 0702",
+		"/a/b/c/":  "dir 0706",
+		"/a/b/c/d": "file 0601 empty",
+	},
 }}
 
 func (s *S) TestExtract(c *C) {

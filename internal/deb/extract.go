@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -109,34 +110,8 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 		syscall.Umask(oldUmask)
 	}()
 
-	shouldExtract := func(pkgPath string) (globPath string, ok bool) {
-		if pkgPath == "" {
-			return "", false
-		}
-		pkgPathIsDir := pkgPath[len(pkgPath)-1] == '/'
-		for extractPath, extractInfos := range options.Extract {
-			if extractPath == "" {
-				continue
-			}
-			switch {
-			case strings.ContainsAny(extractPath, "*?"):
-				if strdist.GlobPath(extractPath, pkgPath) {
-					return extractPath, true
-				}
-			case extractPath == pkgPath:
-				return "", true
-			case pkgPathIsDir:
-				for _, extractInfo := range extractInfos {
-					if strings.HasPrefix(extractInfo.Path, pkgPath) {
-						return "", true
-					}
-				}
-			}
-		}
-		return "", false
-	}
-
 	pendingPaths := make(map[string]bool)
+	var globs []string
 	for extractPath, extractInfos := range options.Extract {
 		for _, extractInfo := range extractInfos {
 			if !extractInfo.Optional {
@@ -144,7 +119,25 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 				break
 			}
 		}
+		if strings.ContainsAny(extractPath, "*?") {
+			globs = append(globs, extractPath)
+		}
 	}
+
+	// dirInfo represents a directory that we
+	//   a) encountered in the tarball,
+	//   b) created, or
+	//   c) both a) and c).
+	type dirInfo struct {
+		// mode of the directory with which we
+		//   a) encountered it in the tarball, or
+		//   b) created it
+		mode fs.FileMode
+		// whether we created this directory
+		created bool
+	}
+	// directories we encountered and/or created
+	dirInfos := make(map[string]dirInfo)
 
 	tarReader := tar.NewReader(dataReader)
 	for {
@@ -161,44 +154,83 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 			continue
 		}
 		sourcePath = sourcePath[1:]
-		globPath, ok := shouldExtract(sourcePath)
-		if !ok {
+		sourceMode := tarHeader.FileInfo().Mode()
+
+		globPath := ""
+		extractInfos := options.Extract[sourcePath]
+
+		if extractInfos == nil {
+			for _, glob := range globs {
+				if strdist.GlobPath(glob, sourcePath) {
+					globPath = glob
+					extractInfos = []ExtractInfo{{Path: glob}}
+					break
+				}
+			}
+		}
+
+		// Is this a directory path that was not requested?
+		if extractInfos == nil && sourceMode.IsDir() {
+			if info := dirInfos[sourcePath]; info.mode != sourceMode {
+				// We have not seen this directory yet, or we
+				// have seen or created it with a different mode
+				// before. Record the source path mode.
+				info.mode = sourceMode
+				dirInfos[sourcePath] = info
+				if info.created {
+					// We have created this directory before
+					// with a different mode. Create it
+					// again with the proper mode.
+					extractInfos = []ExtractInfo{{Path: sourcePath}}
+				}
+			}
+		}
+
+		if extractInfos == nil {
 			continue
 		}
 
-		sourceIsDir := sourcePath[len(sourcePath)-1] == '/'
-
-		//debugf("Extracting header: %#v", tarHeader)
-
-		var extractInfos []ExtractInfo
 		if globPath != "" {
-			extractInfos = options.Extract[globPath]
-			delete(pendingPaths, globPath)
 			if options.Globbed != nil {
 				options.Globbed[globPath] = append(options.Globbed[globPath], sourcePath)
 			}
+			delete(pendingPaths, globPath)
 		} else {
-			extractInfos, ok = options.Extract[sourcePath]
-			if ok {
-				delete(pendingPaths, sourcePath)
-			} else {
-				// Base directory for extracted content. Relevant mainly to preserve
-				// the metadata, since the extracted content itself will also create
-				// any missing directories unaccounted for in the options.
-				err := fsutil.Create(&fsutil.CreateOptions{
-					Path:        filepath.Join(options.TargetDir, sourcePath),
-					Mode:        tarHeader.FileInfo().Mode(),
-					MakeParents: true,
-				})
-				if err != nil {
-					return err
-				}
-				continue
+			delete(pendingPaths, sourcePath)
+		}
+
+		// createParents creates missing parent directories of the path
+		// with modes with which they were encountered in the tarball or
+		// 0755 if they were not encountered yet.
+		var createParents func(path string) error
+		createParents = func(path string) error {
+			dir := fsutil.SlashedPathDir(path)
+			if dir == "/" {
+				return nil
 			}
+			info := dirInfos[dir]
+			if info.created {
+				return nil
+			} else if info.mode == 0 {
+				info.mode = fs.ModeDir | 0755
+			}
+			if err := createParents(dir); err != nil {
+				return err
+			}
+			create := fsutil.CreateOptions{
+				Path: filepath.Join(options.TargetDir, dir),
+				Mode: info.mode,
+			}
+			if err := fsutil.Create(&create); err != nil {
+				return err
+			}
+			info.created = true
+			dirInfos[dir] = info
+			return nil
 		}
 
 		var contentCache []byte
-		var contentIsCached = len(extractInfos) > 1 && !sourceIsDir && globPath == ""
+		var contentIsCached = len(extractInfos) > 1 && sourceMode.IsRegular() && globPath == ""
 		if contentIsCached {
 			// Read and cache the content so it may be reused.
 			// As an alternative, to avoid having an entire file in
@@ -219,22 +251,29 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 			}
 			var targetPath string
 			if globPath == "" {
-				targetPath = filepath.Join(options.TargetDir, extractInfo.Path)
+				targetPath = extractInfo.Path
 			} else {
-				targetPath = filepath.Join(options.TargetDir, sourcePath)
+				targetPath = sourcePath
+			}
+			if err := createParents(targetPath); err != nil {
+				return err
 			}
 			if extractInfo.Mode != 0 {
 				tarHeader.Mode = int64(extractInfo.Mode)
 			}
+			fsMode := tarHeader.FileInfo().Mode()
 			err := fsutil.Create(&fsutil.CreateOptions{
-				Path:        targetPath,
-				Mode:        tarHeader.FileInfo().Mode(),
-				Data:        pathReader,
-				Link:        tarHeader.Linkname,
-				MakeParents: true,
+				Path: filepath.Join(options.TargetDir, targetPath),
+				Mode: fsMode,
+				Data: pathReader,
+				Link: tarHeader.Linkname,
 			})
 			if err != nil {
 				return err
+			}
+			if fsMode.IsDir() {
+				// Record the target directory mode.
+				dirInfos[targetPath] = dirInfo{fsMode, true}
 			}
 			if globPath != "" {
 				break
