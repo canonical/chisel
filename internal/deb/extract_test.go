@@ -2,6 +2,8 @@ package deb_test
 
 import (
 	"bytes"
+	"io"
+	"io/fs"
 
 	. "gopkg.in/check.v1"
 
@@ -468,5 +470,231 @@ func (s *S) TestExtract(c *C) {
 
 		result := testutil.TreeDump(dir)
 		c.Assert(result, DeepEquals, test.result)
+	}
+}
+
+type callbackTest struct {
+	summary   string
+	pkgdata   []byte
+	extract   map[string][]deb.ExtractInfo
+	callbacks [][]any
+	noConsume bool
+	noData    bool
+}
+
+var callbackTests = []callbackTest{{
+	summary: "Trivial",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		Dir(0701, "./a/"),
+		Dir(0702, "./a/b/"),
+		Reg(0601, "./a/b/c", ""),
+	}),
+	extract: map[string][]deb.ExtractInfo{
+		"/**": []deb.ExtractInfo{{Path: "/**"}},
+	},
+	callbacks: [][]any{
+		{"create", "/a/", "/a/", "", 0701},
+		{"create", "/a/b/", "/a/b/", "", 0702},
+		{"data", "/a/b/c", 0, []byte{}},
+		{"create", "/a/b/c", "/a/b/c", "", 0601},
+	},
+}, {
+	summary: "Data",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		Dir(0701, "./a/"),
+		Reg(0601, "./a/b", "foo"),
+		Reg(0602, "./a/c", "bar"),
+	}),
+	extract: map[string][]deb.ExtractInfo{
+		"/**": []deb.ExtractInfo{{Path: "/**"}},
+	},
+	callbacks: [][]any{
+		{"create", "/a/", "/a/", "", 0701},
+		{"data", "/a/b", 3, []byte("foo")},
+		{"create", "/a/b", "/a/b", "", 0601},
+		{"data", "/a/c", 3, []byte("bar")},
+		{"create", "/a/c", "/a/c", "", 0602},
+	},
+}, {
+	summary: "Symlinks",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		Reg(0601, "./a", ""),
+		Lnk(0777, "./b", "/a"),
+		Lnk(0777, "./c", "/d"),
+	}),
+	extract: map[string][]deb.ExtractInfo{
+		"/**": []deb.ExtractInfo{{Path: "/**"}},
+	},
+	noData: true,
+	callbacks: [][]any{
+		{"create", "/a", "/a", "", 0601},
+		{"create", "/b", "/b", "/a", 0777},
+		{"create", "/c", "/c", "/d", 0777},
+	},
+}, {
+	summary: "Simple copied paths",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		Reg(0601, "./a", ""),
+		Reg(0602, "./b", ""),
+		Dir(0701, "./c/"),
+		Reg(0603, "./c/d", ""),
+	}),
+	extract: map[string][]deb.ExtractInfo{
+		"/a":   []deb.ExtractInfo{{Path: "/a"}},
+		"/c/d": []deb.ExtractInfo{{Path: "/b"}},
+	},
+	noData: true,
+	callbacks: [][]any{
+		{"create", "/a", "/a", "", 0601},
+		{"create", "/c/d", "/b", "", 0603},
+	},
+}, {
+	summary: "Parent directories",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		Dir(0701, "./a/"),
+		Dir(0702, "./a/b/"),
+		Dir(0703, "./a/b/c/"),
+		Reg(0601, "./a/b/c/d", ""),
+	}),
+	extract: map[string][]deb.ExtractInfo{
+		"/a/b/c/": []deb.ExtractInfo{{Path: "/a/b/c/"}},
+	},
+	callbacks: [][]any{
+		{"create", "/a/", "/a/", "", 0701},
+		{"create", "/a/b/", "/a/b/", "", 0702},
+		{"create", "/a/b/c/", "/a/b/c/", "", 0703},
+	},
+}, {
+	summary: "Parent directories with globs",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		Dir(0701, "./a/"),
+		Dir(0702, "./a/b/"),
+		Dir(0703, "./a/b/c/"),
+		Reg(0601, "./a/b/c/d", ""),
+	}),
+	extract: map[string][]deb.ExtractInfo{
+		"/a/b/*/": []deb.ExtractInfo{{Path: "/a/b/*/"}},
+	},
+	callbacks: [][]any{
+		{"create", "/a/", "/a/", "", 0701},
+		{"create", "/a/b/", "/a/b/", "", 0702},
+		{"create", "/a/b/c/", "/a/b/c/", "", 0703},
+	},
+}, {
+	summary: "Parent directories out of order",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		Reg(0601, "./a/b/c/d", ""),
+		Dir(0703, "./a/b/c/"),
+		Dir(0702, "./a/b/"),
+		Dir(0701, "./a/"),
+	}),
+	extract: map[string][]deb.ExtractInfo{
+		"/a/b/*/": []deb.ExtractInfo{{Path: "/a/b/*/"}},
+	},
+	callbacks: [][]any{
+		{"create", "", "/a/", "", 0755},
+		{"create", "", "/a/b/", "", 0755},
+		{"create", "/a/b/c/", "/a/b/c/", "", 0703},
+		{"create", "/a/b/", "/a/b/", "", 0702},
+		{"create", "/a/", "/a/", "", 0701},
+	},
+}, {
+	summary: "Parent directories with early copy path",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		Dir(0701, "./a/"),
+		Reg(0601, "./a/b", ""),
+		Dir(0702, "./c/"),
+		Reg(0602, "./c/d", ""),
+	}),
+	extract: map[string][]deb.ExtractInfo{
+		"/a/b": []deb.ExtractInfo{{Path: "/c/d"}},
+	},
+	noData: true,
+	callbacks: [][]any{
+		{"create", "", "/c/", "", 0755},
+		{"create", "/a/b", "/c/d", "", 0601},
+		{"create", "/c/", "/c/", "", 0702},
+	},
+}, {
+	summary: "Same file twice with different content",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		Reg(0601, "./a", "foo"),
+		Reg(0602, "./b", "bar"),
+		Reg(0603, "./a", "baz"),
+	}),
+	extract: map[string][]deb.ExtractInfo{
+		"/*": []deb.ExtractInfo{{Path: "/*"}},
+	},
+	callbacks: [][]any{
+		{"data", "/a", 3, []byte("foo")},
+		{"create", "/a", "/a", "", 0601},
+		{"data", "/b", 3, []byte("bar")},
+		{"create", "/b", "/b", "", 0602},
+		{"data", "/a", 3, []byte("baz")},
+		{"create", "/a", "/a", "", 0603},
+	},
+}, {
+	summary: "Source with multiple targets",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		Reg(0601, "./a", "aaa"),
+		Reg(0602, "./b", "bu bu bu"),
+	}),
+	extract: map[string][]deb.ExtractInfo{
+		"/a": []deb.ExtractInfo{{Path: "/b"}},
+		"/b": []deb.ExtractInfo{
+			{Path: "/c", Mode: 0603},
+			{Path: "/d"},
+		},
+	},
+	callbacks: [][]any{
+		{"data", "/a", 3, []byte("aaa")},
+		{"create", "/a", "/b", "", 0601},
+		{"data", "/b", 8, []byte("bu bu bu")},
+		{"create", "/b", "/c", "", 0603},
+		{"create", "/b", "/d", "", 0602},
+	},
+}}
+
+func (s *S) TestExtractCallbacks(c *C) {
+	for _, test := range callbackTests {
+		c.Logf("Test: %s", test.summary)
+		dir := c.MkDir()
+		var callbacks [][]any
+		onData := func(source string, size int64) (deb.ConsumeData, error) {
+			if test.noConsume {
+				args := []any{"data", source, int(size), nil}
+				callbacks = append(callbacks, args)
+				return nil, nil
+			}
+			consume := func(reader io.Reader) error {
+				data, err := io.ReadAll(reader)
+				if err != nil {
+					return err
+				}
+				args := []any{"data", source, int(size), data}
+				callbacks = append(callbacks, args)
+				return nil
+			}
+			return consume, nil
+		}
+		if test.noData {
+			onData = nil
+		}
+		onCreate := func(source, target, link string, mode fs.FileMode) error {
+			modeInt := int(07777 & mode)
+			args := []any{"create", source, target, link, modeInt}
+			callbacks = append(callbacks, args)
+			return nil
+		}
+		options := deb.ExtractOptions{
+			Package:   "test",
+			TargetDir: dir,
+			Extract:   test.extract,
+			OnData:    onData,
+			OnCreate:  onCreate,
+		}
+		err := deb.Extract(bytes.NewBuffer(test.pkgdata), &options)
+		c.Assert(err, IsNil)
+		c.Assert(callbacks, DeepEquals, test.callbacks)
 	}
 }

@@ -21,11 +21,56 @@ import (
 	"github.com/canonical/chisel/internal/strdist"
 )
 
+type ConsumeData func(reader io.Reader) error
+
+// DataCallback function is called when a tarball entry of a regular file is
+// going to be extracted.
+//
+// The source and size parameters are set to the file's path in the tarball and
+// the size of its content, respectively. When the returned ConsumeData function
+// is not nil, it is called with the file's content.
+//
+// When the source path occurs in the tarball more than once, this function will
+// be called for each occurrence.
+//
+// If either DataCallback or ConsumeData function returns a non-nil error, the
+// Extract() function will fail with that error.
+type DataCallback func(source string, size int64) (ConsumeData, error)
+
+// The CreateCallback function is called when a tarball entry is going to be
+// extracted to a target path.
+//
+// The target, link, and mode parameters are set to the target's path, symbolic
+// link target, and mode, respectively. The target's filesystem type can be
+// determined from these parameters. If the link is not empty, the target is a
+// symbolic link. Otherwise, if the target's path ends with /, it is a
+// directory. Otherwise, it is a regular file.
+//
+// When the source parameter is not empty, the target is going to be extracted
+// from a tarball entry with the source path. The function may be called more
+// than once with the same source when the tarball entry is extracted to
+// multiple different targets.
+//
+// Otherwise, the mode is 0755 and the target is going to be an implicitly
+// created parent directory of another target, and when a directory entry with
+// that path is later encountered in the tarball with a different mode, the
+// function will be called again with the same target, source equal to the
+// target, and the different mode.
+//
+// When the source path occurs in the tarball more than once, this function will
+// be called for each target path for each occurrence.
+//
+// If CreateCallback function returns a non-nil error, the Extract() function
+// will fail with that error.
+type CreateCallback func(source, target, link string, mode fs.FileMode) error
+
 type ExtractOptions struct {
 	Package   string
 	TargetDir string
 	Extract   map[string][]ExtractInfo
 	Globbed   map[string][]string
+	OnData    DataCallback
+	OnCreate  CreateCallback
 }
 
 type ExtractInfo struct {
@@ -209,13 +254,20 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 				return nil
 			}
 			info := dirInfos[dir]
+			source := dir
 			if info.created {
 				return nil
 			} else if info.mode == 0 {
 				info.mode = fs.ModeDir | 0755
+				source = ""
 			}
 			if err := createParents(dir); err != nil {
 				return err
+			}
+			if options.OnCreate != nil {
+				if err := options.OnCreate(source, dir, "", info.mode); err != nil {
+					return err
+				}
 			}
 			create := fsutil.CreateOptions{
 				Path: filepath.Join(options.TargetDir, dir),
@@ -229,27 +281,37 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 			return nil
 		}
 
-		var contentCache []byte
-		var contentIsCached = len(extractInfos) > 1 && sourceMode.IsRegular() && globPath == ""
-		if contentIsCached {
-			// Read and cache the content so it may be reused.
-			// As an alternative, to avoid having an entire file in
-			// memory at once this logic might open the first file
-			// written and copy it every time. For now, the choice
-			// is speed over memory efficiency.
-			data, err := io.ReadAll(tarReader)
-			if err != nil {
-				return err
+		getReader := func() io.Reader { return tarReader }
+
+		if sourceMode.IsRegular() {
+			var consumeData ConsumeData
+			if options.OnData != nil {
+				var err error
+				if consumeData, err = options.OnData(sourcePath, tarHeader.Size); err != nil {
+					return err
+				}
 			}
-			contentCache = data
+			if consumeData != nil || (len(extractInfos) > 1 && globPath == "") {
+				// Read and cache the content so it may be reused.
+				// As an alternative, to avoid having an entire file in
+				// memory at once this logic might open the first file
+				// written and copy it every time. For now, the choice
+				// is speed over memory efficiency.
+				data, err := io.ReadAll(tarReader)
+				if err != nil {
+					return err
+				}
+				getReader = func() io.Reader { return bytes.NewReader(data) }
+			}
+			if consumeData != nil {
+				if err := consumeData(getReader()); err != nil {
+					return err
+				}
+			}
 		}
 
-		var pathReader io.Reader = tarReader
 		origMode := tarHeader.Mode
 		for _, extractInfo := range extractInfos {
-			if contentIsCached {
-				pathReader = bytes.NewReader(contentCache)
-			}
 			var targetPath string
 			if globPath == "" {
 				targetPath = extractInfo.Path
@@ -264,10 +326,15 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 				tarHeader.Mode = int64(extractInfo.Mode)
 			}
 			fsMode := tarHeader.FileInfo().Mode()
+			if options.OnCreate != nil {
+				if err := options.OnCreate(sourcePath, targetPath, tarHeader.Linkname, fsMode); err != nil {
+					return err
+				}
+			}
 			err := fsutil.Create(&fsutil.CreateOptions{
 				Path: filepath.Join(options.TargetDir, targetPath),
 				Mode: fsMode,
-				Data: pathReader,
+				Data: getReader(),
 				Link: tarHeader.Linkname,
 			})
 			if err != nil {
