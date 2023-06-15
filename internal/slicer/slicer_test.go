@@ -113,6 +113,145 @@ var slicerTests = []slicerTest{{
 		db.Slice{
 			Name: "base-files_myslice",
 		},
+		db.Path{
+			Path:   "/bin/",
+			Mode:   0755,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/bin/hallo",
+			Mode:   0644,
+			Slices: []string{"base-files_myslice"},
+			Link:   "../usr/bin/hallo",
+		},
+		db.Path{
+			Path:   "/etc/",
+			Mode:   0755,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/etc/dir/",
+			Mode:   0755,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/etc/dir/sub/",
+			Mode:   0777,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/etc/passwd",
+			Mode:   0644,
+			Slices: []string{"base-files_myslice"},
+			SHA256: &[...]byte{
+				0x5b, 0x41, 0x36, 0x2b, 0xc8, 0x2b, 0x7f, 0x3d,
+				0x56, 0xed, 0xc5, 0xa3, 0x06, 0xdb, 0x22, 0x10,
+				0x57, 0x07, 0xd0, 0x1f, 0xf4, 0x81, 0x9e, 0x26,
+				0xfa, 0xef, 0x97, 0x24, 0xa2, 0xd4, 0x06, 0xc9,
+			},
+			Size: 5,
+		},
+		db.Path{
+			Path:   "/usr/",
+			Mode:   0755,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/usr/bin/",
+			Mode:   0755,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/usr/bin/hallo",
+			Mode:   0775,
+			Slices: []string{"base-files_myslice"},
+			SHA256: &[...]byte{
+				0xea, 0xf2, 0x95, 0x75, 0x43, 0x07, 0x7e, 0x93,
+				0x01, 0x5b, 0x0b, 0x2e, 0x06, 0xeb, 0xe3, 0x20,
+				0xed, 0x56, 0x8e, 0xf8, 0x53, 0x24, 0x5c, 0x7e,
+				0xbe, 0xdf, 0x33, 0xc4, 0xe4, 0x5c, 0xf4, 0x0d,
+			},
+			Size: 29,
+		},
+		db.Path{
+			Path:   "/usr/bin/hello",
+			Mode:   0775,
+			Slices: []string{"base-files_myslice"},
+			SHA256: &[...]byte{
+				0xea, 0xf2, 0x95, 0x75, 0x43, 0x07, 0x7e, 0x93,
+				0x01, 0x5b, 0x0b, 0x2e, 0x06, 0xeb, 0xe3, 0x20,
+				0xed, 0x56, 0x8e, 0xf8, 0x53, 0x24, 0x5c, 0x7e,
+				0xbe, 0xdf, 0x33, 0xc4, 0xe4, 0x5c, 0xf4, 0x0d,
+			},
+			Size: 29,
+		},
+		db.Path{
+			Path:   "/usr/share/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/copyright",
+			Mode:   0644,
+			Slices: []string(nil),
+			SHA256: &[...]byte{
+				0xcd, 0xb5, 0x46, 0x1d, 0x85, 0x15, 0x00, 0x2d,
+				0x0f, 0xe3, 0xba, 0xbb, 0x76, 0x4e, 0xec, 0x38,
+				0x77, 0x45, 0x8b, 0x20, 0xf4, 0xe4, 0xbb, 0x16,
+				0x21, 0x9f, 0x62, 0xea, 0x95, 0x3a, 0xfe, 0xea,
+			},
+			Size: 1228,
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/bin/",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/bin/hallo",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/etc/",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/etc/dir/",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/etc/dir/sub/",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/etc/passwd",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/usr/",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/usr/bin/",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/usr/bin/hallo",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/usr/bin/hello",
+		},
 	},
 }, {
 	summary: "Glob extraction",
@@ -139,6 +278,67 @@ var slicerTests = []slicerTest{{
 		db.Slice{
 			Name: "base-files_myslice",
 		},
+		db.Path{
+			Path:   "/usr/",
+			Mode:   0755,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/usr/bin/",
+			Mode:   0755,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/usr/bin/hello",
+			Mode:   0775,
+			Slices: []string{"base-files_myslice"},
+			SHA256: &[...]byte{
+				0xea, 0xf2, 0x95, 0x75, 0x43, 0x07, 0x7e, 0x93,
+				0x01, 0x5b, 0x0b, 0x2e, 0x06, 0xeb, 0xe3, 0x20,
+				0xed, 0x56, 0x8e, 0xf8, 0x53, 0x24, 0x5c, 0x7e,
+				0xbe, 0xdf, 0x33, 0xc4, 0xe4, 0x5c, 0xf4, 0x0d,
+			},
+			Size: 29,
+		},
+		db.Path{
+			Path:   "/usr/share/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/copyright",
+			Mode:   0644,
+			Slices: []string(nil),
+			SHA256: &[...]byte{
+				0xcd, 0xb5, 0x46, 0x1d, 0x85, 0x15, 0x00, 0x2d,
+				0x0f, 0xe3, 0xba, 0xbb, 0x76, 0x4e, 0xec, 0x38,
+				0x77, 0x45, 0x8b, 0x20, 0xf4, 0xe4, 0xbb, 0x16,
+				0x21, 0x9f, 0x62, 0xea, 0x95, 0x3a, 0xfe, 0xea,
+			},
+			Size: 1228,
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/usr/",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/usr/bin/",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/usr/bin/hello",
+		},
 	},
 }, {
 	summary: "Create new file under extracted directory",
@@ -164,6 +364,63 @@ var slicerTests = []slicerTest{{
 		},
 		db.Slice{
 			Name: "base-files_myslice",
+		},
+		db.Path{
+			Path:   "/tmp/",
+			Mode:   0777,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/tmp/new",
+			Mode:   0644,
+			Slices: []string{"base-files_myslice"},
+			SHA256: &[...]byte{
+				0x5b, 0x41, 0x36, 0x2b, 0xc8, 0x2b, 0x7f, 0x3d,
+				0x56, 0xed, 0xc5, 0xa3, 0x06, 0xdb, 0x22, 0x10,
+				0x57, 0x07, 0xd0, 0x1f, 0xf4, 0x81, 0x9e, 0x26,
+				0xfa, 0xef, 0x97, 0x24, 0xa2, 0xd4, 0x06, 0xc9,
+			},
+			Size: 5,
+		},
+		db.Path{
+			Path:   "/usr/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/copyright",
+			Mode:   0644,
+			Slices: []string(nil),
+			SHA256: &[...]byte{
+				0xcd, 0xb5, 0x46, 0x1d, 0x85, 0x15, 0x00, 0x2d,
+				0x0f, 0xe3, 0xba, 0xbb, 0x76, 0x4e, 0xec, 0x38,
+				0x77, 0x45, 0x8b, 0x20, 0xf4, 0xe4, 0xbb, 0x16,
+				0x21, 0x9f, 0x62, 0xea, 0x95, 0x3a, 0xfe, 0xea,
+			},
+			Size: 1228,
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/tmp/",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/tmp/new",
 		},
 	},
 }, {
@@ -192,6 +449,72 @@ var slicerTests = []slicerTest{{
 		db.Slice{
 			Name: "base-files_myslice",
 		},
+		db.Path{
+			Path:   "/tmp/",
+			Mode:   0777,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/tmp/new/",
+			Mode:   0755,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/tmp/new/sub",
+			Mode:   0644,
+			Slices: []string{"base-files_myslice"},
+			SHA256: &[...]byte{
+				0x5b, 0x41, 0x36, 0x2b, 0xc8, 0x2b, 0x7f, 0x3d,
+				0x56, 0xed, 0xc5, 0xa3, 0x06, 0xdb, 0x22, 0x10,
+				0x57, 0x07, 0xd0, 0x1f, 0xf4, 0x81, 0x9e, 0x26,
+				0xfa, 0xef, 0x97, 0x24, 0xa2, 0xd4, 0x06, 0xc9,
+			},
+			Size: 5,
+		},
+		db.Path{
+			Path:   "/usr/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/copyright",
+			Mode:   0644,
+			Slices: []string(nil),
+			SHA256: &[...]byte{
+				0xcd, 0xb5, 0x46, 0x1d, 0x85, 0x15, 0x00, 0x2d,
+				0x0f, 0xe3, 0xba, 0xbb, 0x76, 0x4e, 0xec, 0x38,
+				0x77, 0x45, 0x8b, 0x20, 0xf4, 0xe4, 0xbb, 0x16,
+				0x21, 0x9f, 0x62, 0xea, 0x95, 0x3a, 0xfe, 0xea,
+			},
+			Size: 1228,
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/tmp/",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/tmp/new/",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/tmp/new/sub",
+		},
 	},
 }, {
 	summary: "Create new directory under extracted directory",
@@ -217,6 +540,56 @@ var slicerTests = []slicerTest{{
 		},
 		db.Slice{
 			Name: "base-files_myslice",
+		},
+		db.Path{
+			Path:   "/tmp/",
+			Mode:   0777,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/tmp/new/",
+			Mode:   0755,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/usr/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/copyright",
+			Mode:   0644,
+			Slices: []string(nil),
+			SHA256: &[...]byte{
+				0xcd, 0xb5, 0x46, 0x1d, 0x85, 0x15, 0x00, 0x2d,
+				0x0f, 0xe3, 0xba, 0xbb, 0x76, 0x4e, 0xec, 0x38,
+				0x77, 0x45, 0x8b, 0x20, 0xf4, 0xe4, 0xbb, 0x16,
+				0x21, 0x9f, 0x62, 0xea, 0x95, 0x3a, 0xfe, 0xea,
+			},
+			Size: 1228,
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/tmp/",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/tmp/new/",
 		},
 	},
 }, {
@@ -254,6 +627,124 @@ var slicerTests = []slicerTest{{
 		db.Slice{
 			Name: "base-files_myslice",
 		},
+		db.Path{
+			Path:   "/tmp/",
+			Mode:   0777,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/tmp/file1",
+			Mode:   0644,
+			Slices: []string{"base-files_myslice"},
+			SHA256: &[...]byte{
+				0x5b, 0x41, 0x36, 0x2b, 0xc8, 0x2b, 0x7f, 0x3d,
+				0x56, 0xed, 0xc5, 0xa3, 0x06, 0xdb, 0x22, 0x10,
+				0x57, 0x07, 0xd0, 0x1f, 0xf4, 0x81, 0x9e, 0x26,
+				0xfa, 0xef, 0x97, 0x24, 0xa2, 0xd4, 0x06, 0xc9,
+			},
+			Size: 5,
+		},
+		db.Path{
+			Path:   "/tmp/file3",
+			Mode:   0644,
+			Slices: []string{"base-files_myslice"},
+			SHA256: &[...]byte{
+				0x5b, 0x41, 0x36, 0x2b, 0xc8, 0x2b, 0x7f, 0x3d,
+				0x56, 0xed, 0xc5, 0xa3, 0x06, 0xdb, 0x22, 0x10,
+				0x57, 0x07, 0xd0, 0x1f, 0xf4, 0x81, 0x9e, 0x26,
+				0xfa, 0xef, 0x97, 0x24, 0xa2, 0xd4, 0x06, 0xc9,
+			},
+			Size: 5,
+		},
+		db.Path{
+			Path:   "/usr/",
+			Mode:   0755,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/usr/bin/",
+			Mode:   0755,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/usr/bin/hello1",
+			Mode:   0775,
+			Slices: []string{"base-files_myslice"},
+			SHA256: &[...]byte{
+				0xea, 0xf2, 0x95, 0x75, 0x43, 0x07, 0x7e, 0x93,
+				0x01, 0x5b, 0x0b, 0x2e, 0x06, 0xeb, 0xe3, 0x20,
+				0xed, 0x56, 0x8e, 0xf8, 0x53, 0x24, 0x5c, 0x7e,
+				0xbe, 0xdf, 0x33, 0xc4, 0xe4, 0x5c, 0xf4, 0x0d,
+			},
+			Size: 29,
+		},
+		db.Path{
+			Path:   "/usr/bin/hello3",
+			Mode:   0775,
+			Slices: []string{"base-files_myslice"},
+			SHA256: &[...]byte{
+				0xea, 0xf2, 0x95, 0x75, 0x43, 0x07, 0x7e, 0x93,
+				0x01, 0x5b, 0x0b, 0x2e, 0x06, 0xeb, 0xe3, 0x20,
+				0xed, 0x56, 0x8e, 0xf8, 0x53, 0x24, 0x5c, 0x7e,
+				0xbe, 0xdf, 0x33, 0xc4, 0xe4, 0x5c, 0xf4, 0x0d,
+			},
+			Size: 29,
+		},
+		db.Path{
+			Path:   "/usr/share/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/copyright",
+			Mode:   0644,
+			Slices: []string(nil),
+			SHA256: &[...]byte{
+				0xcd, 0xb5, 0x46, 0x1d, 0x85, 0x15, 0x00, 0x2d,
+				0x0f, 0xe3, 0xba, 0xbb, 0x76, 0x4e, 0xec, 0x38,
+				0x77, 0x45, 0x8b, 0x20, 0xf4, 0xe4, 0xbb, 0x16,
+				0x21, 0x9f, 0x62, 0xea, 0x95, 0x3a, 0xfe, 0xea,
+			},
+			Size: 1228,
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/tmp/",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/tmp/file1",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/tmp/file3",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/usr/",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/usr/bin/",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/usr/bin/hello1",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/usr/bin/hello3",
+		},
 	},
 }, {
 	summary: "Script: write a file",
@@ -280,6 +771,63 @@ var slicerTests = []slicerTest{{
 		},
 		db.Slice{
 			Name: "base-files_myslice",
+		},
+		db.Path{
+			Path:   "/tmp/",
+			Mode:   0777,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/tmp/file1",
+			Mode:   0644,
+			Slices: []string{"base-files_myslice"},
+			SHA256: &[...]byte{
+				0x5b, 0x41, 0x36, 0x2b, 0xc8, 0x2b, 0x7f, 0x3d,
+				0x56, 0xed, 0xc5, 0xa3, 0x06, 0xdb, 0x22, 0x10,
+				0x57, 0x07, 0xd0, 0x1f, 0xf4, 0x81, 0x9e, 0x26,
+				0xfa, 0xef, 0x97, 0x24, 0xa2, 0xd4, 0x06, 0xc9,
+			},
+			Size: 5,
+		},
+		db.Path{
+			Path:   "/usr/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/copyright",
+			Mode:   0644,
+			Slices: []string(nil),
+			SHA256: &[...]byte{
+				0xcd, 0xb5, 0x46, 0x1d, 0x85, 0x15, 0x00, 0x2d,
+				0x0f, 0xe3, 0xba, 0xbb, 0x76, 0x4e, 0xec, 0x38,
+				0x77, 0x45, 0x8b, 0x20, 0xf4, 0xe4, 0xbb, 0x16,
+				0x21, 0x9f, 0x62, 0xea, 0x95, 0x3a, 0xfe, 0xea,
+			},
+			Size: 1228,
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/tmp/",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/tmp/file1",
 		},
 	},
 }, {
@@ -312,6 +860,88 @@ var slicerTests = []slicerTest{{
 		db.Slice{
 			Name: "base-files_myslice",
 		},
+		db.Path{
+			Path:   "/foo/",
+			Mode:   0755,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/foo/file2",
+			Mode:   0644,
+			Slices: []string{"base-files_myslice"},
+			SHA256: &[...]byte{
+				0xd9, 0x8c, 0xf5, 0x3e, 0x0c, 0x8b, 0x77, 0xc1,
+				0x4a, 0x96, 0x35, 0x8d, 0x5b, 0x69, 0x58, 0x42,
+				0x25, 0xb4, 0xbb, 0x90, 0x26, 0x42, 0x3c, 0xbc,
+				0x2f, 0x7b, 0x01, 0x61, 0x89, 0x4c, 0x40, 0x2c,
+			},
+			Size: 5,
+		},
+		db.Path{
+			Path:   "/tmp/",
+			Mode:   0777,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/tmp/file1",
+			Mode:   0644,
+			Slices: []string{"base-files_myslice"},
+			SHA256: &[...]byte{
+				0x5b, 0x41, 0x36, 0x2b, 0xc8, 0x2b, 0x7f, 0x3d,
+				0x56, 0xed, 0xc5, 0xa3, 0x06, 0xdb, 0x22, 0x10,
+				0x57, 0x07, 0xd0, 0x1f, 0xf4, 0x81, 0x9e, 0x26,
+				0xfa, 0xef, 0x97, 0x24, 0xa2, 0xd4, 0x06, 0xc9,
+			},
+			Size: 5,
+		},
+		db.Path{
+			Path:   "/usr/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/copyright",
+			Mode:   0644,
+			Slices: []string(nil),
+			SHA256: &[...]byte{
+				0xcd, 0xb5, 0x46, 0x1d, 0x85, 0x15, 0x00, 0x2d,
+				0x0f, 0xe3, 0xba, 0xbb, 0x76, 0x4e, 0xec, 0x38,
+				0x77, 0x45, 0x8b, 0x20, 0xf4, 0xe4, 0xbb, 0x16,
+				0x21, 0x9f, 0x62, 0xea, 0x95, 0x3a, 0xfe, 0xea,
+			},
+			Size: 1228,
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/foo/",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/foo/file2",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/tmp/",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/tmp/file1",
+		},
 	},
 }, {
 	summary: "Script: use 'until' to remove file after mutate",
@@ -342,6 +972,72 @@ var slicerTests = []slicerTest{{
 		db.Slice{
 			Name: "base-files_myslice",
 		},
+		db.Path{
+			Path:   "/foo/",
+			Mode:   0755,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/foo/file2",
+			Mode:   0644,
+			Slices: []string{"base-files_myslice"},
+			SHA256: &[...]byte{
+				0xd9, 0x8c, 0xf5, 0x3e, 0x0c, 0x8b, 0x77, 0xc1,
+				0x4a, 0x96, 0x35, 0x8d, 0x5b, 0x69, 0x58, 0x42,
+				0x25, 0xb4, 0xbb, 0x90, 0x26, 0x42, 0x3c, 0xbc,
+				0x2f, 0x7b, 0x01, 0x61, 0x89, 0x4c, 0x40, 0x2c,
+			},
+			Size: 5,
+		},
+		db.Path{
+			Path:   "/tmp/",
+			Mode:   0777,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/usr/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/copyright",
+			Mode:   0644,
+			Slices: []string(nil),
+			SHA256: &[...]byte{
+				0xcd, 0xb5, 0x46, 0x1d, 0x85, 0x15, 0x00, 0x2d,
+				0x0f, 0xe3, 0xba, 0xbb, 0x76, 0x4e, 0xec, 0x38,
+				0x77, 0x45, 0x8b, 0x20, 0xf4, 0xe4, 0xbb, 0x16,
+				0x21, 0x9f, 0x62, 0xea, 0x95, 0x3a, 0xfe, 0xea,
+			},
+			Size: 1228,
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/foo/",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/foo/file2",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/tmp/",
+		},
 	},
 }, {
 	summary: "Script: use 'until' to remove wildcard after mutate",
@@ -367,6 +1063,51 @@ var slicerTests = []slicerTest{{
 		},
 		db.Slice{
 			Name: "base-files_myslice",
+		},
+		db.Path{
+			Path:   "/etc/",
+			Mode:   0755,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/usr/",
+			Mode:   0755,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/usr/share/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/copyright",
+			Mode:   0644,
+			Slices: []string(nil),
+			SHA256: &[...]byte{
+				0xcd, 0xb5, 0x46, 0x1d, 0x85, 0x15, 0x00, 0x2d,
+				0x0f, 0xe3, 0xba, 0xbb, 0x76, 0x4e, 0xec, 0x38,
+				0x77, 0x45, 0x8b, 0x20, 0xf4, 0xe4, 0xbb, 0x16,
+				0x21, 0x9f, 0x62, 0xea, 0x95, 0x3a, 0xfe, 0xea,
+			},
+			Size: 1228,
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/etc/",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/usr/",
 		},
 	},
 }, {
@@ -394,6 +1135,67 @@ var slicerTests = []slicerTest{{
 		},
 		db.Slice{
 			Name: "base-files_myslice",
+		},
+		db.Path{
+			Path:   "/usr/",
+			Mode:   0755,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/usr/bin/",
+			Mode:   0755,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/usr/bin/hallo",
+			Mode:   0775,
+			Slices: []string{"base-files_myslice"},
+			SHA256: &[...]byte{
+				0xea, 0xf2, 0x95, 0x75, 0x43, 0x07, 0x7e, 0x93,
+				0x01, 0x5b, 0x0b, 0x2e, 0x06, 0xeb, 0xe3, 0x20,
+				0xed, 0x56, 0x8e, 0xf8, 0x53, 0x24, 0x5c, 0x7e,
+				0xbe, 0xdf, 0x33, 0xc4, 0xe4, 0x5c, 0xf4, 0x0d,
+			},
+			Size: 29,
+		},
+		db.Path{
+			Path:   "/usr/share/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/copyright",
+			Mode:   0644,
+			Slices: []string(nil),
+			SHA256: &[...]byte{
+				0xcd, 0xb5, 0x46, 0x1d, 0x85, 0x15, 0x00, 0x2d,
+				0x0f, 0xe3, 0xba, 0xbb, 0x76, 0x4e, 0xec, 0x38,
+				0x77, 0x45, 0x8b, 0x20, 0xf4, 0xe4, 0xbb, 0x16,
+				0x21, 0x9f, 0x62, 0xea, 0x95, 0x3a, 0xfe, 0xea,
+			},
+			Size: 1228,
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/usr/",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/usr/bin/",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/usr/bin/hallo",
 		},
 	},
 }, {
@@ -453,6 +1255,67 @@ var slicerTests = []slicerTest{{
 		db.Slice{
 			Name: "base-files_myslice2",
 		},
+		db.Path{
+			Path:   "/usr/",
+			Mode:   0755,
+			Slices: []string{"base-files_myslice1"},
+		},
+		db.Path{
+			Path:   "/usr/bin/",
+			Mode:   0755,
+			Slices: []string{"base-files_myslice1"},
+		},
+		db.Path{
+			Path:   "/usr/bin/hello",
+			Mode:   0775,
+			Slices: []string{"base-files_myslice1"},
+			SHA256: &[...]byte{
+				0xea, 0xf2, 0x95, 0x75, 0x43, 0x07, 0x7e, 0x93,
+				0x01, 0x5b, 0x0b, 0x2e, 0x06, 0xeb, 0xe3, 0x20,
+				0xed, 0x56, 0x8e, 0xf8, 0x53, 0x24, 0x5c, 0x7e,
+				0xbe, 0xdf, 0x33, 0xc4, 0xe4, 0x5c, 0xf4, 0x0d,
+			},
+			Size: 29,
+		},
+		db.Path{
+			Path:   "/usr/share/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/copyright",
+			Mode:   0644,
+			Slices: []string(nil),
+			SHA256: &[...]byte{
+				0xcd, 0xb5, 0x46, 0x1d, 0x85, 0x15, 0x00, 0x2d,
+				0x0f, 0xe3, 0xba, 0xbb, 0x76, 0x4e, 0xec, 0x38,
+				0x77, 0x45, 0x8b, 0x20, 0xf4, 0xe4, 0xbb, 0x16,
+				0x21, 0x9f, 0x62, 0xea, 0x95, 0x3a, 0xfe, 0xea,
+			},
+			Size: 1228,
+		},
+		db.Content{
+			Slice: "base-files_myslice1",
+			Path:  "/usr/",
+		},
+		db.Content{
+			Slice: "base-files_myslice1",
+			Path:  "/usr/bin/",
+		},
+		db.Content{
+			Slice: "base-files_myslice1",
+			Path:  "/usr/bin/hello",
+		},
 	},
 }, {
 	summary: "Relative content root directory must not error",
@@ -482,6 +1345,63 @@ var slicerTests = []slicerTest{{
 		db.Slice{
 			Name: "base-files_myslice",
 		},
+		db.Path{
+			Path:   "/tmp/",
+			Mode:   0777,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/tmp/file1",
+			Mode:   0644,
+			Slices: []string{"base-files_myslice"},
+			SHA256: &[...]byte{
+				0x5b, 0x41, 0x36, 0x2b, 0xc8, 0x2b, 0x7f, 0x3d,
+				0x56, 0xed, 0xc5, 0xa3, 0x06, 0xdb, 0x22, 0x10,
+				0x57, 0x07, 0xd0, 0x1f, 0xf4, 0x81, 0x9e, 0x26,
+				0xfa, 0xef, 0x97, 0x24, 0xa2, 0xd4, 0x06, 0xc9,
+			},
+			Size: 5,
+		},
+		db.Path{
+			Path:   "/usr/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/copyright",
+			Mode:   0644,
+			Slices: []string(nil),
+			SHA256: &[...]byte{
+				0xcd, 0xb5, 0x46, 0x1d, 0x85, 0x15, 0x00, 0x2d,
+				0x0f, 0xe3, 0xba, 0xbb, 0x76, 0x4e, 0xec, 0x38,
+				0x77, 0x45, 0x8b, 0x20, 0xf4, 0xe4, 0xbb, 0x16,
+				0x21, 0x9f, 0x62, 0xea, 0x95, 0x3a, 0xfe, 0xea,
+			},
+			Size: 1228,
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/tmp/",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/tmp/file1",
+		},
 	},
 }, {
 	summary: "Can list parent directories of normal paths",
@@ -509,6 +1429,90 @@ var slicerTests = []slicerTest{{
 		},
 		db.Slice{
 			Name: "base-files_myslice",
+		},
+		db.Path{
+			Path:   "/a/",
+			Mode:   0755,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/a/b/",
+			Mode:   0755,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/a/b/c",
+			Mode:   0644,
+			Slices: []string{"base-files_myslice"},
+			SHA256: &[...]byte{
+				0x2c, 0x26, 0xb4, 0x6b, 0x68, 0xff, 0xc6, 0x8f,
+				0xf9, 0x9b, 0x45, 0x3c, 0x1d, 0x30, 0x41, 0x34,
+				0x13, 0x42, 0x2d, 0x70, 0x64, 0x83, 0xbf, 0xa0,
+				0xf9, 0x8a, 0x5e, 0x88, 0x62, 0x66, 0xe7, 0xae,
+			},
+			Size: 3,
+		},
+		db.Path{
+			Path:   "/usr/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/copyright",
+			Mode:   0644,
+			Slices: []string(nil),
+			SHA256: &[...]byte{
+				0xcd, 0xb5, 0x46, 0x1d, 0x85, 0x15, 0x00, 0x2d,
+				0x0f, 0xe3, 0xba, 0xbb, 0x76, 0x4e, 0xec, 0x38,
+				0x77, 0x45, 0x8b, 0x20, 0xf4, 0xe4, 0xbb, 0x16,
+				0x21, 0x9f, 0x62, 0xea, 0x95, 0x3a, 0xfe, 0xea,
+			},
+			Size: 1228,
+		},
+		db.Path{
+			Path:   "/x/",
+			Mode:   0755,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/x/y/",
+			Mode:   0755,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/a/",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/a/b/",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/a/b/c",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/x/",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/x/y/",
 		},
 	},
 }, {
@@ -562,6 +1566,67 @@ var slicerTests = []slicerTest{{
 		},
 		db.Slice{
 			Name: "base-files_myslice",
+		},
+		db.Path{
+			Path:   "/usr/",
+			Mode:   0755,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/usr/bin/",
+			Mode:   0755,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/usr/bin/hello",
+			Mode:   0775,
+			Slices: []string{"base-files_myslice"},
+			SHA256: &[...]byte{
+				0xea, 0xf2, 0x95, 0x75, 0x43, 0x07, 0x7e, 0x93,
+				0x01, 0x5b, 0x0b, 0x2e, 0x06, 0xeb, 0xe3, 0x20,
+				0xed, 0x56, 0x8e, 0xf8, 0x53, 0x24, 0x5c, 0x7e,
+				0xbe, 0xdf, 0x33, 0xc4, 0xe4, 0x5c, 0xf4, 0x0d,
+			},
+			Size: 29,
+		},
+		db.Path{
+			Path:   "/usr/share/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/copyright",
+			Mode:   0644,
+			Slices: []string(nil),
+			SHA256: &[...]byte{
+				0xcd, 0xb5, 0x46, 0x1d, 0x85, 0x15, 0x00, 0x2d,
+				0x0f, 0xe3, 0xba, 0xbb, 0x76, 0x4e, 0xec, 0x38,
+				0x77, 0x45, 0x8b, 0x20, 0xf4, 0xe4, 0xbb, 0x16,
+				0x21, 0x9f, 0x62, 0xea, 0x95, 0x3a, 0xfe, 0xea,
+			},
+			Size: 1228,
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/usr/",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/usr/bin/",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/usr/bin/hello",
 		},
 	},
 }, {
@@ -622,6 +1687,146 @@ var slicerTests = []slicerTest{{
 		db.Slice{
 			Name: "copyright-symlink-openssl_config",
 		},
+		db.Path{
+			Path:   "/etc/",
+			Mode:   0755,
+			Slices: []string{"copyright-symlink-openssl_config"},
+		},
+		db.Path{
+			Path:   "/etc/ssl/",
+			Mode:   0755,
+			Slices: []string{"copyright-symlink-openssl_config"},
+		},
+		db.Path{
+			Path:   "/etc/ssl/openssl.cnf",
+			Mode:   0644,
+			Slices: []string{"copyright-symlink-openssl_config"},
+			SHA256: &[...]byte{
+				0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14,
+				0x9a, 0xfb, 0xf4, 0xc8, 0x99, 0x6f, 0xb9, 0x24,
+				0x27, 0xae, 0x41, 0xe4, 0x64, 0x9b, 0x93, 0x4c,
+				0xa4, 0x95, 0x99, 0x1b, 0x78, 0x52, 0xb8, 0x55,
+			},
+		},
+		db.Path{
+			Path:   "/usr/",
+			Mode:   0755,
+			Slices: []string{"copyright-symlink-libssl3_libs", "copyright-symlink-openssl_bins"},
+		},
+		db.Path{
+			Path:   "/usr/bin/",
+			Mode:   0755,
+			Slices: []string{"copyright-symlink-openssl_bins"},
+		},
+		db.Path{
+			Path:   "/usr/bin/openssl",
+			Mode:   0755,
+			Slices: []string{"copyright-symlink-openssl_bins"},
+			SHA256: &[...]byte{
+				0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14,
+				0x9a, 0xfb, 0xf4, 0xc8, 0x99, 0x6f, 0xb9, 0x24,
+				0x27, 0xae, 0x41, 0xe4, 0x64, 0x9b, 0x93, 0x4c,
+				0xa4, 0x95, 0x99, 0x1b, 0x78, 0x52, 0xb8, 0x55,
+			},
+		},
+		db.Path{
+			Path:   "/usr/lib/",
+			Mode:   0755,
+			Slices: []string{"copyright-symlink-libssl3_libs"},
+		},
+		db.Path{
+			Path:   "/usr/lib/x86_64-linux-gnu/",
+			Mode:   0755,
+			Slices: []string{"copyright-symlink-libssl3_libs"},
+		},
+		db.Path{
+			Path:   "/usr/lib/x86_64-linux-gnu/libssl.so.3",
+			Mode:   0755,
+			Slices: []string{"copyright-symlink-libssl3_libs"},
+			SHA256: &[...]byte{
+				0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14,
+				0x9a, 0xfb, 0xf4, 0xc8, 0x99, 0x6f, 0xb9, 0x24,
+				0x27, 0xae, 0x41, 0xe4, 0x64, 0x9b, 0x93, 0x4c,
+				0xa4, 0x95, 0x99, 0x1b, 0x78, 0x52, 0xb8, 0x55,
+			},
+		},
+		db.Path{
+			Path:   "/usr/share/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/copyright-symlink-libssl3/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/copyright-symlink-libssl3/copyright",
+			Mode:   0644,
+			Slices: []string(nil),
+			SHA256: &[...]byte{
+				0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14,
+				0x9a, 0xfb, 0xf4, 0xc8, 0x99, 0x6f, 0xb9, 0x24,
+				0x27, 0xae, 0x41, 0xe4, 0x64, 0x9b, 0x93, 0x4c,
+				0xa4, 0x95, 0x99, 0x1b, 0x78, 0x52, 0xb8, 0x55,
+			},
+		},
+		db.Path{
+			Path:   "/usr/share/doc/copyright-symlink-openssl/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/copyright-symlink-openssl/copyright",
+			Mode:   0777,
+			Slices: []string(nil),
+			Link:   "../libssl3/copyright",
+		},
+		db.Content{
+			Slice: "copyright-symlink-libssl3_libs",
+			Path:  "/usr/",
+		},
+		db.Content{
+			Slice: "copyright-symlink-libssl3_libs",
+			Path:  "/usr/lib/",
+		},
+		db.Content{
+			Slice: "copyright-symlink-libssl3_libs",
+			Path:  "/usr/lib/x86_64-linux-gnu/",
+		},
+		db.Content{
+			Slice: "copyright-symlink-libssl3_libs",
+			Path:  "/usr/lib/x86_64-linux-gnu/libssl.so.3",
+		},
+		db.Content{
+			Slice: "copyright-symlink-openssl_bins",
+			Path:  "/usr/",
+		},
+		db.Content{
+			Slice: "copyright-symlink-openssl_bins",
+			Path:  "/usr/bin/",
+		},
+		db.Content{
+			Slice: "copyright-symlink-openssl_bins",
+			Path:  "/usr/bin/openssl",
+		},
+		db.Content{
+			Slice: "copyright-symlink-openssl_config",
+			Path:  "/etc/",
+		},
+		db.Content{
+			Slice: "copyright-symlink-openssl_config",
+			Path:  "/etc/ssl/",
+		},
+		db.Content{
+			Slice: "copyright-symlink-openssl_config",
+			Path:  "/etc/ssl/openssl.cnf",
+		},
 	},
 }, {
 	summary: "Can list unclean directory paths",
@@ -649,6 +1854,90 @@ var slicerTests = []slicerTest{{
 		},
 		db.Slice{
 			Name: "base-files_myslice",
+		},
+		db.Path{
+			Path:   "/a/",
+			Mode:   0755,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/a/b/",
+			Mode:   0755,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/a/b/c",
+			Mode:   0644,
+			Slices: []string{"base-files_myslice"},
+			SHA256: &[...]byte{
+				0x2c, 0x26, 0xb4, 0x6b, 0x68, 0xff, 0xc6, 0x8f,
+				0xf9, 0x9b, 0x45, 0x3c, 0x1d, 0x30, 0x41, 0x34,
+				0x13, 0x42, 0x2d, 0x70, 0x64, 0x83, 0xbf, 0xa0,
+				0xf9, 0x8a, 0x5e, 0x88, 0x62, 0x66, 0xe7, 0xae,
+			},
+			Size: 3,
+		},
+		db.Path{
+			Path:   "/usr/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/copyright",
+			Mode:   0644,
+			Slices: []string(nil),
+			SHA256: &[...]byte{
+				0xcd, 0xb5, 0x46, 0x1d, 0x85, 0x15, 0x00, 0x2d,
+				0x0f, 0xe3, 0xba, 0xbb, 0x76, 0x4e, 0xec, 0x38,
+				0x77, 0x45, 0x8b, 0x20, 0xf4, 0xe4, 0xbb, 0x16,
+				0x21, 0x9f, 0x62, 0xea, 0x95, 0x3a, 0xfe, 0xea,
+			},
+			Size: 1228,
+		},
+		db.Path{
+			Path:   "/x/",
+			Mode:   0755,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/x/y/",
+			Mode:   0755,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/a/",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/a/b/",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/a/b/c",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/x/",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/x/y/",
 		},
 	},
 }, {
@@ -702,6 +1991,67 @@ var slicerTests = []slicerTest{{
 		},
 		db.Slice{
 			Name: "base-files_myslice",
+		},
+		db.Path{
+			Path:   "/usr/",
+			Mode:   0755,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/usr/bin/",
+			Mode:   0755,
+			Slices: []string{"base-files_myslice"},
+		},
+		db.Path{
+			Path:   "/usr/bin/hello",
+			Mode:   0775,
+			Slices: []string{"base-files_myslice"},
+			SHA256: &[...]byte{
+				0xea, 0xf2, 0x95, 0x75, 0x43, 0x07, 0x7e, 0x93,
+				0x01, 0x5b, 0x0b, 0x2e, 0x06, 0xeb, 0xe3, 0x20,
+				0xed, 0x56, 0x8e, 0xf8, 0x53, 0x24, 0x5c, 0x7e,
+				0xbe, 0xdf, 0x33, 0xc4, 0xe4, 0x5c, 0xf4, 0x0d,
+			},
+			Size: 29,
+		},
+		db.Path{
+			Path:   "/usr/share/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/base-files/copyright",
+			Mode:   0644,
+			Slices: []string(nil),
+			SHA256: &[...]byte{
+				0xcd, 0xb5, 0x46, 0x1d, 0x85, 0x15, 0x00, 0x2d,
+				0x0f, 0xe3, 0xba, 0xbb, 0x76, 0x4e, 0xec, 0x38,
+				0x77, 0x45, 0x8b, 0x20, 0xf4, 0xe4, 0xbb, 0x16,
+				0x21, 0x9f, 0x62, 0xea, 0x95, 0x3a, 0xfe, 0xea,
+			},
+			Size: 1228,
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/usr/",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/usr/bin/",
+		},
+		db.Content{
+			Slice: "base-files_myslice",
+			Path:  "/usr/bin/hello",
 		},
 	},
 }, {
@@ -789,6 +2139,82 @@ var slicerTests = []slicerTest{{
 		},
 		db.Slice{
 			Name: "proton_mass",
+		},
+		db.Path{
+			Path:   "/mass/",
+			Mode:   0755,
+			Slices: []string{"electron_mass", "proton_mass"},
+		},
+		db.Path{
+			Path:   "/mass/electron",
+			Mode:   0644,
+			Slices: []string{"electron_mass"},
+			SHA256: &[...]byte{
+				0xa1, 0x25, 0x8e, 0x30, 0x83, 0xf9, 0xa2, 0xd9,
+				0x94, 0xc5, 0x0d, 0xea, 0x22, 0xf3, 0xaf, 0x9e,
+				0xaa, 0x32, 0x39, 0x6b, 0x37, 0xba, 0xb6, 0x15,
+				0x2b, 0x00, 0xd5, 0x04, 0x9e, 0x76, 0x75, 0x16,
+			},
+			Size: 22,
+		},
+		db.Path{
+			Path:   "/mass/proton",
+			Mode:   0644,
+			Slices: []string{"proton_mass"},
+			SHA256: &[...]byte{
+				0xa2, 0x39, 0x0d, 0x10, 0x58, 0x70, 0xf8, 0xe0,
+				0xd8, 0xa6, 0x04, 0x60, 0xf8, 0x5d, 0x3f, 0x49,
+				0x3a, 0x11, 0xe3, 0xcc, 0xec, 0xff, 0xef, 0x06,
+				0x51, 0xbb, 0x60, 0xfb, 0xc9, 0x36, 0xc7, 0x66,
+			},
+			Size: 23,
+		},
+		db.Path{
+			Path:   "/usr/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/electron/",
+			Mode:   0755,
+			Slices: []string(nil),
+		},
+		db.Path{
+			Path:   "/usr/share/doc/electron/copyright",
+			Mode:   0644,
+			Slices: []string(nil),
+			SHA256: &[...]byte{
+				0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14,
+				0x9a, 0xfb, 0xf4, 0xc8, 0x99, 0x6f, 0xb9, 0x24,
+				0x27, 0xae, 0x41, 0xe4, 0x64, 0x9b, 0x93, 0x4c,
+				0xa4, 0x95, 0x99, 0x1b, 0x78, 0x52, 0xb8, 0x55,
+			},
+		},
+		db.Content{
+			Slice: "electron_mass",
+			Path:  "/mass/",
+		},
+		db.Content{
+			Slice: "electron_mass",
+			Path:  "/mass/electron",
+		},
+		db.Content{
+			Slice: "proton_mass",
+			Path:  "/mass/",
+		},
+		db.Content{
+			Slice: "proton_mass",
+			Path:  "/mass/proton",
 		},
 	},
 }}
