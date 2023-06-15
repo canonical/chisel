@@ -413,6 +413,32 @@ var extractTests = []extractTest{{
 		"/a/b/c/":  "dir 0706",
 		"/a/b/c/d": "file 0601 empty",
 	},
+}, {
+	summary: "Copies with different permissions",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		Dir(0701, "./a/"),
+		Reg(0601, "./b", ""),
+	}),
+	options: deb.ExtractOptions{
+		Extract: map[string][]deb.ExtractInfo{
+			"/a/": []deb.ExtractInfo{
+				{Path: "/b/"},
+				{Path: "/c/", Mode: 0702},
+				{Path: "/d/", Mode: 01777},
+				{Path: "/e/"},
+				{Path: "/f/", Mode: 0723},
+				{Path: "/g/"},
+			},
+		},
+	},
+	result: map[string]string{
+		"/b/": "dir 0701",
+		"/c/": "dir 0702",
+		"/d/": "dir 01777",
+		"/e/": "dir 0701",
+		"/f/": "dir 0723",
+		"/g/": "dir 0701",
+	},
 }}
 
 func (s *S) TestExtract(c *C) {
