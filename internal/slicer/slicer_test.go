@@ -11,6 +11,7 @@ import (
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/chisel/internal/archive"
+	"github.com/canonical/chisel/internal/db"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/slicer"
 	"github.com/canonical/chisel/internal/testutil"
@@ -35,6 +36,7 @@ type slicerTest struct {
 	slices  []setup.SliceKey
 	hackopt func(c *C, opts *slicer.RunOptions)
 	result  map[string]string
+	db      []any
 	error   string
 }
 
@@ -103,6 +105,15 @@ var slicerTests = []slicerTest{{
 		"/etc/dir/sub/":  "dir 01777",
 		"/etc/passwd":    "file 0644 5b41362b",
 	},
+	db: []any{
+		db.Package{
+			Name:    "base-files",
+			Version: "1.0",
+		},
+		db.Slice{
+			Name: "base-files_myslice",
+		},
+	},
 }, {
 	summary: "Glob extraction",
 	slices:  []setup.SliceKey{{"base-files", "myslice"}},
@@ -120,6 +131,15 @@ var slicerTests = []slicerTest{{
 		"/usr/bin/":      "dir 0755",
 		"/usr/bin/hello": "file 0775 eaf29575",
 	},
+	db: []any{
+		db.Package{
+			Name:    "base-files",
+			Version: "1.0",
+		},
+		db.Slice{
+			Name: "base-files_myslice",
+		},
+	},
 }, {
 	summary: "Create new file under extracted directory",
 	slices:  []setup.SliceKey{{"base-files", "myslice"}},
@@ -136,6 +156,15 @@ var slicerTests = []slicerTest{{
 	result: map[string]string{
 		"/tmp/":    "dir 01777", // This is the magic.
 		"/tmp/new": "file 0644 5b41362b",
+	},
+	db: []any{
+		db.Package{
+			Name:    "base-files",
+			Version: "1.0",
+		},
+		db.Slice{
+			Name: "base-files_myslice",
+		},
 	},
 }, {
 	summary: "Create new nested file under extracted directory",
@@ -155,6 +184,15 @@ var slicerTests = []slicerTest{{
 		"/tmp/new/":    "dir 0755",
 		"/tmp/new/sub": "file 0644 5b41362b",
 	},
+	db: []any{
+		db.Package{
+			Name:    "base-files",
+			Version: "1.0",
+		},
+		db.Slice{
+			Name: "base-files_myslice",
+		},
+	},
 }, {
 	summary: "Create new directory under extracted directory",
 	slices:  []setup.SliceKey{{"base-files", "myslice"}},
@@ -171,6 +209,15 @@ var slicerTests = []slicerTest{{
 	result: map[string]string{
 		"/tmp/":     "dir 01777", // This is the magic.
 		"/tmp/new/": "dir 0755",
+	},
+	db: []any{
+		db.Package{
+			Name:    "base-files",
+			Version: "1.0",
+		},
+		db.Slice{
+			Name: "base-files_myslice",
+		},
 	},
 }, {
 	summary: "Conditional architecture",
@@ -199,6 +246,15 @@ var slicerTests = []slicerTest{{
 		"/usr/bin/hello1": "file 0775 eaf29575",
 		"/usr/bin/hello3": "file 0775 eaf29575",
 	},
+	db: []any{
+		db.Package{
+			Name:    "base-files",
+			Version: "1.0",
+		},
+		db.Slice{
+			Name: "base-files_myslice",
+		},
+	},
 }, {
 	summary: "Script: write a file",
 	slices:  []setup.SliceKey{{"base-files", "myslice"}},
@@ -216,6 +272,15 @@ var slicerTests = []slicerTest{{
 	result: map[string]string{
 		"/tmp/":      "dir 01777",
 		"/tmp/file1": "file 0644 d98cf53e",
+	},
+	db: []any{
+		db.Package{
+			Name:    "base-files",
+			Version: "1.0",
+		},
+		db.Slice{
+			Name: "base-files_myslice",
+		},
 	},
 }, {
 	summary: "Script: read a file",
@@ -239,6 +304,15 @@ var slicerTests = []slicerTest{{
 		"/foo/":      "dir 0755",
 		"/foo/file2": "file 0644 5b41362b",
 	},
+	db: []any{
+		db.Package{
+			Name:    "base-files",
+			Version: "1.0",
+		},
+		db.Slice{
+			Name: "base-files_myslice",
+		},
+	},
 }, {
 	summary: "Script: use 'until' to remove file after mutate",
 	slices:  []setup.SliceKey{{"base-files", "myslice"}},
@@ -260,6 +334,15 @@ var slicerTests = []slicerTest{{
 		"/foo/":      "dir 0755",
 		"/foo/file2": "file 0644 5b41362b",
 	},
+	db: []any{
+		db.Package{
+			Name:    "base-files",
+			Version: "1.0",
+		},
+		db.Slice{
+			Name: "base-files_myslice",
+		},
+	},
 }, {
 	summary: "Script: use 'until' to remove wildcard after mutate",
 	slices:  []setup.SliceKey{{"base-files", "myslice"}},
@@ -276,6 +359,15 @@ var slicerTests = []slicerTest{{
 	result: map[string]string{
 		"/usr/": "dir 0755",
 		"/etc/": "dir 0755",
+	},
+	db: []any{
+		db.Package{
+			Name:    "base-files",
+			Version: "1.0",
+		},
+		db.Slice{
+			Name: "base-files_myslice",
+		},
 	},
 }, {
 	summary: "Script: 'until' does not remove non-empty directories",
@@ -294,6 +386,15 @@ var slicerTests = []slicerTest{{
 		"/usr/":          "dir 0755",
 		"/usr/bin/":      "dir 0755",
 		"/usr/bin/hallo": "file 0775 eaf29575",
+	},
+	db: []any{
+		db.Package{
+			Name:    "base-files",
+			Version: "1.0",
+		},
+		db.Slice{
+			Name: "base-files_myslice",
+		},
 	},
 }, {
 	summary: "Script: cannot write non-mutable files",
@@ -341,6 +442,18 @@ var slicerTests = []slicerTest{{
 						content.read("/usr/bin/hello")
 		`,
 	},
+	db: []any{
+		db.Package{
+			Name:    "base-files",
+			Version: "1.0",
+		},
+		db.Slice{
+			Name: "base-files_myslice1",
+		},
+		db.Slice{
+			Name: "base-files_myslice2",
+		},
+	},
 }, {
 	summary: "Relative content root directory must not error",
 	slices:  []setup.SliceKey{{"base-files", "myslice"}},
@@ -361,6 +474,15 @@ var slicerTests = []slicerTest{{
 		opts.TargetDir, err = filepath.Rel(dir, opts.TargetDir)
 		c.Assert(err, IsNil)
 	},
+	db: []any{
+		db.Package{
+			Name:    "base-files",
+			Version: "1.0",
+		},
+		db.Slice{
+			Name: "base-files_myslice",
+		},
+	},
 }, {
 	summary: "Can list parent directories of normal paths",
 	slices:  []setup.SliceKey{{"base-files", "myslice"}},
@@ -379,6 +501,15 @@ var slicerTests = []slicerTest{{
 						content.list("/x")
 						content.list("/x/y")
 		`,
+	},
+	db: []any{
+		db.Package{
+			Name:    "base-files",
+			Version: "1.0",
+		},
+		db.Slice{
+			Name: "base-files_myslice",
+		},
 	},
 }, {
 	summary: "Cannot list unselected directory",
@@ -424,6 +555,15 @@ var slicerTests = []slicerTest{{
 						content.list("/usr/bin")
 		`,
 	},
+	db: []any{
+		db.Package{
+			Name:    "base-files",
+			Version: "1.0",
+		},
+		db.Slice{
+			Name: "base-files_myslice",
+		},
+	},
 }, {
 	summary: "Cannot list directories not matched by glob",
 	slices:  []setup.SliceKey{{"base-files", "myslice"}},
@@ -464,6 +604,25 @@ var slicerTests = []slicerTest{{
 						/etc/ssl/openssl.cnf:
 		`,
 	},
+	db: []any{
+		db.Package{
+			Name:    "copyright-symlink-libssl3",
+			Version: "1.0",
+		},
+		db.Package{
+			Name:    "copyright-symlink-openssl",
+			Version: "1.0",
+		},
+		db.Slice{
+			Name: "copyright-symlink-libssl3_libs",
+		},
+		db.Slice{
+			Name: "copyright-symlink-openssl_bins",
+		},
+		db.Slice{
+			Name: "copyright-symlink-openssl_config",
+		},
+	},
 }, {
 	summary: "Can list unclean directory paths",
 	slices:  []setup.SliceKey{{"base-files", "myslice"}},
@@ -482,6 +641,15 @@ var slicerTests = []slicerTest{{
 						content.list("/x///")
 						content.list("/x/./././y")
 		`,
+	},
+	db: []any{
+		db.Package{
+			Name:    "base-files",
+			Version: "1.0",
+		},
+		db.Slice{
+			Name: "base-files_myslice",
+		},
 	},
 }, {
 	summary: "Cannot read directories",
@@ -526,6 +694,15 @@ var slicerTests = []slicerTest{{
 		"/usr/":          "dir 0755",
 		"/usr/bin/":      "dir 0755",
 		"/usr/bin/hello": "file 0775 eaf29575",
+	},
+	db: []any{
+		db.Package{
+			Name:    "base-files",
+			Version: "1.0",
+		},
+		db.Slice{
+			Name: "base-files_myslice",
+		},
 	},
 }, {
 	summary: "Custom archives with custom packages",
@@ -597,6 +774,22 @@ var slicerTests = []slicerTest{{
 		"/usr/share/doc/":                   "dir 0755",
 		"/usr/share/doc/electron/":          "dir 0755",
 		"/usr/share/doc/electron/copyright": "file 0644 empty",
+	},
+	db: []any{
+		db.Package{
+			Name:    "electron",
+			Version: "1.0",
+		},
+		db.Package{
+			Name:    "proton",
+			Version: "1.0",
+		},
+		db.Slice{
+			Name: "electron_mass",
+		},
+		db.Slice{
+			Name: "proton_mass",
+		},
 	},
 }}
 
@@ -710,11 +903,15 @@ func (s *S) TestRun(c *C) {
 			archives[name] = archive
 		}
 
+		var obtainedDB = &fakeDB{}
+		var expectedDB = &fakeDB{}
+
 		targetDir := c.MkDir()
 		options := slicer.RunOptions{
 			Selection: selection,
 			Archives:  archives,
 			TargetDir: targetDir,
+			AddToDB:   obtainedDB.add,
 		}
 		if test.hackopt != nil {
 			test.hackopt(c, &options)
@@ -744,5 +941,12 @@ func (s *S) TestRun(c *C) {
 			}
 			c.Assert(testutil.TreeDump(targetDir), DeepEquals, result)
 		}
+
+		//c.Log(obtainedDB.dump())
+		for _, v := range test.db {
+			err := expectedDB.add(v)
+			c.Assert(err, IsNil)
+		}
+		c.Assert(obtainedDB.values(), DeepEquals, expectedDB.values())
 	}
 }

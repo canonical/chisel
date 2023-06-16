@@ -10,6 +10,7 @@ import (
 
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/cache"
+	"github.com/canonical/chisel/internal/db"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/slicer"
 )
@@ -98,11 +99,19 @@ func (cmd *cmdCut) Execute(args []string) error {
 		archives[archiveName] = openArchive
 	}
 
-	return slicer.Run(&slicer.RunOptions{
+	dbw := db.New()
+
+	err = slicer.Run(&slicer.RunOptions{
 		Selection: selection,
 		Archives:  archives,
 		TargetDir: cmd.RootDir,
+		AddToDB:   dbw.Add,
 	})
+	if err != nil {
+		return err
+	}
+
+	return db.Save(dbw, cmd.RootDir)
 }
 
 // TODO These need testing, and maybe moving into a common file.
