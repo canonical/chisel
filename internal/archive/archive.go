@@ -13,9 +13,17 @@ import (
 	"github.com/canonical/chisel/internal/deb"
 )
 
+type PackageInfo interface {
+	Name() string
+	Version() string
+	Arch() string
+	SHA256() string
+}
+
 type Archive interface {
 	Options() *Options
 	Fetch(pkg string) (io.ReadCloser, error)
+	Info(pkg string) PackageInfo
 	Exists(pkg string) bool
 }
 
@@ -77,6 +85,23 @@ func (a *ubuntuArchive) Options() *Options {
 func (a *ubuntuArchive) Exists(pkg string) bool {
 	_, _, err := a.selectPackage(pkg)
 	return err == nil
+}
+
+type pkgInfo struct{ control.Section }
+
+var _ PackageInfo = pkgInfo{}
+
+func (info pkgInfo) Name() string    { return info.Get("Package") }
+func (info pkgInfo) Version() string { return info.Get("Version") }
+func (info pkgInfo) Arch() string    { return info.Get("Architecture") }
+func (info pkgInfo) SHA256() string  { return info.Get("SHA256") }
+
+func (a *ubuntuArchive) Info(pkg string) (info PackageInfo) {
+	section, _, _ := a.selectPackage(pkg)
+	if section != nil {
+		info = &pkgInfo{section}
+	}
+	return
 }
 
 func (a *ubuntuArchive) selectPackage(pkg string) (control.Section, *ubuntuIndex, error) {
