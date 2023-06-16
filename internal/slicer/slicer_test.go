@@ -23,6 +23,7 @@ var (
 )
 
 type testPackage struct {
+	info    map[string]string
 	content []byte
 }
 
@@ -607,6 +608,22 @@ const defaultChiselYaml = `
 			components: [main, universe]
 `
 
+type testPackageInfo map[string]string
+
+var _ archive.PackageInfo = (testPackageInfo)(nil)
+
+func (info testPackageInfo) Name() string    { return info["Package"] }
+func (info testPackageInfo) Version() string { return info["Version"] }
+func (info testPackageInfo) Arch() string    { return info["Architecture"] }
+func (info testPackageInfo) SHA256() string  { return info["SHA256"] }
+
+func (s testPackageInfo) Get(key string) (value string) {
+	if s != nil {
+		value = s[key]
+	}
+	return
+}
+
 type testArchive struct {
 	options archive.Options
 	pkgs    map[string]testPackage
@@ -626,6 +643,18 @@ func (a *testArchive) Fetch(pkg string) (io.ReadCloser, error) {
 func (a *testArchive) Exists(pkg string) bool {
 	_, ok := a.pkgs[pkg]
 	return ok
+}
+
+func (a *testArchive) Info(pkg string) archive.PackageInfo {
+	var info map[string]string
+	if pkgData, ok := a.pkgs[pkg]; ok {
+		if info = pkgData.info; info == nil {
+			info = map[string]string{
+				"Version": "1.0",
+			}
+		}
+	}
+	return testPackageInfo(info)
 }
 
 func (s *S) TestRun(c *C) {
