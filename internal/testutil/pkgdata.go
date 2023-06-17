@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"encoding/base64"
+	"strings"
 	"time"
 
 	"github.com/blakesmith/ar"
@@ -174,7 +175,7 @@ func fixupTarEntry(entry *TarEntry) {
 	if hdr.Typeflag == 0 {
 		if hdr.Linkname != "" {
 			hdr.Typeflag = tar.TypeSymlink
-		} else if hdr.Name[len(hdr.Name)-1] == '/' {
+		} else if strings.HasSuffix(hdr.Name, "/") {
 			hdr.Typeflag = tar.TypeDir
 		} else {
 			hdr.Typeflag = tar.TypeReg
@@ -264,4 +265,44 @@ func MakeDeb(entries []TarEntry) ([]byte, error) {
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+func MakeTestDeb(entries []TarEntry) []byte {
+	data, err := MakeDeb(entries)
+	if err != nil {
+		panic(err)
+	}
+	return data
+}
+
+func REG(mode int64, path, content string) TarEntry {
+	return TarEntry{
+		Header: tar.Header{
+			Typeflag: tar.TypeReg,
+			Name:     path,
+			Mode:     mode,
+		},
+		Content: []byte(content),
+	}
+}
+
+func DIR(mode int64, path string) TarEntry {
+	return TarEntry{
+		Header: tar.Header{
+			Typeflag: tar.TypeDir,
+			Name:     path,
+			Mode:     mode,
+		},
+	}
+}
+
+func LNK(mode int64, path, target string) TarEntry {
+	return TarEntry{
+		Header: tar.Header{
+			Typeflag: tar.TypeSymlink,
+			Name:     path,
+			Mode:     mode,
+			Linkname: target,
+		},
+	}
 }
