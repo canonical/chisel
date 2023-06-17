@@ -16,9 +16,20 @@ import (
 	"github.com/canonical/chisel/internal/testutil"
 )
 
+var (
+	Reg = testutil.Reg
+	Dir = testutil.Dir
+	Lnk = testutil.Lnk
+)
+
+type testPackage struct {
+	content []byte
+}
+
 type slicerTest struct {
 	summary string
 	arch    string
+	pkgs    map[string]map[string]testPackage
 	release map[string]string
 	slices  []setup.SliceKey
 	hackopt func(c *C, opts *slicer.RunOptions)
@@ -515,6 +526,77 @@ var slicerTests = []slicerTest{{
 		"/usr/bin/":      "dir 0755",
 		"/usr/bin/hello": "file 0775 eaf29575",
 	},
+}, {
+	summary: "Custom archives with custom packages",
+	pkgs: map[string]map[string]testPackage{
+		"leptons": {
+			"electron": testPackage{
+				content: testutil.MustMakeDeb([]testutil.TarEntry{
+					Dir(0755, "./"),
+					Dir(0755, "./mass/"),
+					Reg(0644, "./mass/electron", "9.1093837015E−31 kg\n"),
+					Dir(0755, "./usr/"),
+					Dir(0755, "./usr/share/"),
+					Dir(0755, "./usr/share/doc/"),
+					Dir(0755, "./usr/share/doc/electron/"),
+					Reg(0644, "./usr/share/doc/electron/copyright", ""),
+				}),
+			},
+		},
+		"hadrons": {
+			"proton": testPackage{
+				content: testutil.MustMakeDeb([]testutil.TarEntry{
+					Dir(0755, "./"),
+					Dir(0755, "./mass/"),
+					Reg(0644, "./mass/proton", "1.67262192369E−27 kg\n"),
+				}),
+			},
+		},
+	},
+	release: map[string]string{
+		"chisel.yaml": `
+			format: chisel-v1
+			archives:
+				leptons:
+					version: 1
+					suites: [main]
+					components: [main, universe]
+					default: true
+				hadrons:
+					version: 1
+					suites: [main]
+					components: [main]
+		`,
+		"slices/mydir/electron.yaml": `
+			package: electron
+			slices:
+				mass:
+					contents:
+						/mass/electron:
+		`,
+		"slices/mydir/proton.yaml": `
+			package: proton
+			archive: hadrons
+			slices:
+				mass:
+					contents:
+						/mass/proton:
+		`,
+	},
+	slices: []setup.SliceKey{
+		{"electron", "mass"},
+		{"proton", "mass"},
+	},
+	result: map[string]string{
+		"/mass/":                            "dir 0755",
+		"/mass/electron":                    "file 0644 a1258e30",
+		"/mass/proton":                      "file 0644 a2390d10",
+		"/usr/":                             "dir 0755",
+		"/usr/share/":                       "dir 0755",
+		"/usr/share/doc/":                   "dir 0755",
+		"/usr/share/doc/electron/":          "dir 0755",
+		"/usr/share/doc/electron/copyright": "file 0644 empty",
+	},
 }}
 
 const defaultChiselYaml = `
@@ -527,7 +609,7 @@ const defaultChiselYaml = `
 
 type testArchive struct {
 	options archive.Options
-	pkgs    map[string][]byte
+	pkgs    map[string]testPackage
 }
 
 func (a *testArchive) Options() *archive.Options {
@@ -536,7 +618,7 @@ func (a *testArchive) Options() *archive.Options {
 
 func (a *testArchive) Fetch(pkg string) (io.ReadCloser, error) {
 	if data, ok := a.pkgs[pkg]; ok {
-		return io.NopCloser(bytes.NewBuffer(data)), nil
+		return io.NopCloser(bytes.NewBuffer(data.content)), nil
 	}
 	return nil, fmt.Errorf("attempted to open %q package", pkg)
 }
@@ -569,16 +651,23 @@ func (s *S) TestRun(c *C) {
 		selection, err := setup.Select(release, test.slices)
 		c.Assert(err, IsNil)
 
-		pkgs := map[string][]byte{
-			"base-files": testutil.PackageData["base-files"],
+		pkgs := map[string]testPackage{
+			"base-files": testPackage{content: testutil.PackageData["base-files"]},
 		}
 		for name, entries := range packageEntries {
 			deb, err := testutil.MakeDeb(entries)
 			c.Assert(err, IsNil)
-			pkgs[name] = deb
+			pkgs[name] = testPackage{content: deb}
 		}
 		archives := map[string]archive.Archive{}
 		for name, setupArchive := range release.Archives {
+			var archivePkgs map[string]testPackage
+			if test.pkgs != nil {
+				archivePkgs = test.pkgs[name]
+			}
+			if archivePkgs == nil {
+				archivePkgs = pkgs
+			}
 			archive := &testArchive{
 				options: archive.Options{
 					Label:      setupArchive.Name,
@@ -587,7 +676,7 @@ func (s *S) TestRun(c *C) {
 					Components: setupArchive.Components,
 					Arch:       test.arch,
 				},
-				pkgs: pkgs,
+				pkgs: archivePkgs,
 			}
 			archives[name] = archive
 		}
@@ -611,8 +700,15 @@ func (s *S) TestRun(c *C) {
 
 		if test.result != nil {
 			result := make(map[string]string, len(copyrightEntries)+len(test.result))
-			for k, v := range copyrightEntries {
-				result[k] = v
+			if test.pkgs == nil {
+				// This was added in order to not specify copyright entries for each
+				// existing test. These tests use only the base-files embedded
+				// package. Custom packages may not include copyright entries
+				// though. So if a test defines any custom packages, it must include
+				// copyright entries explicitly in the results.
+				for k, v := range copyrightEntries {
+					result[k] = v
+				}
 			}
 			for k, v := range test.result {
 				result[k] = v
