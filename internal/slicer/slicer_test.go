@@ -527,12 +527,12 @@ const defaultChiselYaml = `
 `
 
 type testArchive struct {
-	arch string
-	pkgs map[string][]byte
+	options archive.Options
+	pkgs    map[string][]byte
 }
 
 func (a *testArchive) Options() *archive.Options {
-	return &archive.Options{Arch: a.arch}
+	return &a.options
 }
 
 func (a *testArchive) Fetch(pkg string) (io.ReadCloser, error) {
@@ -579,9 +579,15 @@ func (s *S) TestRun(c *C) {
 			pkgs[name] = deb
 		}
 		archives := map[string]archive.Archive{}
-		for name, _ := range release.Archives {
+		for name, setupArchive := range release.Archives {
 			archive := &testArchive{
-				arch: test.arch,
+				options: archive.Options{
+					Label:      setupArchive.Name,
+					Version:    setupArchive.Version,
+					Suites:     setupArchive.Suites,
+					Components: setupArchive.Components,
+					Arch:       test.arch,
+				},
 				pkgs: pkgs,
 			}
 			archives[name] = archive
