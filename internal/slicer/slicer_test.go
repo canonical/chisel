@@ -487,6 +487,35 @@ var slicerTests = []slicerTest{{
 		`,
 	},
 	error: `slice base-files_myslice: content is not a file: /x/y`,
+}, {
+	summary: "Non-default archive",
+	slices:  []setup.SliceKey{{"base-files", "myslice"}},
+	release: map[string]string{
+		"chisel.yaml": `
+			format: chisel-v1
+			archives:
+				foo:
+					version: 22.04
+					components: [main, universe]
+					default: true
+				bar:
+					version: 22.04
+					components: [main]
+		`,
+		"slices/mydir/base-files.yaml": `
+			package: base-files
+			archive: bar
+			slices:
+				myslice:
+					contents:
+						/usr/bin/hello:
+		`,
+	},
+	result: map[string]string{
+		"/usr/":          "dir 0755",
+		"/usr/bin/":      "dir 0755",
+		"/usr/bin/hello": "file 0775 eaf29575",
+	},
 }}
 
 const defaultChiselYaml = `
@@ -549,11 +578,13 @@ func (s *S) TestRun(c *C) {
 			c.Assert(err, IsNil)
 			pkgs[name] = deb
 		}
-		archives := map[string]archive.Archive{
-			"ubuntu": &testArchive{
+		archives := map[string]archive.Archive{}
+		for name, _ := range release.Archives {
+			archive := &testArchive{
 				arch: test.arch,
 				pkgs: pkgs,
-			},
+			}
+			archives[name] = archive
 		}
 
 		targetDir := c.MkDir()
