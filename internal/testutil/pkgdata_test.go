@@ -370,3 +370,42 @@ func (s *pkgdataSuite) TestMakeDeb(c *C) {
 	_, err = arReader.Next()
 	c.Assert(err, Equals, io.EOF)
 }
+
+func (s *S) TestTarEntryShortHands(c *C) {
+	var testCases = []struct {
+		shorthand testutil.TarEntry
+		result    testutil.TarEntry
+	}{{
+		testutil.REG(0600, "./document.txt", "cats are best"),
+		testutil.TarEntry{
+			Header: tar.Header{
+				Typeflag: tar.TypeReg,
+				Name:     "./document.txt",
+				Mode:     0600,
+			},
+			Content: []byte("cats are best"),
+		},
+	}, {
+		testutil.DIR(0755, "./home/user"),
+		testutil.TarEntry{
+			Header: tar.Header{
+				Typeflag: tar.TypeDir,
+				Name:     "./home/user",
+				Mode:     0755,
+			},
+		},
+	}, {
+		testutil.LNK(0755, "./lib", "./usr/lib/"),
+		testutil.TarEntry{
+			Header: tar.Header{
+				Typeflag: tar.TypeSymlink,
+				Name:     "./lib",
+				Mode:     0755,
+				Linkname: "./usr/lib/",
+			},
+		},
+	}}
+	for _, test := range testCases {
+		c.Assert(test.shorthand, DeepEquals, test.result)
+	}
+}

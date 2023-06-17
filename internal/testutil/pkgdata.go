@@ -265,3 +265,35 @@ func MakeDeb(entries []TarEntry) ([]byte, error) {
 	}
 	return buf.Bytes(), nil
 }
+
+func REG(mode int64, path, content string) TarEntry {
+	return TarEntry{
+		Header: tar.Header{
+			Typeflag: tar.TypeReg,
+			Name:     path,
+			Mode:     mode,
+		},
+		Content: []byte(content),
+	}
+}
+
+func DIR(mode int64, path string) TarEntry {
+	return TarEntry{
+		Header: tar.Header{
+			Typeflag: tar.TypeDir,
+			Name:     path,
+			Mode:     mode,
+		},
+	}
+}
+
+func LNK(mode int64, path, target string) TarEntry {
+	return TarEntry{
+		Header: tar.Header{
+			Typeflag: tar.TypeSymlink,
+			Name:     path,
+			Mode:     mode,
+			Linkname: target,
+		},
+	}
+}
