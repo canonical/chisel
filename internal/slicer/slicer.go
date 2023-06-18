@@ -59,7 +59,6 @@ func Run(options *RunOptions) error {
 		syscall.Umask(oldUmask)
 	}()
 
-	release := options.Selection.Release
 	targetDir := filepath.Clean(options.TargetDir)
 	targetDirAbs := targetDir
 	if !filepath.IsAbs(targetDirAbs) {
@@ -74,15 +73,23 @@ func Run(options *RunOptions) error {
 	for _, slice := range options.Selection.Slices {
 		extractPackage := extract[slice.Package]
 		if extractPackage == nil {
-			archiveName := release.Packages[slice.Package].Archive
-			archive := options.Archives[archiveName]
-			if archive == nil {
-				return fmt.Errorf("archive %q not defined", archiveName)
+			var selectedVersion string
+			var selectedArchive archive.Archive
+			for _, currentArchive := range options.Archives {
+				pkgInfo := currentArchive.Info(slice.Package)
+				if pkgInfo == nil {
+					continue
+				}
+				currentVersion := pkgInfo.Version()
+				if selectedVersion == "" || deb.CompareVersions(selectedVersion, currentVersion) < 0 {
+					selectedVersion = currentVersion
+					selectedArchive = currentArchive
+				}
 			}
-			if !archive.Exists(slice.Package) {
+			if selectedVersion == "" {
 				return fmt.Errorf("slice package %q missing from archive", slice.Package)
 			}
-			archives[slice.Package] = archive
+			archives[slice.Package] = selectedArchive
 			extractPackage = make(map[string][]deb.ExtractInfo)
 			extract[slice.Package] = extractPackage
 		}

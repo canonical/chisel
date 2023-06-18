@@ -508,7 +508,6 @@ var slicerTests = []slicerTest{{
 				foo:
 					version: 22.04
 					components: [main, universe]
-					default: true
 				bar:
 					version: 22.04
 					components: [main]
@@ -562,7 +561,6 @@ var slicerTests = []slicerTest{{
 					version: 1
 					suites: [main]
 					components: [main, universe]
-					default: true
 				hadrons:
 					version: 1
 					suites: [main]
@@ -577,7 +575,6 @@ var slicerTests = []slicerTest{{
 		`,
 		"slices/mydir/proton.yaml": `
 			package: proton
-			archive: hadrons
 			slices:
 				mass:
 					contents:
@@ -597,6 +594,97 @@ var slicerTests = []slicerTest{{
 		"/usr/share/doc/":                   "dir 0755",
 		"/usr/share/doc/electron/":          "dir 0755",
 		"/usr/share/doc/electron/copyright": "file 0644 empty",
+	},
+}, {
+	summary: "Can pick latest packages from multiple archives",
+	pkgs: map[string]map[string]testPackage{
+		"vertebrates": {
+			"cheetah": testPackage{
+				info: map[string]string{
+					"Version": "109.4",
+				},
+				content: testutil.MustMakeDeb([]testutil.TarEntry{
+					Dir(0755, "./"),
+					Dir(0755, "./speed/"),
+					Reg(0644, "./speed/cheetah", "109.4 km/h\n"),
+				}),
+			},
+			"ostrich": testPackage{
+				info: map[string]string{
+					"Version": "100.0",
+				},
+				content: testutil.MustMakeDeb([]testutil.TarEntry{
+					Dir(0755, "./"),
+					Dir(0755, "./speed/"),
+					Reg(0644, "./speed/ostrich", "100.0 km/h\n"),
+				}),
+			},
+		},
+		"mammals": {
+			"cheetah": testPackage{
+				info: map[string]string{
+					"Version": "120.7",
+				},
+				content: testutil.MustMakeDeb([]testutil.TarEntry{
+					Dir(0755, "./"),
+					Dir(0755, "./speed/"),
+					Reg(0644, "./speed/cheetah", "120.7 km/h\n"),
+				}),
+			},
+		},
+		"birds": {
+			"ostrich": testPackage{
+				info: map[string]string{
+					"Version": "90.0",
+				},
+				content: testutil.MustMakeDeb([]testutil.TarEntry{
+					Dir(0755, "./"),
+					Dir(0755, "./speed/"),
+					Reg(0644, "./speed/ostrich", "90.0 km/h\n"),
+				}),
+			},
+		},
+	},
+	slices: []setup.SliceKey{
+		{"cheetah", "speed"},
+		{"ostrich", "speed"},
+	},
+	release: map[string]string{
+		"chisel.yaml": `
+			format: chisel-v1
+			archives:
+				vertebrates:
+					version: 1
+					suites: [main]
+					components: [main, universe]
+				mammals:
+					version: 1
+					suites: [main]
+					components: [main]
+				birds:
+					version: 1
+					suites: [main]
+					components: [main]
+		`,
+		"slices/mydir/cheetah.yaml": `
+			package: cheetah
+			slices:
+				speed:
+					contents:
+						/speed/cheetah:
+		`,
+		"slices/mydir/ostrich.yaml": `
+			package: ostrich
+			slices:
+				speed:
+					contents:
+						/speed/ostrich:
+		`,
+	},
+	result: map[string]string{
+		"/speed/":        "dir 0755",
+		"/speed/cheetah": "file 0644 e98b0879",
+		"/speed/ostrich": "file 0644 c8fa2806",
 	},
 }}
 
