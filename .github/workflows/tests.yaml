@@ -23,7 +23,9 @@ jobs:
           go-version-file: 'go.mod'
 
       - name: Run unit tests
-        run: go test -v -cover -coverprofile=${TEST_COVERAGE_FILE} ./...
+        run: |
+          go test -v -cover -coverprofile=${TEST_COVERAGE_FILE} ./...
+          go test -v -cover ./internal/archive/ -args --real-archive
 
       - name: Convert test coverage to HTML
         if: always()
