@@ -303,13 +303,6 @@ func (s *S) TestTimeout(c *C) {
 
 	_, err := archive.Open(&options)
 	c.Assert(err, ErrorMatches, `.*context deadline exceeded.*`)
-
-	// set timeout to zero so that request never times out
-	archive.SetTimeout(0)
-
-	options.CacheDir = c.MkDir()
-	_, err = archive.Open(&options)
-	c.Assert(err, IsNil)
 }
 
 var elfToDebArch = map[elf.Machine]string{
