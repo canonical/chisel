@@ -142,7 +142,7 @@ func findCredentialsInDir(repoURL string, credsDir string) (creds credentials, e
 		fpath := filepath.Join(credsDir, file)
 		f, err := os.Open(fpath)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("cannot read credentials file: %w", err))
+			errs = append(errs, fmt.Errorf("cannot read credentials file %s: %w", fpath, err))
 			continue
 		}
 
