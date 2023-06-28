@@ -16,4 +16,4 @@ func FakeDo(do func(req *http.Request) (*http.Response, error)) (restore func())
 }
 
 type Credentials = credentials
-var FindCredsInDir = findCredsInDir
+var FindCredentialsInDir = findCredentialsInDir

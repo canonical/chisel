@@ -77,10 +77,10 @@ func findCredentials(repoUrl string) (credentials, error) {
 	if v := os.Getenv("CHISEL_AUTH_DIR"); v != "" {
 		credsDir = v
 	}
-	return findCredsInDir(repoUrl, credsDir)
+	return findCredentialsInDir(repoUrl, credsDir)
 }
 
-// findCredsInDir searches for credentials for repoUrl in configuration
+// findCredentialsInDir searches for credentials for repoUrl in configuration
 // files in credsDir directory. If the directory does not exist, empty
 // credentials structure with nil err is returned.
 // Only files that do not begin with dot and have either no or ".conf"
@@ -88,7 +88,7 @@ func findCredentials(repoUrl string) (credentials, error) {
 // order. The first file that contains machine declaration matching repoUrl
 // ends the search. If no file contain matching machine declaration, empty
 // credentials structure with nil err is returned.
-func findCredsInDir(repoUrl string, credsDir string) (creds credentials, err error) {
+func findCredentialsInDir(repoUrl string, credsDir string) (creds credentials, err error) {
 	contents, err := os.ReadDir(credsDir)
 	if err != nil {
 		if os.IsNotExist(err) {
