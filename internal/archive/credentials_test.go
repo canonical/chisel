@@ -196,6 +196,26 @@ machine http://example.com/baz/qux login k password l
 		{"http://example.com/bar", "", "g", "h"},
 		{"http://example.com/baz/qux", "", "i", "j"},
 	},
+}, {
+	summary: "EOF while epxecting username",
+	credsFiles: map[string]string{
+		"nouser": `
+machine http://example.com/foo login
+`,
+	},
+	matchTests: []matchTest{
+		{"http://example.com/foo", "cannot parse credentials file .*/nouser: syntax error: reached end of file while expecting username text", "", ""},
+	},
+}, {
+	summary: "EOF while epxecting password",
+	credsFiles: map[string]string{
+		"nopw": `
+machine http://example.com/foo login a password
+`,
+	},
+	matchTests: []matchTest{
+		{"http://example.com/foo", "cannot parse credentials file .*/nopw: syntax error: reached end of file while expecting password text", "a", ""},
+	},
 }}
 
 func (s *S) TestFindCredentials(c *C) {

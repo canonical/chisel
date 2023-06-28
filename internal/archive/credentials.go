@@ -139,14 +139,15 @@ func findCredentialsInDir(repoURL string, credsDir string) (creds credentials, e
 	sort.Strings(confFiles)
 
 	for _, file := range confFiles {
-		f, err := os.Open(filepath.Join(credsDir, file))
+		fpath := filepath.Join(credsDir, file)
+		f, err := os.Open(fpath)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("cannot read credentials file: %w", err))
 			continue
 		}
 
 		if err = findCredsInFile(query, f, &creds); err != nil {
-			errs = append(errs, fmt.Errorf("cannot parse credentials file: %w", err))
+			errs = append(errs, fmt.Errorf("cannot parse credentials file %s: %w", fpath, err))
 		} else if !creds.Empty() {
 			break
 		}
