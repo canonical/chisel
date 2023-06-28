@@ -40,6 +40,16 @@ func parseRepoURL(repoUrl string, creds *credentials) (*credentialsQuery, error)
 	if err != nil {
 		return nil, err
 	}
+
+	if creds != nil {
+		creds.Username = u.User.Username()
+		creds.Password, _ = u.User.Password()
+
+		if !creds.Empty() {
+			return nil, nil
+		}
+	}
+
 	host := u.Host
 	port := u.Port()
 	if port != "" {
@@ -59,11 +69,6 @@ func parseRepoURL(repoUrl string, creds *credentials) (*credentialsQuery, error)
 		// machine declarations in netrc file is not optional and must
 		// also match.
 		needScheme: u.Scheme != "https" && u.Scheme != "tor+https",
-	}
-
-	if creds != nil {
-		creds.Username = u.User.Username()
-		creds.Password, _ = u.User.Password()
 	}
 
 	return &query, nil
