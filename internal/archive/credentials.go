@@ -33,9 +33,9 @@ type credentialsQuery struct {
 	needScheme bool
 }
 
-// queryFor parses repoUrl into credentialsQuery and fills provided credentials with
-// username and password if they are specified in repoUrl.
-func queryFor(repoUrl string, creds *credentials) (*credentialsQuery, error) {
+// parseRepoURL parses repoUrl into credentialsQuery and fills provided
+// credentials with username and password if they are specified in repoUrl.
+func parseRepoURL(repoUrl string, creds *credentials) (*credentialsQuery, error) {
 	u, err := url.Parse(repoUrl)
 	if err != nil {
 		return nil, err
@@ -99,7 +99,7 @@ func findCredentialsInDir(repoUrl string, credsDir string) (creds credentials, e
 		return
 	}
 
-	query, err := queryFor(repoUrl, &creds)
+	query, err := parseRepoURL(repoUrl, &creds)
 	if err != nil || !creds.Empty() {
 		return
 	}
