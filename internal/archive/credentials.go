@@ -35,19 +35,17 @@ type credentialsQuery struct {
 
 // parseRepoURL parses repoUrl into credentialsQuery and fills provided
 // credentials with username and password if they are specified in repoUrl.
-func parseRepoURL(repoUrl string, creds *credentials) (*credentialsQuery, error) {
+func parseRepoURL(repoUrl string) (creds credentials, query *credentialsQuery, err error) {
 	u, err := url.Parse(repoUrl)
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	if creds != nil {
-		creds.Username = u.User.Username()
-		creds.Password, _ = u.User.Password()
+	creds.Username = u.User.Username()
+	creds.Password, _ = u.User.Password()
 
-		if !creds.Empty() {
-			return nil, nil
-		}
+	if !creds.Empty() {
+		return
 	}
 
 	host := u.Host
@@ -60,7 +58,7 @@ func parseRepoURL(repoUrl string, creds *credentials) (*credentialsQuery, error)
 		host = u.Host[0 : len(u.Host)-len(port)-1]
 	}
 
-	query := credentialsQuery{
+	query = &credentialsQuery{
 		scheme: u.Scheme,
 		host:   host,
 		port:   port,
@@ -71,7 +69,7 @@ func parseRepoURL(repoUrl string, creds *credentials) (*credentialsQuery, error)
 		needScheme: u.Scheme != "https" && u.Scheme != "tor+https",
 	}
 
-	return &query, nil
+	return
 }
 
 // findCredentials searches credentials for repoUrl in configuration files in
@@ -104,7 +102,7 @@ func findCredentialsInDir(repoUrl string, credsDir string) (creds credentials, e
 		return
 	}
 
-	query, err := parseRepoURL(repoUrl, &creds)
+	creds, query, err := parseRepoURL(repoUrl)
 	if err != nil || !creds.Empty() {
 		return
 	}
