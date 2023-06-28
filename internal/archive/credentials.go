@@ -69,19 +69,13 @@ func queryFor(repoUrl string, creds *credentials) (*credentialsQuery, error) {
 	return &query, nil
 }
 
-var testCredentialsDir string
-
 // findCredentials searches credentials for repoUrl in configuration files in
 // directory specified by CHISEL_AUTH_DIR environment variable if it's
 // non-empty or /etc/apt/auth.conf.d.
 func findCredentials(repoUrl string) (credentials, error) {
 	credsDir := "/etc/apt/auth.conf.d"
-	if testCredentialsDir == "" {
-		if v := os.Getenv("CHISEL_AUTH_DIR"); v != "" {
-			credsDir = v
-		}
-	} else {
-		credsDir = testCredentialsDir
+	if v := os.Getenv("CHISEL_AUTH_DIR"); v != "" {
+		credsDir = v
 	}
 	return findCredsInDir(repoUrl, credsDir)
 }

@@ -206,8 +206,6 @@ func (s *S) TestFindCredentials(c *C) {
 
 func (s *S) runFindCredentialsTest(c *C, t *credentialsTest) {
 	credsDir := c.MkDir()
-	restore := archive.FakeCredentialsDir(credsDir)
-	defer restore()
 
 	for filename, data := range t.credsFiles {
 		fpath := filepath.Join(credsDir, filename)
@@ -219,7 +217,7 @@ func (s *S) runFindCredentialsTest(c *C, t *credentialsTest) {
 
 	for _, matchTest := range t.matchTests {
 		c.Logf("Summary: %s for URL %s", t.summary, matchTest.url)
-		creds, err := archive.FindCredentials(matchTest.url)
+		creds, err := archive.FindCredsInDir(matchTest.url, credsDir)
 		if matchTest.err != "" {
 			c.Assert(err, ErrorMatches, matchTest.err)
 		} else {
@@ -236,17 +234,15 @@ func (s *S) TestFindCredentialsMissingDir(c *C) {
 
 	workDir := c.MkDir()
 	credsDir := filepath.Join(workDir, "auth.conf.d")
-	restore := archive.FakeCredentialsDir(credsDir)
-	defer restore()
 
-	creds, err = archive.FindCredentials("https://example.com/foo/bar")
+	creds, err = archive.FindCredsInDir("https://example.com/foo/bar", credsDir)
 	c.Assert(err, IsNil)
 	c.Assert(creds, Equals, emptyCreds)
 
 	err = os.Mkdir(credsDir, 0755)
 	c.Assert(err, IsNil)
 
-	creds, err = archive.FindCredentials("https://example.com/foo/bar")
+	creds, err = archive.FindCredsInDir("https://example.com/foo/bar", credsDir)
 	c.Assert(err, IsNil)
 	c.Assert(creds, Equals, emptyCreds)
 
@@ -254,7 +250,7 @@ func (s *S) TestFindCredentialsMissingDir(c *C) {
 	err = os.WriteFile(confFile, []byte("machine example.com login admin password swordfish"), 0600)
 	c.Assert(err, IsNil)
 
-	creds, err = archive.FindCredentials("https://example.com/foo/bar")
+	creds, err = archive.FindCredsInDir("https://example.com/foo/bar", credsDir)
 	c.Assert(err, IsNil)
 	c.Assert(creds, Not(Equals), emptyCreds)
 	c.Assert(creds.Username, Equals, "admin")

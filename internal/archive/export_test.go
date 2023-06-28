@@ -16,10 +16,4 @@ func FakeDo(do func(req *http.Request) (*http.Response, error)) (restore func())
 }
 
 type Credentials = credentials
-var FindCredentials = findCredentials
-func FakeCredentialsDir(credentialsDir string) (restore func()) {
-	testCredentialsDir = credentialsDir
-	return func() {
-		testCredentialsDir = ""
-	}
-}
+var FindCredsInDir = findCredsInDir
