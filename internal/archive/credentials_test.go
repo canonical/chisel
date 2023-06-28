@@ -154,7 +154,7 @@ machine login foo password bar login baz
 `,
 	},
 	matchTests: []matchTest{
-		{":http:foo", "parse \":http:foo\": missing protocol scheme", "", ""},
+		{":http:foo", "cannot parse archive URL: parse \":http:foo\": missing protocol scheme", "", ""},
 		{"", "", "", ""}, // this is fine URL apparently, but won't ever match
 		{"https://login", "", "baz", "bar"},
 	},

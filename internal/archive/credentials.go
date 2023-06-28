@@ -103,7 +103,11 @@ func findCredentialsInDir(repoURL string, credsDir string) (creds credentials, e
 	}
 
 	creds, query, err := parseRepoURL(repoURL)
-	if err != nil || !creds.Empty() {
+	if err != nil {
+		err = fmt.Errorf("cannot parse archive URL: %w", err)
+		return
+	}
+	if query == nil { // creds.Empty() == false
 		return
 	}
 
