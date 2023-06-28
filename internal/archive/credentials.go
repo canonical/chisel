@@ -33,10 +33,10 @@ type credentialsQuery struct {
 	needScheme bool
 }
 
-// parseRepoURL parses repoUrl into credentialsQuery and fills provided
-// credentials with username and password if they are specified in repoUrl.
-func parseRepoURL(repoUrl string) (creds credentials, query *credentialsQuery, err error) {
-	u, err := url.Parse(repoUrl)
+// parseRepoURL parses repoURL into credentialsQuery and fills provided
+// credentials with username and password if they are specified in repoURL.
+func parseRepoURL(repoURL string) (creds credentials, query *credentialsQuery, err error) {
+	u, err := url.Parse(repoURL)
 	if err != nil {
 		return
 	}
@@ -72,26 +72,26 @@ func parseRepoURL(repoUrl string) (creds credentials, query *credentialsQuery, e
 	return
 }
 
-// findCredentials searches credentials for repoUrl in configuration files in
+// findCredentials searches credentials for repoURL in configuration files in
 // directory specified by CHISEL_AUTH_DIR environment variable if it's
 // non-empty or /etc/apt/auth.conf.d.
-func findCredentials(repoUrl string) (credentials, error) {
+func findCredentials(repoURL string) (credentials, error) {
 	credsDir := "/etc/apt/auth.conf.d"
 	if v := os.Getenv("CHISEL_AUTH_DIR"); v != "" {
 		credsDir = v
 	}
-	return findCredentialsInDir(repoUrl, credsDir)
+	return findCredentialsInDir(repoURL, credsDir)
 }
 
-// findCredentialsInDir searches for credentials for repoUrl in configuration
+// findCredentialsInDir searches for credentials for repoURL in configuration
 // files in credsDir directory. If the directory does not exist, empty
 // credentials structure with nil err is returned.
 // Only files that do not begin with dot and have either no or ".conf"
 // extension are searched. The files are searched in ascending lexicographic
-// order. The first file that contains machine declaration matching repoUrl
+// order. The first file that contains machine declaration matching repoURL
 // ends the search. If no file contain matching machine declaration, empty
 // credentials structure with nil err is returned.
-func findCredentialsInDir(repoUrl string, credsDir string) (creds credentials, err error) {
+func findCredentialsInDir(repoURL string, credsDir string) (creds credentials, err error) {
 	contents, err := os.ReadDir(credsDir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -102,7 +102,7 @@ func findCredentialsInDir(repoUrl string, credsDir string) (creds credentials, e
 		return
 	}
 
-	creds, query, err := parseRepoURL(repoUrl)
+	creds, query, err := parseRepoURL(repoURL)
 	if err != nil || !creds.Empty() {
 		return
 	}
