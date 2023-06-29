@@ -119,6 +119,9 @@ func findCredentialsInDir(repoURL string, credsDir string) (creds credentials, e
 		if strings.HasPrefix(name, ".") {
 			continue
 		}
+		if ext := filepath.Ext(name); ext != "" && ext != ".conf" {
+			continue
+		}
 		info, err := entry.Info()
 		if err != nil {
 			errs = append(errs, fmt.Errorf("cannot stat credentials file: %w", err))
@@ -127,10 +130,7 @@ func findCredentialsInDir(repoURL string, credsDir string) (creds credentials, e
 		if !info.Mode().IsRegular() {
 			continue
 		}
-		ext := filepath.Ext(name)
-		if ext == "" || ext == ".conf" {
-			confFiles = append(confFiles, name)
-		}
+		confFiles = append(confFiles, name)
 	}
 	if len(confFiles) == 0 {
 		err = errors.Join(errs...)
