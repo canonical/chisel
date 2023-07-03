@@ -179,13 +179,16 @@ func (index *ubuntuIndex) fetchRelease() error {
 		return err
 	}
 
-	ctrl, err := control.ParseReader("Suite", reader)
+	ctrl, err := control.ParseReader("Label", reader)
 	if err != nil {
 		return fmt.Errorf("parsing archive Release file: %v", err)
 	}
-	section := ctrl.Section(index.suite)
+	section := ctrl.Section("Ubuntu")
 	if section == nil {
-		return fmt.Errorf("corrupted archive Release file: no %s section", index.suite)
+		section = ctrl.Section("UbuntuProFIPS")
+		if section == nil {
+			return fmt.Errorf("corrupted archive Release file: no Ubuntu section")
+		}
 	}
 	logf("Release date: %s", section.Get("Date"))
 
