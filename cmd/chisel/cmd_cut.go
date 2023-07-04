@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/cache"
@@ -25,14 +24,12 @@ var cutDescs = map[string]string{
 	"release": "Chisel release directory",
 	"root":    "Root for generated content",
 	"arch":    "Package architecture",
-	"timeout": "Timeout for each request",
 }
 
 type cmdCut struct {
-	Release string        `long:"release" value-name:"<dir>"`
-	RootDir string        `long:"root" value-name:"<dir>" required:"yes"`
-	Arch    string        `long:"arch" value-name:"<arch>"`
-	Timeout time.Duration `long:"timeout" value-name:"<duration>" default:"60s"`
+	Release string `long:"release" value-name:"<dir>"`
+	RootDir string `long:"root" value-name:"<dir>" required:"yes"`
+	Arch    string `long:"arch" value-name:"<arch>"`
 
 	Positional struct {
 		SliceRefs []string `positional-arg-name:"<slice names>" required:"yes"`
@@ -84,8 +81,6 @@ func (cmd *cmdCut) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
-
-	archive.SetTimeout(cmd.Timeout)
 
 	archives := make(map[string]archive.Archive)
 	for archiveName, archiveInfo := range release.Archives {

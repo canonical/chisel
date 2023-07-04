@@ -14,7 +14,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/archive/testarchive"
@@ -281,28 +280,6 @@ func (s *S) TestRealArchive(c *C) {
 	for _, arch := range elfToDebArch {
 		s.testOpenArchiveArch(c, arch)
 	}
-}
-
-func (s *S) TestTimeout(c *C) {
-	if !*realArchiveFlag {
-		c.Skip("--real-archive not provided")
-	}
-	options := archive.Options{
-		Label:      "ubuntu",
-		Version:    "22.04",
-		Arch:       "amd64",
-		Suites:     []string{"jammy"},
-		Components: []string{"main", "universe"},
-		CacheDir:   c.MkDir(),
-	}
-
-	defer archive.SetTimeout(60 * time.Second)
-
-	// set a ridiculously small timeout to raise an error
-	archive.SetTimeout(time.Millisecond)
-
-	_, err := archive.Open(&options)
-	c.Assert(err, ErrorMatches, `.*context deadline exceeded.*`)
 }
 
 var elfToDebArch = map[elf.Machine]string{

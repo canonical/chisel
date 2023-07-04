@@ -42,7 +42,7 @@ func Open(options *Options) (Archive, error) {
 }
 
 var httpClient = &http.Client{
-	Timeout: 60 * time.Second,
+	Timeout: 30 * time.Second,
 }
 
 var httpDo = httpClient.Do
@@ -52,12 +52,6 @@ var bulkClient = &http.Client{
 }
 
 var bulkDo = bulkClient.Do
-
-// SetTimeout sets the Timeout for each request.
-// A Timeout of zero means no timeout.
-func SetTimeout(timeout time.Duration) {
-	httpClient.Timeout = timeout
-}
 
 type ubuntuArchive struct {
 	options Options
