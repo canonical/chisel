@@ -41,6 +41,13 @@ func Open(options *Options) (Archive, error) {
 	return openUbuntu(options)
 }
 
+type fetchFlags uint
+
+const (
+	fetchBulk    fetchFlags = 1 << iota
+	fetchDefault fetchFlags = 0
+)
+
 var httpClient = &http.Client{
 	Timeout: 30 * time.Second,
 }
@@ -107,7 +114,7 @@ func (a *ubuntuArchive) Fetch(pkg string) (io.ReadCloser, error) {
 	}
 	suffix := section.Get("Filename")
 	logf("Fetching %s...", suffix)
-	reader, err := index.fetch("../../"+suffix, section.Get("SHA256"))
+	reader, err := index.fetch("../../"+suffix, section.Get("SHA256"), fetchBulk)
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +178,7 @@ func openUbuntu(options *Options) (Archive, error) {
 
 func (index *ubuntuIndex) fetchRelease() error {
 	logf("Fetching %s %s %s suite details...", index.label, index.version, index.suite)
-	reader, err := index.fetch("Release", "")
+	reader, err := index.fetch("Release", "", fetchDefault)
 	if err != nil {
 		return err
 	}
@@ -199,7 +206,7 @@ func (index *ubuntuIndex) fetchIndex() error {
 	}
 
 	logf("Fetching index for %s %s %s %s component...", index.label, index.version, index.suite, index.component)
-	reader, err := index.fetch(packagesPath+".gz", digest)
+	reader, err := index.fetch(packagesPath+".gz", digest, fetchBulk)
 	if err != nil {
 		return err
 	}
@@ -229,7 +236,7 @@ func (index *ubuntuIndex) checkComponents(components []string) error {
 	return nil
 }
 
-func (index *ubuntuIndex) fetch(suffix, digest string) (io.ReadCloser, error) {
+func (index *ubuntuIndex) fetch(suffix, digest string, flags fetchFlags) (io.ReadCloser, error) {
 	reader, err := index.cache.Open(digest)
 	if err == nil {
 		return reader, nil
@@ -253,7 +260,12 @@ func (index *ubuntuIndex) fetch(suffix, digest string) (io.ReadCloser, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot create HTTP request: %v", err)
 	}
-	resp, err := httpDo(req)
+	var resp *http.Response
+	if flags&fetchBulk != 0 {
+		resp, err = bulkDo(req)
+	} else {
+		resp, err = httpDo(req)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("cannot talk to archive: %v", err)
 	}
