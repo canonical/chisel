@@ -101,6 +101,7 @@ func (p *Package) Content() []byte {
 type Release struct {
 	Suite   string
 	Version string
+	Label   string
 	Items   []Item
 }
 
@@ -124,7 +125,7 @@ func (r *Release) Content() []byte {
 	}
 	content := fmt.Sprintf(string(testutil.Reindent(`
 		Origin: Ubuntu
-		Label: Ubuntu
+		Label: %s
 		Suite: %s
 		Version: %s
 		Codename: codename
@@ -134,7 +135,7 @@ func (r *Release) Content() []byte {
 		Description: Ubuntu %s
 		SHA256:
 		%s
-	`)), r.Suite, r.Version, r.Version, digests.String())
+	`)), r.Label, r.Suite, r.Version, r.Version, digests.String())
 
 	return []byte(content)
 }

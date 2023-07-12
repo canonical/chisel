@@ -89,9 +89,14 @@ func (s *httpSuite) TestDoError(c *C) {
 }
 
 func (s *httpSuite) prepareArchive(suite, version, arch string, components []string) *testarchive.Release {
+	return s.prepareArchiveAdjustRelease(suite, version, arch, components, nil)
+}
+
+func (s *httpSuite) prepareArchiveAdjustRelease(suite, version, arch string, components []string, adjustRelease func(*testarchive.Release)) *testarchive.Release {
 	release := &testarchive.Release{
 		Suite:   suite,
 		Version: version,
+		Label:   "Ubuntu",
 	}
 	for i, component := range components {
 		index := &testarchive.PackageIndex{
@@ -113,6 +118,9 @@ func (s *httpSuite) prepareArchive(suite, version, arch string, components []str
 	base, err := url.Parse(s.base)
 	if err != nil {
 		panic(err)
+	}
+	if adjustRelease != nil {
+		adjustRelease(release)
 	}
 	release.Render(base.Path, s.responses)
 	return release
@@ -258,6 +266,70 @@ func (s *httpSuite) TestFetchSecurityPackage(c *C) {
 	pkg, err = archive.Fetch("mypkg2")
 	c.Assert(err, IsNil)
 	c.Assert(read(pkg), Equals, "mypkg2 1.2 data")
+}
+
+func (s *httpSuite) TestArchiveLabels(c *C) {
+	setLabel := func(label string) func(*testarchive.Release) {
+		return func(r *testarchive.Release) {
+			r.Label = label
+		}
+	}
+
+	s.prepareArchive("jammy", "22.04", "amd64", []string{"main", "universe"})
+
+	options := archive.Options{
+		Label:      "ubuntu",
+		Version:    "22.04",
+		Arch:       "amd64",
+		Suites:     []string{"jammy"},
+		Components: []string{"main", "universe"},
+		CacheDir:   c.MkDir(),
+	}
+
+	_, err := archive.Open(&options)
+	c.Assert(err, IsNil)
+
+	s.prepareArchiveAdjustRelease("jammy", "22.04", "amd64", []string{"main", "universe"}, setLabel("Ubuntu"))
+
+	options = archive.Options{
+		Label:      "ubuntu",
+		Version:    "22.04",
+		Arch:       "amd64",
+		Suites:     []string{"jammy"},
+		Components: []string{"main", "universe"},
+		CacheDir:   c.MkDir(),
+	}
+
+	_, err = archive.Open(&options)
+	c.Assert(err, IsNil)
+
+	s.prepareArchiveAdjustRelease("jammy", "22.04", "amd64", []string{"main", "universe"}, setLabel("UbuntuProFIPS"))
+
+	options = archive.Options{
+		Label:      "ubuntu",
+		Version:    "22.04",
+		Arch:       "amd64",
+		Suites:     []string{"jammy"},
+		Components: []string{"main", "universe"},
+		CacheDir:   c.MkDir(),
+	}
+
+	_, err = archive.Open(&options)
+	c.Assert(err, IsNil)
+
+	s.prepareArchiveAdjustRelease("jammy", "22.04", "amd64", []string{"main", "universe"}, setLabel("ThirdParty"))
+
+	options = archive.Options{
+		Label:      "ubuntu",
+		Version:    "22.04",
+		Arch:       "amd64",
+		Suites:     []string{"jammy"},
+		Components: []string{"main", "universe"},
+		CacheDir:   c.MkDir(),
+	}
+
+	_, err = archive.Open(&options)
+	c.Assert(err, ErrorMatches, `.*\bno Ubuntu section`)
 }
 
 func read(r io.Reader) string {
