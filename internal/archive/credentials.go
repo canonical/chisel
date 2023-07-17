@@ -215,7 +215,7 @@ func findCredsInFile(query *credentialsQuery, netrc io.Reader, creds *credential
 		creds:   creds,
 	}
 	var err error
-	for state := netrcInvalid; state != nil; {
+	for state := netrcStart; state != nil; {
 		state, err = state(&p)
 	}
 	if err := p.scanner.Err(); err != nil {
@@ -226,7 +226,7 @@ func findCredsInFile(query *credentialsQuery, netrc io.Reader, creds *credential
 
 type netrcState func(*netrcParser) (netrcState, error)
 
-func netrcInvalid(p *netrcParser) (netrcState, error) {
+func netrcStart(p *netrcParser) (netrcState, error) {
 	for p.scanner.Scan() {
 		if p.scanner.Text() == "machine" {
 			return netrcMachine, nil
@@ -242,29 +242,29 @@ func netrcMachine(p *netrcParser) (netrcState, error) {
 	token := p.scanner.Text()
 	if i := strings.Index(token, "://"); i != -1 {
 		if token[0:i] != p.query.scheme {
-			return netrcInvalid, nil
+			return netrcStart, nil
 		}
 		token = token[i+3:]
 	} else if p.query.needScheme {
-		return netrcInvalid, nil
+		return netrcStart, nil
 	}
 	if !strings.HasPrefix(token, p.query.host) {
-		return netrcInvalid, nil
+		return netrcStart, nil
 	}
 	token = token[len(p.query.host):]
 	if len(token) > 0 {
 		if token[0] == ':' {
 			if p.query.port == "" {
-				return netrcInvalid, nil
+				return netrcStart, nil
 			}
 			token = token[1:]
 			if !strings.HasPrefix(token, p.query.port) {
-				return netrcInvalid, nil
+				return netrcStart, nil
 			}
 			token = token[len(p.query.port):]
 		}
 		if !strings.HasPrefix(p.query.path, token) {
-			return netrcInvalid, nil
+			return netrcStart, nil
 		}
 	}
 	return netrcGoodMachine, nil
