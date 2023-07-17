@@ -215,7 +215,7 @@ func findCredsInFile(query *credentialsQuery, netrc io.Reader, creds *credential
 		creds:   creds,
 	}
 	var err error
-	for state := netrcStart; state != nil; {
+	for state := netrcInvalid; state != nil; {
 		state, err = state(&p)
 	}
 	if err := p.scanner.Err(); err != nil {
@@ -225,8 +225,6 @@ func findCredsInFile(query *credentialsQuery, netrc io.Reader, creds *credential
 }
 
 type netrcState func(*netrcParser) (netrcState, error)
-
-var netrcStart = netrcInvalid
 
 func netrcInvalid(p *netrcParser) (netrcState, error) {
 	for p.scanner.Scan() {
