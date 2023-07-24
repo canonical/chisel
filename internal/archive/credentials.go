@@ -21,7 +21,7 @@ type credentials struct {
 
 // Empty checks whether c represents unsuccessful search.
 func (c credentials) Empty() bool {
-	return c.Username == ""
+	return c.Username == "" && c.Password == ""
 }
 
 // credentialsQuery contains parsed input URL data used for search.
