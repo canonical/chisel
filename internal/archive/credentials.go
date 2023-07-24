@@ -215,14 +215,9 @@ func findCredsInFile(query *credentialsQuery, netrc io.Reader, creds *credential
 		creds:   creds,
 	}
 	var err error
-	for state := netrcStart; state != nil; {
-		if err != nil {
-			panic("internal error: state != nil && err != nil")
-		}
+	for state := netrcStart; err == nil && state != nil; {
 		state, err = state(&p)
-	}
-	if err := p.scanner.Err(); err != nil {
-		return err
+		err = errors.Join(err, p.scanner.Err())
 	}
 	return err
 }
