@@ -255,20 +255,18 @@ func netrcMachine(p *netrcParser) (netrcState, error) {
 		return netrcStart, nil
 	}
 	token = token[len(p.query.host):]
-	if len(token) > 0 {
-		if token[0] == ':' {
-			if p.query.port == "" {
-				return netrcStart, nil
-			}
-			token = token[1:]
-			if !strings.HasPrefix(token, p.query.port) {
-				return netrcStart, nil
-			}
-			token = token[len(p.query.port):]
-		}
-		if !strings.HasPrefix(p.query.path, token) {
+	if len(token) > 0 && token[0] == ':' {
+		if p.query.port == "" {
 			return netrcStart, nil
 		}
+		token = token[1:]
+		if !strings.HasPrefix(token, p.query.port) {
+			return netrcStart, nil
+		}
+		token = token[len(p.query.port):]
+	}
+	if !strings.HasPrefix(p.query.path, token) {
+		return netrcStart, nil
 	}
 	return netrcGoodMachine, nil
 }
