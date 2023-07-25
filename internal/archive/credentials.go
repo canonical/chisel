@@ -96,6 +96,7 @@ func findCredentialsInDir(repoURL string, credsDir string) (creds credentials, e
 	if err != nil {
 		if os.IsNotExist(err) {
 			err = nil
+			debugf("credentials directory %#v does not exist", credsDir)
 		} else {
 			err = fmt.Errorf("cannot open credentials directory: %w", err)
 		}
