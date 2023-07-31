@@ -3,10 +3,14 @@ name: Build
 on:
   workflow_dispatch:
   push:
+    tags: [v*]
+    branches: [main]
     paths-ignore:
       - '**.md'
   pull_request:
     branches: [main]
+  release:
+    types: [published]
 
 jobs:
   build-chisel:
@@ -30,13 +34,45 @@ jobs:
             machine_arch: 'S/390'
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      # The checkout action in previous step overwrites annonated tag
+      # with lightweight tags breaking ``git describe``
+      # See https://github.com/actions/checkout/issues/882
+      # and https://github.com/actions/checkout/issues/290
+      # The following step is a workaround to restore the latest tag
+      # to it's original state.
+      - name: Restore (annonated) tag
+        run: git fetch --force origin ${GITHUB_REF}:${GITHUB_REF}
+        if: ${{ github.ref_type == 'tag' }}
 
       - uses: actions/setup-go@v3
         with:
           go-version-file: 'go.mod'
 
       - name: Build Chisel for linux/${{ matrix.arch }}
-        run: GOARCH=${{ matrix.arch }} go build ./cmd/chisel/
+        id: build
+        env:
+          GOOS: "linux"
+          GOARCH: ${{ matrix.arch }}
+          CGO_ENABLED: "0"
+        run: |
+          echo "Generating version file"
+          go generate ./cmd/
+
+          echo "Building for $GOOS $GOARCH"
+          go build -trimpath -ldflags='-s -w' ./cmd/chisel
+
+          # Get version via "chisel version" to ensure it matches that exactly
+          CHISEL_VERSION=$(GOOS=linux GOARCH=amd64 go run ./cmd/chisel version)
+          echo "Version: $CHISEL_VERSION"
+
+          # Version should not be "unknown"
+          [ "$CHISEL_VERSION" != "unknown" ] || exit 1
+
+          # Share variables with subsequent steps
+          echo "CHISEL_VERSION=${CHISEL_VERSION}" >>$GITHUB_OUTPUT
 
       - name: Test if is executable
         run: test -x ./chisel
@@ -44,3 +80,36 @@ jobs:
       - name: Test if binary has the right machine architecture
         run: |
           [ "$(readelf -h chisel | grep 'Machine:' | awk -F' ' '{print $NF}')" == "${{ matrix.machine_arch }}" ]
+
+      - name: Create archive
+        id: archive
+        env:
+          GOOS: "linux"
+          GOARCH: ${{ matrix.arch }}
+          CHISEL_VERSION: ${{ steps.build.outputs.CHISEL_VERSION }}
+        run: |
+          ARCHIVE_FILE=chisel_${CHISEL_VERSION}_${GOOS}_${GOARCH}.tar.gz
+          echo "Creating archive $ARCHIVE_FILE"
+
+          mkdir -p dist/build
+          cp chisel LICENSE README.md dist/build
+          find dist/build -printf "%P\n" | tar -czf dist/$ARCHIVE_FILE --no-recursion -C dist/build -T -
+
+          # Share variables with subsequent steps
+          echo "ARCHIVE_FILE=${ARCHIVE_FILE}" >>$GITHUB_OUTPUT
+
+      - name: Upload archive as Actions artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ steps.archive.outputs.ARCHIVE_FILE }}
+          path: dist/${{ steps.archive.outputs.ARCHIVE_FILE }}
+
+      - name: Upload archive to release
+        env:
+          CHISEL_VERSION: ${{ steps.build.outputs.CHISEL_VERSION }}
+          ARCHIVE_FILE: ${{ steps.archive.outputs.ARCHIVE_FILE }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: ${{ github.event_name == 'release' }}
+        run: |
+          echo "Uploading $ARCHIVE_FILE to release $CHISEL_VERSION"
+          gh release upload $CHISEL_VERSION dist/$ARCHIVE_FILE
