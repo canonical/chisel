@@ -43,7 +43,7 @@ if [ -z "$v" ]; then
     if command -v git >/dev/null; then
         # not using "--dirty" here until the following bug is fixed:
         # https://bugs.launchpad.net/snapcraft/+bug/1662388
-        v="$(git describe --always | sed -e 's/-/+git/;y/-/./' )"
+        v="$(git describe --tags --always | sed -e 's/-/+git/;y/-/./' )"
         o=git
     fi
 fi
