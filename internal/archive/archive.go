@@ -182,7 +182,10 @@ func (index *ubuntuIndex) fetchRelease() error {
 	}
 	section := ctrl.Section("Ubuntu")
 	if section == nil {
-		return fmt.Errorf("corrupted archive Release file: no Ubuntu section")
+		section = ctrl.Section("UbuntuProFIPS")
+		if section == nil {
+			return fmt.Errorf("corrupted archive Release file: no Ubuntu section")
+		}
 	}
 	logf("Release date: %s", section.Get("Date"))
 
