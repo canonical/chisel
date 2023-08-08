@@ -54,14 +54,14 @@ machine socks5h://example.last/debian login debian password rules
 		{"https://example.org:8080/foo", "", "example", "foobar"},
 		{"https://example.net:42/foo", "", "foo", "bar"},
 		{"https://example.org/foo", "", "anonymous", "pass"},
-		{"https://example.com/apt", "", "", ""},
+		{"https://example.com/apt", "^credentials not found$", "", ""},
 		{"https://example.com/foo", "", "user1", "pass1"},
 		{"https://example.com/fooo", "", "user1", "pass1"},
-		{"https://example.com/fo", "", "", ""},
+		{"https://example.com/fo", "^credentials not found$", "", ""},
 		{"https://example.com/bar", "", "user2", "pass2"},
 		{"https://example.com/user", "", "user", ""},
 		{"socks5h://example.last/debian", "", "debian", "rules"},
-		{"socks5h://example.debian/", "", "", ""},
+		{"socks5h://example.debian/", "^credentials not found$", "", ""},
 		{"socks5h://user:pass@example.debian/", "", "user", "pass"},
 	},
 }, {
@@ -74,7 +74,7 @@ machine2 example.org login foo3 password bar
 `,
 	},
 	matchTests: []matchTest{
-		{"https://example.org/foo", "", "", ""},
+		{"https://example.org/foo", "^credentials not found$", "", ""},
 	},
 }, {
 	summary: "Bad file: Ends machine",
@@ -85,7 +85,7 @@ machine`,
 	},
 	matchTests: []matchTest{
 		{"https://example.org/foo", "", "foo1", "bar"},
-		{"https://example.net/foo", ".*\\breached end of file while expecting machine text\\b.*", "", ""},
+		{"https://example.net/foo", "^credentials not found$", "", ""},
 		{"https://foo:bar@example.net/foo", "", "foo", "bar"},
 	},
 }, {
@@ -98,7 +98,7 @@ machine example.net login
 	},
 	matchTests: []matchTest{
 		{"https://example.org/foo", "", "foo1", "bar"},
-		{"https://example.net/foo", ".*\\breached end of file while expecting username text\\b.*", "", ""},
+		{"https://example.net/foo", "^credentials not found$", "", ""},
 		{"https://foo:bar@example.net/foo", "", "foo", "bar"},
 	},
 }, {
@@ -111,9 +111,9 @@ machine http://http.example login foo1 password bar
 	},
 	matchTests: []matchTest{
 		{"https://https.example/foo", "", "foo1", "bar"},
-		{"http://https.example/foo", "", "", ""},
+		{"http://https.example/foo", "^credentials not found$", "", ""},
 		{"http://http.example/foo", "", "foo1", "bar"},
-		{"https://http.example/foo", "", "", ""},
+		{"https://http.example/foo", "^credentials not found$", "", ""},
 	},
 }, {
 	summary: "Password is machine",
@@ -125,7 +125,7 @@ machine http://site2.com login u2 password p2
 	},
 	matchTests: []matchTest{
 		{"http://site1.com/foo", "", "u1", "machine"},
-		{"http://site2.com/bar", "", "", ""},
+		{"http://site2.com/bar", "^credentials not found$", "", ""},
 	},
 }, {
 	summary: "Multiple login and password tokens",
@@ -143,8 +143,8 @@ machine http://site2.com login f password g
 	summary:    "Empty auth dir",
 	credsFiles: map[string]string{},
 	matchTests: []matchTest{
-		{"https://example.com/foo", "", "", ""},
-		{"http://zombo.com", "", "", ""},
+		{"https://example.com/foo", "^credentials not found$", "", ""},
+		{"http://zombo.com", "^credentials not found$", "", ""},
 	},
 }, {
 	summary: "Invalid input URL",
@@ -155,7 +155,7 @@ machine login foo password bar login baz
 	},
 	matchTests: []matchTest{
 		{":http:foo", "cannot parse archive URL: parse \":http:foo\": missing protocol scheme", "", ""},
-		{"", "", "", ""}, // this is fine URL apparently, but won't ever match
+		{"", "^credentials not found$", "", ""}, // this is fine URL apparently, but won't ever match
 		{"https://login", "", "baz", "bar"},
 	},
 }, {
@@ -204,7 +204,7 @@ machine http://example.com/foo login
 `,
 	},
 	matchTests: []matchTest{
-		{"http://example.com/foo", "cannot parse credentials file .*/nouser: syntax error: reached end of file while expecting username text", "", ""},
+		{"http://example.com/foo", "^credentials not found$", "", ""},
 	},
 }, {
 	summary: "EOF while epxecting password",
@@ -214,7 +214,7 @@ machine http://example.com/foo login a password
 `,
 	},
 	matchTests: []matchTest{
-		{"http://example.com/foo", "cannot parse credentials file .*/nopw: syntax error: reached end of file while expecting password text", "a", ""},
+		{"http://example.com/foo", "^credentials not found$", "a", ""},
 	},
 }}
 
@@ -242,29 +242,30 @@ func (s *S) runFindCredentialsTest(c *C, t *credentialsTest) {
 			c.Assert(err, ErrorMatches, matchTest.err)
 		} else {
 			c.Assert(err, IsNil)
+			c.Assert(creds, NotNil)
+			c.Assert(creds.Username, Equals, matchTest.username)
+			c.Assert(creds.Password, Equals, matchTest.password)
 		}
-		c.Assert(creds.Username, Equals, matchTest.username)
-		c.Assert(creds.Password, Equals, matchTest.password)
 	}
 }
 
 func (s *S) TestFindCredentialsMissingDir(c *C) {
-	var creds, emptyCreds archive.Credentials
+	var creds *archive.Credentials
 	var err error
 
 	workDir := c.MkDir()
 	credsDir := filepath.Join(workDir, "auth.conf.d")
 
 	creds, err = archive.FindCredentialsInDir("https://example.com/foo/bar", credsDir)
-	c.Assert(err, IsNil)
-	c.Assert(creds, Equals, emptyCreds)
+	c.Assert(err, ErrorMatches, "^credentials not found$")
+	c.Assert(creds, IsNil)
 
 	err = os.Mkdir(credsDir, 0755)
 	c.Assert(err, IsNil)
 
 	creds, err = archive.FindCredentialsInDir("https://example.com/foo/bar", credsDir)
-	c.Assert(err, IsNil)
-	c.Assert(creds, Equals, emptyCreds)
+	c.Assert(err, ErrorMatches, "^credentials not found$")
+	c.Assert(creds, IsNil)
 
 	confFile := filepath.Join(credsDir, "example")
 	err = os.WriteFile(confFile, []byte("machine example.com login admin password swordfish"), 0600)
@@ -272,7 +273,7 @@ func (s *S) TestFindCredentialsMissingDir(c *C) {
 
 	creds, err = archive.FindCredentialsInDir("https://example.com/foo/bar", credsDir)
 	c.Assert(err, IsNil)
-	c.Assert(creds, Not(Equals), emptyCreds)
+	c.Assert(creds, NotNil)
 	c.Assert(creds.Username, Equals, "admin")
 	c.Assert(creds.Password, Equals, "swordfish")
 }

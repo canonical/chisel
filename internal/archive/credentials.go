@@ -35,12 +35,13 @@ type credentialsQuery struct {
 
 // parseRepoURL parses repoURL into credentialsQuery and fills provided
 // credentials with username and password if they are specified in repoURL.
-func parseRepoURL(repoURL string) (creds credentials, query *credentialsQuery, err error) {
+func parseRepoURL(repoURL string) (creds *credentials, query *credentialsQuery, err error) {
 	u, err := url.Parse(repoURL)
 	if err != nil {
 		return
 	}
 
+	creds = &credentials{}
 	creds.Username = u.User.Username()
 	creds.Password, _ = u.User.Password()
 
@@ -72,10 +73,12 @@ func parseRepoURL(repoURL string) (creds credentials, query *credentialsQuery, e
 	return
 }
 
+var ErrCredentialsNotFound = errors.New("credentials not found")
+
 // findCredentials searches credentials for repoURL in configuration files in
 // directory specified by CHISEL_AUTH_DIR environment variable if it's
 // non-empty, otherwise /etc/apt/auth.conf.d.
-func findCredentials(repoURL string) (credentials, error) {
+func findCredentials(repoURL string) (*credentials, error) {
 	credsDir := "/etc/apt/auth.conf.d"
 	if v := os.Getenv("CHISEL_AUTH_DIR"); v != "" {
 		credsDir = v
@@ -83,6 +86,7 @@ func findCredentials(repoURL string) (credentials, error) {
 	return findCredentialsInDir(repoURL, credsDir)
 }
 
+var FindCredentials = findCredentials
 // findCredentialsInDir searches for credentials for repoURL in configuration
 // files in credsDir directory. If the directory does not exist, empty
 // credentials structure with nil err is returned.
@@ -91,28 +95,20 @@ func findCredentials(repoURL string) (credentials, error) {
 // order. The first file that contains machine declaration matching repoURL
 // ends the search. If no file contain matching machine declaration, empty
 // credentials structure with nil err is returned.
-func findCredentialsInDir(repoURL string, credsDir string) (creds credentials, err error) {
+func findCredentialsInDir(repoURL string, credsDir string) (*credentials, error) {
 	contents, err := os.ReadDir(credsDir)
 	if err != nil {
-		if os.IsNotExist(err) {
-			err = nil
-			debugf("credentials directory %#v does not exist", credsDir)
-		} else {
-			err = fmt.Errorf("cannot open credentials directory: %w", err)
-		}
-		return
+		logf("Cannot open credentials directory %q: %v", credsDir, err)
+		return nil, ErrCredentialsNotFound
 	}
 
 	creds, query, err := parseRepoURL(repoURL)
 	if err != nil {
-		err = fmt.Errorf("cannot parse archive URL: %w", err)
-		return
+		return nil, fmt.Errorf("cannot parse archive URL: %v", err)
 	}
-	if query == nil { // creds.Empty() == false
-		return
+	if !creds.Empty() {
+		return creds, nil
 	}
-
-	errs := make([]error, 0)
 
 	confFiles := make([]string, 0, len(contents))
 	for _, entry := range contents {
@@ -125,7 +121,7 @@ func findCredentialsInDir(repoURL string, credsDir string) (creds credentials, e
 		}
 		info, err := entry.Info()
 		if err != nil {
-			errs = append(errs, fmt.Errorf("cannot stat credentials file: %w", err))
+			logf("Cannot stat credentials file %q: %v", filepath.Join(credsDir, name), err)
 			continue
 		}
 		if !info.Mode().IsRegular() {
@@ -134,8 +130,7 @@ func findCredentialsInDir(repoURL string, credsDir string) (creds credentials, e
 		confFiles = append(confFiles, name)
 	}
 	if len(confFiles) == 0 {
-		err = errors.Join(errs...)
-		return
+		return nil, ErrCredentialsNotFound
 	}
 	sort.Strings(confFiles)
 
@@ -143,19 +138,21 @@ func findCredentialsInDir(repoURL string, credsDir string) (creds credentials, e
 		fpath := filepath.Join(credsDir, file)
 		f, err := os.Open(fpath)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("cannot read credentials file %s: %w", fpath, err))
+			logf("Cannot open credentials file %q: %v", fpath, err)
 			continue
 		}
-
-		if err = findCredsInFile(query, f, &creds); err != nil {
-			errs = append(errs, fmt.Errorf("cannot parse credentials file %s: %w", fpath, err))
-		} else if !creds.Empty() {
-			break
+		creds, err = findCredentialsInternal(query, f)
+		if closeErr := f.Close(); closeErr != nil {
+			logf("Cannot close credentials file %q: %v", fpath, err)
+		}
+		if err == nil {
+			return creds, nil
+		} else if err != ErrCredentialsNotFound {
+			logf("Cannot parse credentials file %q: %v", fpath, err)
 		}
 	}
 
-	err = errors.Join(errs...)
-	return
+	return nil, ErrCredentialsNotFound
 }
 
 type netrcParser struct {
@@ -164,7 +161,7 @@ type netrcParser struct {
 	creds   *credentials
 }
 
-// findCredsInFile searches for credentials in netrc file matching query
+// findCredentialsInternal searches for credentials in netrc file matching query
 // and fills creds with matched credentials if there's a match. The first match
 // ends the search.
 //
@@ -207,20 +204,26 @@ type netrcParser struct {
 //	[3] https://salsa.debian.org/apt-team/apt/-/blob/4e04cbaf/methods/aptmethod.h#L560
 //	[4] https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html
 //	[5] https://daniel.haxx.se/blog/2022/05/31/netrc-pains/
-func findCredsInFile(query *credentialsQuery, netrc io.Reader, creds *credentials) error {
+func findCredentialsInternal(query *credentialsQuery, netrc io.Reader) (*credentials, error) {
 	s := bufio.NewScanner(netrc)
 	s.Split(bufio.ScanWords)
 	p := netrcParser{
 		query:   query,
 		scanner: s,
-		creds:   creds,
+		creds:   &credentials{},
 	}
 	var err error
 	for state := netrcStart; err == nil && state != nil; {
 		state, err = state(&p)
 		err = errors.Join(err, p.scanner.Err())
 	}
-	return err
+	if err != nil {
+		return nil, err
+	}
+	if p.creds.Empty() {
+		return nil, ErrCredentialsNotFound
+	}
+	return p.creds, nil
 }
 
 type netrcState func(*netrcParser) (netrcState, error)
