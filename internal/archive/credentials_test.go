@@ -218,13 +218,13 @@ machine http://example.com/foo login a password
 	},
 }}
 
-func (s *S) TestFindCredentials(c *C) {
+func (s *S) TestFindCredentialsInDir(c *C) {
 	for _, t := range credentialsTests {
-		s.runFindCredentialsTest(c, &t)
+		s.runFindCredentialsInDirTest(c, &t)
 	}
 }
 
-func (s *S) runFindCredentialsTest(c *C, t *credentialsTest) {
+func (s *S) runFindCredentialsInDirTest(c *C, t *credentialsTest) {
 	credsDir := c.MkDir()
 
 	for filename, data := range t.credsFiles {
@@ -249,7 +249,7 @@ func (s *S) runFindCredentialsTest(c *C, t *credentialsTest) {
 	}
 }
 
-func (s *S) TestFindCredentialsMissingDir(c *C) {
+func (s *S) TestFindCredentialsInDirMissingDir(c *C) {
 	var creds *archive.Credentials
 	var err error
 
@@ -276,4 +276,48 @@ func (s *S) TestFindCredentialsMissingDir(c *C) {
 	c.Assert(creds, NotNil)
 	c.Assert(creds.Username, Equals, "admin")
 	c.Assert(creds.Password, Equals, "swordfish")
+}
+
+func fakeEnv(name, value string) (restore func()) {
+	origValue, origSet := os.LookupEnv(name)
+	os.Setenv(name, value)
+	return func() {
+		if origSet {
+			os.Setenv(name, origValue)
+		} else {
+			os.Unsetenv(name)
+		}
+	}
+}
+
+func (s *S) TestFindCredentials(c *C) {
+	var creds *archive.Credentials
+	var err error
+
+	workDir := c.MkDir()
+	credsDir := filepath.Join(workDir, "auth.conf.d")
+
+	restore := fakeEnv("CHISEL_AUTH_DIR", credsDir)
+	defer restore()
+
+	creds, err = archive.FindCredentials("http://example.com/my/site")
+	c.Assert(err, ErrorMatches, "^credentials not found$")
+	c.Assert(creds, IsNil)
+
+	err = os.Mkdir(credsDir, 0755)
+	c.Assert(err, IsNil)
+
+	creds, err = archive.FindCredentials("http://example.com/my/site")
+	c.Assert(err, ErrorMatches, "^credentials not found$")
+	c.Assert(creds, IsNil)
+
+	confFile := filepath.Join(credsDir, "mysite")
+	err = os.WriteFile(confFile, []byte("machine http://example.com/my login johndoe password 12345"), 0600)
+	c.Assert(err, IsNil)
+
+	creds, err = archive.FindCredentials("http://example.com/my/site")
+	c.Assert(err, IsNil)
+	c.Assert(creds, NotNil)
+	c.Assert(creds.Username, Equals, "johndoe")
+	c.Assert(creds.Password, Equals, "12345")
 }

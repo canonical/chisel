@@ -73,20 +73,21 @@ func parseRepoURL(repoURL string) (creds *credentials, query *credentialsQuery, 
 	return
 }
 
+const defaultCredsDir = "/etc/apt/auth.conf.d"
+
 var ErrCredentialsNotFound = errors.New("credentials not found")
 
 // findCredentials searches credentials for repoURL in configuration files in
 // directory specified by CHISEL_AUTH_DIR environment variable if it's
 // non-empty, otherwise /etc/apt/auth.conf.d.
 func findCredentials(repoURL string) (*credentials, error) {
-	credsDir := "/etc/apt/auth.conf.d"
+	credsDir := defaultCredsDir
 	if v := os.Getenv("CHISEL_AUTH_DIR"); v != "" {
 		credsDir = v
 	}
 	return findCredentialsInDir(repoURL, credsDir)
 }
 
-var FindCredentials = findCredentials
 // findCredentialsInDir searches for credentials for repoURL in configuration
 // files in credsDir directory. If the directory does not exist, empty
 // credentials structure with nil err is returned.
