@@ -20,10 +20,10 @@ type createTest struct {
 
 var createTests = []createTest{{
 	options: fsutil.CreateOptions{
-		Path: "foo/bar",
-		Data: bytes.NewBufferString("data1"),
-		Mode: 0444,
-		Dirs: true,
+		Path:           "foo/bar",
+		Data:           bytes.NewBufferString("data1"),
+		Mode:           0444,
+		MakeParentDirs: true,
 	},
 	result: map[string]string{
 		"/foo/":    "dir 0755",
@@ -31,10 +31,10 @@ var createTests = []createTest{{
 	},
 }, {
 	options: fsutil.CreateOptions{
-		Path: "foo/bar",
-		Link: "../baz",
-		Mode: fs.ModeSymlink,
-		Dirs: true,
+		Path:           "foo/bar",
+		Link:           "../baz",
+		Mode:           fs.ModeSymlink,
+		MakeParentDirs: true,
 	},
 	result: map[string]string{
 		"/foo/":    "dir 0755",
@@ -42,9 +42,9 @@ var createTests = []createTest{{
 	},
 }, {
 	options: fsutil.CreateOptions{
-		Path: "foo/bar",
-		Mode: fs.ModeDir | 0444,
-		Dirs: true,
+		Path:           "foo/bar",
+		Mode:           fs.ModeDir | 0444,
+		MakeParentDirs: true,
 	},
 	result: map[string]string{
 		"/foo/":     "dir 0755",
@@ -56,7 +56,7 @@ var createTests = []createTest{{
 		Mode: fs.ModeDir | fs.ModeSticky | 0775,
 	},
 	result: map[string]string{
-		"/tmp/":     "dir 01775",
+		"/tmp/": "dir 01775",
 	},
 }, {
 	options: fsutil.CreateOptions{
