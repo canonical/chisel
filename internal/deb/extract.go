@@ -187,9 +187,9 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 				// the metadata, since the extracted content itself will also create
 				// any missing directories unaccounted for in the options.
 				err := fsutil.Create(&fsutil.CreateOptions{
-					Path:           filepath.Join(options.TargetDir, sourcePath),
-					Mode:           tarHeader.FileInfo().Mode(),
-					MakeParentDirs: true,
+					Path:        filepath.Join(options.TargetDir, sourcePath),
+					Mode:        tarHeader.FileInfo().Mode(),
+					MakeParents: true,
 				})
 				if err != nil {
 					return err
@@ -228,11 +228,11 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 				tarHeader.Mode = int64(extractInfo.Mode)
 			}
 			err := fsutil.Create(&fsutil.CreateOptions{
-				Path: targetPath,
-				Mode: tarHeader.FileInfo().Mode(),
-				Data: pathReader,
-				Link: tarHeader.Linkname,
-				MakeParentDirs: true,
+				Path:        targetPath,
+				Mode:        tarHeader.FileInfo().Mode(),
+				Data:        pathReader,
+				Link:        tarHeader.Linkname,
+				MakeParents: true,
 			})
 			if err != nil {
 				return err

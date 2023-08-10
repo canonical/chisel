@@ -9,19 +9,19 @@ import (
 )
 
 type CreateOptions struct {
-	Path           string
-	Mode           fs.FileMode
-	Data           io.Reader
-	Link           string
-	MakeParentDirs bool
+	Path        string
+	Mode        fs.FileMode
+	Data        io.Reader
+	Link        string
+	MakeParents bool
 }
 
 // Creates file according to passed CreateOptions.
-// If o.MakeParentDirs is true, missing parent directories of o.Path are
+// If o.MakeParents is true, missing parent directories of o.Path are
 // created with permissions 0755.
 func Create(o *CreateOptions) error {
 	var err error
-	if o.MakeParentDirs {
+	if o.MakeParents {
 		if err := os.MkdirAll(filepath.Dir(o.Path), 0755); err != nil {
 			return err
 		}

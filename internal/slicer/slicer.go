@@ -212,11 +212,11 @@ func Run(options *RunOptions) error {
 			}
 
 			err := fsutil.Create(&fsutil.CreateOptions{
-				Path:           targetPath,
-				Mode:           tarHeader.FileInfo().Mode(),
-				Data:           fileContent,
-				Link:           linkTarget,
-				MakeParentDirs: true,
+				Path:        targetPath,
+				Mode:        tarHeader.FileInfo().Mode(),
+				Data:        fileContent,
+				Link:        linkTarget,
+				MakeParents: true,
 			})
 			if err != nil {
 				return err
