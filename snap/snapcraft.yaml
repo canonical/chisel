@@ -1,0 +1,64 @@
+name: chisel
+summary: Chisel is a software tool for carving and cutting Debian packages!
+description: |
+  Chisel can derive a minimal Ubuntu-like Linux distribution
+  using a release database that defines "slices" of existing packages.
+  Slices enable developers to cherry-pick just the files they need
+  from the Ubuntu archives, and combine them to create a new
+  filesystem which can be packaged into an OCI-compliant
+  container image or similar.
+
+  Usage: chisel <command> [<options>...]
+
+  Commands can be classified as follows:
+
+    Basic: help, version
+    Action: cut
+
+  For more information about a command, run 'chisel help <command>'.
+  For a short summary of all commands, run 'chisel help --all'.
+
+  This snap can only install the slices in a location inside the
+  user $HOME directory i.e. the --root option in "cut" command
+  should have a location inside the user $HOME directory.
+issues: https://github.com/canonical/chisel/issues
+source-code: https://github.com/canonical/chisel
+license: AGPL-3.0
+adopt-info: chisel-release-data
+
+base: core22
+confinement: strict
+
+parts:
+  chisel:
+    plugin: go
+    source: .
+    build-snaps:
+      - go/1.20/stable
+    build-environment:
+      - CGO_ENABLED: 0
+      - GOFLAGS: -trimpath -ldflags=-w -ldflags=-s
+    override-build: |
+      go generate ./cmd
+      craftctl default
+
+  chisel-release-data:
+    plugin: nil
+    source: .
+    override-build: |
+      # set snap version
+      version="$(${CRAFT_STAGE}/bin/chisel version)"
+      craftctl set version="$version"
+
+      # chisel releases are semantically versioned and
+      # have a "v" prefix
+      [[ "${version}" == *"git"* ]] && grade=devel || grade=stable
+      craftctl set grade="$grade"
+    after: [chisel]
+
+apps:
+  chisel:
+    command: bin/chisel
+    plugs:
+      - network
+      - home

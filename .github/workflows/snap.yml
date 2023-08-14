@@ -1,0 +1,54 @@
+name: Snap
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    outputs:
+      chisel-snap: ${{ steps.build-chisel-snap.outputs.snap }}
+
+    steps:
+      - name: Checkout chisel repo
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Build chisel Snap
+        id: build-chisel-snap
+        uses: snapcore/action-build@v1
+
+      - name: Attach chisel snap to GH workflow execution
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ steps.build-chisel-snap.outputs.snap }}
+          path: ${{ steps.build-chisel-snap.outputs.snap }}
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: [build]
+
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: ${{ needs.build.outputs.chisel-snap }}
+
+      - name: Install the chisel snap
+        run: |
+          set -ex
+          # Install the chisel snap from the artifact built in the previous job
+          sudo snap install --dangerous ${{ needs.build.outputs.chisel-snap }}
+
+          # Make sure chisel is installed
+          echo "version: $(chisel version)"
+
+      - name: Run smoke test
+        run: |
+          set -ex
+          mkdir chisel-rootfs
+          chisel cut --root chisel-rootfs/ libc6_libs
+          find chisel-rootfs/ | grep libc
