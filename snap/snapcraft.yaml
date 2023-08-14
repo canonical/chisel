@@ -1,8 +1,12 @@
 name: chisel
 summary: Chisel is a software tool for carving and cutting Debian packages!
 description: |
-  Chisel can slice a Linux distribution using a release database
-  and construct a new filesystem using the finely defined parts.
+  Chisel can derive a minimal Ubuntu-like Linux distribution
+  using a release database that defines "slices" of existing packages.
+  Slices enable developers to cherry-pick just the files they need
+  from the Ubuntu archives, and combine them to create a new
+  filesystem which can be packaged into an OCI-compliant
+  container image or similar.
 
   Usage: chisel <command> [<options>...]
 
@@ -13,6 +17,10 @@ description: |
 
   For more information about a command, run 'chisel help <command>'.
   For a short summary of all commands, run 'chisel help --all'.
+
+  This snap can only install the slices in a location inside the
+  user $HOME directory i.e. the --root option in "cut" command
+  should have a location inside the user $HOME directory.
 issues: https://github.com/canonical/chisel/issues
 source-code: https://github.com/canonical/chisel
 license: AGPL-3.0
