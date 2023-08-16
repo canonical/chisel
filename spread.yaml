@@ -40,16 +40,13 @@ backends:
     discard:
       docker rm -f $SPREAD_SYSTEM
     systems:
-      - ubuntu-22.04:
-          username: ubuntu
-          password: ubuntu
-      - ubuntu-22.10:
+      - ubuntu-23.04:
           username: ubuntu
           password: ubuntu
 
 prepare: |
-  apt install -y git
-  docker run --rm -v $PWD:/rootfs -w /rootfs golang:1.20 go build -buildvcs=false ./cmd/chisel/
+  apt install -y golang git
+  go build -buildvcs=false ./cmd/chisel/
   mv chisel /usr/local/bin
 
 suites:
