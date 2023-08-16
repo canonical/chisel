@@ -1,0 +1,33 @@
+name: Run spread tests
+
+on:
+  workflow_dispatch:
+  push:
+    paths-ignore:
+      - '**.md'
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 0 */2 * *"
+
+jobs:
+  spread-tests:
+    name: Spread tests
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/checkout@v3
+        with:
+          repository: snapcore/spread
+          path: _spread
+
+      - uses: actions/setup-go@v3
+        with:
+          go-version: '>=1.17.0'
+
+      - name: Build and run spread
+        run: |
+          (cd _spread/cmd/spread && go build)
+          _spread/cmd/spread/spread -vv

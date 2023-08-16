@@ -1,0 +1,54 @@
+project: chisel
+
+path: /chisel
+
+environment:
+  OS: ubuntu
+
+backends:
+  # Cannot use LXD backend due to https://github.com/snapcore/spread/issues/154
+  # lxd:
+  #   systems:
+  #     - ubuntu-bionic
+  #     - ubuntu-focal
+  #     - ubuntu-jammy
+  # GitHub actions (runners) don't support nested virtualization (https://github.com/community/community/discussions/8305)
+  # qemu:
+  #   systems:
+  #     - ubuntu-22.04:
+  #         username: ubuntu
+  #         password: ubuntu
+  #     - ubuntu-22.10:
+  #         username: ubuntu
+  #         password: ubuntu
+  adhoc:
+    allocate: |
+      echo "Allocating $SPREAD_SYSTEM..."
+      image=$(echo $SPREAD_SYSTEM | tr '-' ':')
+      docker pull $image
+      docker run -e usr=$SPREAD_SYSTEM_USERNAME -e pass=$SPREAD_SYSTEM_PASSWORD --name $SPREAD_SYSTEM -d $image sh -c '
+        set -x
+        apt update
+        apt install -y openssh-server sudo
+        mkdir /run/sshd
+        useradd -rm -d /home/ubuntu -s /bin/bash -g root -G sudo -u 1000 ubuntu
+        echo "$usr:$pass" | chpasswd
+        echo "$usr ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+        /usr/sbin/sshd -D
+      '
+      ADDRESS `docker inspect $SPREAD_SYSTEM --format '{{.NetworkSettings.Networks.bridge.IPAddress}}'`
+    discard:
+      docker rm -f $SPREAD_SYSTEM
+    systems:
+      - ubuntu-23.04:
+          username: ubuntu
+          password: ubuntu
+
+prepare: |
+  apt install -y golang git
+  go build -buildvcs=false ./cmd/chisel/
+  mv chisel /usr/local/bin
+
+suites:
+  tests/:
+    summary: Tests common scenarios
