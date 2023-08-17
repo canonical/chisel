@@ -1,4 +1,3 @@
-//
 // Package jsonwall provides an interface to work with database files in the simple
 // "jsonwall" format, which consists of a text file with one JSON object per line,
 // where both the individual JSON fields and the lines themselves are sorted to
@@ -6,17 +5,17 @@
 //
 // For example, the following content represents a valid jsonwall database:
 //
-//     {"jsonwall":"1.0","count":3}
-//     {"kind":"app","name":"chisel","version":"1.0"}
-//     {"kind":"app","name":"pebble","version":"1.2"}
+//	{"jsonwall":"1.0","count":3}
+//	{"kind":"app","name":"chisel","version":"1.0"}
+//	{"kind":"app","name":"pebble","version":"1.2"}
 //
 // The entries in this database might be manipulated with a type such as:
 //
-//     type AppEntry struct {
-//             Kind string    `json:"kind"`
-//             Name string    `json:"name,omitempty"`
-//             Version string `json:"version,omitempty"`
-//     }
+//	type AppEntry struct {
+//	        Kind string    `json:"kind"`
+//	        Name string    `json:"name,omitempty"`
+//	        Version string `json:"version,omitempty"`
+//	}
 //
 // Such data types have two important characteristics: fields must be defined in
 // the order that will be used when searching, and every optional field must be
@@ -24,22 +23,21 @@
 //
 // With that in place, the database may be accessed as:
 //
-//     app := AppEntry{Kind: "app", Name: "chisel"}
-//     if db.Get(&app) == nil {
-//             fmt.Println(app.Name, "version:", app.Version)
-//     }
+//	app := AppEntry{Kind: "app", Name: "chisel"}
+//	if db.Get(&app) == nil {
+//	        fmt.Println(app.Name, "version:", app.Version)
+//	}
 //
 // Iteration works similarly:
 //
-//     app := AppEntry{Kind: "app"}
-//     if iter, err := db.Iter(&app); err == nil {
-//             for iter.Next() {
-//                     if iter.Get(&app) == nil {
-//                             fmt.Println(app.Name, "version:", app.Version)
-//                     }
-//             }
-//     }
-//
+//	app := AppEntry{Kind: "app"}
+//	if iter, err := db.Iter(&app); err == nil {
+//	        for iter.Next() {
+//	                if iter.Get(&app) == nil {
+//	                        fmt.Println(app.Name, "version:", app.Version)
+//	                }
+//	        }
+//	}
 package jsonwall
 
 import (

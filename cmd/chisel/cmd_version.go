@@ -1,4 +1,3 @@
-
 package main
 
 import (
@@ -14,7 +13,7 @@ var longVersionHelp = `
 The version command displays the versions of the running client and server.
 `
 
-type cmdVersion struct {}
+type cmdVersion struct{}
 
 func init() {
 	addCommand("version", shortVersionHelp, longVersionHelp, func() flags.Commander { return &cmdVersion{} }, nil, nil)

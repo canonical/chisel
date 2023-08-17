@@ -7,7 +7,6 @@ import (
 	"strings"
 )
 
-
 // The logic in this file is supposed to be fast so that parsing large data
 // files feels instantaneous. It does that by performing a fast scan once to
 // index the sections, and then rather than parsing the individual sections it

@@ -149,10 +149,10 @@ var extractTests = []extractTest{{
 		},
 	},
 	result: map[string]string{
-		"/etc/":                    "dir 0755",
-		"/etc/dpkg/":               "dir 0755",
-		"/etc/default/":            "dir 0755",
-		"/etc/debian_version":      "file 0644 cce26cfe",
+		"/etc/":               "dir 0755",
+		"/etc/dpkg/":          "dir 0755",
+		"/etc/default/":       "dir 0755",
+		"/etc/debian_version": "file 0644 cce26cfe",
 	},
 	globbed: map[string][]string{
 		"/etc/dp*/": []string{"/etc/dpkg/"},

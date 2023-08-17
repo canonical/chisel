@@ -1,4 +1,3 @@
-
 package main
 
 import (
@@ -18,9 +17,7 @@ import (
 	"github.com/canonical/chisel/internal/deb"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/slicer"
-
 	//"github.com/canonical/chisel/internal/logger"
-
 )
 
 var (

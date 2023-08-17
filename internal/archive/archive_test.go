@@ -142,10 +142,10 @@ var optionErrorTests = []optionErrorTest{{
 	error: `archive has no component "other"`,
 }, {
 	options: archive.Options{
-		Label:    "ubuntu",
-		Version:  "22.04",
-		Arch:     "amd64",
-		Suites:     []string{"jammy"},
+		Label:   "ubuntu",
+		Version: "22.04",
+		Arch:    "amd64",
+		Suites:  []string{"jammy"},
 	},
 	error: "archive options missing components",
 }, {

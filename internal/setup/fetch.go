@@ -38,7 +38,7 @@ func FetchRelease(options *FetchOptions) (*Release, error) {
 		cacheDir = cache.DefaultDir("chisel")
 	}
 
-	dirName := filepath.Join(cacheDir, "releases", options.Label + "-" + options.Version)
+	dirName := filepath.Join(cacheDir, "releases", options.Label+"-"+options.Version)
 	err := os.MkdirAll(dirName, 0755)
 	if err == nil {
 		lockFile := fslock.New(filepath.Join(cacheDir, "releases", ".lock"))
@@ -57,7 +57,7 @@ func FetchRelease(options *FetchOptions) (*Release, error) {
 		return nil, err
 	}
 
-	req, err := http.NewRequest("GET", baseURL + options.Label + "-" + options.Version, nil)
+	req, err := http.NewRequest("GET", baseURL+options.Label+"-"+options.Version, nil)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create request for release information: %w", err)
 	}

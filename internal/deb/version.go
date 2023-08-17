@@ -150,9 +150,10 @@ func compareSubversion(va, vb string) int {
 // CompareVersions compare two version strings that follow the debian
 // version policy and
 // Returns:
-//   -1 if a is smaller than b
-//    0 if a equals b
-//   +1 if a is bigger than b
+//
+//	-1 if a is smaller than b
+//	 0 if a equals b
+//	+1 if a is bigger than b
 func CompareVersions(va, vb string) int {
 	var sa, sb string
 	if ia := strings.IndexByte(va, '-'); ia < 0 {

@@ -42,7 +42,6 @@ func (s *S) TestDefaultDir(c *C) {
 	c.Assert(strings.HasSuffix(defaultDir, "/foo/bar"), Equals, true)
 }
 
-
 func (s *S) TestCacheEmpty(c *C) {
 	cc := cache.Cache{c.MkDir()}
 
@@ -129,7 +128,7 @@ func (s *S) TestCacheWrongDigest(c *C) {
 	_, err := w.Write([]byte("data2"))
 	errClose := w.Close()
 	c.Assert(err, IsNil)
-	c.Assert(errClose, ErrorMatches, "expected digest " + data1Digest + ", got " + data2Digest)
+	c.Assert(errClose, ErrorMatches, "expected digest "+data1Digest+", got "+data2Digest)
 
 	_, err = cc.Read(data1Digest)
 	c.Assert(err, Equals, cache.MissErr)

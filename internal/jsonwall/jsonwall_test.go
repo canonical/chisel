@@ -150,7 +150,7 @@ var dataTypeTests = []struct {
 	}},
 }, {
 	summary: "Invalid add request",
-	values:  []any{
+	values: []any{
 		42,
 	},
 	dbError: "invalid database value: 42",

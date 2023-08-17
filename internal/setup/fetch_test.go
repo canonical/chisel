@@ -14,8 +14,8 @@ import (
 
 func (s *S) TestFetch(c *C) {
 	options := &setup.FetchOptions{
-		Label: "ubuntu",
-		Version: "22.04",
+		Label:    "ubuntu",
+		Version:  "22.04",
 		CacheDir: c.MkDir(),
 	}
 

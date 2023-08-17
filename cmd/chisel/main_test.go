@@ -20,10 +20,10 @@ func Test(t *testing.T) { TestingT(t) }
 
 type BaseChiselSuite struct {
 	testutil.BaseTest
-	stdin     *bytes.Buffer
-	stdout    *bytes.Buffer
-	stderr    *bytes.Buffer
-	password  string
+	stdin    *bytes.Buffer
+	stdout   *bytes.Buffer
+	stderr   *bytes.Buffer
+	password string
 }
 
 func (s *BaseChiselSuite) readPassword(fd int) ([]byte, error) {
