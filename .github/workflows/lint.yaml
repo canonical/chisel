@@ -1,0 +1,30 @@
+name: Lint
+
+on:
+  push:
+    paths-ignore:
+      - '**.md'
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-go@v3
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Ensure no formatting changes
+        run: |
+          go fmt ./...
+          git diff --exit-code
+
+      - name: Check bugs and unused code
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.54.1
+          args: --disable-all --enable errcheck,staticcheck,unused
