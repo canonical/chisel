@@ -62,7 +62,7 @@ jobs:
           find chisel-rootfs/ | grep libc
 
   promote:
-    if: ${{ github.event_name == "release" }}
+    if: ${{ github.event_name == 'release' }}
     name: Promote
     runs-on: ubuntu-latest
     needs: test
