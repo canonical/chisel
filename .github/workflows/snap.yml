@@ -3,6 +3,11 @@ name: Snap
 on:
   pull_request:
     branches: [main]
+  release:
+    types: [published]
+
+env:
+  SNAP_NAME: chisel
 
 jobs:
   build:
@@ -13,7 +18,7 @@ jobs:
 
     steps:
       - name: Checkout chisel repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -22,7 +27,7 @@ jobs:
         uses: snapcore/action-build@v1
 
       - name: Attach chisel snap to GH workflow execution
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ steps.build-chisel-snap.outputs.snap }}
           path: ${{ steps.build-chisel-snap.outputs.snap }}
@@ -31,6 +36,8 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     needs: [build]
+    outputs:
+      chisel-version: ${{ steps.install-chisel-snap.outputs.version }}
 
     steps:
       - uses: actions/download-artifact@v3
@@ -38,13 +45,14 @@ jobs:
           name: ${{ needs.build.outputs.chisel-snap }}
 
       - name: Install the chisel snap
+        id: install-chisel-snap
         run: |
           set -ex
           # Install the chisel snap from the artifact built in the previous job
           sudo snap install --dangerous ${{ needs.build.outputs.chisel-snap }}
 
           # Make sure chisel is installed
-          echo "version: $(chisel version)"
+          echo "version=$(chisel version)" | tee -a "$GITHUB_OUTPUT"
 
       - name: Run smoke test
         run: |
@@ -52,3 +60,49 @@ jobs:
           mkdir chisel-rootfs
           chisel cut --root chisel-rootfs/ libc6_libs
           find chisel-rootfs/ | grep libc
+
+  promote:
+    if: ${{ github.event_name == 'release' }}
+    name: Promote
+    runs-on: ubuntu-latest
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64, armhf, ppc64el, s390x]
+    env:
+      TRACK: latest
+      DEFAULT_RISK: edge
+      TO_RISK: candidate
+
+    steps:
+      - name: Install snapcraft
+        run: sudo snap install snapcraft --classic
+
+      - name: Wait for ${{ needs.test.outputs.chisel-version }} to be released
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        run: |
+          while ! `snapcraft status ${{ env.SNAP_NAME }} --track ${{ env.TRACK }} --arch ${{ matrix.arch }} \
+              | grep "${{ env.DEFAULT_RISK }}" \
+              | awk -F' ' '{print $2}' \
+              | grep -Fxq "${{ needs.test.outputs.chisel-version }}"`; do
+            echo "[${{ matrix.arch }}] Waiting for ${{ needs.test.outputs.chisel-version }} \
+              to be released to ${{ env.TRACK }}/${{ env.DEFAULT_RISK }}..."
+            sleep 10
+          done
+
+      # It would be easier to use `snapcraft promote`, but there's an error when trying
+      # to avoid the prompt with the "--yes" option:
+      # > 'latest/edge' is not a valid set value for --from-channel when using --yes.
+      - name: Promote ${{ needs.test.outputs.chisel-version }} (${{ matrix.arch }}) to ${{ env.TO_RISK }}
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        run: |
+          revision="$(snapcraft status ${{ env.SNAP_NAME }} --track ${{ env.TRACK }} --arch ${{ matrix.arch }} \
+            | grep "${{ env.DEFAULT_RISK }}" \
+            | awk -F' ' '{print $3}')"
+
+          snapcraft release ${{ env.SNAP_NAME }} \
+            $revision \
+            ${{ env.TRACK }}/${{ env.TO_RISK }}
