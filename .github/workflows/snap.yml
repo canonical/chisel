@@ -69,7 +69,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [amd64, arm64, armhf, ppc64el, s390x]
+        arch: [amd64, arm64, armhf, ppc64el, s390x, riscv64]
     env:
       TRACK: latest
       DEFAULT_RISK: edge
