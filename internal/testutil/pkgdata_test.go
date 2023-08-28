@@ -315,6 +315,21 @@ var pkgdataCheckEntries = []checkTarEntry{{
 		ModTime:  epochStartTime,
 		Format:   tar.FormatGNU,
 	},
+}, {
+	testutil.TarEntry{
+		Header: tar.Header{
+			Name: "",
+		},
+	},
+	tar.Header{
+		Typeflag: tar.TypeReg,
+		Name:     "",
+		Mode:     00644,
+		Uname:    "root",
+		Gname:    "root",
+		ModTime:  epochStartTime,
+		Format:   tar.FormatGNU,
+	},
 }}
 
 func (s *pkgdataSuite) TestMakeDeb(c *C) {

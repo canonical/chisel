@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"encoding/base64"
+	"strings"
 	"time"
 
 	"github.com/blakesmith/ar"
@@ -174,7 +175,7 @@ func fixupTarEntry(entry *TarEntry) {
 	if hdr.Typeflag == 0 {
 		if hdr.Linkname != "" {
 			hdr.Typeflag = tar.TypeSymlink
-		} else if hdr.Name[len(hdr.Name)-1] == '/' {
+		} else if strings.HasSuffix(hdr.Name, "/") {
 			hdr.Typeflag = tar.TypeDir
 		} else {
 			hdr.Typeflag = tar.TypeReg
