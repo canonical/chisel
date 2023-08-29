@@ -385,3 +385,15 @@ func (s *pkgdataSuite) TestMakeDeb(c *C) {
 	_, err = arReader.Next()
 	c.Assert(err, Equals, io.EOF)
 }
+
+func (s *S) TestMustMakeDeb(c *C) {
+	defer func() {
+		err := recover()
+		c.Assert(err, ErrorMatches, `.*: cannot encode header: invalid PAX record: "path = \\x00./foo.*`)
+	}()
+	testutil.MustMakeDeb([]testutil.TarEntry{{
+		Header: tar.Header{
+			Name: "\000./foo",
+		},
+	}})
+}
