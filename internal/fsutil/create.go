@@ -13,10 +13,19 @@ type CreateOptions struct {
 	Mode fs.FileMode
 	Data io.Reader
 	Link string
+	// If MakeParents is true, missing parent directories of Path are
+	// created with permissions 0755.
+	MakeParents bool
 }
 
+// Creates a filesystem entry according to the provided options.
 func Create(o *CreateOptions) error {
 	var err error
+	if o.MakeParents {
+		if err := os.MkdirAll(filepath.Dir(o.Path), 0755); err != nil {
+			return err
+		}
+	}
 	switch o.Mode & fs.ModeType {
 	case 0:
 		err = createFile(o)
@@ -32,11 +41,7 @@ func Create(o *CreateOptions) error {
 
 func createDir(o *CreateOptions) error {
 	debugf("Creating directory: %s (mode %#o)", o.Path, o.Mode)
-	err := os.MkdirAll(filepath.Dir(o.Path), 0755)
-	if err != nil {
-		return err
-	}
-	err = os.Mkdir(o.Path, o.Mode)
+	err := os.Mkdir(o.Path, o.Mode)
 	if os.IsExist(err) {
 		err = os.Chmod(o.Path, o.Mode)
 	}
@@ -45,10 +50,6 @@ func createDir(o *CreateOptions) error {
 
 func createFile(o *CreateOptions) error {
 	debugf("Writing file: %s (mode %#o)", o.Path, o.Mode)
-	err := os.MkdirAll(filepath.Dir(o.Path), 0755)
-	if err != nil && !os.IsExist(err) {
-		return err
-	}
 	file, err := os.OpenFile(o.Path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, o.Mode)
 	if err != nil {
 		return err
@@ -63,10 +64,6 @@ func createFile(o *CreateOptions) error {
 
 func createSymlink(o *CreateOptions) error {
 	debugf("Creating symlink: %s => %s", o.Path, o.Link)
-	err := os.MkdirAll(filepath.Dir(o.Path), 0755)
-	if err != nil && !os.IsExist(err) {
-		return err
-	}
 	fileinfo, err := os.Lstat(o.Path)
 	if err == nil {
 		if (fileinfo.Mode() & os.ModeSymlink) != 0 {
