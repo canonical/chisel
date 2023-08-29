@@ -266,7 +266,7 @@ func MakeDeb(entries []TarEntry) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func MakeTestDeb(entries []TarEntry) []byte {
+func MustMakeDeb(entries []TarEntry) []byte {
 	data, err := MakeDeb(entries)
 	if err != nil {
 		panic(err)
