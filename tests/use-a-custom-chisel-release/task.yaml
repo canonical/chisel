@@ -2,7 +2,6 @@ summary: Use a custom Chisel release
 
 environment:
     RELEASE/jammy: 22.04
-    RELEASE/kinetic: 22.10
 
 execute: |
   rootfs_folder=rootfs_${RELEASE}
