@@ -31,11 +31,6 @@ var (
 	//noticef = logger.Noticef
 )
 
-// defaultChiselDir is the Chisel directory used if $CHISEL is not set. It is
-// created by the daemon ("chisel run") if it doesn't exist, and also used by
-// the chisel client.
-const defaultChiselDir = "/var/lib/chisel/default"
-
 type options struct {
 	Version func() `long:"version"`
 }

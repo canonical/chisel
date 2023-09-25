@@ -70,12 +70,6 @@ func (s *BaseChiselSuite) ResetStdStreams() {
 	s.stderr.Reset()
 }
 
-func fakeArgs(args ...string) (restore func()) {
-	old := os.Args
-	os.Args = args
-	return func() { os.Args = old }
-}
-
 func fakeVersion(v string) (restore func()) {
 	old := cmd.Version
 	cmd.Version = v

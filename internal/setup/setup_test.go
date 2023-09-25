@@ -14,7 +14,6 @@ import (
 type setupTest struct {
 	summary   string
 	input     map[string]string
-	slices    map[string]*setup.Slice
 	release   *setup.Release
 	relerror  string
 	selslices []setup.SliceKey

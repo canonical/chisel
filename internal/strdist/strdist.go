@@ -20,8 +20,6 @@ type Cost struct {
 	SwapAB  CostInt
 	DeleteA CostInt
 	InsertB CostInt
-
-	private struct{}
 }
 
 type CostFunc func(ar, br rune) Cost
