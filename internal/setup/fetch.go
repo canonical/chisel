@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -52,7 +51,7 @@ func FetchRelease(options *FetchOptions) (*Release, error) {
 	}
 
 	tagName := filepath.Join(dirName, ".etag")
-	tagData, err := ioutil.ReadFile(tagName)
+	tagData, err := os.ReadFile(tagName)
 	if err != nil && !os.IsNotExist(err) {
 		return nil, err
 	}
@@ -99,7 +98,7 @@ func FetchRelease(options *FetchOptions) (*Release, error) {
 		}
 		tag := resp.Header.Get("ETag")
 		if tag != "" {
-			err := ioutil.WriteFile(tagName, []byte(tag), 0644)
+			err := os.WriteFile(tagName, []byte(tag), 0644)
 			if err != nil {
 				return nil, fmt.Errorf("cannot write remote release tag file: %v", err)
 			}

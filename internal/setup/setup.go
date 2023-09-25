@@ -3,7 +3,7 @@ package setup
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -254,7 +254,7 @@ func ParseSliceKey(sliceKey string) (SliceKey, error) {
 func readRelease(baseDir string) (*Release, error) {
 	baseDir = filepath.Clean(baseDir)
 	filePath := filepath.Join(baseDir, "chisel.yaml")
-	data, err := ioutil.ReadFile(filePath)
+	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read release definition: %s", err)
 	}
@@ -270,33 +270,33 @@ func readRelease(baseDir string) (*Release, error) {
 }
 
 func readSlices(release *Release, baseDir, dirName string) error {
-	finfos, err := ioutil.ReadDir(dirName)
+	entries, err := os.ReadDir(dirName)
 	if err != nil {
 		return fmt.Errorf("cannot read %s%c directory", stripBase(baseDir, dirName), filepath.Separator)
 	}
 
-	for _, finfo := range finfos {
-		if finfo.IsDir() {
-			err := readSlices(release, baseDir, filepath.Join(dirName, finfo.Name()))
+	for _, entry := range entries {
+		if entry.IsDir() {
+			err := readSlices(release, baseDir, filepath.Join(dirName, entry.Name()))
 			if err != nil {
 				return err
 			}
 			continue
 		}
-		if finfo.IsDir() || !strings.HasSuffix(finfo.Name(), ".yaml") {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".yaml") {
 			continue
 		}
-		match := fnameExp.FindStringSubmatch(finfo.Name())
+		match := fnameExp.FindStringSubmatch(entry.Name())
 		if match == nil {
-			return fmt.Errorf("invalid slice definition filename: %q\")", finfo.Name())
+			return fmt.Errorf("invalid slice definition filename: %q\")", entry.Name())
 		}
 
 		pkgName := match[1]
-		pkgPath := filepath.Join(dirName, finfo.Name())
+		pkgPath := filepath.Join(dirName, entry.Name())
 		if pkg, ok := release.Packages[pkgName]; ok {
 			return fmt.Errorf("package %q slices defined more than once: %s and %s\")", pkgName, pkg.Path, pkgPath)
 		}
-		data, err := ioutil.ReadFile(pkgPath)
+		data, err := os.ReadFile(pkgPath)
 		if err != nil {
 			// Errors from package os generally include the path.
 			return fmt.Errorf("cannot read slice definition file: %v", err)

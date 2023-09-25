@@ -8,9 +8,9 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -65,7 +65,7 @@ func (s *httpSuite) Do(req *http.Request) (*http.Response, error) {
 		body = string(response)
 	}
 	rsp := &http.Response{
-		Body:       ioutil.NopCloser(strings.NewReader(body)),
+		Body:       io.NopCloser(strings.NewReader(body)),
 		Header:     s.header,
 		StatusCode: s.status,
 	}
@@ -333,7 +333,7 @@ func (s *httpSuite) TestArchiveLabels(c *C) {
 }
 
 func read(r io.Reader) string {
-	data, err := ioutil.ReadAll(r)
+	data, err := io.ReadAll(r)
 	if err != nil {
 		panic(err)
 	}
@@ -405,7 +405,7 @@ func (s *S) testOpenArchiveArch(c *C, arch string) {
 	})
 	c.Assert(err, IsNil)
 
-	data, err := ioutil.ReadFile(filepath.Join(extractDir, "copyright"))
+	data, err := os.ReadFile(filepath.Join(extractDir, "copyright"))
 	c.Assert(err, IsNil)
 
 	copyrightTop := "This package was written by Peter Tobias <tobias@et-inf.fho-emden.de>\non Thu, 16 Jan 1997 01:00:34 +0100."

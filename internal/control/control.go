@@ -3,7 +3,6 @@ package control
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"strings"
 )
 
@@ -102,7 +101,7 @@ type ctrlPos struct {
 }
 
 func ParseReader(sectionKey string, content io.Reader) (File, error) {
-	data, err := ioutil.ReadAll(content)
+	data, err := io.ReadAll(content)
 	if err != nil {
 		return nil, err
 	}

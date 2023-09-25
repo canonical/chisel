@@ -2,7 +2,6 @@ package scripts_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -211,7 +210,7 @@ func (s *S) TestScripts(c *C) {
 			fpath := filepath.Join(rootDir, path)
 			err := os.MkdirAll(filepath.Dir(fpath), 0755)
 			c.Assert(err, IsNil)
-			err = ioutil.WriteFile(fpath, []byte(data), 0644)
+			err = os.WriteFile(fpath, []byte(data), 0644)
 			c.Assert(err, IsNil)
 		}
 		if test.hackdir != nil {

@@ -5,8 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"golang.org/x/crypto/ssh/terminal"
-
+	"golang.org/x/term"
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/chisel/cmd"
@@ -51,7 +50,7 @@ func (s *BaseChiselSuite) TearDownTest(c *C) {
 	chisel.Stdin = os.Stdin
 	chisel.Stdout = os.Stdout
 	chisel.Stderr = os.Stderr
-	chisel.ReadPassword = terminal.ReadPassword
+	chisel.ReadPassword = term.ReadPassword
 
 	s.BaseTest.TearDownTest(c)
 }

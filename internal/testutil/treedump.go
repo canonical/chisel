@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 )
@@ -39,7 +38,7 @@ func TreeDump(dir string) map[string]string {
 			}
 			result["/"+path] = fmt.Sprintf("symlink %s", lpath)
 		case 0: // Regular
-			data, err := ioutil.ReadFile(fpath)
+			data, err := os.ReadFile(fpath)
 			if err != nil {
 				return fmt.Errorf("cannot read file: %w", err)
 			}

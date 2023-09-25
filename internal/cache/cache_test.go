@@ -3,7 +3,7 @@ package cache_test
 import (
 	. "gopkg.in/check.v1"
 
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -144,7 +144,7 @@ func (s *S) TestCacheOpen(c *C) {
 
 	f, err := cc.Open(data1Digest)
 	c.Assert(err, IsNil)
-	data1, err := ioutil.ReadAll(f)
+	data1, err := io.ReadAll(f)
 	closeErr := f.Close()
 	c.Assert(err, IsNil)
 	c.Assert(closeErr, IsNil)

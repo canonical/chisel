@@ -1,7 +1,6 @@
 package archive_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -231,7 +230,7 @@ func (s *S) runFindCredentialsInDirTest(c *C, t *credentialsTest) {
 		fpath := filepath.Join(credsDir, filename)
 		err := os.MkdirAll(filepath.Dir(fpath), 0755)
 		c.Assert(err, IsNil)
-		err = ioutil.WriteFile(fpath, []byte(data), 0644)
+		err = os.WriteFile(fpath, []byte(data), 0644)
 		c.Assert(err, IsNil)
 	}
 

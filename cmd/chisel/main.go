@@ -10,8 +10,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/jessevdk/go-flags"
-
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/deb"
@@ -26,7 +25,7 @@ var (
 	Stdout io.Writer = os.Stdout
 	Stderr io.Writer = os.Stderr
 	// overridden for testing
-	ReadPassword = terminal.ReadPassword
+	ReadPassword = term.ReadPassword
 	// set to logger.Panicf in testing
 	//noticef = logger.Noticef
 )
@@ -285,8 +284,8 @@ func Parser() *flags.Parser {
 }
 
 var (
-	isStdinTTY  = terminal.IsTerminal(0)
-	isStdoutTTY = terminal.IsTerminal(1)
+	isStdinTTY  = term.IsTerminal(0)
+	isStdoutTTY = term.IsTerminal(1)
 )
 
 func main() {

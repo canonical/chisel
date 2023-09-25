@@ -4,7 +4,7 @@ import (
 	"github.com/jessevdk/go-flags"
 
 	"fmt"
-	"io/ioutil"
+	"os"
 	"regexp"
 	"strings"
 
@@ -120,7 +120,7 @@ func parseReleaseInfo(release string) (label, version string, err error) {
 }
 
 func readReleaseInfo() (label, version string, err error) {
-	data, err := ioutil.ReadFile("/etc/lsb-release")
+	data, err := os.ReadFile("/etc/lsb-release")
 	if err == nil {
 		const labelPrefix = "DISTRIB_ID="
 		const versionPrefix = "DISTRIB_RELEASE="

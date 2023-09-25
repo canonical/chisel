@@ -16,7 +16,7 @@ package testutil_test
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"gopkg.in/check.v1"
@@ -34,7 +34,7 @@ func (*filePresenceCheckerSuite) TestFilePresent(c *check.C) {
 	testInfo(c, FilePresent, "FilePresent", []string{"filename"})
 	testCheck(c, FilePresent, false, `filename must be a string`, 42)
 	testCheck(c, FilePresent, false, fmt.Sprintf(`file %q is absent but should exist`, filename), filename)
-	c.Assert(ioutil.WriteFile(filename, nil, 0644), check.IsNil)
+	c.Assert(os.WriteFile(filename, nil, 0644), check.IsNil)
 	testCheck(c, FilePresent, true, "", filename)
 }
 
@@ -44,6 +44,6 @@ func (*filePresenceCheckerSuite) TestFileAbsent(c *check.C) {
 	testInfo(c, FileAbsent, "FileAbsent", []string{"filename"})
 	testCheck(c, FileAbsent, false, `filename must be a string`, 42)
 	testCheck(c, FileAbsent, true, "", filename)
-	c.Assert(ioutil.WriteFile(filename, nil, 0644), check.IsNil)
+	c.Assert(os.WriteFile(filename, nil, 0644), check.IsNil)
 	testCheck(c, FileAbsent, false, fmt.Sprintf(`file %q is present but should not exist`, filename), filename)
 }

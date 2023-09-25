@@ -5,7 +5,6 @@ import (
 	"go.starlark.net/starlark"
 
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -149,7 +148,7 @@ func (c *ContentValue) Read(thread *starlark.Thread, fn *starlark.Builtin, args 
 	if err != nil {
 		return nil, err
 	}
-	data, err := ioutil.ReadFile(fpath)
+	data, err := os.ReadFile(fpath)
 	if err != nil {
 		return nil, c.polishError(path, err)
 	}
@@ -172,7 +171,7 @@ func (c *ContentValue) Write(thread *starlark.Thread, fn *starlark.Builtin, args
 
 	// No mode parameter for now as slices are supposed to list files
 	// explicitly instead.
-	err = ioutil.WriteFile(fpath, fdata, 0644)
+	err = os.WriteFile(fpath, fdata, 0644)
 	if err != nil {
 		return nil, c.polishError(path, err)
 	}
@@ -194,7 +193,7 @@ func (c *ContentValue) List(thread *starlark.Thread, fn *starlark.Builtin, args 
 	if err != nil {
 		return nil, err
 	}
-	entries, err := ioutil.ReadDir(fpath)
+	entries, err := os.ReadDir(fpath)
 	if err != nil {
 		return nil, c.polishError(path, err)
 	}

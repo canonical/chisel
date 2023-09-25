@@ -45,7 +45,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"sort"
 	"strings"
 )
@@ -136,7 +135,7 @@ func (dbw *DBWriter) WriteTo(w io.Writer) (n int64, err error) {
 
 // ReadDB reads into memory the database from the provided r.
 func ReadDB(r io.Reader) (*DB, error) {
-	data, err := ioutil.ReadAll(r)
+	data, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}

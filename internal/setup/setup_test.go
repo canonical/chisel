@@ -1,7 +1,6 @@
 package setup_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -815,7 +814,7 @@ func (s *S) TestParseRelease(c *C) {
 			fpath := filepath.Join(dir, path)
 			err := os.MkdirAll(filepath.Dir(fpath), 0755)
 			c.Assert(err, IsNil)
-			err = ioutil.WriteFile(fpath, testutil.Reindent(data), 0644)
+			err = os.WriteFile(fpath, testutil.Reindent(data), 0644)
 			c.Assert(err, IsNil)
 		}
 

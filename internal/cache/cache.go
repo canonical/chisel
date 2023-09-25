@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"hash"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
@@ -158,7 +157,7 @@ func (c *Cache) Read(digest string) ([]byte, error) {
 		return nil, err
 	}
 	defer file.Close()
-	data, err := ioutil.ReadAll(file)
+	data, err := io.ReadAll(file)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read file from cache: %v", err)
 	}
@@ -166,12 +165,16 @@ func (c *Cache) Read(digest string) ([]byte, error) {
 }
 
 func (c *Cache) Expire(timeout time.Duration) error {
-	list, err := ioutil.ReadDir(filepath.Join(c.Dir, digestKind))
+	entries, err := os.ReadDir(filepath.Join(c.Dir, digestKind))
 	if err != nil {
 		return fmt.Errorf("cannot list cache directory: %v", err)
 	}
 	expired := time.Now().Add(-timeout)
-	for _, finfo := range list {
+	for _, entry := range entries {
+		finfo, err := entry.Info()
+		if err != nil {
+			return err
+		}
 		if finfo.ModTime().After(expired) {
 			continue
 		}
