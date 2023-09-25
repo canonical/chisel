@@ -103,8 +103,6 @@ func (cmd *cmdCut) Execute(args []string) error {
 		Archives:  archives,
 		TargetDir: cmd.RootDir,
 	})
-
-	return printVersions()
 }
 
 // TODO These need testing, and maybe moving into a common file.

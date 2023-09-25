@@ -155,7 +155,10 @@ func fixupArg(optName string) string {
 // from each other.
 func Parser() *flags.Parser {
 	optionsData.Version = func() {
-		printVersions()
+		err := printVersions()
+		if err != nil {
+			panic(&exitStatus{1})
+		}
 		panic(&exitStatus{0})
 	}
 	flagopts := flags.Options(flags.PassDoubleDash)
@@ -169,7 +172,10 @@ func Parser() *flags.Parser {
 		version.Hidden = true
 	}
 	// add --help like what go-flags would do for us, but hidden
-	addHelp(parser)
+	err := addHelp(parser)
+	if err != nil {
+		debugf("cannot add --help: %v", err)
+	}
 
 	// Add all regular commands
 	for _, c := range commands {

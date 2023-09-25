@@ -88,7 +88,10 @@ func BenchmarkParse(b *testing.B) {
 	content := string(data)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		control.ParseString("Package", content)
+		_, err := control.ParseString("Package", content)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
