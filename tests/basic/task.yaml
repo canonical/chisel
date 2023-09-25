@@ -2,7 +2,6 @@ summary: Ensure multiple slices (with mutation scripts) are properly installed
 
 environment:
     RELEASE/jammy: 22.04
-    RELEASE/kinetic: 22.10
 
 execute: |
   rootfs_folder=rootfs_${RELEASE}
