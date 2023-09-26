@@ -16,7 +16,7 @@ package testutil
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"os/exec"
 	"path/filepath"
 
@@ -80,11 +80,11 @@ func (s *fakeCommandSuite) TestFakeShellchecksWhenAvailable(c *check.C) {
 		{"shellcheck", "-s", "bash", "-"},
 	})
 
-	scriptData, err := ioutil.ReadFile(fake.Exe())
+	scriptData, err := os.ReadFile(fake.Exe())
 	c.Assert(err, check.IsNil)
 	c.Assert(string(scriptData), Contains, "\necho some-command\n")
 
-	data, err := ioutil.ReadFile(filepath.Join(tmpDir, "input"))
+	data, err := os.ReadFile(filepath.Join(tmpDir, "input"))
 	c.Assert(err, check.IsNil)
 	c.Assert(data, check.DeepEquals, scriptData)
 }

@@ -3,7 +3,6 @@ package setup_test
 import (
 	. "gopkg.in/check.v1"
 
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -14,8 +13,8 @@ import (
 
 func (s *S) TestFetch(c *C) {
 	options := &setup.FetchOptions{
-		Label: "ubuntu",
-		Version: "22.04",
+		Label:    "ubuntu",
+		Version:  "22.04",
 		CacheDir: c.MkDir(),
 	}
 
@@ -35,16 +34,16 @@ func (s *S) TestFetch(c *C) {
 		markerPath := filepath.Join(release.Path, "test.marker")
 		switch fetch {
 		case 0:
-			err := ioutil.WriteFile(markerPath, nil, 0644)
+			err := os.WriteFile(markerPath, nil, 0644)
 			c.Assert(err, IsNil)
 		case 1:
-			_, err := ioutil.ReadFile(markerPath)
+			_, err := os.ReadFile(markerPath)
 			c.Assert(err, IsNil)
 
-			err = ioutil.WriteFile(filepath.Join(release.Path, ".etag"), []byte("wrong"), 0644)
+			err = os.WriteFile(filepath.Join(release.Path, ".etag"), []byte("wrong"), 0644)
 			c.Assert(err, IsNil)
 		case 2:
-			_, err := ioutil.ReadFile(markerPath)
+			_, err := os.ReadFile(markerPath)
 			c.Assert(os.IsNotExist(err), Equals, true)
 		}
 	}

@@ -3,10 +3,8 @@ package control
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"strings"
 )
-
 
 // The logic in this file is supposed to be fast so that parsing large data
 // files feels instantaneous. It does that by performing a fast scan once to
@@ -103,7 +101,7 @@ type ctrlPos struct {
 }
 
 func ParseReader(sectionKey string, content io.Reader) (File, error) {
-	data, err := ioutil.ReadAll(content)
+	data, err := io.ReadAll(content)
 	if err != nil {
 		return nil, err
 	}

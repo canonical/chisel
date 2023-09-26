@@ -83,32 +83,6 @@ func cmpNumeric(a, b string) int {
 	return 0
 }
 
-func matchEpoch(a string) bool {
-	if len(a) == 0 {
-		return false
-	}
-	if a[0] < '0' || a[0] > '9' {
-		return false
-	}
-	var i int
-	for i = 1; i < len(a) && a[i] >= '0' && a[i] <= '9'; i++ {
-	}
-	return i < len(a) && a[i] == ':'
-}
-
-func atMostOneDash(a string) bool {
-	seen := false
-	for i := 0; i < len(a); i++ {
-		if a[i] == '-' {
-			if seen {
-				return false
-			}
-			seen = true
-		}
-	}
-	return true
-}
-
 func nextFrag(s string) (frag, rest string, numeric bool) {
 	if len(s) == 0 {
 		return "", "", false
@@ -150,9 +124,10 @@ func compareSubversion(va, vb string) int {
 // CompareVersions compare two version strings that follow the debian
 // version policy and
 // Returns:
-//   -1 if a is smaller than b
-//    0 if a equals b
-//   +1 if a is bigger than b
+//
+//	-1 if a is smaller than b
+//	 0 if a equals b
+//	+1 if a is bigger than b
 func CompareVersions(va, vb string) int {
 	var sa, sb string
 	if ia := strings.IndexByte(va, '-'); ia < 0 {

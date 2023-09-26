@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -537,7 +536,7 @@ func (a *testArchive) Options() *archive.Options {
 
 func (a *testArchive) Fetch(pkg string) (io.ReadCloser, error) {
 	if data, ok := a.pkgs[pkg]; ok {
-		return ioutil.NopCloser(bytes.NewBuffer(data)), nil
+		return io.NopCloser(bytes.NewBuffer(data)), nil
 	}
 	return nil, fmt.Errorf("attempted to open %q package", pkg)
 }
@@ -560,7 +559,7 @@ func (s *S) TestRun(c *C) {
 			fpath := filepath.Join(releaseDir, path)
 			err := os.MkdirAll(filepath.Dir(fpath), 0755)
 			c.Assert(err, IsNil)
-			err = ioutil.WriteFile(fpath, testutil.Reindent(data), 0644)
+			err = os.WriteFile(fpath, testutil.Reindent(data), 0644)
 			c.Assert(err, IsNil)
 		}
 

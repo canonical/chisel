@@ -4,7 +4,7 @@ import (
 	"github.com/canonical/chisel/internal/control"
 
 	"bytes"
-	"io/ioutil"
+	"os"
 	"testing"
 
 	. "gopkg.in/check.v1"
@@ -29,7 +29,7 @@ Line: line for three
 Section: three
 
 Section: four
-Multi: 
+Multi:
  Space at EOL above
   Extra space
 	One tab
@@ -81,19 +81,22 @@ func (s *S) TestParseReader(c *C) {
 }
 
 func BenchmarkParse(b *testing.B) {
-	data, err := ioutil.ReadFile("Packages")
+	data, err := os.ReadFile("Packages")
 	if err != nil {
 		b.Fatalf("cannot open Packages file: %v", err)
 	}
 	content := string(data)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		control.ParseString("Package", content)
+		_, err := control.ParseString("Package", content)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
 func BenchmarkSectionGet(b *testing.B) {
-	data, err := ioutil.ReadFile("Packages")
+	data, err := os.ReadFile("Packages")
 	if err != nil {
 		b.Fatalf("cannot open Packages file: %v", err)
 	}

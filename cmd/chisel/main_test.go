@@ -5,8 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"golang.org/x/crypto/ssh/terminal"
-
+	"golang.org/x/term"
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/chisel/cmd"
@@ -20,10 +19,10 @@ func Test(t *testing.T) { TestingT(t) }
 
 type BaseChiselSuite struct {
 	testutil.BaseTest
-	stdin     *bytes.Buffer
-	stdout    *bytes.Buffer
-	stderr    *bytes.Buffer
-	password  string
+	stdin    *bytes.Buffer
+	stdout   *bytes.Buffer
+	stderr   *bytes.Buffer
+	password string
 }
 
 func (s *BaseChiselSuite) readPassword(fd int) ([]byte, error) {
@@ -51,7 +50,7 @@ func (s *BaseChiselSuite) TearDownTest(c *C) {
 	chisel.Stdin = os.Stdin
 	chisel.Stdout = os.Stdout
 	chisel.Stderr = os.Stderr
-	chisel.ReadPassword = terminal.ReadPassword
+	chisel.ReadPassword = term.ReadPassword
 
 	s.BaseTest.TearDownTest(c)
 }
@@ -68,12 +67,6 @@ func (s *BaseChiselSuite) ResetStdStreams() {
 	s.stdin.Reset()
 	s.stdout.Reset()
 	s.stderr.Reset()
-}
-
-func fakeArgs(args ...string) (restore func()) {
-	old := os.Args
-	os.Args = args
-	return func() { os.Args = old }
 }
 
 func fakeVersion(v string) (restore func()) {

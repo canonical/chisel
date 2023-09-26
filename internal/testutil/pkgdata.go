@@ -228,6 +228,9 @@ func makeTar(entries []TarEntry) ([]byte, error) {
 func compressBytesZstd(input []byte) ([]byte, error) {
 	var buf bytes.Buffer
 	writer, err := zstd.NewWriter(&buf)
+	if err != nil {
+		return nil, err
+	}
 	if _, err = writer.Write(input); err != nil {
 		return nil, err
 	}

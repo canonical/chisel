@@ -1,0 +1,12 @@
+name: CLA check
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  cla-check:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check if Canonical's Contributor License Agreement has been signed
+        uses: canonical/has-signed-canonical-cla@v1

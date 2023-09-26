@@ -11,7 +11,7 @@ var pathInfoExp = regexp.MustCompile(`([a-f0-9]{32,}) +([0-9]+) +\S+`)
 func ParsePathInfo(table, path string) (digest string, size int, ok bool) {
 	pos := strings.Index(table, " "+path+"\n")
 	if pos == -1 {
-		if !strings.HasSuffix(table, " " + path) {
+		if !strings.HasSuffix(table, " "+path) {
 			return "", -1, false
 		}
 		pos = len(table) - len(path)

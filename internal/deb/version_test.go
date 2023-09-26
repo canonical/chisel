@@ -71,28 +71,28 @@ func (s *VersionTestSuite) TestVersionCompare(c *C) {
 		{"1.0", "1.0-0+b1", -1},
 		{"1.0", "1.0-0~", 1},
 		// from the old perl cupt
-		{"1.2.3", "1.2.3", 0},                   // identical
-		{"4.4.3-2", "4.4.3-2", 0},               // identical
-		{"1.2.3", "1.2.3-0", 0},                 // zero revision
-		{"009", "9", 0},                         // zeroes…
-		{"009ab5", "9ab5", 0},                   // there as well
-		{"1.2.3", "1.2.3-1", -1},                // added non-zero revision
-		{"1.2.3", "1.2.4", -1},                  // just bigger
-		{"1.2.4", "1.2.3", 1},                   // order doesn't matter
-		{"1.2.24", "1.2.3", 1},                  // bigger, eh?
-		{"0.10.0", "0.8.7", 1},                  // bigger, eh?
-		{"3.2", "2.3", 1},                       // major number rocks
-		{"1.3.2a", "1.3.2", 1},                  // letters rock
-		{"0.5.0~git", "0.5.0~git2", -1},         // numbers rock
-		{"2a", "21", -1},                        // but not in all places
-		{"1.2a+~bCd3", "1.2a++", -1},            // tilde doesn't rock
-		{"1.2a+~bCd3", "1.2a+~", 1},             // but first is longer!
-		{"5.10.0", "5.005", 1},                  // preceding zeroes don't matters
-		{"3a9.8", "3.10.2", -1},                 // letters are before all letter symbols
-		{"3a9.8", "3~10", 1},                    // but after the tilde
-		{"1.4+OOo3.0.0~", "1.4+OOo3.0.0-4", -1}, // another tilde check
-		{"2.4.7-1", "2.4.7-z", -1},              // revision comparing
-		{"1.002-1+b2", "1.00", 1},               // whatever...
+		{"1.2.3", "1.2.3", 0},                                // identical
+		{"4.4.3-2", "4.4.3-2", 0},                            // identical
+		{"1.2.3", "1.2.3-0", 0},                              // zero revision
+		{"009", "9", 0},                                      // zeroes…
+		{"009ab5", "9ab5", 0},                                // there as well
+		{"1.2.3", "1.2.3-1", -1},                             // added non-zero revision
+		{"1.2.3", "1.2.4", -1},                               // just bigger
+		{"1.2.4", "1.2.3", 1},                                // order doesn't matter
+		{"1.2.24", "1.2.3", 1},                               // bigger, eh?
+		{"0.10.0", "0.8.7", 1},                               // bigger, eh?
+		{"3.2", "2.3", 1},                                    // major number rocks
+		{"1.3.2a", "1.3.2", 1},                               // letters rock
+		{"0.5.0~git", "0.5.0~git2", -1},                      // numbers rock
+		{"2a", "21", -1},                                     // but not in all places
+		{"1.2a+~bCd3", "1.2a++", -1},                         // tilde doesn't rock
+		{"1.2a+~bCd3", "1.2a+~", 1},                          // but first is longer!
+		{"5.10.0", "5.005", 1},                               // preceding zeroes don't matters
+		{"3a9.8", "3.10.2", -1},                              // letters are before all letter symbols
+		{"3a9.8", "3~10", 1},                                 // but after the tilde
+		{"1.4+OOo3.0.0~", "1.4+OOo3.0.0-4", -1},              // another tilde check
+		{"2.4.7-1", "2.4.7-z", -1},                           // revision comparing
+		{"1.002-1+b2", "1.00", 1},                            // whatever...
 		{"12-20220319-1ubuntu1", "12-20220319-1ubuntu2", -1}, // libgcc-s1
 		{"1:13.0.1-2ubuntu2", "1:13.0.1-2ubuntu3", -1},
 	} {

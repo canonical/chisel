@@ -3,7 +3,7 @@ package cache_test
 import (
 	. "gopkg.in/check.v1"
 
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -41,7 +41,6 @@ func (s *S) TestDefaultDir(c *C) {
 	c.Assert(strings.Contains(defaultDir, "/cache-"), Equals, true)
 	c.Assert(strings.HasSuffix(defaultDir, "/foo/bar"), Equals, true)
 }
-
 
 func (s *S) TestCacheEmpty(c *C) {
 	cc := cache.Cache{c.MkDir()}
@@ -129,7 +128,7 @@ func (s *S) TestCacheWrongDigest(c *C) {
 	_, err := w.Write([]byte("data2"))
 	errClose := w.Close()
 	c.Assert(err, IsNil)
-	c.Assert(errClose, ErrorMatches, "expected digest " + data1Digest + ", got " + data2Digest)
+	c.Assert(errClose, ErrorMatches, "expected digest "+data1Digest+", got "+data2Digest)
 
 	_, err = cc.Read(data1Digest)
 	c.Assert(err, Equals, cache.MissErr)
@@ -145,7 +144,7 @@ func (s *S) TestCacheOpen(c *C) {
 
 	f, err := cc.Open(data1Digest)
 	c.Assert(err, IsNil)
-	data1, err := ioutil.ReadAll(f)
+	data1, err := io.ReadAll(f)
 	closeErr := f.Close()
 	c.Assert(err, IsNil)
 	c.Assert(closeErr, IsNil)

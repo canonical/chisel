@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -38,7 +37,7 @@ func FetchRelease(options *FetchOptions) (*Release, error) {
 		cacheDir = cache.DefaultDir("chisel")
 	}
 
-	dirName := filepath.Join(cacheDir, "releases", options.Label + "-" + options.Version)
+	dirName := filepath.Join(cacheDir, "releases", options.Label+"-"+options.Version)
 	err := os.MkdirAll(dirName, 0755)
 	if err == nil {
 		lockFile := fslock.New(filepath.Join(cacheDir, "releases", ".lock"))
@@ -52,12 +51,12 @@ func FetchRelease(options *FetchOptions) (*Release, error) {
 	}
 
 	tagName := filepath.Join(dirName, ".etag")
-	tagData, err := ioutil.ReadFile(tagName)
+	tagData, err := os.ReadFile(tagName)
 	if err != nil && !os.IsNotExist(err) {
 		return nil, err
 	}
 
-	req, err := http.NewRequest("GET", baseURL + options.Label + "-" + options.Version, nil)
+	req, err := http.NewRequest("GET", baseURL+options.Label+"-"+options.Version, nil)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create request for release information: %w", err)
 	}
@@ -99,7 +98,7 @@ func FetchRelease(options *FetchOptions) (*Release, error) {
 		}
 		tag := resp.Header.Get("ETag")
 		if tag != "" {
-			err := ioutil.WriteFile(tagName, []byte(tag), 0644)
+			err := os.WriteFile(tagName, []byte(tag), 0644)
 			if err != nil {
 				return nil, fmt.Errorf("cannot write remote release tag file: %v", err)
 			}

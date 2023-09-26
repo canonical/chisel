@@ -1,4 +1,3 @@
-
 package main
 
 import (
@@ -11,16 +10,13 @@ import (
 	"unicode/utf8"
 
 	"github.com/jessevdk/go-flags"
-
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/deb"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/slicer"
-
 	//"github.com/canonical/chisel/internal/logger"
-
 )
 
 var (
@@ -29,15 +25,10 @@ var (
 	Stdout io.Writer = os.Stdout
 	Stderr io.Writer = os.Stderr
 	// overridden for testing
-	ReadPassword = terminal.ReadPassword
+	ReadPassword = term.ReadPassword
 	// set to logger.Panicf in testing
 	//noticef = logger.Noticef
 )
-
-// defaultChiselDir is the Chisel directory used if $CHISEL is not set. It is
-// created by the daemon ("chisel run") if it doesn't exist, and also used by
-// the chisel client.
-const defaultChiselDir = "/var/lib/chisel/default"
 
 type options struct {
 	Version func() `long:"version"`
@@ -164,7 +155,10 @@ func fixupArg(optName string) string {
 // from each other.
 func Parser() *flags.Parser {
 	optionsData.Version = func() {
-		printVersions()
+		err := printVersions()
+		if err != nil {
+			panic(&exitStatus{1})
+		}
 		panic(&exitStatus{0})
 	}
 	flagopts := flags.Options(flags.PassDoubleDash)
@@ -178,7 +172,10 @@ func Parser() *flags.Parser {
 		version.Hidden = true
 	}
 	// add --help like what go-flags would do for us, but hidden
-	addHelp(parser)
+	err := addHelp(parser)
+	if err != nil {
+		debugf("cannot add --help: %v", err)
+	}
 
 	// Add all regular commands
 	for _, c := range commands {
@@ -293,8 +290,8 @@ func Parser() *flags.Parser {
 }
 
 var (
-	isStdinTTY  = terminal.IsTerminal(0)
-	isStdoutTTY = terminal.IsTerminal(1)
+	isStdinTTY  = term.IsTerminal(0)
+	isStdoutTTY = term.IsTerminal(1)
 )
 
 func main() {

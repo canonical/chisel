@@ -56,7 +56,7 @@ var createTests = []createTest{{
 		Mode: fs.ModeDir | fs.ModeSticky | 0775,
 	},
 	result: map[string]string{
-		"/tmp/":     "dir 01775",
+		"/tmp/": "dir 01775",
 	},
 }, {
 	options: fsutil.CreateOptions{

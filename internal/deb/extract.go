@@ -6,7 +6,6 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -206,7 +205,7 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 			// memory at once this logic might open the first file
 			// written and copy it every time. For now, the choice
 			// is speed over memory efficiency.
-			data, err := ioutil.ReadAll(tarReader)
+			data, err := io.ReadAll(tarReader)
 			if err != nil {
 				return err
 			}

@@ -15,7 +15,7 @@
 package testutil_test
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"regexp"
 
@@ -36,7 +36,7 @@ func (s *fileContentCheckerSuite) TestFileEquals(c *check.C) {
 	d := c.MkDir()
 	content := "not-so-random-string"
 	filename := filepath.Join(d, "canary")
-	c.Assert(ioutil.WriteFile(filename, []byte(content), 0644), check.IsNil)
+	c.Assert(os.WriteFile(filename, []byte(content), 0644), check.IsNil)
 
 	testInfo(c, FileEquals, "FileEquals", []string{"filename", "contents"})
 	testCheck(c, FileEquals, true, "", filename, content)
@@ -57,7 +57,7 @@ func (s *fileContentCheckerSuite) TestFileContains(c *check.C) {
 	d := c.MkDir()
 	content := "not-so-random-string"
 	filename := filepath.Join(d, "canary")
-	c.Assert(ioutil.WriteFile(filename, []byte(content), 0644), check.IsNil)
+	c.Assert(os.WriteFile(filename, []byte(content), 0644), check.IsNil)
 
 	testInfo(c, FileContains, "FileContains", []string{"filename", "contents"})
 	testCheck(c, FileContains, true, "", filename, content[1:])
@@ -82,7 +82,7 @@ func (s *fileContentCheckerSuite) TestFileMatches(c *check.C) {
 	d := c.MkDir()
 	content := "not-so-random-string"
 	filename := filepath.Join(d, "canary")
-	c.Assert(ioutil.WriteFile(filename, []byte(content), 0644), check.IsNil)
+	c.Assert(os.WriteFile(filename, []byte(content), 0644), check.IsNil)
 
 	testInfo(c, FileMatches, "FileMatches", []string{"filename", "regex"})
 	testCheck(c, FileMatches, true, "", filename, ".*")

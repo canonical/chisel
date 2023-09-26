@@ -1,0 +1,55 @@
+linters:
+  # Disable all linters.
+  # Default: false
+  disable-all: true
+  # Enable specific linter
+  # https://golangci-lint.run/usage/linters/#enabled-by-default
+  enable:
+    - errcheck
+    - staticcheck
+    - unused
+
+issues:
+  exclude-rules:
+    # exclusions for errcheck
+    - path: "^.*/log.go$"
+      text: "globalLogger.Output.*not checked"
+      linters:
+        - errcheck
+    - path: "^.*_test.go$"
+      text: "release.Render.*not checked"
+      linters:
+        - errcheck
+    - path: "^.*_test.go$"
+      text: "release.Walk.*not checked"
+      linters:
+        - errcheck
+    - path: "internal/setup/fetch.go"
+      text: "lockFile.Unlock.*not checked"
+      linters:
+        - errcheck
+    # exclusions for unused
+    # addDebugCommand is an useful function that may be used later
+    - path: "cmd/chisel/main.go"
+      text: "addDebugCommand.*unused"
+      linters:
+        - unused
+    # exclude common (unused) issues from log.go files
+    - path: "^.*/log.go$"
+      text: "logf.*unused"
+      linters:
+        - unused
+    - path: "^.*/log.go$"
+      text: "debugf.*unused"
+      linters:
+        - unused
+    - path: "^.*/log.go$"
+      text: "globalDebug.*unused"
+      linters:
+        - unused
+    - path: "^.*/log.go$"
+      text: "globalLogger.*unused"
+      linters:
+        - unused
+  max-issues-per-linter: 0
+  max-same-issues: 0

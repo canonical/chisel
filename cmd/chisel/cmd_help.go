@@ -100,9 +100,10 @@ func (w *manfixer) Write(buf []byte) (int, error) {
 
 var tpRegexp = regexp.MustCompile(`(?m)(?:^\.TP\n)+`)
 
-func (w *manfixer) flush() {
+func (w *manfixer) flush() error {
 	str := tpRegexp.ReplaceAllLiteralString(w.Buffer.String(), ".TP\n")
-	io.Copy(Stdout, strings.NewReader(str))
+	_, err := io.Copy(Stdout, strings.NewReader(str))
+	return err
 }
 
 func (cmd cmdHelp) Execute(args []string) error {
@@ -114,8 +115,8 @@ func (cmd cmdHelp) Execute(args []string) error {
 		// subcommand, but --man is hidden so no real need to check.
 		out := &manfixer{}
 		cmd.parser.WriteManPage(out)
-		out.flush()
-		return nil
+		err := out.flush()
+		return err
 	}
 	if cmd.All {
 		if len(cmd.Positional.Subs) > 0 {

@@ -359,6 +359,7 @@ func (s *pkgdataSuite) TestMakeDeb(c *C) {
 
 	var tarBuf bytes.Buffer
 	zstdReader, err := zstd.NewReader(&tarZstdBuf)
+	c.Assert(err, IsNil)
 	size, err = zstdReader.WriteTo(&tarBuf)
 	c.Assert(err, IsNil)
 	c.Assert(int(size), testutil.IntGreaterThan, 0)

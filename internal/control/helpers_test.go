@@ -39,21 +39,21 @@ var parsePathInfoTests = []parsePathInfoTest{{
 	size:   2,
 	digest: "0123456789abcdef0123456789abcdef",
 }, {
-	table: `0123456789abcdef0123456789abcdef 0 /the/path`,
+	table:  `0123456789abcdef0123456789abcdef 0 /the/path`,
 	path:   "/the/path",
 	size:   0,
 	digest: "0123456789abcdef0123456789abcdef",
 }, {
-	table: `0123456789abcdef0123456789abcdef    555    /the/path`,
+	table:  `0123456789abcdef0123456789abcdef    555    /the/path`,
 	path:   "/the/path",
 	size:   555,
 	digest: "0123456789abcdef0123456789abcdef",
 }, {
-	table: `deadbeef 0 /the/path`,
+	table:  `deadbeef 0 /the/path`,
 	path:   "/the/path",
 	digest: "",
 }, {
-	table: `bad-data 0 /the/path`,
+	table:  `bad-data 0 /the/path`,
 	path:   "/the/path",
 	digest: "",
 }}
