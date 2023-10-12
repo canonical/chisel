@@ -398,3 +398,42 @@ func (s *S) TestMustMakeDeb(c *C) {
 		},
 	}})
 }
+
+func (s *S) TestTarEntryShortHands(c *C) {
+	var testCases = []struct {
+		shorthand testutil.TarEntry
+		result    testutil.TarEntry
+	}{{
+		testutil.Reg(0600, "./document.txt", "cats are best"),
+		testutil.TarEntry{
+			Header: tar.Header{
+				Typeflag: tar.TypeReg,
+				Name:     "./document.txt",
+				Mode:     0600,
+			},
+			Content: []byte("cats are best"),
+		},
+	}, {
+		testutil.Dir(0755, "./home/user"),
+		testutil.TarEntry{
+			Header: tar.Header{
+				Typeflag: tar.TypeDir,
+				Name:     "./home/user",
+				Mode:     0755,
+			},
+		},
+	}, {
+		testutil.Lnk(0755, "./lib", "./usr/lib/"),
+		testutil.TarEntry{
+			Header: tar.Header{
+				Typeflag: tar.TypeSymlink,
+				Name:     "./lib",
+				Mode:     0755,
+				Linkname: "./usr/lib/",
+			},
+		},
+	}}
+	for _, test := range testCases {
+		c.Assert(test.shorthand, DeepEquals, test.result)
+	}
+}

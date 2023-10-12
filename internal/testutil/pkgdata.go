@@ -277,3 +277,41 @@ func MustMakeDeb(entries []TarEntry) []byte {
 	}
 	return data
 }
+
+// Reg is a shortcut for creating a regular file TarEntry structure (with
+// tar.Typeflag set tar.TypeReg). Reg stands for "REGular file".
+func Reg(mode int64, path, content string) TarEntry {
+	return TarEntry{
+		Header: tar.Header{
+			Typeflag: tar.TypeReg,
+			Name:     path,
+			Mode:     mode,
+		},
+		Content: []byte(content),
+	}
+}
+
+// Dir is a shortcut for creating a directory TarEntry structure (with
+// tar.Typeflag set to tar.TypeDir). Dir stands for "DIRectory".
+func Dir(mode int64, path string) TarEntry {
+	return TarEntry{
+		Header: tar.Header{
+			Typeflag: tar.TypeDir,
+			Name:     path,
+			Mode:     mode,
+		},
+	}
+}
+
+// Lnk is a shortcut for creating a symbolic link TarEntry structure (with
+// tar.Typeflag set to tar.TypeSymlink). Lnk stands for "symbolic LiNK".
+func Lnk(mode int64, path, target string) TarEntry {
+	return TarEntry{
+		Header: tar.Header{
+			Typeflag: tar.TypeSymlink,
+			Name:     path,
+			Mode:     mode,
+			Linkname: target,
+		},
+	}
+}
