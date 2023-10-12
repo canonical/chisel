@@ -54,25 +54,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 		sliceKeys[i] = sliceKey
 	}
 
-	var release *setup.Release
-	var err error
-	if strings.Contains(cmd.Release, "/") {
-		release, err = setup.ReadRelease(cmd.Release)
-	} else {
-		var label, version string
-		if cmd.Release == "" {
-			label, version, err = readReleaseInfo()
-		} else {
-			label, version, err = parseReleaseInfo(cmd.Release)
-		}
-		if err != nil {
-			return err
-		}
-		release, err = setup.FetchRelease(&setup.FetchOptions{
-			Label:   label,
-			Version: version,
-		})
-	}
+	release, _, err := getRelease(cmd.Release)
 	if err != nil {
 		return err
 	}
@@ -135,4 +117,32 @@ func readReleaseInfo() (label, version string, err error) {
 		}
 	}
 	return "", "", fmt.Errorf("cannot infer release via /etc/lsb-release, see the --release option")
+}
+
+// getRelease returns the release and release label (e.g. ubuntu-22.04 or
+// /path/to/release/dir/ if a directory was passed as input).
+func getRelease(releaseStr string) (release *setup.Release, releaseLabel string, err error) {
+	if strings.Contains(releaseStr, "/") {
+		release, err = setup.ReadRelease(releaseStr)
+		releaseLabel = releaseStr
+	} else {
+		var label, version string
+		if releaseStr == "" {
+			label, version, err = readReleaseInfo()
+		} else {
+			label, version, err = parseReleaseInfo(releaseStr)
+		}
+		if err != nil {
+			return nil, "", err
+		}
+		release, err = setup.FetchRelease(&setup.FetchOptions{
+			Label:   label,
+			Version: version,
+		})
+		releaseLabel = label + "-" + version
+	}
+	if err != nil {
+		return nil, "", err
+	}
+	return release, releaseLabel, nil
 }
