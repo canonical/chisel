@@ -73,23 +73,19 @@ func (cmd *cmdFind) Execute(args []string) error {
 	return nil
 }
 
-const maxStrDist int64 = 3
+const maxStrDist int64 = 1
 
 // matchSlice returns true if a slice (partially) matches with a query.
 func matchSlice(slice *setup.Slice, query string) bool {
-	// check if the query (partially) matches with "pkg_slice" format slice name.
+	// check if the query is a substring of the pkg_slice slice name
+	if strings.Contains(slice.String(), query) {
+		return true
+	}
+	// check if the query string is atmost ``maxStrDist`` Levenshtein [1]
+	// distance away from the pkg_slice slice name.
+	// [1] https://en.wikipedia.org/wiki/Levenshtein_distance
 	dist := strdist.Distance(slice.String(), query, strdist.StandardCost, maxStrDist+1)
 	if dist <= maxStrDist {
-		return true
-	}
-	// check if the query (partially) matches with the package name.
-	distPkg := strdist.Distance(slice.Package, query, strdist.StandardCost, maxStrDist+1)
-	if distPkg <= maxStrDist {
-		return true
-	}
-	// check if the query (partially) matches with the slice name.
-	distSlice := strdist.Distance(slice.Name, query, strdist.StandardCost, maxStrDist+1)
-	if distSlice <= maxStrDist {
 		return true
 	}
 	return false
