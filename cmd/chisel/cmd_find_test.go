@@ -105,16 +105,9 @@ var findTests = []findTest{{
 		sampleRelease.Packages["python3.10"].Slices["config"],
 	},
 }, {
-	summary: "Check partial matching with pkg_slice format query",
+	summary: "Check substring matching",
 	release: sampleRelease,
-	query:   "python3_bins",
-	expSlices: []*setup.Slice{
-		sampleRelease.Packages["python3.10"].Slices["bins"],
-	},
-}, {
-	summary: "Check partial matching for package names",
-	release: sampleRelease,
-	query:   "python3",
+	query:   "ython",
 	expSlices: []*setup.Slice{
 		sampleRelease.Packages["python3.10"].Slices["bins"],
 		sampleRelease.Packages["python3.10"].Slices["config"],
@@ -123,16 +116,11 @@ var findTests = []findTest{{
 		sampleRelease.Packages["python3.10"].Slices["utils"],
 	},
 }, {
-	summary: "Check partial matching for slice names",
+	summary: "Check partial matching",
 	release: sampleRelease,
-	query:   "conf",
+	query:   "python3.1x_bins",
 	expSlices: []*setup.Slice{
-		sampleRelease.Packages["openjdk-8-jdk"].Slices["bins"],
-		sampleRelease.Packages["openjdk-8-jdk"].Slices["config"],
-		sampleRelease.Packages["openjdk-8-jdk"].Slices["core"],
 		sampleRelease.Packages["python3.10"].Slices["bins"],
-		sampleRelease.Packages["python3.10"].Slices["config"],
-		sampleRelease.Packages["python3.10"].Slices["core"],
 	},
 }, {
 	summary:  "Ensure error for nil release",
