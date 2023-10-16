@@ -17,7 +17,7 @@ var longFindHelp = `
 The find command queries the chisel releases for available slices.
 
 With the --release flag, it queries for slices in a particular branch
-of chisel-releases repository[1] or a particular directory. If left
+of the chisel-releases repository[1] or a particular directory. If left
 unspecified, it queries with the release info found in /etc/lsb-release.
 
 [1] https://github.com/canonical/chisel-releases
