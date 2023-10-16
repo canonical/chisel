@@ -123,6 +123,11 @@ var findTests = []findTest{{
 		sampleRelease.Packages["python3.10"].Slices["bins"],
 	},
 }, {
+	summary:   "Check no matching slice",
+	release:   sampleRelease,
+	query:     "foo_bar",
+	expSlices: nil,
+}, {
 	summary:  "Ensure error for nil release",
 	query:    "foo",
 	expError: ".*invalid release",
