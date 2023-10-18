@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	. "gopkg.in/check.v1"
+	"gopkg.in/yaml.v3"
 
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/testutil"
@@ -850,4 +851,79 @@ func (s *S) TestParseRelease(c *C) {
 			}
 		}
 	}
+}
+
+// Test YAML marshalling of setup.Package and setup.Slice
+func (s *S) TestPackageMarshalYAML(c *C) {
+	sampleRelease := map[string]string{
+		"chisel.yaml": string(defaultChiselYaml),
+		"slices/mypkg.yaml": `
+			package: mypkg
+
+			slices:
+				foo:
+					contents:
+						/etc/foo:
+						/etc/foo-dir/: {make: true, mode: 0644}
+				bar:
+					essential:
+						- mypkg_foo
+					contents:
+						/bin/bar:
+						/etc/bar.conf: {text: TODO, mutable: true, arch: riscv64}
+						/lib/*-linux-*/bar.so: {arch: [amd64,arm64,i386]}
+						/usr/bin/bar: {symlink: /bin/bar}
+						/usr/bin/baz: {copy: /bin/bar}
+						/usr/lib/bar*.so:
+						/usr/share/bar/*.conf: {until: mutate}
+					mutate: |
+						dir = "/usr/share/bar/"
+						conf = [content.read(dir + path) for path in content.list(dir)]
+						content.write("/etc/bar.conf", "".join(conf))
+				baz:
+					essential:
+						- mypkg_foo
+						- mypkg_bar
+		`,
+	}
+
+	// write and parse the sample release
+	dir := c.MkDir()
+	for path, data := range sampleRelease {
+		fpath := filepath.Join(dir, path)
+		err := os.MkdirAll(filepath.Dir(fpath), 0755)
+		c.Assert(err, IsNil)
+		err = os.WriteFile(fpath, testutil.Reindent(data), 0644)
+		c.Assert(err, IsNil)
+	}
+	release, err := setup.ReadRelease(dir)
+	c.Assert(err, IsNil)
+	c.Assert(release, NotNil)
+	c.Assert(release.Path, Equals, dir)
+	release.Path = ""
+
+	// for each package, modify the sample release with marshalled yaml
+	for _, pkg := range release.Packages {
+		data, err := yaml.Marshal(pkg)
+		c.Assert(err, IsNil)
+		sampleRelease[pkg.Path] = string(data)
+	}
+
+	// write and parse the changed release
+	newDir := c.MkDir()
+	for path, data := range sampleRelease {
+		fpath := filepath.Join(newDir, path)
+		err := os.MkdirAll(filepath.Dir(fpath), 0755)
+		c.Assert(err, IsNil)
+		err = os.WriteFile(fpath, testutil.Reindent(data), 0644)
+		c.Assert(err, IsNil)
+	}
+	newRelease, err := setup.ReadRelease(newDir)
+	c.Assert(err, IsNil)
+	c.Assert(newRelease, NotNil)
+	c.Assert(newRelease.Path, Equals, newDir)
+	newRelease.Path = ""
+
+	// check that both parsed releases (old and new) are equal
+	c.Assert(newRelease, DeepEquals, release)
 }
