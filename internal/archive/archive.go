@@ -1,12 +1,18 @@
 package archive
 
 import (
+	"bytes"
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/ProtonMail/go-crypto/openpgp/clearsign"
+	pgperrors "github.com/ProtonMail/go-crypto/openpgp/errors"
 
 	"github.com/canonical/chisel/internal/cache"
 	"github.com/canonical/chisel/internal/control"
@@ -26,6 +32,7 @@ type Options struct {
 	Suites     []string
 	Components []string
 	CacheDir   string
+	Keyrings   []openpgp.KeyRing
 }
 
 func Open(options *Options) (Archive, error) {
@@ -74,7 +81,7 @@ type ubuntuIndex struct {
 	component string
 	release   control.Section
 	packages  control.File
-	cache     *cache.Cache
+	archive   *ubuntuArchive
 }
 
 func (a *ubuntuArchive) Options() *Options {
@@ -152,7 +159,7 @@ func openUbuntu(options *Options) (Archive, error) {
 				suite:     suite,
 				component: component,
 				release:   release,
-				cache:     archive.cache,
+				archive:   archive,
 			}
 			if release == nil {
 				err := index.fetchRelease()
@@ -176,12 +183,40 @@ func openUbuntu(options *Options) (Archive, error) {
 	return archive, nil
 }
 
+func (index *ubuntuIndex) fetchVerifyReleaseFile() (io.ReadCloser, error) {
+	reader, err := index.fetch("InRelease", "", fetchDefault)
+	if err != nil {
+		return nil, err
+	}
+	content, err := io.ReadAll(reader)
+	reader.Close()
+	if err != nil {
+		return nil, err
+	}
+	block, _ := clearsign.Decode(content)
+	if block == nil {
+		return nil, fmt.Errorf("corrupted archive InRelease file: no clear-signed block")
+	}
+	err = pgperrors.ErrUnknownIssuer
+	for _, keyring := range index.archive.options.Keyrings {
+		_, err = block.VerifySignature(keyring, nil)
+		if err == nil || !errors.Is(err, pgperrors.ErrUnknownIssuer) {
+			break
+		}
+	}
+	if err != nil {
+		return nil, fmt.Errorf("release signature verification failed: %w", err)
+	}
+	return io.NopCloser(bytes.NewReader(block.Plaintext)), nil
+}
+
 func (index *ubuntuIndex) fetchRelease() error {
 	logf("Fetching %s %s %s suite details...", index.label, index.version, index.suite)
-	reader, err := index.fetch("Release", "", fetchDefault)
+	reader, err := index.fetchVerifyReleaseFile()
 	if err != nil {
 		return err
 	}
+	defer reader.Close()
 
 	ctrl, err := control.ParseReader("Label", reader)
 	if err != nil {
@@ -240,7 +275,7 @@ func (index *ubuntuIndex) checkComponents(components []string) error {
 }
 
 func (index *ubuntuIndex) fetch(suffix, digest string, flags fetchFlags) (io.ReadCloser, error) {
-	reader, err := index.cache.Open(digest)
+	reader, err := index.archive.cache.Open(digest)
 	if err == nil {
 		return reader, nil
 	} else if err != cache.MissErr {
@@ -293,7 +328,7 @@ func (index *ubuntuIndex) fetch(suffix, digest string, flags fetchFlags) (io.Rea
 		body = reader
 	}
 
-	writer := index.cache.Create(digest)
+	writer := index.archive.cache.Create(digest)
 	defer writer.Close()
 
 	_, err = io.Copy(writer, body)
@@ -304,5 +339,5 @@ func (index *ubuntuIndex) fetch(suffix, digest string, flags fetchFlags) (io.Rea
 		return nil, fmt.Errorf("cannot fetch from archive: %v", err)
 	}
 
-	return index.cache.Open(writer.Digest())
+	return index.archive.cache.Open(writer.Digest())
 }

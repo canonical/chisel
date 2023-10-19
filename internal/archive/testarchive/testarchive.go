@@ -8,6 +8,9 @@ import (
 	"path"
 	"strings"
 
+	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/ProtonMail/go-crypto/openpgp/clearsign"
+
 	"github.com/canonical/chisel/internal/testutil"
 )
 
@@ -99,10 +102,11 @@ func (p *Package) Content() []byte {
 }
 
 type Release struct {
-	Suite   string
-	Version string
-	Label   string
-	Items   []Item
+	Suite      string
+	Version    string
+	Label      string
+	Items      []Item
+	SigningKey openpgp.Key
 }
 
 func (r *Release) Walk(f func(Item) error) error {
@@ -110,7 +114,7 @@ func (r *Release) Walk(f func(Item) error) error {
 }
 
 func (r *Release) Path() string {
-	return "Release"
+	return "InRelease"
 }
 
 func (r *Release) Section() []byte {
@@ -137,7 +141,18 @@ func (r *Release) Content() []byte {
 		%s
 	`)), r.Label, r.Suite, r.Version, r.Version, digests.String())
 
-	return []byte(content)
+	var buf bytes.Buffer
+	wr, err := clearsign.Encode(&buf, r.SigningKey.PrivateKey, nil)
+	if err != nil {
+		panic(err)
+	}
+	if _, err := wr.Write([]byte(content)); err != nil {
+		panic(err)
+	}
+	if err := wr.Close(); err != nil {
+		panic(err)
+	}
+	return buf.Bytes()
 }
 
 func (r *Release) Render(prefix string, content map[string][]byte) error {

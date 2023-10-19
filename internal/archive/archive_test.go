@@ -4,6 +4,7 @@ import (
 	. "gopkg.in/check.v1"
 
 	"debug/elf"
+	_ "embed"
 	"errors"
 	"flag"
 	"fmt"
@@ -15,25 +16,45 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ProtonMail/go-crypto/openpgp"
+	pgppacket "github.com/ProtonMail/go-crypto/openpgp/packet"
+
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/archive/testarchive"
 	"github.com/canonical/chisel/internal/deb"
 )
 
 type httpSuite struct {
-	logf      func(string, ...interface{})
-	base      string
-	request   *http.Request
-	requests  []*http.Request
-	response  string
-	responses map[string][]byte
-	err       error
-	header    http.Header
-	status    int
-	restore   func()
+	logf         func(string, ...interface{})
+	base         string
+	request      *http.Request
+	requests     []*http.Request
+	response     string
+	responses    map[string][]byte
+	err          error
+	header       http.Header
+	status       int
+	restore      func()
+	keyring      openpgp.KeyRing
+	signingKeyID uint64
 }
 
 var _ = Suite(&httpSuite{})
+
+func parseKeyring(ascii string) openpgp.KeyRing {
+	keyring, err := openpgp.ReadArmoredKeyRing(strings.NewReader(ascii))
+	if err != nil {
+		panic(err)
+	}
+	return keyring
+}
+
+var (
+	//go:embed testdata/chisel-test.asc
+	testKeyringASCII string
+	testKeyring             = parseKeyring(testKeyringASCII)
+	testSigningKeyID uint64 = 0xE57B791E5AEF3869
+)
 
 func (s *httpSuite) SetUpTest(c *C) {
 	s.logf = c.Logf
@@ -46,6 +67,8 @@ func (s *httpSuite) SetUpTest(c *C) {
 	s.header = nil
 	s.status = 200
 	s.restore = archive.FakeDo(s.Do)
+	s.keyring = testKeyring
+	s.signingKeyID = testSigningKeyID
 }
 
 func (s *httpSuite) TearDownTest(c *C) {
@@ -93,10 +116,15 @@ func (s *httpSuite) prepareArchive(suite, version, arch string, components []str
 }
 
 func (s *httpSuite) prepareArchiveAdjustRelease(suite, version, arch string, components []string, adjustRelease func(*testarchive.Release)) *testarchive.Release {
+	signingKeys := s.keyring.KeysByIdUsage(s.signingKeyID, pgppacket.KeyFlagSign)
+	if len(signingKeys) == 0 {
+		panic("keyring has no signing keys with given ID")
+	}
 	release := &testarchive.Release{
-		Suite:   suite,
-		Version: version,
-		Label:   "Ubuntu",
+		Suite:      suite,
+		Version:    version,
+		Label:      "Ubuntu",
+		SigningKey: signingKeys[0],
 	}
 	for i, component := range components {
 		index := &testarchive.PackageIndex{
@@ -138,14 +166,16 @@ var optionErrorTests = []optionErrorTest{{
 		Arch:       "amd64",
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "other"},
+		Keyrings:   []openpgp.KeyRing{testKeyring},
 	},
 	error: `archive has no component "other"`,
 }, {
 	options: archive.Options{
-		Label:   "ubuntu",
-		Version: "22.04",
-		Arch:    "amd64",
-		Suites:  []string{"jammy"},
+		Label:    "ubuntu",
+		Version:  "22.04",
+		Arch:     "amd64",
+		Suites:   []string{"jammy"},
+		Keyrings: []openpgp.KeyRing{testKeyring},
 	},
 	error: "archive options missing components",
 }, {
@@ -154,6 +184,7 @@ var optionErrorTests = []optionErrorTest{{
 		Version:    "22.04",
 		Arch:       "amd64",
 		Components: []string{"main", "other"},
+		Keyrings:   []openpgp.KeyRing{testKeyring},
 	},
 	error: `archive options missing suites`,
 }, {
@@ -163,6 +194,7 @@ var optionErrorTests = []optionErrorTest{{
 		Arch:       "foo",
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "other"},
+		Keyrings:   []openpgp.KeyRing{testKeyring},
 	},
 	error: `invalid package architecture: foo`,
 }}
@@ -188,6 +220,7 @@ func (s *httpSuite) TestFetchPackage(c *C) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
+		Keyrings:   []openpgp.KeyRing{testKeyring},
 	}
 
 	archive, err := archive.Open(&options)
@@ -217,6 +250,7 @@ func (s *httpSuite) TestFetchPortsPackage(c *C) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
+		Keyrings:   []openpgp.KeyRing{testKeyring},
 	}
 
 	archive, err := archive.Open(&options)
@@ -254,6 +288,7 @@ func (s *httpSuite) TestFetchSecurityPackage(c *C) {
 		Arch:       "amd64",
 		Suites:     []string{"jammy", "jammy-security", "jammy-updates"},
 		Components: []string{"main", "universe"},
+		Keyrings:   []openpgp.KeyRing{testKeyring},
 	}
 
 	archive, err := archive.Open(&options)
@@ -284,6 +319,7 @@ func (s *httpSuite) TestArchiveLabels(c *C) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
+		Keyrings:   []openpgp.KeyRing{testKeyring},
 	}
 
 	_, err := archive.Open(&options)
@@ -298,6 +334,7 @@ func (s *httpSuite) TestArchiveLabels(c *C) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
+		Keyrings:   []openpgp.KeyRing{testKeyring},
 	}
 
 	_, err = archive.Open(&options)
@@ -312,6 +349,7 @@ func (s *httpSuite) TestArchiveLabels(c *C) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
+		Keyrings:   []openpgp.KeyRing{testKeyring},
 	}
 
 	_, err = archive.Open(&options)
@@ -326,6 +364,7 @@ func (s *httpSuite) TestArchiveLabels(c *C) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
+		Keyrings:   []openpgp.KeyRing{testKeyring},
 	}
 
 	_, err = archive.Open(&options)
@@ -344,6 +383,12 @@ func read(r io.Reader) string {
 // Real archive tests, only enabled via --real-archive.
 
 var realArchiveFlag = flag.Bool("real-archive", false, "Perform tests against real archive")
+
+var (
+	//go:embed testdata/ubuntu-archive-keyring.asc
+	ubuntuArchiveKeyringASCII string
+	ubuntuArchiveKeyring      = parseKeyring(ubuntuArchiveKeyringASCII)
+)
 
 func (s *S) TestRealArchive(c *C) {
 	if !*realArchiveFlag {
@@ -381,6 +426,7 @@ func (s *S) testOpenArchiveArch(c *C, arch string) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
+		Keyrings:   []openpgp.KeyRing{ubuntuArchiveKeyring},
 	}
 
 	archive, err := archive.Open(&options)
