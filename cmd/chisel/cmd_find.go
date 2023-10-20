@@ -73,33 +73,30 @@ func (cmd *cmdFind) Execute(args []string) error {
 	return nil
 }
 
-const maxStrDist int64 = 1
+// fuzzyMatchSlice reports whether a slice (partially) matches the query.
+func fuzzyMatchSlice(slice *setup.Slice, query string) bool {
+	const maxStrDist = 1
 
-// matchSlice returns true if a slice (partially) matches with a query.
-func matchSlice(slice *setup.Slice, query string) bool {
 	// check if the query is a substring of the pkg_slice slice name
 	if strings.Contains(slice.String(), query) {
 		return true
 	}
-	// check if the query string is atmost ``maxStrDist`` Levenshtein [1]
+	// check if the query string is at most ``maxStrDist`` Levenshtein [1]
 	// distance away from the pkg_slice slice name.
 	// [1] https://en.wikipedia.org/wiki/Levenshtein_distance
 	dist := strdist.Distance(slice.String(), query, strdist.StandardCost, maxStrDist+1)
-	if dist <= maxStrDist {
-		return true
-	}
-	return false
+	return dist <= maxStrDist
 }
 
-// findSlices goes through the release searching for any slices that matches
-// the query string. It returns a list of slices who matches the query.
+// findSlices goes through the release searching for any slices that match
+// the query string. It returns a list of slices that match the query.
 func findSlices(release *setup.Release, query string) (slices []*setup.Slice, err error) {
 	if release == nil {
 		return nil, fmt.Errorf("cannot find slice: invalid release")
 	}
 	for _, pkg := range release.Packages {
 		for _, slice := range pkg.Slices {
-			if slice != nil && matchSlice(slice, query) {
+			if slice != nil && fuzzyMatchSlice(slice, query) {
 				slices = append(slices, slice)
 			}
 		}
