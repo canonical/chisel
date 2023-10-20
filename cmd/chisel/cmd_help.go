@@ -155,11 +155,11 @@ type helpCategory struct {
 var helpCategories = []helpCategory{{
 	Label:       "Basic",
 	Description: "general operations",
-	Commands:    []string{"help", "version"},
+	Commands:    []string{"find", "help", "version"},
 }, {
 	Label:       "Action",
 	Description: "make things happen",
-	Commands:    []string{"cut", "find"},
+	Commands:    []string{"cut"},
 }}
 
 var (
