@@ -41,7 +41,7 @@ type Package struct {
 }
 
 func (p *Package) MarshalYAML() (interface{}, error) {
-	return convertPackageToYamlPackage(p)
+	return packageToYAML(p)
 }
 
 // Slice holds the details about a package slice.
@@ -58,7 +58,7 @@ type SliceScripts struct {
 }
 
 func (s *Slice) MarshalYAML() (interface{}, error) {
-	return convertSliceToYamlSlice(s)
+	return sliceToYAML(s)
 }
 
 type PathKind string
@@ -651,8 +651,8 @@ func Select(release *Release, slices []SliceKey) (*Selection, error) {
 	return selection, nil
 }
 
-// convertPathInfoToYamlPath converts a PathInfo object to a yamlPath object.
-func convertPathInfoToYamlPath(pi *PathInfo) (*yamlPath, error) {
+// pathInfoToYAML converts a PathInfo object to a yamlPath object.
+func pathInfoToYAML(pi *PathInfo) (*yamlPath, error) {
 	if pi == nil {
 		return nil, nil
 	}
@@ -678,8 +678,8 @@ func convertPathInfoToYamlPath(pi *PathInfo) (*yamlPath, error) {
 	return path, nil
 }
 
-// convertSliceToYamlSlice converts a Slice object to a yamlSlice object.
-func convertSliceToYamlSlice(s *Slice) (*yamlSlice, error) {
+// sliceToYAML converts a Slice object to a yamlSlice object.
+func sliceToYAML(s *Slice) (*yamlSlice, error) {
 	if s == nil {
 		return nil, nil
 	}
@@ -688,23 +688,22 @@ func convertSliceToYamlSlice(s *Slice) (*yamlSlice, error) {
 		Contents:  make(map[string]*yamlPath, len(s.Contents)),
 		Mutate:    s.Scripts.Mutate,
 	}
-	for idx, sliceKey := range s.Essential {
-		slice.Essential[idx] = sliceKey.String()
+	for i, key := range s.Essential {
+		slice.Essential[i] = key.String()
 	}
-	for contPath, pathInfo := range s.Contents {
-		pi := pathInfo
-		path, err := convertPathInfoToYamlPath(&pi)
+	for path, info := range s.Contents {
+		pi := info
+		yamlPath, err := pathInfoToYAML(&pi)
 		if err != nil {
 			return nil, err
 		}
-		slice.Contents[contPath] = path
+		slice.Contents[path] = yamlPath
 	}
 	return slice, nil
 }
 
-// convertPackageToYamlPackage converts a Package object to a
-// yamlPackage object.
-func convertPackageToYamlPackage(p *Package) (*yamlPackage, error) {
+// packageToYAML converts a Package object to a yamlPackage object.
+func packageToYAML(p *Package) (*yamlPackage, error) {
 	if p == nil {
 		return nil, nil
 	}
@@ -714,11 +713,11 @@ func convertPackageToYamlPackage(p *Package) (*yamlPackage, error) {
 		Slices:  make(map[string]yamlSlice, len(p.Slices)),
 	}
 	for name, slice := range p.Slices {
-		ySlice, err := convertSliceToYamlSlice(slice)
+		yamlSlice, err := sliceToYAML(slice)
 		if err != nil {
 			return nil, err
 		}
-		pkg.Slices[name] = *ySlice
+		pkg.Slices[name] = *yamlSlice
 	}
 	return pkg, nil
 }

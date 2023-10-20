@@ -15,14 +15,14 @@ var shortInfoHelp = "Show information about package slices"
 var longInfoHelp = `
 The info command shows detailed information about package slices.
 
-It accepts a white-space separated list of strings. The list can be
+It accepts a whitespace-separated list of strings. The list can be
 composed of package names, slice names, or a combination of both. The
 default output format is YAML. When multiple package or slice names
 are provided, the output is a list of YAML documents, separated by
-three dashes (“---”).
+three dashes ("---").
 
 Slice definitions are shown verbatim according to their definition in
-the Chisel releases. For example, "globs" are not expanded.
+the Chisel releases. For example, globs are not expanded.
 `
 
 var infoDescs = map[string]string{
@@ -53,12 +53,12 @@ func (cmd *infoCmd) Execute(args []string) error {
 
 	packages, notFound := selectPackageSlices(release, cmd.Positional.Queries)
 
-	for idx, pkg := range packages {
+	for i, pkg := range packages {
 		data, err := yaml.Marshal(pkg)
 		if err != nil {
 			return err
 		}
-		if idx > 0 {
+		if i > 0 {
 			fmt.Fprintln(Stdout, "---")
 		}
 		fmt.Fprint(Stdout, string(data))
