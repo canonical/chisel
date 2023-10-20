@@ -47,7 +47,7 @@ slices:
             /usr/lib/libpkg.so*: {}
 `,
 }, {
-	summary: "Multiple slice within same package",
+	summary: "Multiple slices within the same package",
 	input:   sampleRelease,
 	query:   []string{"mypkg_foo", "mypkg_baz"},
 	stdout: `
