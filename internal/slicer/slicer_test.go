@@ -22,19 +22,24 @@ var (
 	Lnk = testutil.Lnk
 )
 
-type testPackage struct {
+type testPackageData struct {
+	name    string
 	content []byte
 }
 
+type testArchiveData struct {
+	packages []testPackageData
+}
+
 type slicerTest struct {
-	summary string
-	arch    string
-	pkgs    map[string]map[string]testPackage
-	release map[string]string
-	slices  []setup.SliceKey
-	hackopt func(c *C, opts *slicer.RunOptions)
-	result  map[string]string
-	error   string
+	summary  string
+	arch     string
+	archives map[string]testArchiveData
+	release  map[string]string
+	slices   []setup.SliceKey
+	hackopt  func(c *C, opts *slicer.RunOptions)
+	result   map[string]string
+	error    string
 }
 
 var packageEntries = map[string][]testutil.TarEntry{
@@ -528,9 +533,10 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Custom archives with custom packages",
-	pkgs: map[string]map[string]testPackage{
-		"leptons": {
-			"electron": testPackage{
+	archives: map[string]testArchiveData{
+		"leptons": testArchiveData{
+			packages: []testPackageData{{
+				name: "electron",
 				content: testutil.MustMakeDeb([]testutil.TarEntry{
 					Dir(0755, "./"),
 					Dir(0755, "./mass/"),
@@ -541,16 +547,17 @@ var slicerTests = []slicerTest{{
 					Dir(0755, "./usr/share/doc/electron/"),
 					Reg(0644, "./usr/share/doc/electron/copyright", ""),
 				}),
-			},
+			}},
 		},
-		"hadrons": {
-			"proton": testPackage{
+		"hadrons": testArchiveData{
+			packages: []testPackageData{{
+				name: "proton",
 				content: testutil.MustMakeDeb([]testutil.TarEntry{
 					Dir(0755, "./"),
 					Dir(0755, "./mass/"),
 					Reg(0644, "./mass/proton", "1.67262192369E−27 kg\n"),
 				}),
-			},
+			}},
 		},
 	},
 	release: map[string]string{
@@ -609,7 +616,7 @@ const defaultChiselYaml = `
 
 type testArchive struct {
 	options archive.Options
-	pkgs    map[string]testPackage
+	pkgs    map[string]testPackageData
 }
 
 func (a *testArchive) Options() *archive.Options {
@@ -651,22 +658,27 @@ func (s *S) TestRun(c *C) {
 		selection, err := setup.Select(release, test.slices)
 		c.Assert(err, IsNil)
 
-		pkgs := map[string]testPackage{
-			"base-files": testPackage{content: testutil.PackageData["base-files"]},
+		pkgs := map[string]testPackageData{
+			"base-files": testPackageData{content: testutil.PackageData["base-files"]},
 		}
 		for name, entries := range packageEntries {
 			deb, err := testutil.MakeDeb(entries)
 			c.Assert(err, IsNil)
-			pkgs[name] = testPackage{content: deb}
+			pkgs[name] = testPackageData{content: deb}
 		}
 		archives := map[string]archive.Archive{}
 		for name, setupArchive := range release.Archives {
-			var archivePkgs map[string]testPackage
-			if test.pkgs != nil {
-				archivePkgs = test.pkgs[name]
-			}
-			if archivePkgs == nil {
-				archivePkgs = pkgs
+			archivePkgs := pkgs
+			if archiveData, ok := test.archives[name]; ok {
+				archivePkgs = make(map[string]testPackageData, len(archiveData.packages))
+				for _, pkgData := range archiveData.packages {
+					// Currently we enforce that package names are unique per archive. This can be
+					// lifted in future e.g. when dealing with multiple package versions.
+					if _, exists := archivePkgs[pkgData.name]; exists {
+						panic(fmt.Sprintf("duplicate package %s in archive %s", pkgData.name, name))
+					}
+					archivePkgs[pkgData.name] = pkgData
+				}
 			}
 			archive := &testArchive{
 				options: archive.Options{
@@ -700,7 +712,7 @@ func (s *S) TestRun(c *C) {
 
 		if test.result != nil {
 			result := make(map[string]string, len(copyrightEntries)+len(test.result))
-			if test.pkgs == nil {
+			if test.archives == nil {
 				// This was added in order to not specify copyright entries for each
 				// existing test. These tests use only the base-files embedded
 				// package. Custom packages may not include copyright entries
