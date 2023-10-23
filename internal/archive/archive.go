@@ -195,7 +195,7 @@ func (index *ubuntuIndex) fetchVerifyReleaseFile() (io.ReadCloser, error) {
 	}
 	block, _ := clearsign.Decode(content)
 	if block == nil {
-		return nil, fmt.Errorf("corrupted archive InRelease file: no clear-signed block")
+		return nil, fmt.Errorf("cannot decode InRelease clear-sign block")
 	}
 	err = pgperrors.ErrUnknownIssuer
 	for _, keyring := range index.archive.options.Keyrings {
