@@ -108,7 +108,7 @@ func (s *httpSuite) TestDoError(c *C) {
 	}
 
 	_, err := archive.Open(&options)
-	c.Check(err, ErrorMatches, "cannot talk to archive: BAM")
+	c.Check(err, ErrorMatches, "cannot fetch release: cannot talk to archive: BAM")
 }
 
 func (s *httpSuite) prepareArchive(suite, version, arch string, components []string) *testarchive.Release {

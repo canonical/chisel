@@ -162,7 +162,7 @@ func openUbuntu(options *Options) (Archive, error) {
 				archive:   archive,
 			}
 			if release == nil {
-				err := index.fetchRelease()
+				err := index.parseRelease()
 				if err != nil {
 					return nil, err
 				}
@@ -183,21 +183,21 @@ func openUbuntu(options *Options) (Archive, error) {
 	return archive, nil
 }
 
-func (index *ubuntuIndex) fetchVerifyReleaseFile() (io.ReadCloser, error) {
+func (index *ubuntuIndex) fetchRelease() ([]byte, error) {
 	reader, err := index.fetch("InRelease", "", fetchDefault)
 	if err != nil {
 		return nil, err
 	}
-	content, err := io.ReadAll(reader)
-	reader.Close()
-	if err != nil {
-		return nil, err
-	}
-	block, _ := clearsign.Decode(content)
+	defer reader.Close()
+	return io.ReadAll(reader)
+}
+
+func (index *ubuntuIndex) verifyRelease(signedData []byte) ([]byte, error) {
+	block, _ := clearsign.Decode(signedData)
 	if block == nil {
 		return nil, fmt.Errorf("cannot decode InRelease clear-sign block")
 	}
-	err = pgperrors.ErrUnknownIssuer
+	err := pgperrors.ErrUnknownIssuer
 	for _, keyring := range index.archive.options.Keyrings {
 		_, err = block.VerifySignature(keyring, nil)
 		if err == nil || !errors.Is(err, pgperrors.ErrUnknownIssuer) {
@@ -205,20 +205,22 @@ func (index *ubuntuIndex) fetchVerifyReleaseFile() (io.ReadCloser, error) {
 		}
 	}
 	if err != nil {
-		return nil, fmt.Errorf("release signature verification failed: %w", err)
+		return nil, fmt.Errorf("signature verification failed: %w", err)
 	}
-	return io.NopCloser(bytes.NewReader(block.Plaintext)), nil
+	return block.Plaintext, nil
 }
 
-func (index *ubuntuIndex) fetchRelease() error {
+func (index *ubuntuIndex) parseRelease() error {
 	logf("Fetching %s %s %s suite details...", index.label, index.version, index.suite)
-	reader, err := index.fetchVerifyReleaseFile()
+	signed, err := index.fetchRelease()
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot fetch release: %w", err)
 	}
-	defer reader.Close()
-
-	ctrl, err := control.ParseReader("Label", reader)
+	content, err := index.verifyRelease(signed)
+	if err != nil {
+		return fmt.Errorf("cannot verify release: %w", err)
+	}
+	ctrl, err := control.ParseReader("Label", bytes.NewReader(content))
 	if err != nil {
 		return fmt.Errorf("parsing archive Release file: %v", err)
 	}
