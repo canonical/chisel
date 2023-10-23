@@ -166,16 +166,16 @@ var optionErrorTests = []optionErrorTest{{
 		Arch:       "amd64",
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "other"},
-		Keyrings:   []openpgp.KeyRing{testKeyring},
+		PublicKeys: []openpgp.KeyRing{testKeyring},
 	},
 	error: `archive has no component "other"`,
 }, {
 	options: archive.Options{
-		Label:    "ubuntu",
-		Version:  "22.04",
-		Arch:     "amd64",
-		Suites:   []string{"jammy"},
-		Keyrings: []openpgp.KeyRing{testKeyring},
+		Label:      "ubuntu",
+		Version:    "22.04",
+		Arch:       "amd64",
+		Suites:     []string{"jammy"},
+		PublicKeys: []openpgp.KeyRing{testKeyring},
 	},
 	error: "archive options missing components",
 }, {
@@ -184,7 +184,7 @@ var optionErrorTests = []optionErrorTest{{
 		Version:    "22.04",
 		Arch:       "amd64",
 		Components: []string{"main", "other"},
-		Keyrings:   []openpgp.KeyRing{testKeyring},
+		PublicKeys: []openpgp.KeyRing{testKeyring},
 	},
 	error: `archive options missing suites`,
 }, {
@@ -194,7 +194,7 @@ var optionErrorTests = []optionErrorTest{{
 		Arch:       "foo",
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "other"},
-		Keyrings:   []openpgp.KeyRing{testKeyring},
+		PublicKeys: []openpgp.KeyRing{testKeyring},
 	},
 	error: `invalid package architecture: foo`,
 }}
@@ -220,7 +220,7 @@ func (s *httpSuite) TestFetchPackage(c *C) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
-		Keyrings:   []openpgp.KeyRing{testKeyring},
+		PublicKeys: []openpgp.KeyRing{testKeyring},
 	}
 
 	archive, err := archive.Open(&options)
@@ -250,7 +250,7 @@ func (s *httpSuite) TestFetchPortsPackage(c *C) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
-		Keyrings:   []openpgp.KeyRing{testKeyring},
+		PublicKeys: []openpgp.KeyRing{testKeyring},
 	}
 
 	archive, err := archive.Open(&options)
@@ -288,7 +288,7 @@ func (s *httpSuite) TestFetchSecurityPackage(c *C) {
 		Arch:       "amd64",
 		Suites:     []string{"jammy", "jammy-security", "jammy-updates"},
 		Components: []string{"main", "universe"},
-		Keyrings:   []openpgp.KeyRing{testKeyring},
+		PublicKeys: []openpgp.KeyRing{testKeyring},
 	}
 
 	archive, err := archive.Open(&options)
@@ -319,7 +319,7 @@ func (s *httpSuite) TestArchiveLabels(c *C) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
-		Keyrings:   []openpgp.KeyRing{testKeyring},
+		PublicKeys: []openpgp.KeyRing{testKeyring},
 	}
 
 	_, err := archive.Open(&options)
@@ -334,7 +334,7 @@ func (s *httpSuite) TestArchiveLabels(c *C) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
-		Keyrings:   []openpgp.KeyRing{testKeyring},
+		PublicKeys: []openpgp.KeyRing{testKeyring},
 	}
 
 	_, err = archive.Open(&options)
@@ -349,7 +349,7 @@ func (s *httpSuite) TestArchiveLabels(c *C) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
-		Keyrings:   []openpgp.KeyRing{testKeyring},
+		PublicKeys: []openpgp.KeyRing{testKeyring},
 	}
 
 	_, err = archive.Open(&options)
@@ -364,7 +364,7 @@ func (s *httpSuite) TestArchiveLabels(c *C) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
-		Keyrings:   []openpgp.KeyRing{testKeyring},
+		PublicKeys: []openpgp.KeyRing{testKeyring},
 	}
 
 	_, err = archive.Open(&options)
@@ -426,7 +426,7 @@ func (s *S) testOpenArchiveArch(c *C, arch string) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
-		Keyrings:   []openpgp.KeyRing{ubuntuArchiveKeyring},
+		PublicKeys: []openpgp.KeyRing{ubuntuArchiveKeyring},
 	}
 
 	archive, err := archive.Open(&options)

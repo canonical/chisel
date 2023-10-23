@@ -32,7 +32,7 @@ type Options struct {
 	Suites     []string
 	Components []string
 	CacheDir   string
-	Keyrings   []openpgp.KeyRing
+	PublicKeys []openpgp.KeyRing
 }
 
 func Open(options *Options) (Archive, error) {
@@ -198,8 +198,8 @@ func (index *ubuntuIndex) verifyRelease(signedData []byte) ([]byte, error) {
 		return nil, fmt.Errorf("cannot decode InRelease clear-sign block")
 	}
 	err := pgperrors.ErrUnknownIssuer
-	for _, keyring := range index.archive.options.Keyrings {
-		_, err = block.VerifySignature(keyring, nil)
+	for _, pubkey := range index.archive.options.PublicKeys {
+		_, err = block.VerifySignature(pubkey, nil)
 		if err == nil || !errors.Is(err, pgperrors.ErrUnknownIssuer) {
 			break
 		}

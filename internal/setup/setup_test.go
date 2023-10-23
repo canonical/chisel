@@ -855,14 +855,14 @@ var setupTests = []setupTest{{
 				Version:    "22.04",
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
-				Keyrings:   []openpgp.KeyRing{testKeyringUbuntuArchive},
+				PublicKeys: []openpgp.KeyRing{testKeyringUbuntuArchive},
 			},
 			"bar": {
 				Name:       "bar",
 				Version:    "22.04",
 				Suites:     []string{"jammy-updates"},
 				Components: []string{"universe"},
-				Keyrings:   []openpgp.KeyRing{testKeyringUbuntuArchive, testKeyringUbuntuMaster},
+				PublicKeys: []openpgp.KeyRing{testKeyringUbuntuArchive, testKeyringUbuntuMaster},
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -875,7 +875,7 @@ var setupTests = []setupTest{{
 		},
 	},
 }, {
-	summary: "Unknown keyring",
+	summary: "Unknown public key",
 	input: map[string]string{
 		"chisel.yaml": `
 			format: chisel-v1
@@ -898,9 +898,9 @@ var setupTests = []setupTest{{
 			package: mypkg
 		`,
 	},
-	relerror: `chisel.yaml: archive "foo" references unknown keyring "ubuntu-archive"`,
+	relerror: `chisel.yaml: archive "foo" references unknown public key "ubuntu-archive"`,
 }, {
-	summary: "Invalid keyring",
+	summary: "Invalid public key",
 	input: map[string]string{
 		"chisel.yaml": `
 			format: chisel-v1
@@ -924,7 +924,7 @@ var setupTests = []setupTest{{
 			package: mypkg
 		`,
 	},
-	relerror: `chisel.yaml: cannot parse keyring "ubuntu-master": openpgp: invalid argument: no armored data found`,
+	relerror: `chisel.yaml: cannot parse public key "ubuntu-master": openpgp: invalid argument: no armored data found`,
 }}
 
 const defaultChiselYaml = `
