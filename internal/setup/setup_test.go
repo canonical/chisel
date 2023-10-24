@@ -13,7 +13,7 @@ import (
 	"github.com/canonical/chisel/internal/testutil"
 )
 
-func parseKeyring(ascii string) openpgp.KeyRing {
+func parseKeyring(ascii string) openpgp.EntityList {
 	keyring, err := openpgp.ReadArmoredKeyRing(strings.NewReader(ascii))
 	if err != nil {
 		panic(err)
@@ -855,14 +855,14 @@ var setupTests = []setupTest{{
 				Version:    "22.04",
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
-				PublicKeys: []openpgp.KeyRing{testKeyringUbuntuArchive},
+				PublicKeys: testKeyringUbuntuArchive,
 			},
 			"bar": {
 				Name:       "bar",
 				Version:    "22.04",
 				Suites:     []string{"jammy-updates"},
 				Components: []string{"universe"},
-				PublicKeys: []openpgp.KeyRing{testKeyringUbuntuArchive, testKeyringUbuntuMaster},
+				PublicKeys: append(testKeyringUbuntuArchive, testKeyringUbuntuMaster...),
 			},
 		},
 		Packages: map[string]*setup.Package{

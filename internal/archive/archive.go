@@ -3,7 +3,6 @@ package archive
 import (
 	"bytes"
 	"compress/gzip"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,7 +11,6 @@ import (
 
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/ProtonMail/go-crypto/openpgp/clearsign"
-	pgperrors "github.com/ProtonMail/go-crypto/openpgp/errors"
 
 	"github.com/canonical/chisel/internal/cache"
 	"github.com/canonical/chisel/internal/control"
@@ -32,7 +30,7 @@ type Options struct {
 	Suites     []string
 	Components []string
 	CacheDir   string
-	PublicKeys []openpgp.KeyRing
+	PublicKeys openpgp.KeyRing
 }
 
 func Open(options *Options) (Archive, error) {
@@ -141,6 +139,9 @@ func openUbuntu(options *Options) (Archive, error) {
 	if len(options.Version) == 0 {
 		return nil, fmt.Errorf("archive options missing version")
 	}
+	if options.PublicKeys == nil {
+		return nil, fmt.Errorf("archive has no public keys")
+	}
 
 	archive := &ubuntuArchive{
 		options: *options,
@@ -197,14 +198,7 @@ func (index *ubuntuIndex) verifyRelease(signedData []byte) ([]byte, error) {
 	if block == nil {
 		return nil, fmt.Errorf("cannot decode InRelease clear-sign block")
 	}
-	err := pgperrors.ErrUnknownIssuer
-	for _, pubkey := range index.archive.options.PublicKeys {
-		_, err = block.VerifySignature(pubkey, nil)
-		if err == nil || !errors.Is(err, pgperrors.ErrUnknownIssuer) {
-			break
-		}
-	}
-	if err != nil {
+	if _, err := block.VerifySignature(index.archive.options.PublicKeys, nil); err != nil {
 		return nil, fmt.Errorf("signature verification failed: %w", err)
 	}
 	return block.Plaintext, nil

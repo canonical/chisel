@@ -41,7 +41,7 @@ type httpSuite struct {
 
 var _ = Suite(&httpSuite{})
 
-func parseKeyring(ascii string) openpgp.KeyRing {
+func parseKeyring(ascii string) openpgp.EntityList {
 	keyring, err := openpgp.ReadArmoredKeyRing(strings.NewReader(ascii))
 	if err != nil {
 		panic(err)
@@ -105,6 +105,7 @@ func (s *httpSuite) TestDoError(c *C) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main"},
 		CacheDir:   c.MkDir(),
+		PublicKeys: testKeyring,
 	}
 
 	_, err := archive.Open(&options)
@@ -166,7 +167,7 @@ var optionErrorTests = []optionErrorTest{{
 		Arch:       "amd64",
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "other"},
-		PublicKeys: []openpgp.KeyRing{testKeyring},
+		PublicKeys: testKeyring,
 	},
 	error: `archive has no component "other"`,
 }, {
@@ -175,7 +176,7 @@ var optionErrorTests = []optionErrorTest{{
 		Version:    "22.04",
 		Arch:       "amd64",
 		Suites:     []string{"jammy"},
-		PublicKeys: []openpgp.KeyRing{testKeyring},
+		PublicKeys: testKeyring,
 	},
 	error: "archive options missing components",
 }, {
@@ -184,7 +185,7 @@ var optionErrorTests = []optionErrorTest{{
 		Version:    "22.04",
 		Arch:       "amd64",
 		Components: []string{"main", "other"},
-		PublicKeys: []openpgp.KeyRing{testKeyring},
+		PublicKeys: testKeyring,
 	},
 	error: `archive options missing suites`,
 }, {
@@ -194,7 +195,7 @@ var optionErrorTests = []optionErrorTest{{
 		Arch:       "foo",
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "other"},
-		PublicKeys: []openpgp.KeyRing{testKeyring},
+		PublicKeys: testKeyring,
 	},
 	error: `invalid package architecture: foo`,
 }}
@@ -220,7 +221,7 @@ func (s *httpSuite) TestFetchPackage(c *C) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
-		PublicKeys: []openpgp.KeyRing{testKeyring},
+		PublicKeys: testKeyring,
 	}
 
 	archive, err := archive.Open(&options)
@@ -250,7 +251,7 @@ func (s *httpSuite) TestFetchPortsPackage(c *C) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
-		PublicKeys: []openpgp.KeyRing{testKeyring},
+		PublicKeys: testKeyring,
 	}
 
 	archive, err := archive.Open(&options)
@@ -288,7 +289,7 @@ func (s *httpSuite) TestFetchSecurityPackage(c *C) {
 		Arch:       "amd64",
 		Suites:     []string{"jammy", "jammy-security", "jammy-updates"},
 		Components: []string{"main", "universe"},
-		PublicKeys: []openpgp.KeyRing{testKeyring},
+		PublicKeys: testKeyring,
 	}
 
 	archive, err := archive.Open(&options)
@@ -319,7 +320,7 @@ func (s *httpSuite) TestArchiveLabels(c *C) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
-		PublicKeys: []openpgp.KeyRing{testKeyring},
+		PublicKeys: testKeyring,
 	}
 
 	_, err := archive.Open(&options)
@@ -334,7 +335,7 @@ func (s *httpSuite) TestArchiveLabels(c *C) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
-		PublicKeys: []openpgp.KeyRing{testKeyring},
+		PublicKeys: testKeyring,
 	}
 
 	_, err = archive.Open(&options)
@@ -349,7 +350,7 @@ func (s *httpSuite) TestArchiveLabels(c *C) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
-		PublicKeys: []openpgp.KeyRing{testKeyring},
+		PublicKeys: testKeyring,
 	}
 
 	_, err = archive.Open(&options)
@@ -364,11 +365,56 @@ func (s *httpSuite) TestArchiveLabels(c *C) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
-		PublicKeys: []openpgp.KeyRing{testKeyring},
+		PublicKeys: testKeyring,
 	}
 
 	_, err = archive.Open(&options)
 	c.Assert(err, ErrorMatches, `.*\bno Ubuntu section`)
+}
+
+func (s *httpSuite) TestArchiveSignature(c *C) {
+	var err error
+
+	entityA, err := openpgp.NewEntity("chisel-key-1", "", "", nil)
+	if err != nil {
+		panic(err)
+	}
+	entityB, err := openpgp.NewEntity("chisel-key-2", "", "", nil)
+	if err != nil {
+		panic(err)
+	}
+
+	o := archive.Options{
+		Label:      "ubuntu",
+		Version:    "22.04",
+		Arch:       "amd64",
+		Suites:     []string{"jammy"},
+		Components: []string{"main"},
+		CacheDir:   c.MkDir(),
+	}
+
+	s.keyring = openpgp.EntityList{entityA}
+	s.signingKeyID = entityA.PrimaryKey.KeyId
+
+	o.PublicKeys = openpgp.EntityList{entityA}
+	s.prepareArchiveAdjustRelease(o.Suites[0], o.Version, o.Arch, o.Components, nil)
+	_, err = archive.Open(&o)
+	c.Assert(err, IsNil)
+
+	o.PublicKeys = openpgp.EntityList{entityA, entityB}
+	s.prepareArchiveAdjustRelease(o.Suites[0], o.Version, o.Arch, o.Components, nil)
+	_, err = archive.Open(&o)
+	c.Assert(err, IsNil)
+
+	o.PublicKeys = openpgp.EntityList{entityB, entityA}
+	s.prepareArchiveAdjustRelease(o.Suites[0], o.Version, o.Arch, o.Components, nil)
+	_, err = archive.Open(&o)
+	c.Assert(err, IsNil)
+
+	o.PublicKeys = openpgp.EntityList{entityB}
+	s.prepareArchiveAdjustRelease(o.Suites[0], o.Version, o.Arch, o.Components, nil)
+	_, err = archive.Open(&o)
+	c.Assert(err, ErrorMatches, "cannot verify release: signature verification failed: openpgp: signature made by unknown entity")
 }
 
 func read(r io.Reader) string {
@@ -426,7 +472,7 @@ func (s *S) testOpenArchiveArch(c *C, arch string) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
-		PublicKeys: []openpgp.KeyRing{ubuntuArchiveKeyring},
+		PublicKeys: ubuntuArchiveKeyring,
 	}
 
 	archive, err := archive.Open(&options)

@@ -31,7 +31,7 @@ type Archive struct {
 	Version    string
 	Suites     []string
 	Components []string
-	PublicKeys []openpgp.KeyRing
+	PublicKeys openpgp.KeyRing
 }
 
 // Package holds a collection of slices that represent parts of themselves.
@@ -418,14 +418,14 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		return nil, fmt.Errorf("%s: no archives defined", fileName)
 	}
 
-	pubkeysByName := make(map[string]openpgp.KeyRing, 0)
+	pubKeysByName := make(map[string]openpgp.EntityList, 0)
 
-	for pubkeyName, pubkeyArmored := range yamlVar.PublicKeys {
-		pubkey, err := openpgp.ReadArmoredKeyRing(strings.NewReader(pubkeyArmored))
+	for pubKeysName, pubKeyArmored := range yamlVar.PublicKeys {
+		pubKeys, err := openpgp.ReadArmoredKeyRing(strings.NewReader(pubKeyArmored))
 		if err != nil {
-			return nil, fmt.Errorf("%s: cannot parse public key %q: %w", fileName, pubkeyName, err)
+			return nil, fmt.Errorf("%s: cannot parse public key %q: %w", fileName, pubKeysName, err)
 		}
-		pubkeysByName[pubkeyName] = pubkey
+		pubKeysByName[pubKeysName] = pubKeys
 	}
 
 	for archiveName, details := range yamlVar.Archives {
@@ -442,13 +442,17 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		if len(details.Components) == 0 {
 			return nil, fmt.Errorf("%s: archive %q missing components field", fileName, archiveName)
 		}
-		var archivePubkeys []openpgp.KeyRing
-		for _, pubkeyName := range details.PublicKeys {
-			pubkey := pubkeysByName[pubkeyName]
-			if pubkey == nil {
-				return nil, fmt.Errorf("%s: archive %q references unknown public key %q", fileName, archiveName, pubkeyName)
+		var archivePubKeysTmp openpgp.EntityList
+		for _, pubKeysName := range details.PublicKeys {
+			pubKeys := pubKeysByName[pubKeysName]
+			if pubKeys == nil {
+				return nil, fmt.Errorf("%s: archive %q references unknown public key %q", fileName, archiveName, pubKeysName)
 			}
-			archivePubkeys = append(archivePubkeys, pubkey)
+			archivePubKeysTmp = append(archivePubKeysTmp, pubKeys...)
+		}
+		var archivePubKeys openpgp.KeyRing
+		if archivePubKeysTmp != nil {
+			archivePubKeys = archivePubKeysTmp
 		}
 		if len(yamlVar.Archives) == 1 {
 			details.Default = true
@@ -463,7 +467,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 			Version:    details.Version,
 			Suites:     details.Suites,
 			Components: details.Components,
-			PublicKeys: archivePubkeys,
+			PublicKeys: archivePubKeys,
 		}
 	}
 
