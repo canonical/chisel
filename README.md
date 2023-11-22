@@ -1,3 +1,5 @@
+[![chisel](https://snapcraft.io/chisel/badge.svg)](https://snapcraft.io/chisel)
+[![Snap](https://github.com/canonical/chisel/actions/workflows/snap.yml/badge.svg?event=release)](https://github.com/canonical/chisel/actions/workflows/snap.yml)
 [![Build](https://github.com/canonical/chisel/actions/workflows/build.yml/badge.svg)](https://github.com/canonical/chisel/actions/workflows/build.yml)
 [![Tests](https://github.com/canonical/chisel/actions/workflows/tests.yaml/badge.svg)](https://github.com/canonical/chisel/actions/workflows/tests.yaml)
 
