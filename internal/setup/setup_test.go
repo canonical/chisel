@@ -900,30 +900,33 @@ func (s *S) TestPackageMarshalYAML(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(release, NotNil)
 	c.Assert(release.Path, Equals, dir)
-	release.Path = ""
-
-	// for each package, modify the sample release with marshalled yaml
-	for _, pkg := range release.Packages {
-		data, err := yaml.Marshal(pkg)
-		c.Assert(err, IsNil)
-		sampleRelease[pkg.Path] = string(data)
-	}
 
 	// write and parse the changed release
 	newDir := c.MkDir()
-	for path, data := range sampleRelease {
-		fpath := filepath.Join(newDir, path)
-		err := os.MkdirAll(filepath.Dir(fpath), 0755)
+	for _, pkg := range release.Packages {
+		data, err := yaml.Marshal(pkg)
 		c.Assert(err, IsNil)
-		err = os.WriteFile(fpath, testutil.Reindent(data), 0644)
+		fpath := filepath.Join(newDir, pkg.Path)
+		err = os.MkdirAll(filepath.Dir(fpath), 0755)
+		c.Assert(err, IsNil)
+		err = os.WriteFile(fpath, testutil.Reindent(string(data)), 0644)
 		c.Assert(err, IsNil)
 	}
+	err = os.WriteFile(
+		filepath.Join(newDir, "chisel.yaml"),
+		testutil.Reindent(sampleRelease["chisel.yaml"]),
+		0644,
+	)
+	c.Assert(err, IsNil)
+
 	newRelease, err := setup.ReadRelease(newDir)
 	c.Assert(err, IsNil)
 	c.Assert(newRelease, NotNil)
 	c.Assert(newRelease.Path, Equals, newDir)
-	newRelease.Path = ""
 
-	// check that both parsed releases (old and new) are equal
+	// check that both parsed releases (old and new) are equal.
+	// release paths are irrelevant for this comparison.
+	release.Path = ""
+	newRelease.Path = ""
 	c.Assert(newRelease, DeepEquals, release)
 }

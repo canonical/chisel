@@ -18,7 +18,8 @@ The info command shows detailed information about package slices.
 It accepts a whitespace-separated list of strings. The list can be
 composed of package names, slice names, or a combination of both. The
 default output format is YAML. When multiple arguments are provided,
-the output is a list of YAML documents, separated by three dashes ("---").
+the output is a list of YAML documents, separated by a line
+consisting of three dashes ("---").
 
 Slice definitions are shown verbatim according to their definition in
 the Chisel Releases. For example, globs are not expanded.
@@ -74,8 +75,8 @@ func (cmd *infoCmd) Execute(args []string) error {
 }
 
 // selectPackageSlices takes in a release and a list of query strings
-// of package names and/or slice names, and returns a list of packages
-// containing the found slices.  It also returns a list of query
+// of package names and/or slice names, and returns a list of Packages
+// containing the found slices. It also returns a list of query
 // strings that were not found.
 func selectPackageSlices(release *setup.Release, queries []string) (packages []*setup.Package, notFound []string) {
 	var pkgOrder []string
@@ -83,13 +84,12 @@ func selectPackageSlices(release *setup.Release, queries []string) (packages []*
 	allPkgSlices := make(map[string]bool)
 
 	sliceExists := func(key setup.SliceKey) bool {
-		if _, ok := release.Packages[key.Package]; !ok {
+		pkg, ok := release.Packages[key.Package]
+		if !ok {
 			return false
 		}
-		if _, ok := release.Packages[key.Package].Slices[key.Slice]; !ok {
-			return false
-		}
-		return true
+		_, ok = pkg.Slices[key.Slice]
+		return ok
 	}
 	for _, query := range queries {
 		var pkg, slice string

@@ -243,10 +243,6 @@ func (s *ChiselSuite) TestInfoCommand(c *C) {
 	for _, test := range infoTests {
 		c.Logf("Summary: %s", test.summary)
 
-		if _, ok := test.input["chisel.yaml"]; !ok {
-			test.input["chisel.yaml"] = string(defaultChiselYaml)
-		}
-
 		dir := c.MkDir()
 		for path, data := range test.input {
 			fpath := filepath.Join(dir, path)

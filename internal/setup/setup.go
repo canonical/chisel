@@ -673,7 +673,7 @@ func pathInfoToYAML(pi *PathInfo) (*yamlPath, error) {
 		path.Symlink = pi.Info
 	case GlobPath:
 	default:
-		return nil, fmt.Errorf("unrecognised PathInfo type: %s", pi.Kind)
+		return nil, fmt.Errorf("internal error: unrecognised PathInfo type: %s", pi.Kind)
 	}
 	return path, nil
 }
