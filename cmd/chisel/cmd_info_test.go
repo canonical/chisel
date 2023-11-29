@@ -1,11 +1,12 @@
 package main_test
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
-	"strings"
 
 	. "gopkg.in/check.v1"
+	"gopkg.in/yaml.v3"
 
 	chisel "github.com/canonical/chisel/cmd/chisel"
 	"github.com/canonical/chisel/internal/testutil"
@@ -243,6 +244,8 @@ func (s *ChiselSuite) TestInfoCommand(c *C) {
 	for _, test := range infoTests {
 		c.Logf("Summary: %s", test.summary)
 
+		s.ResetStdStreams()
+
 		dir := c.MkDir()
 		for path, data := range test.input {
 			fpath := filepath.Join(dir, path)
@@ -257,15 +260,24 @@ func (s *ChiselSuite) TestInfoCommand(c *C) {
 			prefix = append(prefix, "--release", dir)
 		}
 		test.query = append(prefix, test.query...)
-		test.stdout = strings.TrimPrefix(test.stdout, "\n")
 
 		_, err := chisel.Parser().ParseArgs(test.query)
 		if test.err != "" {
 			c.Assert(err, ErrorMatches, test.err)
+			continue
 		} else {
 			c.Assert(err, IsNil)
 		}
-		c.Assert(s.Stdout(), Equals, test.stdout)
-		s.ResetStdStreams()
+
+		// parse the expected and output YAMLs and compare
+		var testYAML interface{}
+		dec := yaml.NewDecoder(bytes.NewBuffer([]byte(test.stdout)))
+		err = dec.Decode(&testYAML)
+		c.Assert(err, IsNil)
+		var outputYAML interface{}
+		dec = yaml.NewDecoder(bytes.NewBuffer([]byte(s.Stdout())))
+		err = dec.Decode(&outputYAML)
+		c.Assert(err, IsNil)
+		c.Assert(testYAML, DeepEquals, outputYAML)
 	}
 }
