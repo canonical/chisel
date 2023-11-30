@@ -1,43 +1,13 @@
 package setup_test
 
 import (
-	_ "embed"
 	"os"
 	"path/filepath"
-	"strings"
 
-	"github.com/ProtonMail/go-crypto/openpgp"
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/testutil"
-)
-
-func parseKeyring(ascii string) openpgp.KeyRing {
-	keyring, err := openpgp.ReadArmoredKeyRing(strings.NewReader(ascii))
-	if err != nil {
-		panic(err)
-	}
-	return keyring
-}
-
-func indentLines(text string, indent string) string {
-	var result strings.Builder
-	for _, line := range strings.Split(text, "\n") {
-		result.WriteString(indent)
-		result.WriteString(line)
-		result.WriteByte('\n')
-	}
-	return result.String()
-}
-
-var (
-	//go:embed testdata/ubuntu-archive-keyring.asc
-	testKeyringUbuntuArchiveASCII string
-	testKeyringUbuntuArchive      = parseKeyring(testKeyringUbuntuArchiveASCII)
-	//go:embed testdata/ubuntu-master-keyring.asc
-	testKeyringUbuntuMasterASCII string
-	testKeyringUbuntuMaster      = parseKeyring(testKeyringUbuntuMasterASCII)
 )
 
 type setupTest struct {
@@ -821,110 +791,6 @@ var setupTests = []setupTest{{
 			},
 		},
 	},
-}, {
-	summary: "Archives with keyrings",
-	input: map[string]string{
-		"chisel.yaml": `
-			format: chisel-v1
-			archives:
-				foo:
-					version: 22.04
-					components: [main, universe]
-					suites: [jammy]
-					public-keys: [ubuntu-archive]
-					default: true
-				bar:
-					version: 22.04
-					components: [universe]
-					suites: [jammy-updates]
-					public-keys: [ubuntu-archive, ubuntu-master]
-			public-keys:
-				ubuntu-archive: |` + "\n" + indentLines(testKeyringUbuntuArchiveASCII, "\t\t\t\t\t") + `
-				ubuntu-master: |` + "\n" + indentLines(testKeyringUbuntuMasterASCII, "\t\t\t\t\t") + `
-		`,
-		"slices/mydir/mypkg.yaml": `
-			package: mypkg
-		`,
-	},
-	release: &setup.Release{
-		DefaultArchive: "foo",
-
-		Archives: map[string]*setup.Archive{
-			"foo": {
-				Name:       "foo",
-				Version:    "22.04",
-				Suites:     []string{"jammy"},
-				Components: []string{"main", "universe"},
-				Keyrings:   []openpgp.KeyRing{testKeyringUbuntuArchive},
-			},
-			"bar": {
-				Name:       "bar",
-				Version:    "22.04",
-				Suites:     []string{"jammy-updates"},
-				Components: []string{"universe"},
-				Keyrings:   []openpgp.KeyRing{testKeyringUbuntuArchive, testKeyringUbuntuMaster},
-			},
-		},
-		Packages: map[string]*setup.Package{
-			"mypkg": {
-				Archive: "foo",
-				Name:    "mypkg",
-				Path:    "slices/mydir/mypkg.yaml",
-				Slices:  map[string]*setup.Slice{},
-			},
-		},
-	},
-}, {
-	summary: "Unknown keyring",
-	input: map[string]string{
-		"chisel.yaml": `
-			format: chisel-v1
-			archives:
-				foo:
-					version: 22.04
-					components: [main, universe]
-					suites: [jammy]
-					public-keys: [ubuntu-archive]
-					default: true
-				bar:
-					version: 22.04
-					components: [universe]
-					suites: [jammy-updates]
-					public-keys: [ubuntu-master]
-			public-keys:
-				ubuntu-master: |` + "\n" + indentLines(testKeyringUbuntuMasterASCII, "\t\t\t\t\t") + `
-		`,
-		"slices/mydir/mypkg.yaml": `
-			package: mypkg
-		`,
-	},
-	relerror: `chisel.yaml: archive "foo" references unknown keyring "ubuntu-archive"`,
-}, {
-	summary: "Invalid keyring",
-	input: map[string]string{
-		"chisel.yaml": `
-			format: chisel-v1
-			archives:
-				foo:
-					version: 22.04
-					components: [main, universe]
-					suites: [jammy]
-					public-keys: [ubuntu-master]
-					default: true
-			public-keys:
-				ubuntu-master: |
-					G. B. Shaw's Law:
-						Those who can -- do.
-						Those who can't -- teach.
-					
-					Martin's Extension:
-						Those who cannot teach -- administrate.
-		`,
-		"slices/mydir/mypkg.yaml": `
-			package: mypkg
-		`,
-	},
-	relerror: `chisel.yaml: cannot parse keyring "ubuntu-master": openpgp: invalid argument: no armored data found`,
 }}
 
 const defaultChiselYaml = `

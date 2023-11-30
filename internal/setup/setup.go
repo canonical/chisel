@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ProtonMail/go-crypto/openpgp"
 	"gopkg.in/yaml.v3"
 
 	"github.com/canonical/chisel/internal/deb"
@@ -31,7 +30,6 @@ type Archive struct {
 	Version    string
 	Suites     []string
 	Components []string
-	Keyrings   []openpgp.KeyRing
 }
 
 // Package holds a collection of slices that represent parts of themselves.
@@ -320,7 +318,6 @@ func readSlices(release *Release, baseDir, dirName string) error {
 type yamlRelease struct {
 	Format   string                 `yaml:"format"`
 	Archives map[string]yamlArchive `yaml:"archives`
-	Keyrings map[string]string      `yaml:"public-keys"`
 }
 
 const yamlReleaseFormat = "chisel-v1"
@@ -330,7 +327,6 @@ type yamlArchive struct {
 	Suites     []string `yaml:"suites"`
 	Components []string `yaml:"components"`
 	Default    bool     `yaml:"default"`
-	Keyrings   []string `yaml:"public-keys"`
 }
 
 type yamlPackage struct {
@@ -418,16 +414,6 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		return nil, fmt.Errorf("%s: no archives defined", fileName)
 	}
 
-	keyringsByName := make(map[string]openpgp.KeyRing, 0)
-
-	for keyringName, keyringArmored := range yamlVar.Keyrings {
-		keyring, err := openpgp.ReadArmoredKeyRing(strings.NewReader(keyringArmored))
-		if err != nil {
-			return nil, fmt.Errorf("%s: cannot parse keyring %q: %w", fileName, keyringName, err)
-		}
-		keyringsByName[keyringName] = keyring
-	}
-
 	for archiveName, details := range yamlVar.Archives {
 		if details.Version == "" {
 			return nil, fmt.Errorf("%s: archive %q missing version field", fileName, archiveName)
@@ -442,14 +428,6 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		if len(details.Components) == 0 {
 			return nil, fmt.Errorf("%s: archive %q missing components field", fileName, archiveName)
 		}
-		var archiveKeyrings []openpgp.KeyRing
-		for _, keyringName := range details.Keyrings {
-			keyring := keyringsByName[keyringName]
-			if keyring == nil {
-				return nil, fmt.Errorf("%s: archive %q references unknown keyring %q", fileName, archiveName, keyringName)
-			}
-			archiveKeyrings = append(archiveKeyrings, keyring)
-		}
 		if len(yamlVar.Archives) == 1 {
 			details.Default = true
 		} else if details.Default && release.DefaultArchive != "" {
@@ -463,7 +441,6 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 			Version:    details.Version,
 			Suites:     details.Suites,
 			Components: details.Components,
-			Keyrings:   archiveKeyrings,
 		}
 	}
 

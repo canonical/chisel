@@ -3,7 +3,6 @@ module github.com/canonical/chisel
 go 1.20
 
 require (
-	github.com/ProtonMail/go-crypto v0.0.0-20230923063757-afb1ddc0824c
 	github.com/blakesmith/ar v0.0.0-20190502131153-809d4375e1fb
 	github.com/jessevdk/go-flags v1.5.0
 	github.com/juju/fslock v0.0.0-20160525022230-4d5c94c67b4b
@@ -16,9 +15,7 @@ require (
 )
 
 require (
-	github.com/cloudflare/circl v1.3.3 // indirect
 	github.com/kr/pretty v0.2.1 // indirect
 	github.com/kr/text v0.1.0 // indirect
-	golang.org/x/crypto v0.7.0 // indirect
 	golang.org/x/sys v0.12.0 // indirect
 )
