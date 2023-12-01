@@ -14,7 +14,7 @@ type FileReport struct {
 	Size    uint
 	Mutable bool
 	Slices  []string
-	Link    bool
+	Link    string
 }
 
 // Report holds the information about files created when slicing packages.
@@ -43,7 +43,7 @@ func (r *Report) AddFile(slice *setup.Slice, file fsutil.FileInfo) error {
 			Size:    file.Size,
 			Mutable: false,
 			Slices:  []string{slice.Package + "_" + slice.Name},
-			Link:    false,
+			Link:    "TODO",
 		}
 	}
 	return nil

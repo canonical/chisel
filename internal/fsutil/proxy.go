@@ -13,6 +13,7 @@ type FileInfo struct {
 	Mode fs.FileMode
 	Hash string
 	Size uint
+	Link string
 }
 
 // FileCreatorProxy implements the FileCreator interface while logging data about the files created.
@@ -32,11 +33,13 @@ func (fcp *FileCreatorProxy) Create(options *CreateOptions) error {
 	options.Data = &rp
 	fileCreator := DefaultFileCreator{}
 	err := fileCreator.Create(options)
+
 	fr := FileInfo{
 		Path: options.Path,
 		Mode: options.Mode,
 		Hash: hex.EncodeToString(rp.h.Sum(nil)),
 		Size: rp.size,
+		Link: options.Link,
 	}
 	fcp.Files[options.Path] = fr
 	return err
