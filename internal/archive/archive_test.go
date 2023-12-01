@@ -1,6 +1,7 @@
 package archive_test
 
 import (
+	"github.com/canonical/chisel/internal/fsutil"
 	. "gopkg.in/check.v1"
 
 	"debug/elf"
@@ -391,7 +392,7 @@ func (s *S) testOpenArchiveArch(c *C, arch string) {
 	pkg, err := archive.Fetch("hostname")
 	c.Assert(err, IsNil)
 
-	err = deb.Extract(pkg, &deb.ExtractOptions{
+	err = deb.Extract(fsutil.DefaultFileCreator{}, pkg, &deb.ExtractOptions{
 		Package:   "hostname",
 		TargetDir: extractDir,
 		Extract: map[string][]deb.ExtractInfo{

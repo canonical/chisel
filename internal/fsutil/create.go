@@ -18,8 +18,16 @@ type CreateOptions struct {
 	MakeParents bool
 }
 
+type FileCreator interface {
+	Create(o *CreateOptions) error
+}
+
+type DefaultFileCreator struct{}
+
+var _ FileCreator = (*DefaultFileCreator)(nil)
+
 // Creates a filesystem entry according to the provided options.
-func Create(o *CreateOptions) error {
+func (_ DefaultFileCreator) Create(o *CreateOptions) error {
 	var err error
 	if o.MakeParents {
 		if err := os.MkdirAll(filepath.Dir(o.Path), 0755); err != nil {

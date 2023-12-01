@@ -28,6 +28,8 @@ func Run(options *RunOptions) error {
 	archives := make(map[string]archive.Archive)
 	extract := make(map[string]map[string][]deb.ExtractInfo)
 	pathInfos := make(map[string]setup.PathInfo)
+	report := NewReport(options.TargetDir)
+
 	knownPaths := make(map[string]bool)
 
 	knownPaths["/"] = true
@@ -153,12 +155,19 @@ func Run(options *RunOptions) error {
 		if reader == nil {
 			continue
 		}
-		err := deb.Extract(reader, &deb.ExtractOptions{
+		fileCreatorProxy := fsutil.NewFileCreatorProxy()
+		err := deb.Extract(fileCreatorProxy, reader, &deb.ExtractOptions{
 			Package:   slice.Package,
 			Extract:   extract[slice.Package],
 			TargetDir: targetDir,
 			Globbed:   globbedPaths,
 		})
+		for _, file := range fileCreatorProxy.Files {
+			err := report.AddFile(slice, file)
+			if err != nil {
+				return err
+			}
+		}
 		reader.Close()
 		packages[slice.Package] = nil
 		if err != nil {
@@ -211,7 +220,8 @@ func Run(options *RunOptions) error {
 				return fmt.Errorf("internal error: cannot extract path of kind %q", pathInfo.Kind)
 			}
 
-			err := fsutil.Create(&fsutil.CreateOptions{
+			fileCreatorProxy := fsutil.NewFileCreatorProxy()
+			err := fileCreatorProxy.Create(&fsutil.CreateOptions{
 				Path:        targetPath,
 				Mode:        tarHeader.FileInfo().Mode(),
 				Data:        fileContent,
@@ -220,6 +230,12 @@ func Run(options *RunOptions) error {
 			})
 			if err != nil {
 				return err
+			}
+			for _, file := range fileCreatorProxy.Files {
+				err := report.AddFile(slice, file)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}

@@ -2,6 +2,7 @@ package deb_test
 
 import (
 	"bytes"
+	"github.com/canonical/chisel/internal/fsutil"
 
 	. "gopkg.in/check.v1"
 
@@ -295,7 +296,7 @@ func (s *S) TestExtract(c *C) {
 			options.Globbed = make(map[string][]string)
 		}
 
-		err := deb.Extract(bytes.NewBuffer(test.pkgdata), &options)
+		err := deb.Extract(fsutil.DefaultFileCreator{}, bytes.NewBuffer(test.pkgdata), &options)
 		if test.error != "" {
 			c.Assert(err, ErrorMatches, test.error)
 			continue

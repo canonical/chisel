@@ -77,7 +77,7 @@ func (s *S) TestCreate(c *C) {
 		dir := c.MkDir()
 		options := test.options
 		options.Path = filepath.Join(dir, options.Path)
-		err := fsutil.Create(&options)
+		err := fsutil.DefaultFileCreator{}.Create(&options)
 		if test.error != "" {
 			c.Assert(err, ErrorMatches, test.error)
 			continue

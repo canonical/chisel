@@ -45,7 +45,7 @@ func checkExtractOptions(options *ExtractOptions) error {
 	return nil
 }
 
-func Extract(pkgReader io.Reader, options *ExtractOptions) (err error) {
+func Extract(fileCreator fsutil.FileCreator, pkgReader io.Reader, options *ExtractOptions) (err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("cannot extract from package %q: %w", options.Package, err)
@@ -99,10 +99,10 @@ func Extract(pkgReader io.Reader, options *ExtractOptions) (err error) {
 			dataReader = zstdReader
 		}
 	}
-	return extractData(dataReader, options)
+	return extractData(fileCreator, dataReader, options)
 }
 
-func extractData(dataReader io.Reader, options *ExtractOptions) error {
+func extractData(fileCreator fsutil.FileCreator, dataReader io.Reader, options *ExtractOptions) error {
 
 	oldUmask := syscall.Umask(0)
 	defer func() {
@@ -185,7 +185,7 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 				// Base directory for extracted content. Relevant mainly to preserve
 				// the metadata, since the extracted content itself will also create
 				// any missing directories unaccounted for in the options.
-				err := fsutil.Create(&fsutil.CreateOptions{
+				err := fileCreator.Create(&fsutil.CreateOptions{
 					Path:        filepath.Join(options.TargetDir, sourcePath),
 					Mode:        tarHeader.FileInfo().Mode(),
 					MakeParents: true,
@@ -226,7 +226,7 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 			if extractInfo.Mode != 0 {
 				tarHeader.Mode = int64(extractInfo.Mode)
 			}
-			err := fsutil.Create(&fsutil.CreateOptions{
+			err := fileCreator.Create(&fsutil.CreateOptions{
 				Path:        targetPath,
 				Mode:        tarHeader.FileInfo().Mode(),
 				Data:        pathReader,
