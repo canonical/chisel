@@ -4,10 +4,16 @@ import (
 	"os"
 	"path/filepath"
 
+	"golang.org/x/crypto/openpgp/packet"
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/testutil"
+)
+
+var (
+	testKey      = testutil.GetGPGKey("test-key-1")
+	extraTestKey = testutil.GetGPGKey("test-key-2")
 )
 
 type setupTest struct {
@@ -54,6 +60,11 @@ var setupTests = []setupTest{{
 					version: 22.04
 					components: [main, other]
 					suites: [jammy, jammy-security]
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.ArmoredPublicKey, "\t\t\t\t\t\t") + `
 		`,
 		"slices/mydir/mypkg.yaml": `
 			package: mypkg
@@ -68,6 +79,7 @@ var setupTests = []setupTest{{
 				Version:    "22.04",
 				Suites:     []string{"jammy", "jammy-security"},
 				Components: []string{"main", "other"},
+				PublicKeys: []*packet.PublicKey{testKey.PublicKey},
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -111,6 +123,7 @@ var setupTests = []setupTest{{
 				Version:    "22.04",
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
+				PublicKeys: []*packet.PublicKey{testKey.PublicKey},
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -172,6 +185,7 @@ var setupTests = []setupTest{{
 				Version:    "22.04",
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
+				PublicKeys: []*packet.PublicKey{testKey.PublicKey},
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -432,6 +446,7 @@ var setupTests = []setupTest{{
 				Version:    "22.04",
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
+				PublicKeys: []*packet.PublicKey{testKey.PublicKey},
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -646,6 +661,7 @@ var setupTests = []setupTest{{
 				Version:    "22.04",
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
+				PublicKeys: []*packet.PublicKey{testKey.PublicKey},
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -685,6 +701,7 @@ var setupTests = []setupTest{{
 				Version:    "22.04",
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
+				PublicKeys: []*packet.PublicKey{testKey.PublicKey},
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -725,6 +742,7 @@ var setupTests = []setupTest{{
 				Version:    "22.04",
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
+				PublicKeys: []*packet.PublicKey{testKey.PublicKey},
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -756,10 +774,16 @@ var setupTests = []setupTest{{
 					components: [main, universe]
 					suites: [jammy]
 					default: true
+					public-keys: [test-key]
 				bar:
 					version: 22.04
 					components: [universe]
 					suites: [jammy-updates]
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.ArmoredPublicKey, "\t\t\t\t\t\t") + `
 		`,
 		"slices/mydir/mypkg.yaml": `
 			package: mypkg
@@ -774,12 +798,14 @@ var setupTests = []setupTest{{
 				Version:    "22.04",
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
+				PublicKeys: []*packet.PublicKey{testKey.PublicKey},
 			},
 			"bar": {
 				Name:       "bar",
 				Version:    "22.04",
 				Suites:     []string{"jammy-updates"},
 				Components: []string{"universe"},
+				PublicKeys: []*packet.PublicKey{testKey.PublicKey},
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -791,14 +817,158 @@ var setupTests = []setupTest{{
 			},
 		},
 	},
+}, {
+	summary: "Archives with public keys",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: chisel-v1
+			archives:
+				foo:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					public-keys: [extra-key]
+					default: true
+				bar:
+					version: 22.04
+					components: [universe]
+					suites: [jammy-updates]
+					public-keys: [test-key, extra-key]
+			public-keys:
+				extra-key:
+					id: ` + extraTestKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(extraTestKey.ArmoredPublicKey, "\t\t\t\t\t\t") + `
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.ArmoredPublicKey, "\t\t\t\t\t\t") + `
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	release: &setup.Release{
+		DefaultArchive: "foo",
+
+		Archives: map[string]*setup.Archive{
+			"foo": {
+				Name:       "foo",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main", "universe"},
+				PublicKeys: []*packet.PublicKey{extraTestKey.PublicKey},
+			},
+			"bar": {
+				Name:       "bar",
+				Version:    "22.04",
+				Suites:     []string{"jammy-updates"},
+				Components: []string{"universe"},
+				PublicKeys: []*packet.PublicKey{testKey.PublicKey, extraTestKey.PublicKey},
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Archive: "foo",
+				Name:    "mypkg",
+				Path:    "slices/mydir/mypkg.yaml",
+				Slices:  map[string]*setup.Slice{},
+			},
+		},
+	},
+}, {
+	summary: "Archive without public keys",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: chisel-v1
+			archives:
+				foo:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					default: true
+		`,
+	},
+	relerror: `chisel.yaml: archive "foo" missing public-keys field`,
+}, {
+	summary: "Unknown public key",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: chisel-v1
+			archives:
+				foo:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					public-keys: [extra-key]
+					default: true
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	relerror: `chisel.yaml: unknown reference to public key "extra-key" in archive "foo"`,
+}, {
+	summary: "Invalid public key",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: chisel-v1
+			archives:
+				foo:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					public-keys: [extra-key]
+					default: true
+			public-keys:
+				extra-key:
+					id: foo
+					armor: |
+						G. B. Shaw's Law:
+							Those who can -- do.
+							Those who can't -- teach.
+
+						Martin's Extension:
+							Those who cannot teach -- administrate.
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	relerror: `chisel.yaml: invalid public key "extra-key": cannot decode armored data`,
+}, {
+	summary: "Mismatched public key ID",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: chisel-v1
+			archives:
+				foo:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					public-keys: [extra-key]
+					default: true
+			public-keys:
+				extra-key:
+					id: ` + extraTestKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.ArmoredPublicKey, "\t\t\t\t\t\t") + `
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	relerror: `chisel.yaml: invalid public key "extra-key": key-id does not match`,
 }}
 
-const defaultChiselYaml = `
+var defaultChiselYaml = `
 	format: chisel-v1
 	archives:
 		ubuntu:
 			version: 22.04
 			components: [main, universe]
+			public-keys: [test-key]
+	public-keys:
+		test-key:
+			id: ` + testKey.ID + `
+			armor: |` + "\n" + testutil.PrefixEachLine(testKey.ArmoredPublicKey, "\t\t\t\t\t\t") + `
 `
 
 func (s *S) TestParseRelease(c *C) {

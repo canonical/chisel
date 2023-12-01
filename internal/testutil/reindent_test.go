@@ -70,3 +70,34 @@ func (*S) testReindent(c *C, test reindentTest) {
 	}
 	c.Assert(string(reindented), Equals, test.result)
 }
+
+type prefixEachLineTest struct {
+	raw, prefix, result string
+}
+
+var prefixEachLineTests = []prefixEachLineTest{{
+	raw:    "a\n\tb\n  \t\tc\td\n\t ",
+	prefix: "foo",
+	result: "fooa\nfoo\tb\nfoo  \t\tc\td\nfoo\t ",
+}, {
+	raw:    "foo",
+	prefix: "pref",
+	result: "preffoo",
+}, {
+	raw:    "",
+	prefix: "",
+	result: "",
+}, {
+	raw:    "\n",
+	prefix: "\t",
+	result: "\t\n\t",
+}}
+
+func (s *S) TestPrefixEachLine(c *C) {
+	for _, test := range prefixEachLineTests {
+		c.Logf("Test: %#v", test)
+
+		indented := testutil.PrefixEachLine(test.raw, test.prefix)
+		c.Assert(string(indented), Equals, test.result)
+	}
+}
