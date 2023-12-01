@@ -47,7 +47,7 @@ func (s *S) TestProxy(c *C) {
 		syscall.Umask(oldUmask)
 	}()
 
-	for _, test := range createTests {
+	for _, test := range createTests() {
 		c.Logf("Options: %v", test.options)
 		dir := c.MkDir()
 		options := test.options
