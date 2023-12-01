@@ -43,7 +43,7 @@ func (r *Report) AddFile(slice *setup.Slice, file fsutil.FileInfo) error {
 			Size:    file.Size,
 			Mutable: false,
 			Slices:  []string{slice.Package + "_" + slice.Name},
-			Link:    "TODO",
+			Link:    file.Link,
 		}
 	}
 	return nil
