@@ -49,7 +49,7 @@ func (cmd *cmdFind) Execute(args []string) error {
 		return fmt.Errorf("no search term specified")
 	}
 
-	release, releaseLabel, err := getRelease(cmd.Release)
+	release, releaseLabel, err := setup.GetRelease(cmd.Release)
 	if err != nil {
 		return err
 	}
@@ -91,9 +91,6 @@ func fuzzyMatchSlice(slice *setup.Slice, query string) bool {
 // findSlices goes through the release searching for any slices that match
 // the query string. It returns a list of slices that match the query.
 func findSlices(release *setup.Release, query string) (slices []*setup.Slice, err error) {
-	if release == nil {
-		return nil, fmt.Errorf("cannot find slice: invalid release")
-	}
 	for _, pkg := range release.Packages {
 		for _, slice := range pkg.Slices {
 			if slice != nil && fuzzyMatchSlice(slice, query) {
