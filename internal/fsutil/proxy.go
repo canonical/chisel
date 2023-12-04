@@ -16,7 +16,7 @@ type FileInfo struct {
 	Link string
 }
 
-// FileCreatorProxy implements the FileCreator interface while logging data about the files created.
+// FileCreatorProxy implements the FileCreator interface while logging data about the files created (see [FileInfo]).
 type FileCreatorProxy struct {
 	// map indexed by path.
 	Files map[string]FileInfo

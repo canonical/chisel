@@ -5,6 +5,7 @@ import (
 	"github.com/canonical/chisel/internal/fsutil"
 	"github.com/canonical/chisel/internal/setup"
 	"io/fs"
+	"sync"
 )
 
 type FileReport struct {
@@ -22,13 +23,17 @@ type Report struct {
 	Root string
 	// map indexed by path.
 	Files map[string]FileReport
+	mutex *sync.Mutex
 }
 
 func NewReport(root string) *Report {
-	return &Report{Files: make(map[string]FileReport), Root: root}
+	return &Report{Files: make(map[string]FileReport), Root: root, mutex: &sync.Mutex{}}
 }
 
 func (r *Report) AddFile(slice *setup.Slice, file fsutil.FileInfo) error {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
 	if fr, ok := r.Files[file.Path]; ok {
 		if !fr.Mode.IsDir() {
 			var existingSlice *setup.Slice
@@ -37,7 +42,7 @@ func (r *Report) AddFile(slice *setup.Slice, file fsutil.FileInfo) error {
 				break
 			}
 			return fmt.Errorf("slices %s and %s attempted to create the same file: %s",
-				slice.Package+"_"+slice.Name, existingSlice, fr.Path)
+				slice, existingSlice, fr.Path)
 		}
 		fr.Slices[slice] = true
 		r.Files[file.Path] = fr
