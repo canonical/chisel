@@ -13,7 +13,7 @@ type FileReport struct {
 	Hash    string
 	Size    uint
 	Mutable bool
-	Slices  []string
+	Slices  map[*setup.Slice]bool
 	Link    string
 }
 
@@ -31,10 +31,16 @@ func NewReport(root string) *Report {
 func (r *Report) AddFile(slice *setup.Slice, file fsutil.FileInfo) error {
 	if fr, ok := r.Files[file.Path]; ok {
 		if !fr.Mode.IsDir() {
+			var existingSlice *setup.Slice
+			for s := range fr.Slices {
+				existingSlice = s
+				break
+			}
 			return fmt.Errorf("slices %s and %s attempted to create the same file: %s",
-				slice.Package+"_"+slice.Name, fr.Slices[0], fr.Path)
+				slice.Package+"_"+slice.Name, existingSlice, fr.Path)
 		}
-		fr.Slices = append(fr.Slices, slice.Package+"_"+slice.Name)
+		fr.Slices[slice] = true
+		r.Files[file.Path] = fr
 	} else {
 		r.Files[file.Path] = FileReport{
 			Path:    file.Path,
@@ -42,7 +48,7 @@ func (r *Report) AddFile(slice *setup.Slice, file fsutil.FileInfo) error {
 			Hash:    file.Hash,
 			Size:    file.Size,
 			Mutable: false,
-			Slices:  []string{slice.Package + "_" + slice.Name},
+			Slices:  map[*setup.Slice]bool{slice: true},
 			Link:    file.Link,
 		}
 	}
