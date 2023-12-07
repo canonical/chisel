@@ -61,10 +61,14 @@ func (s *S) TestProxy(c *C) {
 			c.Assert(err, IsNil)
 		}
 		c.Assert(testutil.TreeDump(dir), DeepEquals, test.result)
-		// TODO when we land support for creating parent directories compare the whole output
-		// c.Assert(TreeDumpProxy(proxy, dir), DeepEquals, test.result)
-		for path, info := range TreeDumpProxy(proxy, dir) {
-			c.Assert(info, Equals, test.result[path])
+		if test.options.MakeParents {
+			// The proxy does not record the parent directories created
+			// implicitly.
+			for path, info := range TreeDumpProxy(proxy, dir) {
+				c.Assert(info, Equals, test.result[path])
+			}
+		} else {
+			c.Assert(TreeDumpProxy(proxy, dir), DeepEquals, test.result)
 		}
 	}
 }
