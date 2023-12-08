@@ -46,7 +46,7 @@ func (cmd *infoCmd) Execute(args []string) error {
 		return ErrExtraArgs
 	}
 
-	release, _, err := getRelease(cmd.Release)
+	release, _, err := readOrFetchRelease(cmd.Release)
 	if err != nil {
 		return err
 	}

@@ -41,9 +41,12 @@ func readReleaseInfo() (label, version string, err error) {
 	return "", "", fmt.Errorf("cannot infer release via /etc/lsb-release, see the --release option")
 }
 
-// getRelease returns the release and release label (e.g. ubuntu-22.04 or
-// /path/to/release/dir/ if a directory was passed as input).
-func getRelease(releaseStr string) (release *setup.Release, releaseLabel string, err error) {
+// readOrFetchRelease takes a release branch name or a release directory path.
+// It fetches or reads the chisel-release depending on the nature of input and
+// returns the release and release label.
+// If the input is empty, it tries to read the release label from the host
+// system and fetch the chisel-release accordingly.
+func readOrFetchRelease(releaseStr string) (release *setup.Release, releaseLabel string, err error) {
 	if strings.Contains(releaseStr, "/") {
 		release, err = setup.ReadRelease(releaseStr)
 		releaseLabel = releaseStr
