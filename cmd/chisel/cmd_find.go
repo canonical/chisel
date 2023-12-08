@@ -49,7 +49,7 @@ func (cmd *cmdFind) Execute(args []string) error {
 		return fmt.Errorf("no search term specified")
 	}
 
-	release, releaseLabel, err := setup.GetRelease(cmd.Release)
+	release, releaseLabel, err := readOrFetchRelease(cmd.Release)
 	if err != nil {
 		return err
 	}
