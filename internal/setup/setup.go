@@ -323,7 +323,7 @@ type yamlRelease struct {
 	PublicKeys map[string]yamlPublicKey `yaml:"public-keys"`
 }
 
-const yamlReleaseFormat = "chisel-v1"
+const yamlReleaseFormat = "chisel-v2"
 
 type yamlArchive struct {
 	Version    string   `yaml:"version"`
