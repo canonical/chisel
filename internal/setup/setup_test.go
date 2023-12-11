@@ -33,12 +33,12 @@ var setupTests = []setupTest{{
 			format: foobar
 		`,
 	},
-	relerror: `chisel.yaml: expected format "chisel-v1", got "foobar"`,
+	relerror: `chisel.yaml: expected format "chisel-v2", got "foobar"`,
 }, {
 	summary: "Missing archives",
 	input: map[string]string{
 		"chisel.yaml": `
-			format: chisel-v1
+			format: chisel-v2
 		`,
 	},
 	relerror: `chisel.yaml: no archives defined`,
@@ -54,7 +54,7 @@ var setupTests = []setupTest{{
 	summary: "Archive with multiple suites",
 	input: map[string]string{
 		"chisel.yaml": `
-			format: chisel-v1
+			format: chisel-v2
 			archives:
 				ubuntu:
 					version: 22.04
@@ -767,7 +767,7 @@ var setupTests = []setupTest{{
 	summary: "Multiple archives",
 	input: map[string]string{
 		"chisel.yaml": `
-			format: chisel-v1
+			format: chisel-v2
 			archives:
 				foo:
 					version: 22.04
@@ -879,7 +879,7 @@ var setupTests = []setupTest{{
 	summary: "Archives with public keys",
 	input: map[string]string{
 		"chisel.yaml": `
-			format: chisel-v1
+			format: chisel-v2
 			archives:
 				foo:
 					version: 22.04
@@ -936,7 +936,7 @@ var setupTests = []setupTest{{
 	summary: "Archive without public keys",
 	input: map[string]string{
 		"chisel.yaml": `
-			format: chisel-v1
+			format: chisel-v2
 			archives:
 				foo:
 					version: 22.04
@@ -950,7 +950,7 @@ var setupTests = []setupTest{{
 	summary: "Unknown public key",
 	input: map[string]string{
 		"chisel.yaml": `
-			format: chisel-v1
+			format: chisel-v2
 			archives:
 				foo:
 					version: 22.04
@@ -968,7 +968,7 @@ var setupTests = []setupTest{{
 	summary: "Invalid public key",
 	input: map[string]string{
 		"chisel.yaml": `
-			format: chisel-v1
+			format: chisel-v2
 			archives:
 				foo:
 					version: 22.04
@@ -996,7 +996,7 @@ var setupTests = []setupTest{{
 	summary: "Mismatched public key ID",
 	input: map[string]string{
 		"chisel.yaml": `
-			format: chisel-v1
+			format: chisel-v2
 			archives:
 				foo:
 					version: 22.04
@@ -1017,7 +1017,7 @@ var setupTests = []setupTest{{
 }}
 
 var defaultChiselYaml = `
-	format: chisel-v1
+	format: chisel-v2
 	archives:
 		ubuntu:
 			version: 22.04

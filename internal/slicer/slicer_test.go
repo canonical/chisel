@@ -495,7 +495,7 @@ var slicerTests = []slicerTest{{
 	slices:  []setup.SliceKey{{"base-files", "myslice"}},
 	release: map[string]string{
 		"chisel.yaml": `
-			format: chisel-v1
+			format: chisel-v2
 			archives:
 				foo:
 					version: 22.04
@@ -528,7 +528,7 @@ var slicerTests = []slicerTest{{
 }}
 
 var defaultChiselYaml = `
-	format: chisel-v1
+	format: chisel-v2
 	archives:
 		ubuntu:
 			version: 22.04
