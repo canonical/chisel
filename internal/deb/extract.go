@@ -21,10 +21,11 @@ import (
 )
 
 type ExtractOptions struct {
-	Package   string
-	TargetDir string
-	Extract   map[string][]ExtractInfo
-	Globbed   map[string][]string
+	Package     string
+	TargetDir   string
+	Extract     map[string][]ExtractInfo
+	Globbed     map[string][]string
+	FileCreator fsutil.FileCreator
 }
 
 type ExtractInfo struct {
@@ -45,7 +46,7 @@ func checkExtractOptions(options *ExtractOptions) error {
 	return nil
 }
 
-func Extract(fileCreator fsutil.FileCreator, pkgReader io.Reader, options *ExtractOptions) (err error) {
+func Extract(pkgReader io.Reader, options *ExtractOptions) (err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("cannot extract from package %q: %w", options.Package, err)
@@ -99,10 +100,10 @@ func Extract(fileCreator fsutil.FileCreator, pkgReader io.Reader, options *Extra
 			dataReader = zstdReader
 		}
 	}
-	return extractData(fileCreator, dataReader, options)
+	return extractData(dataReader, options)
 }
 
-func extractData(fileCreator fsutil.FileCreator, dataReader io.Reader, options *ExtractOptions) error {
+func extractData(dataReader io.Reader, options *ExtractOptions) error {
 
 	oldUmask := syscall.Umask(0)
 	defer func() {
@@ -185,7 +186,7 @@ func extractData(fileCreator fsutil.FileCreator, dataReader io.Reader, options *
 				// Base directory for extracted content. Relevant mainly to preserve
 				// the metadata, since the extracted content itself will also create
 				// any missing directories unaccounted for in the options.
-				err := fileCreator.Create(&fsutil.CreateOptions{
+				err := options.FileCreator.Create(&fsutil.CreateOptions{
 					Path:        filepath.Join(options.TargetDir, sourcePath),
 					Mode:        tarHeader.FileInfo().Mode(),
 					MakeParents: true,
@@ -226,7 +227,7 @@ func extractData(fileCreator fsutil.FileCreator, dataReader io.Reader, options *
 			if extractInfo.Mode != 0 {
 				tarHeader.Mode = int64(extractInfo.Mode)
 			}
-			err := fileCreator.Create(&fsutil.CreateOptions{
+			err := options.FileCreator.Create(&fsutil.CreateOptions{
 				Path:        targetPath,
 				Mode:        tarHeader.FileInfo().Mode(),
 				Data:        pathReader,

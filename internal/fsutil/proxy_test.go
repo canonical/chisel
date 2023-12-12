@@ -13,7 +13,7 @@ import (
 	"github.com/canonical/chisel/internal/testutil"
 )
 
-func TreeDumpProxy(proxy *fsutil.FileCreatorProxy, root string) map[string]string {
+func treeDumpProxy(proxy *fsutil.FileCreatorProxy, root string) map[string]string {
 	result := make(map[string]string)
 	for _, file := range proxy.Files {
 		path := strings.TrimPrefix(file.Path, root)
@@ -64,11 +64,11 @@ func (s *S) TestProxy(c *C) {
 		if test.options.MakeParents {
 			// The proxy does not record the parent directories created
 			// implicitly.
-			for path, info := range TreeDumpProxy(proxy, dir) {
+			for path, info := range treeDumpProxy(proxy, dir) {
 				c.Assert(info, Equals, test.result[path])
 			}
 		} else {
-			c.Assert(TreeDumpProxy(proxy, dir), DeepEquals, test.result)
+			c.Assert(treeDumpProxy(proxy, dir), DeepEquals, test.result)
 		}
 	}
 }

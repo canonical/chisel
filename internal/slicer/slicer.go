@@ -156,11 +156,12 @@ func Run(options *RunOptions) error {
 			continue
 		}
 		fileCreatorProxy := fsutil.NewFileCreatorProxy()
-		err := deb.Extract(fileCreatorProxy, reader, &deb.ExtractOptions{
-			Package:   slice.Package,
-			Extract:   extract[slice.Package],
-			TargetDir: targetDir,
-			Globbed:   globbedPaths,
+		err := deb.Extract(reader, &deb.ExtractOptions{
+			Package:     slice.Package,
+			Extract:     extract[slice.Package],
+			TargetDir:   targetDir,
+			Globbed:     globbedPaths,
+			FileCreator: fileCreatorProxy,
 		})
 		for _, file := range fileCreatorProxy.Files {
 			err := report.AddFile(slice, file)

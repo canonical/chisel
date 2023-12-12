@@ -2,10 +2,11 @@ package slicer
 
 import (
 	"fmt"
-	"github.com/canonical/chisel/internal/fsutil"
-	"github.com/canonical/chisel/internal/setup"
 	"io/fs"
 	"sync"
+
+	"github.com/canonical/chisel/internal/fsutil"
+	"github.com/canonical/chisel/internal/setup"
 )
 
 type FileReport struct {

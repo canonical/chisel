@@ -3,7 +3,6 @@ package deb_test
 import (
 	"bytes"
 	"github.com/canonical/chisel/internal/fsutil"
-
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/chisel/internal/deb"
@@ -291,12 +290,13 @@ func (s *S) TestExtract(c *C) {
 		options := test.options
 		options.Package = "base-files"
 		options.TargetDir = dir
+		options.FileCreator = fsutil.DefaultFileCreator{}
 
 		if test.globbed != nil {
 			options.Globbed = make(map[string][]string)
 		}
 
-		err := deb.Extract(fsutil.DefaultFileCreator{}, bytes.NewBuffer(test.pkgdata), &options)
+		err := deb.Extract(bytes.NewBuffer(test.pkgdata), &options)
 		if test.error != "" {
 			c.Assert(err, ErrorMatches, test.error)
 			continue

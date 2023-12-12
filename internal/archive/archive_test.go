@@ -392,7 +392,7 @@ func (s *S) testOpenArchiveArch(c *C, arch string) {
 	pkg, err := archive.Fetch("hostname")
 	c.Assert(err, IsNil)
 
-	err = deb.Extract(fsutil.DefaultFileCreator{}, pkg, &deb.ExtractOptions{
+	err = deb.Extract(pkg, &deb.ExtractOptions{
 		Package:   "hostname",
 		TargetDir: extractDir,
 		Extract: map[string][]deb.ExtractInfo{
@@ -403,6 +403,7 @@ func (s *S) testOpenArchiveArch(c *C, arch string) {
 				{Path: "/hostname"},
 			},
 		},
+		FileCreator: fsutil.DefaultFileCreator{},
 	})
 	c.Assert(err, IsNil)
 
