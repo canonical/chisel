@@ -945,7 +945,7 @@ var setupTests = []setupTest{{
 				myslice:
 					madeUpKey4: whatever
 					contents:
-						/path:
+						/path: {madeUpKey5: whatever}
 		`,
 	},
 	release: &setup.Release{
