@@ -925,6 +925,57 @@ var setupTests = []setupTest{{
 		`,
 	},
 	relerror: `chisel.yaml: cannot parse keyring "ubuntu-master": openpgp: invalid argument: no armored data found`,
+}, {
+	summary: "Extra fields in YAML are ignored (necessary for forward compatibility)",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: chisel-v1
+			archives:
+				ubuntu:
+					version: 22.04
+					components: [main, other]
+					suites: [jammy, jammy-security]
+					madeUpKey1: whatever
+			madeUpKey2: whatever
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			madeUpKey3: whatever
+			slices:
+				myslice:
+					madeUpKey4: whatever
+					contents:
+						/path: {madeUpKey5: whatever}
+		`,
+	},
+	release: &setup.Release{
+		DefaultArchive: "ubuntu",
+
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "22.04",
+				Suites:     []string{"jammy", "jammy-security"},
+				Components: []string{"main", "other"},
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Archive: "ubuntu",
+				Name:    "mypkg",
+				Path:    "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{
+					"myslice": {
+						Package: "mypkg",
+						Name:    "myslice",
+						Contents: map[string]setup.PathInfo{
+							"/path": {Kind: "copy"},
+						},
+					},
+				},
+			},
+		},
+	},
 }}
 
 const defaultChiselYaml = `
