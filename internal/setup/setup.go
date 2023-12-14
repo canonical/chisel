@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ProtonMail/go-crypto/openpgp"
+	"golang.org/x/crypto/openpgp/packet"
 	"gopkg.in/yaml.v3"
 
 	"github.com/canonical/chisel/internal/deb"
@@ -31,7 +31,7 @@ type Archive struct {
 	Version    string
 	Suites     []string
 	Components []string
-	Keyrings   []openpgp.KeyRing
+	PublicKeys []*packet.PublicKey
 }
 
 // Package holds a collection of slices that represent parts of themselves.
@@ -318,9 +318,9 @@ func readSlices(release *Release, baseDir, dirName string) error {
 }
 
 type yamlRelease struct {
-	Format   string                 `yaml:"format"`
-	Archives map[string]yamlArchive `yaml:"archives"`
-	Keyrings map[string]string      `yaml:"public-keys"`
+	Format     string                   `yaml:"format"`
+	Archives   map[string]yamlArchive   `yaml:"archives"`
+	PublicKeys map[string]yamlPublicKey `yaml:"public-keys"`
 }
 
 const yamlReleaseFormat = "chisel-v1"
@@ -330,7 +330,7 @@ type yamlArchive struct {
 	Suites     []string `yaml:"suites"`
 	Components []string `yaml:"components"`
 	Default    bool     `yaml:"default"`
-	Keyrings   []string `yaml:"public-keys"`
+	PublicKeys []string `yaml:"public-keys"`
 }
 
 type yamlPackage struct {
@@ -388,6 +388,11 @@ type yamlSlice struct {
 	Mutate    string               `yaml:"mutate"`
 }
 
+type yamlPublicKey struct {
+	KeyID string `yaml:"id"`
+	Armor string `yaml:"armor"`
+}
+
 var ubuntuAdjectives = map[string]string{
 	"18.04": "bionic",
 	"20.04": "focal",
@@ -418,14 +423,17 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		return nil, fmt.Errorf("%s: no archives defined", fileName)
 	}
 
-	keyringsByName := make(map[string]openpgp.KeyRing, 0)
-
-	for keyringName, keyringArmored := range yamlVar.Keyrings {
-		keyring, err := openpgp.ReadArmoredKeyRing(strings.NewReader(keyringArmored))
+	// Decode the public keys and match against provided IDs.
+	pubKeys := make(map[string]*packet.PublicKey, len(yamlVar.PublicKeys))
+	for keyName, yamlPubKey := range yamlVar.PublicKeys {
+		key, err := DecodePublicKey([]byte(yamlPubKey.Armor))
 		if err != nil {
-			return nil, fmt.Errorf("%s: cannot parse keyring %q: %w", fileName, keyringName, err)
+			return nil, fmt.Errorf("%s: invalid public key %q: %w", fileName, keyName, err)
 		}
-		keyringsByName[keyringName] = keyring
+		if yamlPubKey.KeyID != key.KeyIdString() {
+			return nil, fmt.Errorf("%s: invalid public key %q: key-id does not match", fileName, keyName)
+		}
+		pubKeys[keyName] = key
 	}
 
 	for archiveName, details := range yamlVar.Archives {
@@ -442,14 +450,6 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		if len(details.Components) == 0 {
 			return nil, fmt.Errorf("%s: archive %q missing components field", fileName, archiveName)
 		}
-		var archiveKeyrings []openpgp.KeyRing
-		for _, keyringName := range details.Keyrings {
-			keyring := keyringsByName[keyringName]
-			if keyring == nil {
-				return nil, fmt.Errorf("%s: archive %q references unknown keyring %q", fileName, archiveName, keyringName)
-			}
-			archiveKeyrings = append(archiveKeyrings, keyring)
-		}
 		if len(yamlVar.Archives) == 1 {
 			details.Default = true
 		} else if details.Default && release.DefaultArchive != "" {
@@ -458,12 +458,23 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		if details.Default {
 			release.DefaultArchive = archiveName
 		}
+		if len(details.PublicKeys) == 0 {
+			return nil, fmt.Errorf("%s: archive %q missing public-keys field", fileName, archiveName)
+		}
+		var archiveKeys []*packet.PublicKey
+		for _, keyName := range details.PublicKeys {
+			key, ok := pubKeys[keyName]
+			if !ok {
+				return nil, fmt.Errorf("%s: unknown reference to public key %q in archive %q", fileName, keyName, archiveName)
+			}
+			archiveKeys = append(archiveKeys, key)
+		}
 		release.Archives[archiveName] = &Archive{
 			Name:       archiveName,
 			Version:    details.Version,
 			Suites:     details.Suites,
 			Components: details.Components,
-			Keyrings:   archiveKeyrings,
+			PublicKeys: archiveKeys,
 		}
 	}
 

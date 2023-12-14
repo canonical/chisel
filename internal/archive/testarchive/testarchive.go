@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/canonical/chisel/internal/testutil"
+	"golang.org/x/crypto/openpgp/clearsign"
+	"golang.org/x/crypto/openpgp/packet"
 )
 
 type Item interface {
@@ -99,10 +101,11 @@ func (p *Package) Content() []byte {
 }
 
 type Release struct {
-	Suite   string
-	Version string
-	Label   string
-	Items   []Item
+	Suite      string
+	Version    string
+	Label      string
+	Items      []Item
+	SigningKey *packet.PrivateKey
 }
 
 func (r *Release) Walk(f func(Item) error) error {
@@ -110,7 +113,7 @@ func (r *Release) Walk(f func(Item) error) error {
 }
 
 func (r *Release) Path() string {
-	return "Release"
+	return "InRelease"
 }
 
 func (r *Release) Section() []byte {
@@ -137,7 +140,20 @@ func (r *Release) Content() []byte {
 		%s
 	`)), r.Label, r.Suite, r.Version, r.Version, digests.String())
 
-	return []byte(content)
+	var buf bytes.Buffer
+	writer, err := clearsign.Encode(&buf, r.SigningKey, nil)
+	if err != nil {
+		panic(err)
+	}
+	_, err = writer.Write([]byte(content))
+	if err != nil {
+		panic(err)
+	}
+	err = writer.Close()
+	if err != nil {
+		panic(err)
+	}
+	return buf.Bytes()
 }
 
 func (r *Release) Render(prefix string, content map[string][]byte) error {

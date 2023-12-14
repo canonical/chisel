@@ -12,6 +12,8 @@ import (
 // TODO Implement local test server instead of using live repository.
 
 func (s *S) TestFetch(c *C) {
+	c.Skip("TODO chisel-releases need to be updated with public-keys for this test to pass")
+
 	options := &setup.FetchOptions{
 		Label:    "ubuntu",
 		Version:  "22.04",
