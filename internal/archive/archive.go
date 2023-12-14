@@ -201,18 +201,19 @@ func (index *ubuntuIndex) fetchRelease() error {
 	// Unlike gpg --verify which ensures the verification of all signatures,
 	// this is in line with what apt does internally:
 	// https://salsa.debian.org/apt-team/apt/-/blob/4e344a4/methods/gpgv.cc#L553-557
-	sigs, body, content, err := setup.DecodeClearSigned(data)
+	sigs, canonicalBody, err := setup.DecodeClearSigned(data)
 	if err != nil {
 		return fmt.Errorf("cannot decode clearsigned InRelease file: %v", err)
 	}
-	err = setup.VerifyAnySignature(index.archive.publicKeys, sigs, body)
+	err = setup.VerifyAnySignature(index.archive.publicKeys, sigs, canonicalBody)
 	if err != nil {
 		return fmt.Errorf("cannot verify signature of the InRelease file")
 	}
 
-	// Using ``content`` here because ``body`` has CRLF endings.
-	// TODO	figure out how to use either ``body`` or ``content``.
-	ctrl, err := control.ParseString("Label", string(content))
+	// canonicalBody has <CR><LF> line endings, reverting that to  match the
+	// expected control file format.
+	body := strings.ReplaceAll(string(canonicalBody), "\r", "")
+	ctrl, err := control.ParseString("Label", body)
 	if err != nil {
 		return fmt.Errorf("cannot parse InRelease file: %v", err)
 	}

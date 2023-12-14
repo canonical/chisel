@@ -110,7 +110,7 @@ func (s *S) TestVerifySignature(c *C) {
 	for _, test := range verifyClearSignTests {
 		c.Logf("Summary: %s", test.summary)
 
-		sigs, body, _, err := setup.DecodeClearSigned([]byte(test.clearData))
+		sigs, body, err := setup.DecodeClearSigned([]byte(test.clearData))
 		if err == nil {
 			err = setup.VerifyAnySignature(test.pubKeys, sigs, body)
 		}

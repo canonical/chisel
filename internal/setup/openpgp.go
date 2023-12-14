@@ -57,10 +57,13 @@ func DecodePublicKey(armoredData []byte) (*packet.PublicKey, error) {
 
 // DecodeClearSigned decodes the first clearsigned message in the data and
 // returns the signatures, the signed message and the original message text.
-func DecodeClearSigned(clearData []byte) (sigs []*packet.Signature, signed []byte, text []byte, err error) {
+//
+// The returned canonicalBody is canonicalized by converting line endings to
+// <CR><LF> per the GPG RCF: https://www.rfc-editor.org/rfc/rfc4880#section-5.2.4
+func DecodeClearSigned(clearData []byte) (sigs []*packet.Signature, canonicalBody []byte, err error) {
 	block, _ := clearsign.Decode(clearData)
 	if block == nil {
-		return nil, nil, nil, fmt.Errorf("cannot decode clearsign text")
+		return nil, nil, fmt.Errorf("cannot decode clearsign text")
 	}
 	reader := packet.NewReader(block.ArmoredSignature.Body)
 	for {
@@ -69,16 +72,16 @@ func DecodeClearSigned(clearData []byte) (sigs []*packet.Signature, signed []byt
 			if err == io.EOF {
 				break
 			}
-			return nil, nil, nil, fmt.Errorf("cannot parse armored data: %w", err)
+			return nil, nil, fmt.Errorf("cannot parse armored data: %w", err)
 		}
 		if sig, ok := p.(*packet.Signature); ok {
 			sigs = append(sigs, sig)
 		}
 	}
 	if len(sigs) == 0 {
-		return nil, nil, nil, fmt.Errorf("clearsigned data contains no signatures")
+		return nil, nil, fmt.Errorf("clearsigned data contains no signatures")
 	}
-	return sigs, block.Bytes, block.Plaintext, nil
+	return sigs, block.Bytes, nil
 }
 
 // VerifySignature returns nil if sig is a valid signature from pubKey.
