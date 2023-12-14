@@ -119,7 +119,7 @@ archives:
 Example:
 
 ```yaml
-format: chisel-v2
+format: chisel-v1
 
 archives:
     ubuntu:
