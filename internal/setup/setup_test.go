@@ -818,6 +818,64 @@ var setupTests = []setupTest{{
 		},
 	},
 }, {
+	summary: "Extra fields in YAML are ignored (necessary for forward compatibility)",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: chisel-v1
+			archives:
+				ubuntu:
+					version: 22.04
+					components: [main, other]
+					suites: [jammy, jammy-security]
+					public-keys: [test-key]
+					madeUpKey1: whatever
+			madeUpKey2: whatever
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.ArmoredPublicKey, "\t\t\t\t\t\t") + `
+					madeUpKey6: whatever
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			madeUpKey3: whatever
+			slices:
+				myslice:
+					madeUpKey4: whatever
+					contents:
+						/path: {madeUpKey5: whatever}
+		`,
+	},
+	release: &setup.Release{
+		DefaultArchive: "ubuntu",
+
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "22.04",
+				Suites:     []string{"jammy", "jammy-security"},
+				Components: []string{"main", "other"},
+				PublicKeys: []*packet.PublicKey{testKey.PublicKey},
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Archive: "ubuntu",
+				Name:    "mypkg",
+				Path:    "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{
+					"myslice": {
+						Package: "mypkg",
+						Name:    "myslice",
+						Contents: map[string]setup.PathInfo{
+							"/path": {Kind: "copy"},
+						},
+					},
+				},
+			},
+		},
+	},
+}, {
 	summary: "Archives with public keys",
 	input: map[string]string{
 		"chisel.yaml": `

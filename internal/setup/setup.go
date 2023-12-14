@@ -319,7 +319,7 @@ func readSlices(release *Release, baseDir, dirName string) error {
 
 type yamlRelease struct {
 	Format     string                   `yaml:"format"`
-	Archives   map[string]yamlArchive   `yaml:"archives`
+	Archives   map[string]yamlArchive   `yaml:"archives"`
 	PublicKeys map[string]yamlPublicKey `yaml:"public-keys"`
 }
 
@@ -411,7 +411,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 
 	yamlVar := yamlRelease{}
 	dec := yaml.NewDecoder(bytes.NewBuffer(data))
-	dec.KnownFields(true)
+	dec.KnownFields(false)
 	err := dec.Decode(&yamlVar)
 	if err != nil {
 		return nil, fmt.Errorf("%s: cannot parse release definition: %v", fileName, err)
@@ -490,7 +490,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 
 	yamlPkg := yamlPackage{}
 	dec := yaml.NewDecoder(bytes.NewBuffer(data))
-	dec.KnownFields(true)
+	dec.KnownFields(false)
 	err := dec.Decode(&yamlPkg)
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse package %q slice definitions: %v", pkgName, err)
