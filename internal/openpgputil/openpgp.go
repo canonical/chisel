@@ -56,10 +56,10 @@ func DecodePublicKey(armoredData []byte) (*packet.PublicKey, error) {
 }
 
 // DecodeClearSigned decodes the first clearsigned message in the data and
-// returns the signatures, the signed message and the original message text.
+// returns the signatures and the message body.
 //
 // The returned canonicalBody is canonicalized by converting line endings to
-// <CR><LF> per the GPG RCF: https://www.rfc-editor.org/rfc/rfc4880#section-5.2.4
+// <CR><LF> per the openPGP RCF: https://www.rfc-editor.org/rfc/rfc4880#section-5.2.4
 func DecodeClearSigned(clearData []byte) (sigs []*packet.Signature, canonicalBody []byte, err error) {
 	block, _ := clearsign.Decode(clearData)
 	if block == nil {
