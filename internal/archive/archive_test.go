@@ -364,11 +364,11 @@ var verifyArchiveReleaseTests = []verifyArchiveReleaseTest{{
 	pubKeys: []*packet.PublicKey{testKey.PublicKey},
 }, {
 	summary: "No public key to verify with",
-	error:   `.*cannot verify signature.*`,
+	error:   `cannot verify signature of the InRelease file`,
 }, {
 	summary: "Wrong public key",
 	pubKeys: []*packet.PublicKey{extraTestKey.PublicKey},
-	error:   `.*cannot verify signature.*`,
+	error:   `cannot verify signature of the InRelease file`,
 }, {
 	summary: "Multiple public keys (invalid, valid)",
 	pubKeys: []*packet.PublicKey{extraTestKey.PublicKey, testKey.PublicKey},
