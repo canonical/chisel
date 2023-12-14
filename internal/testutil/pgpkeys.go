@@ -5,7 +5,7 @@ import (
 
 	"golang.org/x/crypto/openpgp/packet"
 
-	"github.com/canonical/chisel/internal/setup"
+	"github.com/canonical/chisel/internal/openpgputil"
 )
 
 type Key struct {
@@ -16,7 +16,7 @@ type Key struct {
 	PrivateKey        *packet.PrivateKey
 }
 
-var gpgKeys = map[string]*Key{
+var pgpKeys = map[string]*Key{
 	"ubuntu-archive-key-2018": {
 		ID:               "871920D1991BC93C",
 		ArmoredPublicKey: ubuntuArchiveSignKey2018,
@@ -38,16 +38,16 @@ var gpgKeys = map[string]*Key{
 }
 
 func init() {
-	for name, key := range gpgKeys {
+	for name, key := range pgpKeys {
 		if key.ArmoredPublicKey != "" {
-			pubKeys, privKeys, err := setup.DecodeKeys([]byte(key.ArmoredPublicKey))
+			pubKeys, privKeys, err := openpgputil.DecodeKeys([]byte(key.ArmoredPublicKey))
 			if err != nil || len(privKeys) > 0 || len(pubKeys) != 1 || pubKeys[0].KeyIdString() != key.ID {
 				log.Panicf("invalid public key armored data: %s", name)
 			}
 			key.PublicKey = pubKeys[0]
 		}
 		if key.ArmoredPrivateKey != "" {
-			pubKeys, privKeys, err := setup.DecodeKeys([]byte(key.ArmoredPrivateKey))
+			pubKeys, privKeys, err := openpgputil.DecodeKeys([]byte(key.ArmoredPrivateKey))
 			if err != nil || len(pubKeys) > 0 || len(privKeys) != 1 || privKeys[0].KeyIdString() != key.ID {
 				log.Panicf("invalid private key armored data: %s", name)
 			}
@@ -57,7 +57,7 @@ func init() {
 }
 
 func GetGPGKey(name string) *Key {
-	return gpgKeys[name]
+	return pgpKeys[name]
 }
 
 // Ubuntu Archive Automatic Signing Key (2018) <ftpmaster@ubuntu.com>.

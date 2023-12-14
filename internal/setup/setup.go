@@ -13,6 +13,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/canonical/chisel/internal/deb"
+	"github.com/canonical/chisel/internal/openpgputil"
 	"github.com/canonical/chisel/internal/strdist"
 )
 
@@ -426,7 +427,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 	// Decode the public keys and match against provided IDs.
 	pubKeys := make(map[string]*packet.PublicKey, len(yamlVar.PublicKeys))
 	for keyName, yamlPubKey := range yamlVar.PublicKeys {
-		key, err := DecodePublicKey([]byte(yamlPubKey.Armor))
+		key, err := openpgputil.DecodePublicKey([]byte(yamlPubKey.Armor))
 		if err != nil {
 			return nil, fmt.Errorf("%s: cannot decode public key %q: %w", fileName, keyName, err)
 		}
