@@ -195,27 +195,26 @@ func (index *ubuntuIndex) fetchRelease() error {
 		return err
 	}
 
-	// Decode the signature(s) and verify the InRelease file.
-	// The InRelease file may have multiple signatures from
-	// different keys. Verify that at least one signature is valid
-	// against the archive's set of public keys. Unlike ``gpg --verify``
-	// which ensures the verification of all signatures, this is in line
-	// with what apt does internally [1].
-	// [1]  https://salsa.debian.org/apt-team/apt/-/blob/4e344a4c1d2862b7cdb900a20222bc22ac5edcf7/methods/gpgv.cc#L553-557
+	// Decode the signature(s) and verify the InRelease file. The InRelease
+	// file may have multiple signatures from different keys. Verify that at
+	// least one signature is valid against the archive's set of public keys.
+	// Unlike gpg --verify which ensures the verification of all signatures,
+	// this is in line with what apt does internally:
+	// https://salsa.debian.org/apt-team/apt/-/blob/4e344a4/methods/gpgv.cc#L553-557
 	sigs, body, content, err := setup.DecodeClearSigned(data)
 	if err != nil {
-		return fmt.Errorf("corrupted archive InRelease file: invalid signature")
+		return fmt.Errorf("cannot decode clearsigned InRelease file: %v", err)
 	}
 	err = setup.VerifyAnySignature(index.archive.publicKeys, sigs, body)
 	if err != nil {
-		return fmt.Errorf("cannot verify signature in the InRelease file")
+		return fmt.Errorf("cannot verify signature of the InRelease file")
 	}
 
 	// Using ``content`` here because ``body`` has CRLF endings.
 	// TODO	figure out how to use either ``body`` or ``content``.
 	ctrl, err := control.ParseString("Label", string(content))
 	if err != nil {
-		return fmt.Errorf("parsing archive InRelease file: %v", err)
+		return fmt.Errorf("cannot parse InRelease file: %v", err)
 	}
 	section := ctrl.Section("Ubuntu")
 	if section == nil {

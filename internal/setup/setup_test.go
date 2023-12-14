@@ -963,7 +963,7 @@ var setupTests = []setupTest{{
 			package: mypkg
 		`,
 	},
-	relerror: `chisel.yaml: unknown reference to public key "extra-key" in archive "foo"`,
+	relerror: `chisel.yaml: archive "foo" refers to undefined public key "extra-key"`,
 }, {
 	summary: "Invalid public key",
 	input: map[string]string{
@@ -991,7 +991,7 @@ var setupTests = []setupTest{{
 			package: mypkg
 		`,
 	},
-	relerror: `chisel.yaml: invalid public key "extra-key": cannot decode armored data`,
+	relerror: `chisel.yaml: cannot decode public key "extra-key": cannot decode armored data`,
 }, {
 	summary: "Mismatched public key ID",
 	input: map[string]string{
@@ -1013,7 +1013,7 @@ var setupTests = []setupTest{{
 			package: mypkg
 		`,
 	},
-	relerror: `chisel.yaml: invalid public key "extra-key": key-id does not match`,
+	relerror: `chisel.yaml: public key "extra-key" armor has incorrect ID: expected "9568570379BF1F43", got "854BAF1AA9D76600"`,
 }}
 
 var defaultChiselYaml = `

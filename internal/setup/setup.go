@@ -428,10 +428,10 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 	for keyName, yamlPubKey := range yamlVar.PublicKeys {
 		key, err := DecodePublicKey([]byte(yamlPubKey.Armor))
 		if err != nil {
-			return nil, fmt.Errorf("%s: invalid public key %q: %w", fileName, keyName, err)
+			return nil, fmt.Errorf("%s: cannot decode public key %q: %w", fileName, keyName, err)
 		}
 		if yamlPubKey.KeyID != key.KeyIdString() {
-			return nil, fmt.Errorf("%s: invalid public key %q: key-id does not match", fileName, keyName)
+			return nil, fmt.Errorf("%s: public key %q armor has incorrect ID: expected %q, got %q", fileName, keyName, yamlPubKey.KeyID, key.KeyIdString())
 		}
 		pubKeys[keyName] = key
 	}
@@ -465,7 +465,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		for _, keyName := range details.PublicKeys {
 			key, ok := pubKeys[keyName]
 			if !ok {
-				return nil, fmt.Errorf("%s: unknown reference to public key %q in archive %q", fileName, keyName, archiveName)
+				return nil, fmt.Errorf("%s: archive %q refers to undefined public key %q", fileName, archiveName, keyName)
 			}
 			archiveKeys = append(archiveKeys, key)
 		}

@@ -93,12 +93,12 @@ var verifyClearSignTests = []verifyClearSignTest{{
 	summary:   "Invalid data: bad packets",
 	clearData: invalidSignedDataBadPackets,
 	pubKeys:   []*packet.PublicKey{testKey.PublicKey},
-	relerror:  "error parsing armored data:.*",
+	relerror:  "cannot parse armored data: openpgp: .*",
 }, {
 	summary:   "Invalid data: malformed clearsign text",
 	clearData: "foo\n",
 	pubKeys:   []*packet.PublicKey{testKey.PublicKey},
-	relerror:  "invalid clearsign text.*",
+	relerror:  "cannot decode clearsign text",
 }, {
 	summary:   "Wrong public key to verify with",
 	clearData: clearSignedData,

@@ -60,7 +60,7 @@ func DecodePublicKey(armoredData []byte) (*packet.PublicKey, error) {
 func DecodeClearSigned(clearData []byte) (sigs []*packet.Signature, signed []byte, text []byte, err error) {
 	block, _ := clearsign.Decode(clearData)
 	if block == nil {
-		return nil, nil, nil, fmt.Errorf("invalid clearsign text")
+		return nil, nil, nil, fmt.Errorf("cannot decode clearsign text")
 	}
 	reader := packet.NewReader(block.ArmoredSignature.Body)
 	for {
@@ -69,7 +69,7 @@ func DecodeClearSigned(clearData []byte) (sigs []*packet.Signature, signed []byt
 			if err == io.EOF {
 				break
 			}
-			return nil, nil, nil, fmt.Errorf("error parsing armored data: %w", err)
+			return nil, nil, nil, fmt.Errorf("cannot parse armored data: %w", err)
 		}
 		if sig, ok := p.(*packet.Signature); ok {
 			sigs = append(sigs, sig)
@@ -81,7 +81,7 @@ func DecodeClearSigned(clearData []byte) (sigs []*packet.Signature, signed []byt
 	return sigs, block.Bytes, block.Plaintext, nil
 }
 
-// VerifySignature returns nil if sig is a valid signature made by pubKey.
+// VerifySignature returns nil if sig is a valid signature from pubKey.
 func VerifySignature(pubKey *packet.PublicKey, sig *packet.Signature, body []byte) error {
 	hash := sig.Hash.New()
 	_, err := io.Copy(hash, bytes.NewBuffer(body))
