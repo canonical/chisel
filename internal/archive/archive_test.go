@@ -40,9 +40,9 @@ type httpSuite struct {
 var _ = Suite(&httpSuite{})
 
 var (
-	testKey                  = testutil.GetGPGKey("test-key-1")
-	extraTestKey             = testutil.GetGPGKey("test-key-2")
-	ubuntuArchiveSignKey2018 = testutil.GetGPGKey("ubuntu-archive-key-2018")
+	testKey                  = testutil.PGPKey("test-key-1")
+	extraTestKey             = testutil.PGPKey("test-key-2")
+	ubuntuArchiveSignKey2018 = testutil.PGPKey("ubuntu-archive-key-2018")
 )
 
 func (s *httpSuite) SetUpTest(c *C) {

@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	testKey      = testutil.GetGPGKey("test-key-1")
-	extraTestKey = testutil.GetGPGKey("test-key-2")
+	testKey      = testutil.PGPKey("test-key-1")
+	extraTestKey = testutil.PGPKey("test-key-2")
 )
 
 type archiveKeyTest struct {

@@ -56,7 +56,7 @@ func init() {
 	}
 }
 
-func GetGPGKey(name string) *Key {
+func PGPKey(name string) *Key {
 	return pgpKeys[name]
 }
 

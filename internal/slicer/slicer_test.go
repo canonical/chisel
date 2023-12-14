@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	testKey = testutil.GetGPGKey("test-key-1")
+	testKey = testutil.PGPKey("test-key-1")
 )
 
 type slicerTest struct {
