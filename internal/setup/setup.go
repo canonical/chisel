@@ -390,7 +390,7 @@ type yamlSlice struct {
 }
 
 type yamlPublicKey struct {
-	KeyID string `yaml:"id"`
+	ID    string `yaml:"id"`
 	Armor string `yaml:"armor"`
 }
 
@@ -431,8 +431,8 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%s: cannot decode public key %q: %w", fileName, keyName, err)
 		}
-		if yamlPubKey.KeyID != key.KeyIdString() {
-			return nil, fmt.Errorf("%s: public key %q armor has incorrect ID: expected %q, got %q", fileName, keyName, yamlPubKey.KeyID, key.KeyIdString())
+		if yamlPubKey.ID != key.KeyIdString() {
+			return nil, fmt.Errorf("%s: public key %q armor has incorrect ID: expected %q, got %q", fileName, keyName, yamlPubKey.ID, key.KeyIdString())
 		}
 		pubKeys[keyName] = key
 	}
