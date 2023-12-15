@@ -79,17 +79,21 @@ type prefixEachLineTest struct {
 var prefixEachLineTests = []prefixEachLineTest{{
 	raw:    "a\n\tb\n  \t\tc\td\n\t ",
 	prefix: "foo",
-	result: "fooa\nfoo\tb\nfoo  \t\tc\td\nfoo\t \n",
+	result: "fooa\nfoo\tb\nfoo  \t\tc\td\nfoo\t ",
 }, {
 	raw:    "foo",
 	prefix: "pref",
-	result: "preffoo\n",
+	result: "preffoo",
 }, {
 	raw:    "",
-	prefix: "",
-	result: "\n",
+	prefix: "p",
+	result: "p",
 }, {
 	raw:    "\n",
+	prefix: "\t",
+	result: "\t\n",
+}, {
+	raw:    "\n\n",
 	prefix: "\t",
 	result: "\t\n\t\n",
 }}
