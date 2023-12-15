@@ -32,7 +32,7 @@ type Archive struct {
 	Version    string
 	Suites     []string
 	Components []string
-	PublicKeys []*packet.PublicKey
+	PubKeys    []*packet.PublicKey
 }
 
 // Package holds a collection of slices that represent parts of themselves.
@@ -319,9 +319,9 @@ func readSlices(release *Release, baseDir, dirName string) error {
 }
 
 type yamlRelease struct {
-	Format     string                   `yaml:"format"`
-	Archives   map[string]yamlArchive   `yaml:"archives"`
-	PublicKeys map[string]yamlPublicKey `yaml:"public-keys"`
+	Format   string                 `yaml:"format"`
+	Archives map[string]yamlArchive `yaml:"archives"`
+	PubKeys  map[string]yamlPubKey  `yaml:"public-keys"`
 }
 
 const yamlReleaseFormat = "chisel-v1"
@@ -331,7 +331,7 @@ type yamlArchive struct {
 	Suites     []string `yaml:"suites"`
 	Components []string `yaml:"components"`
 	Default    bool     `yaml:"default"`
-	PublicKeys []string `yaml:"public-keys"`
+	PubKeys    []string `yaml:"public-keys"`
 }
 
 type yamlPackage struct {
@@ -389,7 +389,7 @@ type yamlSlice struct {
 	Mutate    string               `yaml:"mutate"`
 }
 
-type yamlPublicKey struct {
+type yamlPubKey struct {
 	ID    string `yaml:"id"`
 	Armor string `yaml:"armor"`
 }
@@ -425,9 +425,9 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 	}
 
 	// Decode the public keys and match against provided IDs.
-	pubKeys := make(map[string]*packet.PublicKey, len(yamlVar.PublicKeys))
-	for keyName, yamlPubKey := range yamlVar.PublicKeys {
-		key, err := openpgputil.DecodePublicKey([]byte(yamlPubKey.Armor))
+	pubKeys := make(map[string]*packet.PublicKey, len(yamlVar.PubKeys))
+	for keyName, yamlPubKey := range yamlVar.PubKeys {
+		key, err := openpgputil.DecodePubKey([]byte(yamlPubKey.Armor))
 		if err != nil {
 			return nil, fmt.Errorf("%s: cannot decode public key %q: %w", fileName, keyName, err)
 		}
@@ -459,11 +459,11 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		if details.Default {
 			release.DefaultArchive = archiveName
 		}
-		if len(details.PublicKeys) == 0 {
+		if len(details.PubKeys) == 0 {
 			return nil, fmt.Errorf("%s: archive %q missing public-keys field", fileName, archiveName)
 		}
 		var archiveKeys []*packet.PublicKey
-		for _, keyName := range details.PublicKeys {
+		for _, keyName := range details.PubKeys {
 			key, ok := pubKeys[keyName]
 			if !ok {
 				return nil, fmt.Errorf("%s: archive %q refers to undefined public key %q", fileName, archiveName, keyName)
@@ -475,7 +475,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 			Version:    details.Version,
 			Suites:     details.Suites,
 			Components: details.Components,
-			PublicKeys: archiveKeys,
+			PubKeys:    archiveKeys,
 		}
 	}
 

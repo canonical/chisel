@@ -8,62 +8,54 @@ import (
 	"github.com/canonical/chisel/internal/openpgputil"
 )
 
-type Key struct {
-	ID                string
-	ArmoredPublicKey  string
-	ArmoredPrivateKey string
-	PublicKey         *packet.PublicKey
-	PrivateKey        *packet.PrivateKey
+type PGPKeyData struct {
+	ID             string
+	PubKeyArmored  string
+	PrivKeyArmored string
+	PubKey         *packet.PublicKey
+	PrivKey        *packet.PrivateKey
 }
 
-var pgpKeys = map[string]*Key{
-	"ubuntu-archive-key-2018": {
-		ID:               "871920D1991BC93C",
-		ArmoredPublicKey: ubuntuArchiveSignKey2018,
+var PGPKeys = map[string]*PGPKeyData{
+	"keyUbuntu2018": {
+		ID:            "871920D1991BC93C",
+		PubKeyArmored: pubKeyUbuntu2018Armor,
 	},
-	"ubuntu-archive-key-2012": {
-		ID:               "3B4FE6ACC0B21F32",
-		ArmoredPublicKey: ubuntuArchiveSignKey2012,
+	"key1": {
+		ID:             "854BAF1AA9D76600",
+		PubKeyArmored:  pubKey1Armor,
+		PrivKeyArmored: privKey1Armor,
 	},
-	"test-key-1": {
-		ID:                "854BAF1AA9D76600",
-		ArmoredPublicKey:  testPublicKeyData,
-		ArmoredPrivateKey: testPrivateKeyData,
-	},
-	"test-key-2": {
-		ID:                "9568570379BF1F43",
-		ArmoredPublicKey:  testPublicKeyData2,
-		ArmoredPrivateKey: testPrivateKeyData2,
+	"key2": {
+		ID:             "9568570379BF1F43",
+		PubKeyArmored:  pubKey2Armor,
+		PrivKeyArmored: privKey2Armor,
 	},
 }
 
 func init() {
-	for name, key := range pgpKeys {
-		if key.ArmoredPublicKey != "" {
-			pubKeys, privKeys, err := openpgputil.DecodeKeys([]byte(key.ArmoredPublicKey))
+	for name, key := range PGPKeys {
+		if key.PubKeyArmored != "" {
+			pubKeys, privKeys, err := openpgputil.DecodeKeys([]byte(key.PubKeyArmored))
 			if err != nil || len(privKeys) > 0 || len(pubKeys) != 1 || pubKeys[0].KeyIdString() != key.ID {
 				log.Panicf("invalid public key armored data: %s", name)
 			}
-			key.PublicKey = pubKeys[0]
+			key.PubKey = pubKeys[0]
 		}
-		if key.ArmoredPrivateKey != "" {
-			pubKeys, privKeys, err := openpgputil.DecodeKeys([]byte(key.ArmoredPrivateKey))
+		if key.PrivKeyArmored != "" {
+			pubKeys, privKeys, err := openpgputil.DecodeKeys([]byte(key.PrivKeyArmored))
 			if err != nil || len(pubKeys) > 0 || len(privKeys) != 1 || privKeys[0].KeyIdString() != key.ID {
 				log.Panicf("invalid private key armored data: %s", name)
 			}
-			key.PrivateKey = privKeys[0]
+			key.PrivKey = privKeys[0]
 		}
 	}
 }
 
-func PGPKey(name string) *Key {
-	return pgpKeys[name]
-}
-
 // Ubuntu Archive Automatic Signing Key (2018) <ftpmaster@ubuntu.com>.
-// Key ID: 871920D1991BC93C.
+// ID: 871920D1991BC93C.
 // Useful to validate InRelease files from live archive.
-const ubuntuArchiveSignKey2018 = `
+const pubKeyUbuntu2018Armor = `
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 
 mQINBFufwdoBEADv/Gxytx/LcSXYuM0MwKojbBye81s0G1nEx+lz6VAUpIUZnbkq
@@ -95,44 +87,9 @@ uOgcXny1UlwtCUzlrSaP
 -----END PGP PUBLIC KEY BLOCK-----
 `
 
-// Ubuntu Archive Automatic Signing Key (2012) <ftpmaster@ubuntu.com>.
-// Key ID: 3B4FE6ACC0B21F32.
-// Useful to validate InRelease files from live archive.
-const ubuntuArchiveSignKey2012 = `
------BEGIN PGP PUBLIC KEY BLOCK-----
-
-mQINBE+tgXgBEADfiL1KNFHT4H4Dw0OR9LemR8ebsFl+b9E44IpGhgWYDufj0gaM
-/UJ1Ti3bHfRT39VVZ6cv1P4mQy0bnAKFbYz/wo+GhzjBWtn6dThYv7n+KL8bptSC
-Xgg1a6en8dCCIA/pwtS2Ut/g4Eu6Z467dvYNlMgCqvg+prKIrXf5ibio48j3AFvd
-1dDJl2cHfyuON35/83vXKXz0FPohQ7N7kPfI+qrlGBYGWFzC/QEGje360Q2Yo+rf
-MoyDEXmPsoZVqf7EE8gjfnXiRqmz/Bg5YQb5bgnGbLGiHWtjS+ACIdLUq/h+jlSp
-57jw8oQktMh2xVMX4utDM0UENeZnPllVJSlR0b+ZmZz7paeSar8Yxn4wsNlL7GZb
-pW5A/WmcmWfuMYoPhBo5Fq1V2/siKNU3UKuf1KH+X0p1oZ4oOcZ2bS0Zh3YEG8IQ
-ce9Bferq4QMKsekcG9IKS6WBIU7BwaElI2ILD0gSwu8KzvNSEeIJhYSsBIEzrWxI
-BXoN2AC9PCqqXkWlI5Xr/86RWllB3CsoPwEfO8CLJW2LlXTen/Fkq4wT+apdhHei
-WiSsq/J5OEff0rKHBQ3fK7fyVuVNrJFb2CopaBLyCxTupvxs162jjUNopt0c7OqN
-BoPoUoVFAxUSpeEwAw6xrM5vROyLMSeh/YnTuRy8WviRapZCYo6naTCY5wARAQAB
-tEJVYnVudHUgQXJjaGl2ZSBBdXRvbWF0aWMgU2lnbmluZyBLZXkgKDIwMTIpIDxm
-dHBtYXN0ZXJAdWJ1bnR1LmNvbT6JAjgEEwECACIFAk+tgXgCGwMGCwkIBwMCBhUI
-AgkKCwQWAgMBAh4BAheAAAoJEDtP5qzAsh8yXX4QAJHUdK6eYMyJcrFP3yKXtUYQ
-MpaHRM/floqZtOFhlmcLVMgBNOr0eLvBU0JcZyZpHMvZciTDBMWX8ItCYVjRejf0
-K0lPvHHRGaE7t6JHVUCeznNbDMnOPYVwlVJdZLOa6PmE5WXVXpk8uTA8vm6RO2rS
-23vE7U0pQlV+1GVXMWH4ZLjaQs/Tm7wdvRxeqTbtfOEeHGLjmsoh0erHfzMV4wA/
-9Zq86WzuJS1HxXR6OYDC3/aQX7CxYT1MQxEw/PObnHtkl3PRMWdTW7fSQtulEXzp
-r2/JCev6Mfc8Uy0aD3jng9byVk9GpdNFEjGgaUqjqyZosvwAZ4/dmRjmMEibXeNU
-GC8HeWC3WOVV8L/DiA+miJlwPvwPiA1ZuKBI5A8VF0rNHW7QVsG8kQ+PDHgRdsmh
-pzSRgykN1PgK6UxScKX8LqNKCtKpuEPApka7FQ1u4BoZKjjpBhY1R4TpfFkMIe7q
-W8XfqoaP99pED3xXch2zFRNHitNJr+yQJH4z/o+2UvnTA2niUTHlFSCBoU1MvSq1
-N2J3qU6oR2cOYJ4ZxqWyCoeQR1x8aPnLlcn4le6HU7TocYbHaImcIt7qnG4Ni0OW
-P4giEhjOpgxtrWgl36mdufvriwya+EHXzn36EvQ9O+bm3fyarsnhPe01rlsRxqBi
-K1JOw/g4GnpX8iLGEX1V
-=t8OL
------END PGP PUBLIC KEY BLOCK-----
-`
-
 // Test-purpose RSA 2048 bits signing key-pairs without a passphrase.
-// Key ID: 854BAF1AA9D76600. User: "foo-bar <foo@bar>".
-const testPublicKeyData = `
+// ID: 854BAF1AA9D76600. User: "foo-bar <foo@bar>".
+const pubKey1Armor = `
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 
 mQENBGVs8P4BCADPh/fNnw2AI1JCYf+3p4jkcFQPLVsUkoTZk8OXjCxy+UP9Jd2m
@@ -152,7 +109,7 @@ F4nA5w==
 =ZXap
 -----END PGP PUBLIC KEY BLOCK-----
 `
-const testPrivateKeyData = `
+const privKey1Armor = `
 -----BEGIN PGP PRIVATE KEY BLOCK-----
 
 lQOYBGVs8P4BCADPh/fNnw2AI1JCYf+3p4jkcFQPLVsUkoTZk8OXjCxy+UP9Jd2m
@@ -187,8 +144,8 @@ zjGJoKAFtlMwNNDZ39JlkguMB0M5SxoGRXxQZE4DhPntUIW0qsE6ChmmjssjSDeg
 `
 
 // Test-purpose RSA 1024 bits signing key-pairs without a passphrase.
-// Key ID: 9568570379BF1F43. User: "Extra Test Key <test@key>".
-const testPublicKeyData2 = `
+// ID: 9568570379BF1F43. User: "Extra Test Key <test@key>".
+const pubKey2Armor = `
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 
 mI0EZXAwcgEEAMBQ4Qx6xam1k1hyjPrKQfCnGRBBm2+Lw9DHQcz0lreH51iZEVkS
@@ -202,7 +159,7 @@ rwF9bjDSJZUUz1I31YTnHpBiRU+hWuf7OVjnLcEAB8mMa7Y6YN37qT44
 =U79/
 -----END PGP PUBLIC KEY BLOCK-----
 `
-const testPrivateKeyData2 = `
+const privKey2Armor = `
 -----BEGIN PGP PRIVATE KEY BLOCK-----
 
 lQHYBGVwMHIBBADAUOEMesWptZNYcoz6ykHwpxkQQZtvi8PQx0HM9Ja3h+dYmRFZ

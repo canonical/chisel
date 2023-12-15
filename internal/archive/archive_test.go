@@ -33,16 +33,16 @@ type httpSuite struct {
 	header    http.Header
 	status    int
 	restore   func()
-	signKey   *packet.PrivateKey
-	authKey   *packet.PublicKey
+	privKey   *packet.PrivateKey
+	pubKey    *packet.PublicKey
 }
 
 var _ = Suite(&httpSuite{})
 
 var (
-	testKey                  = testutil.PGPKey("test-key-1")
-	extraTestKey             = testutil.PGPKey("test-key-2")
-	ubuntuArchiveSignKey2018 = testutil.PGPKey("ubuntu-archive-key-2018")
+	key1          = testutil.PGPKeys["key1"]
+	key2          = testutil.PGPKeys["key2"]
+	keyUbuntu2018 = testutil.PGPKeys["keyUbuntu2018"]
 )
 
 func (s *httpSuite) SetUpTest(c *C) {
@@ -56,8 +56,8 @@ func (s *httpSuite) SetUpTest(c *C) {
 	s.header = nil
 	s.status = 200
 	s.restore = archive.FakeDo(s.Do)
-	s.signKey = testKey.PrivateKey
-	s.authKey = testKey.PublicKey
+	s.privKey = key1.PrivKey
+	s.pubKey = key1.PubKey
 }
 
 func (s *httpSuite) TearDownTest(c *C) {
@@ -106,10 +106,10 @@ func (s *httpSuite) prepareArchive(suite, version, arch string, components []str
 
 func (s *httpSuite) prepareArchiveAdjustRelease(suite, version, arch string, components []string, adjustRelease func(*testarchive.Release)) *testarchive.Release {
 	release := &testarchive.Release{
-		Suite:      suite,
-		Version:    version,
-		Label:      "Ubuntu",
-		SigningKey: s.signKey,
+		Suite:   suite,
+		Version: version,
+		Label:   "Ubuntu",
+		PrivKey: s.privKey,
 	}
 	for i, component := range components {
 		index := &testarchive.PackageIndex{
@@ -185,7 +185,7 @@ func (s *httpSuite) TestOptionErrors(c *C) {
 	cacheDir := c.MkDir()
 	for _, test := range optionErrorTests {
 		test.options.CacheDir = cacheDir
-		test.options.PublicKeys = append(test.options.PublicKeys, s.authKey)
+		test.options.PubKeys = append(test.options.PubKeys, s.pubKey)
 		_, err := archive.Open(&test.options)
 		c.Assert(err, ErrorMatches, test.error)
 	}
@@ -202,7 +202,7 @@ func (s *httpSuite) TestFetchPackage(c *C) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
-		PublicKeys: []*packet.PublicKey{s.authKey},
+		PubKeys:    []*packet.PublicKey{s.pubKey},
 	}
 
 	archive, err := archive.Open(&options)
@@ -232,7 +232,7 @@ func (s *httpSuite) TestFetchPortsPackage(c *C) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
-		PublicKeys: []*packet.PublicKey{s.authKey},
+		PubKeys:    []*packet.PublicKey{s.pubKey},
 	}
 
 	archive, err := archive.Open(&options)
@@ -270,7 +270,7 @@ func (s *httpSuite) TestFetchSecurityPackage(c *C) {
 		Arch:       "amd64",
 		Suites:     []string{"jammy", "jammy-security", "jammy-updates"},
 		Components: []string{"main", "universe"},
-		PublicKeys: []*packet.PublicKey{s.authKey},
+		PubKeys:    []*packet.PublicKey{s.pubKey},
 	}
 
 	archive, err := archive.Open(&options)
@@ -301,7 +301,7 @@ func (s *httpSuite) TestArchiveLabels(c *C) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
-		PublicKeys: []*packet.PublicKey{s.authKey},
+		PubKeys:    []*packet.PublicKey{s.pubKey},
 	}
 
 	_, err := archive.Open(&options)
@@ -316,7 +316,7 @@ func (s *httpSuite) TestArchiveLabels(c *C) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
-		PublicKeys: []*packet.PublicKey{s.authKey},
+		PubKeys:    []*packet.PublicKey{s.pubKey},
 	}
 
 	_, err = archive.Open(&options)
@@ -331,7 +331,7 @@ func (s *httpSuite) TestArchiveLabels(c *C) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
-		PublicKeys: []*packet.PublicKey{s.authKey},
+		PubKeys:    []*packet.PublicKey{s.pubKey},
 	}
 
 	_, err = archive.Open(&options)
@@ -346,7 +346,7 @@ func (s *httpSuite) TestArchiveLabels(c *C) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
-		PublicKeys: []*packet.PublicKey{s.authKey},
+		PubKeys:    []*packet.PublicKey{s.pubKey},
 	}
 
 	_, err = archive.Open(&options)
@@ -361,17 +361,17 @@ type verifyArchiveReleaseTest struct {
 
 var verifyArchiveReleaseTests = []verifyArchiveReleaseTest{{
 	summary: "A valid public key",
-	pubKeys: []*packet.PublicKey{testKey.PublicKey},
+	pubKeys: []*packet.PublicKey{key1.PubKey},
 }, {
 	summary: "No public key to verify with",
 	error:   `cannot verify signature of the InRelease file`,
 }, {
 	summary: "Wrong public key",
-	pubKeys: []*packet.PublicKey{extraTestKey.PublicKey},
+	pubKeys: []*packet.PublicKey{key2.PubKey},
 	error:   `cannot verify signature of the InRelease file`,
 }, {
 	summary: "Multiple public keys (invalid, valid)",
-	pubKeys: []*packet.PublicKey{extraTestKey.PublicKey, testKey.PublicKey},
+	pubKeys: []*packet.PublicKey{key2.PubKey, key1.PubKey},
 }}
 
 func (s *httpSuite) TestVerifyArchiveRelease(c *C) {
@@ -387,7 +387,7 @@ func (s *httpSuite) TestVerifyArchiveRelease(c *C) {
 			Suites:     []string{"jammy"},
 			Components: []string{"main", "universe"},
 			CacheDir:   c.MkDir(),
-			PublicKeys: test.pubKeys,
+			PubKeys:    test.pubKeys,
 		}
 
 		_, err := archive.Open(&options)
@@ -424,28 +424,28 @@ func (s *S) TestRealArchive(c *C) {
 }
 
 type ubuntuRelease struct {
-	name               string
-	version            string
-	archiveSigningKeys []*packet.PublicKey
+	name           string
+	version        string
+	archivePubKeys []*packet.PublicKey
 }
 
 var ubuntuReleases = []ubuntuRelease{{
 	name:    "focal",
 	version: "20.04",
-	archiveSigningKeys: []*packet.PublicKey{
-		ubuntuArchiveSignKey2018.PublicKey,
+	archivePubKeys: []*packet.PublicKey{
+		keyUbuntu2018.PubKey,
 	},
 }, {
 	name:    "jammy",
 	version: "22.04",
-	archiveSigningKeys: []*packet.PublicKey{
-		ubuntuArchiveSignKey2018.PublicKey,
+	archivePubKeys: []*packet.PublicKey{
+		keyUbuntu2018.PubKey,
 	},
 }, {
 	name:    "noble",
 	version: "24.04",
-	archiveSigningKeys: []*packet.PublicKey{
-		ubuntuArchiveSignKey2018.PublicKey,
+	archivePubKeys: []*packet.PublicKey{
+		keyUbuntu2018.PubKey,
 	},
 }}
 
@@ -478,7 +478,7 @@ func (s *S) testOpenArchiveArch(c *C, release ubuntuRelease, arch string) {
 		Suites:     []string{release.name},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
-		PublicKeys: release.archiveSigningKeys,
+		PubKeys:    release.archivePubKeys,
 	}
 
 	archive, err := archive.Open(&options)

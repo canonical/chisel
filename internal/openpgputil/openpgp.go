@@ -36,9 +36,9 @@ func DecodeKeys(armoredData []byte) (pubKeys []*packet.PublicKey, privKeys []*pa
 	return pubKeys, privKeys, nil
 }
 
-// DecodePublicKey decodes a single public key packet from armored data. The
+// DecodePubKey decodes a single public key packet from armored data. The
 // data should contain exactly one public key packet and no private key packets.
-func DecodePublicKey(armoredData []byte) (*packet.PublicKey, error) {
+func DecodePubKey(armoredData []byte) (*packet.PublicKey, error) {
 	pubKeys, privKeys, err := DecodeKeys(armoredData)
 	if err != nil {
 		return nil, err

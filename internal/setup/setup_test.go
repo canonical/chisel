@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	testKey      = testutil.PGPKey("test-key-1")
-	extraTestKey = testutil.PGPKey("test-key-2")
+	testKey      = testutil.PGPKeys["key1"]
+	extraTestKey = testutil.PGPKeys["key2"]
 )
 
 type setupTest struct {
@@ -64,7 +64,7 @@ var setupTests = []setupTest{{
 			public-keys:
 				test-key:
 					id: ` + testKey.ID + `
-					armor: |` + "\n" + testutil.PrefixEachLine(testKey.ArmoredPublicKey, "\t\t\t\t\t\t") + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmored, "\t\t\t\t\t\t") + `
 		`,
 		"slices/mydir/mypkg.yaml": `
 			package: mypkg
@@ -79,7 +79,7 @@ var setupTests = []setupTest{{
 				Version:    "22.04",
 				Suites:     []string{"jammy", "jammy-security"},
 				Components: []string{"main", "other"},
-				PublicKeys: []*packet.PublicKey{testKey.PublicKey},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -123,7 +123,7 @@ var setupTests = []setupTest{{
 				Version:    "22.04",
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
-				PublicKeys: []*packet.PublicKey{testKey.PublicKey},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -185,7 +185,7 @@ var setupTests = []setupTest{{
 				Version:    "22.04",
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
-				PublicKeys: []*packet.PublicKey{testKey.PublicKey},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -446,7 +446,7 @@ var setupTests = []setupTest{{
 				Version:    "22.04",
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
-				PublicKeys: []*packet.PublicKey{testKey.PublicKey},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -661,7 +661,7 @@ var setupTests = []setupTest{{
 				Version:    "22.04",
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
-				PublicKeys: []*packet.PublicKey{testKey.PublicKey},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -701,7 +701,7 @@ var setupTests = []setupTest{{
 				Version:    "22.04",
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
-				PublicKeys: []*packet.PublicKey{testKey.PublicKey},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -742,7 +742,7 @@ var setupTests = []setupTest{{
 				Version:    "22.04",
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
-				PublicKeys: []*packet.PublicKey{testKey.PublicKey},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -783,7 +783,7 @@ var setupTests = []setupTest{{
 			public-keys:
 				test-key:
 					id: ` + testKey.ID + `
-					armor: |` + "\n" + testutil.PrefixEachLine(testKey.ArmoredPublicKey, "\t\t\t\t\t\t") + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmored, "\t\t\t\t\t\t") + `
 		`,
 		"slices/mydir/mypkg.yaml": `
 			package: mypkg
@@ -798,14 +798,14 @@ var setupTests = []setupTest{{
 				Version:    "22.04",
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
-				PublicKeys: []*packet.PublicKey{testKey.PublicKey},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
 			},
 			"bar": {
 				Name:       "bar",
 				Version:    "22.04",
 				Suites:     []string{"jammy-updates"},
 				Components: []string{"universe"},
-				PublicKeys: []*packet.PublicKey{testKey.PublicKey},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -833,7 +833,7 @@ var setupTests = []setupTest{{
 			public-keys:
 				test-key:
 					id: ` + testKey.ID + `
-					armor: |` + "\n" + testutil.PrefixEachLine(testKey.ArmoredPublicKey, "\t\t\t\t\t\t") + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmored, "\t\t\t\t\t\t") + `
 					madeUpKey6: whatever
 		`,
 		"slices/mydir/mypkg.yaml": `
@@ -855,7 +855,7 @@ var setupTests = []setupTest{{
 				Version:    "22.04",
 				Suites:     []string{"jammy", "jammy-security"},
 				Components: []string{"main", "other"},
-				PublicKeys: []*packet.PublicKey{testKey.PublicKey},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -895,10 +895,10 @@ var setupTests = []setupTest{{
 			public-keys:
 				extra-key:
 					id: ` + extraTestKey.ID + `
-					armor: |` + "\n" + testutil.PrefixEachLine(extraTestKey.ArmoredPublicKey, "\t\t\t\t\t\t") + `
+					armor: |` + "\n" + testutil.PrefixEachLine(extraTestKey.PubKeyArmored, "\t\t\t\t\t\t") + `
 				test-key:
 					id: ` + testKey.ID + `
-					armor: |` + "\n" + testutil.PrefixEachLine(testKey.ArmoredPublicKey, "\t\t\t\t\t\t") + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmored, "\t\t\t\t\t\t") + `
 		`,
 		"slices/mydir/mypkg.yaml": `
 			package: mypkg
@@ -913,14 +913,14 @@ var setupTests = []setupTest{{
 				Version:    "22.04",
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
-				PublicKeys: []*packet.PublicKey{extraTestKey.PublicKey},
+				PubKeys:    []*packet.PublicKey{extraTestKey.PubKey},
 			},
 			"bar": {
 				Name:       "bar",
 				Version:    "22.04",
 				Suites:     []string{"jammy-updates"},
 				Components: []string{"universe"},
-				PublicKeys: []*packet.PublicKey{testKey.PublicKey, extraTestKey.PublicKey},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey, extraTestKey.PubKey},
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -1007,7 +1007,7 @@ var setupTests = []setupTest{{
 			public-keys:
 				extra-key:
 					id: ` + extraTestKey.ID + `
-					armor: |` + "\n" + testutil.PrefixEachLine(testKey.ArmoredPublicKey, "\t\t\t\t\t\t") + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmored, "\t\t\t\t\t\t") + `
 		`,
 		"slices/mydir/mypkg.yaml": `
 			package: mypkg
@@ -1026,7 +1026,7 @@ var defaultChiselYaml = `
 	public-keys:
 		test-key:
 			id: ` + testKey.ID + `
-			armor: |` + "\n" + testutil.PrefixEachLine(testKey.ArmoredPublicKey, "\t\t\t\t\t\t") + `
+			armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmored, "\t\t\t\t\t\t") + `
 `
 
 func (s *S) TestParseRelease(c *C) {

@@ -29,7 +29,7 @@ type Options struct {
 	Suites     []string
 	Components []string
 	CacheDir   string
-	PublicKeys []*packet.PublicKey
+	PubKeys    []*packet.PublicKey
 }
 
 func Open(options *Options) (Archive, error) {
@@ -65,10 +65,10 @@ var bulkClient = &http.Client{
 var bulkDo = bulkClient.Do
 
 type ubuntuArchive struct {
-	options    Options
-	indexes    []*ubuntuIndex
-	cache      *cache.Cache
-	publicKeys []*packet.PublicKey
+	options Options
+	indexes []*ubuntuIndex
+	cache   *cache.Cache
+	pubKeys []*packet.PublicKey
 }
 
 type ubuntuIndex struct {
@@ -145,7 +145,7 @@ func openUbuntu(options *Options) (Archive, error) {
 		cache: &cache.Cache{
 			Dir: options.CacheDir,
 		},
-		publicKeys: options.PublicKeys,
+		pubKeys: options.PubKeys,
 	}
 
 	for _, suite := range options.Suites {
@@ -205,7 +205,7 @@ func (index *ubuntuIndex) fetchRelease() error {
 	if err != nil {
 		return fmt.Errorf("cannot decode clearsigned InRelease file: %v", err)
 	}
-	err = openpgputil.VerifyAnySignature(index.archive.publicKeys, sigs, canonicalBody)
+	err = openpgputil.VerifyAnySignature(index.archive.pubKeys, sigs, canonicalBody)
 	if err != nil {
 		return fmt.Errorf("cannot verify signature of the InRelease file")
 	}

@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	testKey      = testutil.PGPKey("test-key-1")
-	extraTestKey = testutil.PGPKey("test-key-2")
+	testKey      = testutil.PGPKeys["key1"]
+	extraTestKey = testutil.PGPKeys["key2"]
 )
 
 type archiveKeyTest struct {
@@ -22,8 +22,8 @@ type archiveKeyTest struct {
 
 var archiveKeyTests = []archiveKeyTest{{
 	summary: "Armored data with one public key",
-	armored: testKey.ArmoredPublicKey,
-	pubKey:  testKey.PublicKey,
+	armored: testKey.PubKeyArmored,
+	pubKey:  testKey.PubKey,
 }, {
 	summary:  "Armored data with two public keys",
 	armored:  twoPubKeysArmored,
@@ -34,7 +34,7 @@ var archiveKeyTests = []archiveKeyTest{{
 	relerror: "armored data contains no public key",
 }, {
 	summary:  "Armored data with private key",
-	armored:  testKey.ArmoredPrivateKey,
+	armored:  testKey.PrivKeyArmored,
 	relerror: "armored data contains private key",
 }, {
 	summary: "Invalid armored data",
@@ -56,7 +56,7 @@ func (s *S) TestDecodeArchivePubKey(c *C) {
 	for _, test := range archiveKeyTests {
 		c.Logf("Summary: %s", test.summary)
 
-		pubKey, err := openpgputil.DecodePublicKey([]byte(test.armored))
+		pubKey, err := openpgputil.DecodePubKey([]byte(test.armored))
 		if test.relerror != "" {
 			c.Assert(err, ErrorMatches, test.relerror)
 			continue
@@ -77,15 +77,15 @@ type verifyClearSignTest struct {
 var verifyClearSignTests = []verifyClearSignTest{{
 	summary:   "Good data with proper sign",
 	clearData: clearSignedData,
-	pubKeys:   []*packet.PublicKey{testKey.PublicKey},
+	pubKeys:   []*packet.PublicKey{testKey.PubKey},
 }, {
 	summary:   "Good data with multiple signatures",
 	clearData: clearSignedWithMultipleSigns,
-	pubKeys:   []*packet.PublicKey{testKey.PublicKey, extraTestKey.PublicKey},
+	pubKeys:   []*packet.PublicKey{testKey.PubKey, extraTestKey.PubKey},
 }, {
 	summary:   "Multiple signatures: verify at least one signature",
 	clearData: clearSignedWithMultipleSigns,
-	pubKeys:   []*packet.PublicKey{testKey.PublicKey},
+	pubKeys:   []*packet.PublicKey{testKey.PubKey},
 }, {
 	summary:   "Multiple signatures: no valid public keys",
 	clearData: clearSignedWithMultipleSigns,
@@ -93,22 +93,22 @@ var verifyClearSignTests = []verifyClearSignTest{{
 }, {
 	summary:   "Invalid data: improper hash",
 	clearData: invalidSignedData,
-	pubKeys:   []*packet.PublicKey{testKey.PublicKey},
+	pubKeys:   []*packet.PublicKey{testKey.PubKey},
 	relerror:  "openpgp: .*invalid signature: hash tag doesn't match.*",
 }, {
 	summary:   "Invalid data: bad packets",
 	clearData: invalidSignedDataBadPackets,
-	pubKeys:   []*packet.PublicKey{testKey.PublicKey},
+	pubKeys:   []*packet.PublicKey{testKey.PubKey},
 	relerror:  "cannot parse armored data: openpgp: .*",
 }, {
 	summary:   "Invalid data: malformed clearsign text",
 	clearData: "foo\n",
-	pubKeys:   []*packet.PublicKey{testKey.PublicKey},
+	pubKeys:   []*packet.PublicKey{testKey.PubKey},
 	relerror:  "cannot decode clearsign text",
 }, {
 	summary:   "Wrong public key to verify with",
 	clearData: clearSignedData,
-	pubKeys:   []*packet.PublicKey{extraTestKey.PublicKey},
+	pubKeys:   []*packet.PublicKey{extraTestKey.PubKey},
 	relerror:  "openpgp: .*invalid signature:.*verification failure",
 }}
 
