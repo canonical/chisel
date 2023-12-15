@@ -64,7 +64,7 @@ var setupTests = []setupTest{{
 			public-keys:
 				test-key:
 					id: ` + testKey.ID + `
-					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmored, "\t\t\t\t\t\t") + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
 		`,
 		"slices/mydir/mypkg.yaml": `
 			package: mypkg
@@ -783,7 +783,7 @@ var setupTests = []setupTest{{
 			public-keys:
 				test-key:
 					id: ` + testKey.ID + `
-					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmored, "\t\t\t\t\t\t") + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
 		`,
 		"slices/mydir/mypkg.yaml": `
 			package: mypkg
@@ -833,7 +833,7 @@ var setupTests = []setupTest{{
 			public-keys:
 				test-key:
 					id: ` + testKey.ID + `
-					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmored, "\t\t\t\t\t\t") + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
 					madeUpKey6: whatever
 		`,
 		"slices/mydir/mypkg.yaml": `
@@ -895,10 +895,10 @@ var setupTests = []setupTest{{
 			public-keys:
 				extra-key:
 					id: ` + extraTestKey.ID + `
-					armor: |` + "\n" + testutil.PrefixEachLine(extraTestKey.PubKeyArmored, "\t\t\t\t\t\t") + `
+					armor: |` + "\n" + testutil.PrefixEachLine(extraTestKey.PubKeyArmor, "\t\t\t\t\t\t") + `
 				test-key:
 					id: ` + testKey.ID + `
-					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmored, "\t\t\t\t\t\t") + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
 		`,
 		"slices/mydir/mypkg.yaml": `
 			package: mypkg
@@ -1007,7 +1007,7 @@ var setupTests = []setupTest{{
 			public-keys:
 				extra-key:
 					id: ` + extraTestKey.ID + `
-					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmored, "\t\t\t\t\t\t") + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
 		`,
 		"slices/mydir/mypkg.yaml": `
 			package: mypkg
@@ -1026,7 +1026,7 @@ var defaultChiselYaml = `
 	public-keys:
 		test-key:
 			id: ` + testKey.ID + `
-			armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmored, "\t\t\t\t\t\t") + `
+			armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
 `
 
 func (s *S) TestParseRelease(c *C) {

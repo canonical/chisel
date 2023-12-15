@@ -9,41 +9,41 @@ import (
 )
 
 type PGPKeyData struct {
-	ID             string
-	PubKeyArmored  string
-	PrivKeyArmored string
-	PubKey         *packet.PublicKey
-	PrivKey        *packet.PrivateKey
+	ID           string
+	PubKeyArmor  string
+	PrivKeyArmor string
+	PubKey       *packet.PublicKey
+	PrivKey      *packet.PrivateKey
 }
 
 var PGPKeys = map[string]*PGPKeyData{
 	"keyUbuntu2018": {
-		ID:            "871920D1991BC93C",
-		PubKeyArmored: pubKeyUbuntu2018Armor,
+		ID:          "871920D1991BC93C",
+		PubKeyArmor: pubKeyUbuntu2018Armor,
 	},
 	"key1": {
-		ID:             "854BAF1AA9D76600",
-		PubKeyArmored:  pubKey1Armor,
-		PrivKeyArmored: privKey1Armor,
+		ID:           "854BAF1AA9D76600",
+		PubKeyArmor:  pubKey1Armor,
+		PrivKeyArmor: privKey1Armor,
 	},
 	"key2": {
-		ID:             "9568570379BF1F43",
-		PubKeyArmored:  pubKey2Armor,
-		PrivKeyArmored: privKey2Armor,
+		ID:           "9568570379BF1F43",
+		PubKeyArmor:  pubKey2Armor,
+		PrivKeyArmor: privKey2Armor,
 	},
 }
 
 func init() {
 	for name, key := range PGPKeys {
-		if key.PubKeyArmored != "" {
-			pubKeys, privKeys, err := openpgputil.DecodeKeys([]byte(key.PubKeyArmored))
+		if key.PubKeyArmor != "" {
+			pubKeys, privKeys, err := openpgputil.DecodeKeys([]byte(key.PubKeyArmor))
 			if err != nil || len(privKeys) > 0 || len(pubKeys) != 1 || pubKeys[0].KeyIdString() != key.ID {
 				log.Panicf("invalid public key armored data: %s", name)
 			}
 			key.PubKey = pubKeys[0]
 		}
-		if key.PrivKeyArmored != "" {
-			pubKeys, privKeys, err := openpgputil.DecodeKeys([]byte(key.PrivKeyArmored))
+		if key.PrivKeyArmor != "" {
+			pubKeys, privKeys, err := openpgputil.DecodeKeys([]byte(key.PrivKeyArmor))
 			if err != nil || len(pubKeys) > 0 || len(privKeys) != 1 || privKeys[0].KeyIdString() != key.ID {
 				log.Panicf("invalid private key armored data: %s", name)
 			}
