@@ -43,12 +43,9 @@ func Reindent(in string) []byte {
 func PrefixEachLine(text string, prefix string) string {
 	var result strings.Builder
 	lines := strings.Split(text, "\n")
-	for i, line := range lines {
-		newLine := prefix + line
-		if i < len(lines)-1 {
-			newLine += "\n"
-		}
-		_, err := result.WriteString(newLine)
+	for _, line := range lines {
+		prefixed := prefix + line + "\n"
+		_, err := result.WriteString(prefixed)
 		if err != nil {
 			panic(err)
 		}

@@ -3,8 +3,9 @@ package testutil_test
 import (
 	"strings"
 
-	"github.com/canonical/chisel/internal/testutil"
 	. "gopkg.in/check.v1"
+
+	"github.com/canonical/chisel/internal/testutil"
 )
 
 type reindentTest struct {
@@ -78,26 +79,26 @@ type prefixEachLineTest struct {
 var prefixEachLineTests = []prefixEachLineTest{{
 	raw:    "a\n\tb\n  \t\tc\td\n\t ",
 	prefix: "foo",
-	result: "fooa\nfoo\tb\nfoo  \t\tc\td\nfoo\t ",
+	result: "fooa\nfoo\tb\nfoo  \t\tc\td\nfoo\t \n",
 }, {
 	raw:    "foo",
 	prefix: "pref",
-	result: "preffoo",
+	result: "preffoo\n",
 }, {
 	raw:    "",
 	prefix: "",
-	result: "",
+	result: "\n",
 }, {
 	raw:    "\n",
 	prefix: "\t",
-	result: "\t\n\t",
+	result: "\t\n\t\n",
 }}
 
 func (s *S) TestPrefixEachLine(c *C) {
 	for _, test := range prefixEachLineTests {
 		c.Logf("Test: %#v", test)
 
-		indented := testutil.PrefixEachLine(test.raw, test.prefix)
-		c.Assert(string(indented), Equals, test.result)
+		prefixed := testutil.PrefixEachLine(test.raw, test.prefix)
+		c.Assert(prefixed, Equals, test.result)
 	}
 }
