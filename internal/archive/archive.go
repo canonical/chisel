@@ -210,7 +210,7 @@ func (index *ubuntuIndex) fetchRelease() error {
 		return fmt.Errorf("cannot verify signature of the InRelease file")
 	}
 
-	// canonicalBody has <CR><LF> line endings, reverting that to  match the
+	// canonicalBody has <CR><LF> line endings, reverting that to match the
 	// expected control file format.
 	body := strings.ReplaceAll(string(canonicalBody), "\r", "")
 	ctrl, err := control.ParseString("Label", body)
