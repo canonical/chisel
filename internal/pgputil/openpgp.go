@@ -1,4 +1,4 @@
-package openpgputil
+package pgputil
 
 import (
 	"bytes"

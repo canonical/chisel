@@ -1,10 +1,10 @@
-package openpgputil_test
+package pgputil_test
 
 import (
 	"golang.org/x/crypto/openpgp/packet"
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/chisel/internal/openpgputil"
+	"github.com/canonical/chisel/internal/pgputil"
 	"github.com/canonical/chisel/internal/testutil"
 )
 
@@ -56,7 +56,7 @@ func (s *S) TestDecodeArchivePubKey(c *C) {
 	for _, test := range archiveKeyTests {
 		c.Logf("Summary: %s", test.summary)
 
-		pubKey, err := openpgputil.DecodePubKey([]byte(test.armor))
+		pubKey, err := pgputil.DecodePubKey([]byte(test.armor))
 		if test.relerror != "" {
 			c.Assert(err, ErrorMatches, test.relerror)
 			continue
@@ -116,9 +116,9 @@ func (s *S) TestVerifySignature(c *C) {
 	for _, test := range verifyClearSignTests {
 		c.Logf("Summary: %s", test.summary)
 
-		sigs, body, err := openpgputil.DecodeClearSigned([]byte(test.clearData))
+		sigs, body, err := pgputil.DecodeClearSigned([]byte(test.clearData))
 		if err == nil {
-			err = openpgputil.VerifyAnySignature(test.pubKeys, sigs, body)
+			err = pgputil.VerifyAnySignature(test.pubKeys, sigs, body)
 		}
 		if test.relerror != "" {
 			c.Assert(err, ErrorMatches, test.relerror)

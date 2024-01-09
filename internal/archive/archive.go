@@ -13,7 +13,7 @@ import (
 	"github.com/canonical/chisel/internal/cache"
 	"github.com/canonical/chisel/internal/control"
 	"github.com/canonical/chisel/internal/deb"
-	"github.com/canonical/chisel/internal/openpgputil"
+	"github.com/canonical/chisel/internal/pgputil"
 )
 
 type Archive interface {
@@ -201,11 +201,11 @@ func (index *ubuntuIndex) fetchRelease() error {
 	// Unlike gpg --verify which ensures the verification of all signatures,
 	// this is in line with what apt does internally:
 	// https://salsa.debian.org/apt-team/apt/-/blob/4e344a4/methods/gpgv.cc#L553-557
-	sigs, canonicalBody, err := openpgputil.DecodeClearSigned(data)
+	sigs, canonicalBody, err := pgputil.DecodeClearSigned(data)
 	if err != nil {
 		return fmt.Errorf("cannot decode clearsigned InRelease file: %v", err)
 	}
-	err = openpgputil.VerifyAnySignature(index.archive.pubKeys, sigs, canonicalBody)
+	err = pgputil.VerifyAnySignature(index.archive.pubKeys, sigs, canonicalBody)
 	if err != nil {
 		return fmt.Errorf("cannot verify signature of the InRelease file")
 	}

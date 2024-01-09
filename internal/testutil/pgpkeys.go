@@ -5,7 +5,7 @@ import (
 
 	"golang.org/x/crypto/openpgp/packet"
 
-	"github.com/canonical/chisel/internal/openpgputil"
+	"github.com/canonical/chisel/internal/pgputil"
 )
 
 type PGPKeyData struct {
@@ -36,14 +36,14 @@ var PGPKeys = map[string]*PGPKeyData{
 func init() {
 	for name, key := range PGPKeys {
 		if key.PubKeyArmor != "" {
-			pubKeys, privKeys, err := openpgputil.DecodeKeys([]byte(key.PubKeyArmor))
+			pubKeys, privKeys, err := pgputil.DecodeKeys([]byte(key.PubKeyArmor))
 			if err != nil || len(privKeys) > 0 || len(pubKeys) != 1 || pubKeys[0].KeyIdString() != key.ID {
 				log.Panicf("invalid public key armored data: %s", name)
 			}
 			key.PubKey = pubKeys[0]
 		}
 		if key.PrivKeyArmor != "" {
-			pubKeys, privKeys, err := openpgputil.DecodeKeys([]byte(key.PrivKeyArmor))
+			pubKeys, privKeys, err := pgputil.DecodeKeys([]byte(key.PrivKeyArmor))
 			if err != nil || len(pubKeys) > 0 || len(privKeys) != 1 || privKeys[0].KeyIdString() != key.ID {
 				log.Panicf("invalid private key armored data: %s", name)
 			}
