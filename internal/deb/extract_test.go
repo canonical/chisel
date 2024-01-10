@@ -20,14 +20,14 @@ type extractTest struct {
 
 var extractTests = []extractTest{{
 	summary: "Extract nothing",
-	pkgdata: testutil.PackageData["base-files"],
+	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: nil,
 	},
 	result: map[string]string{},
 }, {
 	summary: "Extract a few entries",
-	pkgdata: testutil.PackageData["base-files"],
+	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
 			"/a1/f1": []deb.ExtractInfo{{
@@ -56,7 +56,7 @@ var extractTests = []extractTest{{
 }, {
 
 	summary: "Copy a couple of entries elsewhere",
-	pkgdata: testutil.PackageData["base-files"],
+	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
 			"/a1/f1": []deb.ExtractInfo{{
@@ -78,7 +78,7 @@ var extractTests = []extractTest{{
 }, {
 
 	summary: "Copy same file twice",
-	pkgdata: testutil.PackageData["base-files"],
+	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
 			"/a1/f2": []deb.ExtractInfo{{
@@ -95,7 +95,7 @@ var extractTests = []extractTest{{
 	},
 }, {
 	summary: "Globbing a single dir level",
-	pkgdata: testutil.PackageData["base-files"],
+	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
 			"/a1/b*/": []deb.ExtractInfo{{
@@ -109,7 +109,7 @@ var extractTests = []extractTest{{
 	},
 }, {
 	summary: "Globbing for files with multiple levels at once",
-	pkgdata: testutil.PackageData["base-files"],
+	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
 			"/a1/b**": []deb.ExtractInfo{{
@@ -127,7 +127,7 @@ var extractTests = []extractTest{{
 	},
 }, {
 	summary: "Globbing with reporting of globbed paths",
-	pkgdata: testutil.PackageData["base-files"],
+	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
 			"/a1/b**": []deb.ExtractInfo{{
@@ -154,7 +154,7 @@ var extractTests = []extractTest{{
 	},
 }, {
 	summary: "Globbing must have matching source and target",
-	pkgdata: testutil.PackageData["base-files"],
+	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
 			"/d1/d**": []deb.ExtractInfo{{
@@ -165,7 +165,7 @@ var extractTests = []extractTest{{
 	error: `cannot extract .*: when using wildcards source and target paths must match: /d1/d\*\*`,
 }, {
 	summary: "Globbing must also have a single target",
-	pkgdata: testutil.PackageData["base-files"],
+	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
 			"/etc/d**": []deb.ExtractInfo{{
@@ -178,7 +178,7 @@ var extractTests = []extractTest{{
 	error: `cannot extract .*: when using wildcards source and target paths must match: /etc/d\*\*`,
 }, {
 	summary: "Globbing cannot change modes",
-	pkgdata: testutil.PackageData["base-files"],
+	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
 			"/etc/d**": []deb.ExtractInfo{{
@@ -190,7 +190,7 @@ var extractTests = []extractTest{{
 	error: `cannot extract .*: when using wildcards source and target paths must match: /etc/d\*\*`,
 }, {
 	summary: "Missing file",
-	pkgdata: testutil.PackageData["base-files"],
+	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
 			"/missing_file": []deb.ExtractInfo{{
@@ -198,10 +198,10 @@ var extractTests = []extractTest{{
 			}},
 		},
 	},
-	error: `cannot extract from package "base-files": no content at /missing_file`,
+	error: `cannot extract from package "test-package": no content at /missing_file`,
 }, {
 	summary: "Missing directory",
-	pkgdata: testutil.PackageData["base-files"],
+	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
 			"/missing_dir/": []deb.ExtractInfo{{
@@ -209,10 +209,10 @@ var extractTests = []extractTest{{
 			}},
 		},
 	},
-	error: `cannot extract from package "base-files": no content at /missing_dir/`,
+	error: `cannot extract from package "test-package": no content at /missing_dir/`,
 }, {
 	summary: "Missing glob",
-	pkgdata: testutil.PackageData["base-files"],
+	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
 			"/missing_dir/**": []deb.ExtractInfo{{
@@ -220,10 +220,10 @@ var extractTests = []extractTest{{
 			}},
 		},
 	},
-	error: `cannot extract from package "base-files": no content at /missing_dir/\*\*`,
+	error: `cannot extract from package "test-package": no content at /missing_dir/\*\*`,
 }, {
 	summary: "Missing multiple entries",
-	pkgdata: testutil.PackageData["base-files"],
+	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
 			"/missing_file": []deb.ExtractInfo{{
@@ -234,10 +234,10 @@ var extractTests = []extractTest{{
 			}},
 		},
 	},
-	error: `cannot extract from package "base-files": no content at:\n- /missing_dir/\n- /missing_file`,
+	error: `cannot extract from package "test-package": no content at:\n- /missing_dir/\n- /missing_file`,
 }, {
 	summary: "Optional entries may be missing",
-	pkgdata: testutil.PackageData["base-files"],
+	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
 			"/a1/": []deb.ExtractInfo{{
@@ -259,7 +259,7 @@ var extractTests = []extractTest{{
 	},
 }, {
 	summary: "Optional entries mixed in cannot be missing",
-	pkgdata: testutil.PackageData["base-files"],
+	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
 			"/a1/missing_file": []deb.ExtractInfo{{
@@ -271,7 +271,7 @@ var extractTests = []extractTest{{
 			}},
 		},
 	},
-	error: `cannot extract from package "base-files": no content at /a1/missing_file`,
+	error: `cannot extract from package "test-package": no content at /a1/missing_file`,
 }}
 
 func (s *S) TestExtract(c *C) {
@@ -280,7 +280,7 @@ func (s *S) TestExtract(c *C) {
 		c.Logf("Test: %s", test.summary)
 		dir := c.MkDir()
 		options := test.options
-		options.Package = "base-files"
+		options.Package = "test-package"
 		options.TargetDir = dir
 
 		if test.globbed != nil {

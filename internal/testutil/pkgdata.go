@@ -12,7 +12,7 @@ import (
 
 var PackageData = map[string][]byte{}
 
-var baseFilesPackageEntries = []TarEntry{
+var testPackageEntries = []TarEntry{
 	Dir(0755, "./"),
 	Dir(0755, "./a1/"),
 	Reg(0644, "./a1/f1", "a1f1"),
@@ -28,7 +28,7 @@ var baseFilesPackageEntries = []TarEntry{
 }
 
 func init() {
-	PackageData["base-files"] = MustMakeDeb(baseFilesPackageEntries)
+	PackageData["test-package"] = MustMakeDeb(testPackageEntries)
 }
 
 type TarEntry struct {
