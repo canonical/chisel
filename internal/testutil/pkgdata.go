@@ -14,72 +14,17 @@ var PackageData = map[string][]byte{}
 
 var baseFilesPackageEntries = []TarEntry{
 	Dir(0755, "./"),
-	Dir(0755, "./etc/"),
-	Reg(0644, "./etc/debian_version", "bullseye/sid\n"),
-	Lnk(0644, "./etc/os-release", "../usr/lib/os-release"),
-	Dir(0755, "./etc/default/"),
-	Dir(0755, "./etc/dpkg/"),
-	Dir(0755, "./etc/dpkg/origins/"),
-	Reg(0644, "./etc/dpkg/origins/ubuntu", `Vendor: Ubuntu
-Vendor-URL: http://www.ubuntu.com/
-Bugs: https://bugs.launchpad.net/ubuntu/+filebug
-Parent: Debian
-`),
-	Reg(0644, "./etc/dpkg/origins/debian", `Vendor: Debian
-Vendor-URL: http://www.debian.org/
-Bugs: debbugs://bugs.debian.org
-`),
-	Dir(0755, "./usr/"),
-	Dir(0755, "./usr/bin/"),
-	Reg(0775, "./usr/bin/hello", `#!/bin/sh
-echo "Hello world"
-`),
-	Dir(0755, "./usr/lib/"),
-	Reg(0644, "./usr/lib/os-release", `NAME="Ubuntu"
-VERSION="20.04.4 LTS (Focal Fossa)"
-ID=ubuntu
-ID_LIKE=debian
-PRETTY_NAME="Ubuntu 20.04.4 LTS"
-VERSION_ID="20.04"
-HOME_URL="https://www.ubuntu.com/"
-SUPPORT_URL="https://help.ubuntu.com/"
-BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
-PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
-VERSION_CODENAME=focal
-UBUNTU_CODENAME=focal
-`),
-	Dir(0755, "./usr/share/"),
-	Dir(0755, "./usr/share/doc/"),
-	Dir(0755, "./usr/share/doc/base-files/"),
-	Reg(0644, "./usr/share/doc/base-files/copyright", `This is the Debian GNU/Linux prepackaged version of the Debian Base System
-Miscellaneous files. These files were written by Ian Murdock
-<imurdock@debian.org> and Bruce Perens <bruce@pixar.com>.
-
-This package was first put together by Bruce Perens <Bruce@Pixar.com>,
-from his own sources.
-
-The GNU Public Licenses in /usr/share/common-licenses were taken from
-ftp.gnu.org and are copyrighted by the Free Software Foundation, Inc.
-
-The Artistic License in /usr/share/common-licenses is the one coming
-from Perl and its SPDX name is "Artistic License 1.0 (Perl)".
-
-
-Copyright (C) 1995-2011 Software in the Public Interest.
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-On Debian GNU/Linux systems, the complete text of the GNU General
-Public License can be found in `+"`/usr/share/common-licenses/GPL'.\n"),
-	Dir(01777, "./tmp/"),
+	Dir(0755, "./a1/"),
+	Reg(0644, "./a1/f1", "a1f1"),
+	Reg(0644, "./a1/f2", "a1f2"),
+	Dir(0755, "./a1/b1/"),
+	Reg(0644, "./a1/b1/f1", "a1b1f1"),
+	Reg(0644, "./a1/b1/f2", "a1b1f2"),
+	Dir(0755, "./a1/b1/c1/"),
+	Reg(0644, "./a1/b1/c1/f1", "a1b1c1f1"),
+	Dir(0755, "./a2/"),
+	Dir(0755, "./a2/b1/"),
+	Reg(0644, "./a2/b1/f1", "a2b1f1"),
 }
 
 func init() {
