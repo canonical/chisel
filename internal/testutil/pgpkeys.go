@@ -17,7 +17,7 @@ type PGPKeyData struct {
 }
 
 var PGPKeys = map[string]*PGPKeyData{
-	"keyUbuntu2018": {
+	"key-ubuntu-2018": {
 		ID:          "871920D1991BC93C",
 		PubKeyArmor: pubKeyUbuntu2018Armor,
 	},

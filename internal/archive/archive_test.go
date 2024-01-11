@@ -42,7 +42,7 @@ var _ = Suite(&httpSuite{})
 var (
 	key1          = testutil.PGPKeys["key1"]
 	key2          = testutil.PGPKeys["key2"]
-	keyUbuntu2018 = testutil.PGPKeys["keyUbuntu2018"]
+	keyUbuntu2018 = testutil.PGPKeys["key-ubuntu-2018"]
 )
 
 func (s *httpSuite) SetUpTest(c *C) {
