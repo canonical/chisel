@@ -2,10 +2,11 @@ package deb_test
 
 import (
 	"bytes"
-	"github.com/canonical/chisel/internal/fsutil"
+
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/chisel/internal/deb"
+	"github.com/canonical/chisel/internal/fsutil"
 	"github.com/canonical/chisel/internal/testutil"
 )
 
