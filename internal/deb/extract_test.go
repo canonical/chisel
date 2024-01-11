@@ -181,8 +181,8 @@ var extractTests = []extractTest{{
 	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
-			"/etc/d**": []deb.ExtractInfo{{
-				Path: "/etc/d**",
+			"/d1/d**": []deb.ExtractInfo{{
+				Path: "/d1/d**",
 				Mode: 0777,
 			}},
 		},
