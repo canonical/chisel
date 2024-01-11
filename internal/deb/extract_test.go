@@ -187,7 +187,7 @@ var extractTests = []extractTest{{
 			}},
 		},
 	},
-	error: `cannot extract .*: when using wildcards source and target paths must match: /etc/d\*\*`,
+	error: `cannot extract .*: when using wildcards source and target paths must match: /d1/d\*\*`,
 }, {
 	summary: "Missing file",
 	pkgdata: testutil.PackageData["test-package"],
