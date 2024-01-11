@@ -321,7 +321,7 @@ func readSlices(release *Release, baseDir, dirName string) error {
 type yamlRelease struct {
 	Format   string                 `yaml:"format"`
 	Archives map[string]yamlArchive `yaml:"archives"`
-	PubKeys  map[string]yamlPubKey  `yaml:"public-keys"`
+	PubKeys  map[string]yamlPubKey  `yaml:"v1-public-keys"`
 }
 
 const yamlReleaseFormat = "chisel-v1"
@@ -331,7 +331,7 @@ type yamlArchive struct {
 	Suites     []string `yaml:"suites"`
 	Components []string `yaml:"components"`
 	Default    bool     `yaml:"default"`
-	PubKeys    []string `yaml:"public-keys"`
+	PubKeys    []string `yaml:"v1-public-keys"`
 }
 
 type yamlPackage struct {
@@ -460,7 +460,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 			release.DefaultArchive = archiveName
 		}
 		if len(details.PubKeys) == 0 {
-			return nil, fmt.Errorf("%s: archive %q missing public-keys field", fileName, archiveName)
+			return nil, fmt.Errorf("%s: archive %q missing v1-public-keys field", fileName, archiveName)
 		}
 		var archiveKeys []*packet.PublicKey
 		for _, keyName := range details.PubKeys {

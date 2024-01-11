@@ -501,12 +501,12 @@ var slicerTests = []slicerTest{{
 					version: 22.04
 					components: [main, universe]
 					default: true
-					public-keys: [test-key]
+					v1-public-keys: [test-key]
 				bar:
 					version: 22.04
 					components: [main]
-					public-keys: [test-key]
-			public-keys:
+					v1-public-keys: [test-key]
+			v1-public-keys:
 				test-key:
 					id: ` + testKey.ID + `
 					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
@@ -533,8 +533,8 @@ var defaultChiselYaml = `
 		ubuntu:
 			version: 22.04
 			components: [main, universe]
-			public-keys: [test-key]
-	public-keys:
+			v1-public-keys: [test-key]
+	v1-public-keys:
 		test-key:
 			id: ` + testKey.ID + `
 			armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `

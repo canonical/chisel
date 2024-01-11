@@ -60,8 +60,8 @@ var setupTests = []setupTest{{
 					version: 22.04
 					components: [main, other]
 					suites: [jammy, jammy-security]
-					public-keys: [test-key]
-			public-keys:
+					v1-public-keys: [test-key]
+			v1-public-keys:
 				test-key:
 					id: ` + testKey.ID + `
 					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
@@ -774,13 +774,13 @@ var setupTests = []setupTest{{
 					components: [main, universe]
 					suites: [jammy]
 					default: true
-					public-keys: [test-key]
+					v1-public-keys: [test-key]
 				bar:
 					version: 22.04
 					components: [universe]
 					suites: [jammy-updates]
-					public-keys: [test-key]
-			public-keys:
+					v1-public-keys: [test-key]
+			v1-public-keys:
 				test-key:
 					id: ` + testKey.ID + `
 					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
@@ -827,10 +827,10 @@ var setupTests = []setupTest{{
 					version: 22.04
 					components: [main, other]
 					suites: [jammy, jammy-security]
-					public-keys: [test-key]
+					v1-public-keys: [test-key]
 					madeUpKey1: whatever
 			madeUpKey2: whatever
-			public-keys:
+			v1-public-keys:
 				test-key:
 					id: ` + testKey.ID + `
 					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
@@ -885,14 +885,14 @@ var setupTests = []setupTest{{
 					version: 22.04
 					components: [main, universe]
 					suites: [jammy]
-					public-keys: [extra-key]
+					v1-public-keys: [extra-key]
 					default: true
 				bar:
 					version: 22.04
 					components: [universe]
 					suites: [jammy-updates]
-					public-keys: [test-key, extra-key]
-			public-keys:
+					v1-public-keys: [test-key, extra-key]
+			v1-public-keys:
 				extra-key:
 					id: ` + extraTestKey.ID + `
 					armor: |` + "\n" + testutil.PrefixEachLine(extraTestKey.PubKeyArmor, "\t\t\t\t\t\t") + `
@@ -945,7 +945,7 @@ var setupTests = []setupTest{{
 					default: true
 		`,
 	},
-	relerror: `chisel.yaml: archive "foo" missing public-keys field`,
+	relerror: `chisel.yaml: archive "foo" missing v1-public-keys field`,
 }, {
 	summary: "Unknown public key",
 	input: map[string]string{
@@ -956,7 +956,7 @@ var setupTests = []setupTest{{
 					version: 22.04
 					components: [main, universe]
 					suites: [jammy]
-					public-keys: [extra-key]
+					v1-public-keys: [extra-key]
 					default: true
 		`,
 		"slices/mydir/mypkg.yaml": `
@@ -974,9 +974,9 @@ var setupTests = []setupTest{{
 					version: 22.04
 					components: [main, universe]
 					suites: [jammy]
-					public-keys: [extra-key]
+					v1-public-keys: [extra-key]
 					default: true
-			public-keys:
+			v1-public-keys:
 				extra-key:
 					id: foo
 					armor: |
@@ -1002,9 +1002,9 @@ var setupTests = []setupTest{{
 					version: 22.04
 					components: [main, universe]
 					suites: [jammy]
-					public-keys: [extra-key]
+					v1-public-keys: [extra-key]
 					default: true
-			public-keys:
+			v1-public-keys:
 				extra-key:
 					id: ` + extraTestKey.ID + `
 					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
@@ -1022,8 +1022,8 @@ var defaultChiselYaml = `
 		ubuntu:
 			version: 22.04
 			components: [main, universe]
-			public-keys: [test-key]
-	public-keys:
+			v1-public-keys: [test-key]
+	v1-public-keys:
 		test-key:
 			id: ` + testKey.ID + `
 			armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
