@@ -1,43 +1,19 @@
 package setup_test
 
 import (
-	_ "embed"
 	"os"
 	"path/filepath"
-	"strings"
 
-	"github.com/ProtonMail/go-crypto/openpgp"
+	"golang.org/x/crypto/openpgp/packet"
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/testutil"
 )
 
-func parseKeyring(ascii string) openpgp.KeyRing {
-	keyring, err := openpgp.ReadArmoredKeyRing(strings.NewReader(ascii))
-	if err != nil {
-		panic(err)
-	}
-	return keyring
-}
-
-func indentLines(text string, indent string) string {
-	var result strings.Builder
-	for _, line := range strings.Split(text, "\n") {
-		result.WriteString(indent)
-		result.WriteString(line)
-		result.WriteByte('\n')
-	}
-	return result.String()
-}
-
 var (
-	//go:embed testdata/ubuntu-archive-keyring.asc
-	testKeyringUbuntuArchiveASCII string
-	testKeyringUbuntuArchive      = parseKeyring(testKeyringUbuntuArchiveASCII)
-	//go:embed testdata/ubuntu-master-keyring.asc
-	testKeyringUbuntuMasterASCII string
-	testKeyringUbuntuMaster      = parseKeyring(testKeyringUbuntuMasterASCII)
+	testKey      = testutil.PGPKeys["key1"]
+	extraTestKey = testutil.PGPKeys["key2"]
 )
 
 type setupTest struct {
@@ -84,6 +60,11 @@ var setupTests = []setupTest{{
 					version: 22.04
 					components: [main, other]
 					suites: [jammy, jammy-security]
+					v1-public-keys: [test-key]
+			v1-public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
 		`,
 		"slices/mydir/mypkg.yaml": `
 			package: mypkg
@@ -98,6 +79,7 @@ var setupTests = []setupTest{{
 				Version:    "22.04",
 				Suites:     []string{"jammy", "jammy-security"},
 				Components: []string{"main", "other"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -141,6 +123,7 @@ var setupTests = []setupTest{{
 				Version:    "22.04",
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -202,6 +185,7 @@ var setupTests = []setupTest{{
 				Version:    "22.04",
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -462,6 +446,7 @@ var setupTests = []setupTest{{
 				Version:    "22.04",
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -676,6 +661,7 @@ var setupTests = []setupTest{{
 				Version:    "22.04",
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -715,6 +701,7 @@ var setupTests = []setupTest{{
 				Version:    "22.04",
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -755,6 +742,7 @@ var setupTests = []setupTest{{
 				Version:    "22.04",
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -786,10 +774,16 @@ var setupTests = []setupTest{{
 					components: [main, universe]
 					suites: [jammy]
 					default: true
+					v1-public-keys: [test-key]
 				bar:
 					version: 22.04
 					components: [universe]
 					suites: [jammy-updates]
+					v1-public-keys: [test-key]
+			v1-public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
 		`,
 		"slices/mydir/mypkg.yaml": `
 			package: mypkg
@@ -804,12 +798,14 @@ var setupTests = []setupTest{{
 				Version:    "22.04",
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
 			},
 			"bar": {
 				Name:       "bar",
 				Version:    "22.04",
 				Suites:     []string{"jammy-updates"},
 				Components: []string{"universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -821,110 +817,6 @@ var setupTests = []setupTest{{
 			},
 		},
 	},
-}, {
-	summary: "Archives with keyrings",
-	input: map[string]string{
-		"chisel.yaml": `
-			format: chisel-v1
-			archives:
-				foo:
-					version: 22.04
-					components: [main, universe]
-					suites: [jammy]
-					public-keys: [ubuntu-archive]
-					default: true
-				bar:
-					version: 22.04
-					components: [universe]
-					suites: [jammy-updates]
-					public-keys: [ubuntu-archive, ubuntu-master]
-			public-keys:
-				ubuntu-archive: |` + "\n" + indentLines(testKeyringUbuntuArchiveASCII, "\t\t\t\t\t") + `
-				ubuntu-master: |` + "\n" + indentLines(testKeyringUbuntuMasterASCII, "\t\t\t\t\t") + `
-		`,
-		"slices/mydir/mypkg.yaml": `
-			package: mypkg
-		`,
-	},
-	release: &setup.Release{
-		DefaultArchive: "foo",
-
-		Archives: map[string]*setup.Archive{
-			"foo": {
-				Name:       "foo",
-				Version:    "22.04",
-				Suites:     []string{"jammy"},
-				Components: []string{"main", "universe"},
-				Keyrings:   []openpgp.KeyRing{testKeyringUbuntuArchive},
-			},
-			"bar": {
-				Name:       "bar",
-				Version:    "22.04",
-				Suites:     []string{"jammy-updates"},
-				Components: []string{"universe"},
-				Keyrings:   []openpgp.KeyRing{testKeyringUbuntuArchive, testKeyringUbuntuMaster},
-			},
-		},
-		Packages: map[string]*setup.Package{
-			"mypkg": {
-				Archive: "foo",
-				Name:    "mypkg",
-				Path:    "slices/mydir/mypkg.yaml",
-				Slices:  map[string]*setup.Slice{},
-			},
-		},
-	},
-}, {
-	summary: "Unknown keyring",
-	input: map[string]string{
-		"chisel.yaml": `
-			format: chisel-v1
-			archives:
-				foo:
-					version: 22.04
-					components: [main, universe]
-					suites: [jammy]
-					public-keys: [ubuntu-archive]
-					default: true
-				bar:
-					version: 22.04
-					components: [universe]
-					suites: [jammy-updates]
-					public-keys: [ubuntu-master]
-			public-keys:
-				ubuntu-master: |` + "\n" + indentLines(testKeyringUbuntuMasterASCII, "\t\t\t\t\t") + `
-		`,
-		"slices/mydir/mypkg.yaml": `
-			package: mypkg
-		`,
-	},
-	relerror: `chisel.yaml: archive "foo" references unknown keyring "ubuntu-archive"`,
-}, {
-	summary: "Invalid keyring",
-	input: map[string]string{
-		"chisel.yaml": `
-			format: chisel-v1
-			archives:
-				foo:
-					version: 22.04
-					components: [main, universe]
-					suites: [jammy]
-					public-keys: [ubuntu-master]
-					default: true
-			public-keys:
-				ubuntu-master: |
-					G. B. Shaw's Law:
-						Those who can -- do.
-						Those who can't -- teach.
-					
-					Martin's Extension:
-						Those who cannot teach -- administrate.
-		`,
-		"slices/mydir/mypkg.yaml": `
-			package: mypkg
-		`,
-	},
-	relerror: `chisel.yaml: cannot parse keyring "ubuntu-master": openpgp: invalid argument: no armored data found`,
 }, {
 	summary: "Extra fields in YAML are ignored (necessary for forward compatibility)",
 	input: map[string]string{
@@ -935,8 +827,14 @@ var setupTests = []setupTest{{
 					version: 22.04
 					components: [main, other]
 					suites: [jammy, jammy-security]
+					v1-public-keys: [test-key]
 					madeUpKey1: whatever
 			madeUpKey2: whatever
+			v1-public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+					madeUpKey6: whatever
 		`,
 		"slices/mydir/mypkg.yaml": `
 			package: mypkg
@@ -957,6 +855,7 @@ var setupTests = []setupTest{{
 				Version:    "22.04",
 				Suites:     []string{"jammy", "jammy-security"},
 				Components: []string{"main", "other"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -976,14 +875,158 @@ var setupTests = []setupTest{{
 			},
 		},
 	},
+}, {
+	summary: "Archives with public keys",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: chisel-v1
+			archives:
+				foo:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					v1-public-keys: [extra-key]
+					default: true
+				bar:
+					version: 22.04
+					components: [universe]
+					suites: [jammy-updates]
+					v1-public-keys: [test-key, extra-key]
+			v1-public-keys:
+				extra-key:
+					id: ` + extraTestKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(extraTestKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	release: &setup.Release{
+		DefaultArchive: "foo",
+
+		Archives: map[string]*setup.Archive{
+			"foo": {
+				Name:       "foo",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{extraTestKey.PubKey},
+			},
+			"bar": {
+				Name:       "bar",
+				Version:    "22.04",
+				Suites:     []string{"jammy-updates"},
+				Components: []string{"universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey, extraTestKey.PubKey},
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Archive: "foo",
+				Name:    "mypkg",
+				Path:    "slices/mydir/mypkg.yaml",
+				Slices:  map[string]*setup.Slice{},
+			},
+		},
+	},
+}, {
+	summary: "Archive without public keys",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: chisel-v1
+			archives:
+				foo:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					default: true
+		`,
+	},
+	relerror: `chisel.yaml: archive "foo" missing v1-public-keys field`,
+}, {
+	summary: "Unknown public key",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: chisel-v1
+			archives:
+				foo:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					v1-public-keys: [extra-key]
+					default: true
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	relerror: `chisel.yaml: archive "foo" refers to undefined public key "extra-key"`,
+}, {
+	summary: "Invalid public key",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: chisel-v1
+			archives:
+				foo:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					v1-public-keys: [extra-key]
+					default: true
+			v1-public-keys:
+				extra-key:
+					id: foo
+					armor: |
+						G. B. Shaw's Law:
+							Those who can -- do.
+							Those who can't -- teach.
+
+						Martin's Extension:
+							Those who cannot teach -- administrate.
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	relerror: `chisel.yaml: cannot decode public key "extra-key": cannot decode armored data`,
+}, {
+	summary: "Mismatched public key ID",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: chisel-v1
+			archives:
+				foo:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					v1-public-keys: [extra-key]
+					default: true
+			v1-public-keys:
+				extra-key:
+					id: ` + extraTestKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	relerror: `chisel.yaml: public key "extra-key" armor has incorrect ID: expected "9568570379BF1F43", got "854BAF1AA9D76600"`,
 }}
 
-const defaultChiselYaml = `
+var defaultChiselYaml = `
 	format: chisel-v1
 	archives:
 		ubuntu:
 			version: 22.04
 			components: [main, universe]
+			v1-public-keys: [test-key]
+	v1-public-keys:
+		test-key:
+			id: ` + testKey.ID + `
+			armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
 `
 
 func (s *S) TestParseRelease(c *C) {

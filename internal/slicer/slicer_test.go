@@ -16,6 +16,10 @@ import (
 	"github.com/canonical/chisel/internal/testutil"
 )
 
+var (
+	testKey = testutil.PGPKeys["key1"]
+)
+
 type slicerTest struct {
 	summary string
 	arch    string
@@ -497,9 +501,15 @@ var slicerTests = []slicerTest{{
 					version: 22.04
 					components: [main, universe]
 					default: true
+					v1-public-keys: [test-key]
 				bar:
 					version: 22.04
 					components: [main]
+					v1-public-keys: [test-key]
+			v1-public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
 		`,
 		"slices/mydir/base-files.yaml": `
 			package: base-files
@@ -517,12 +527,17 @@ var slicerTests = []slicerTest{{
 	},
 }}
 
-const defaultChiselYaml = `
+var defaultChiselYaml = `
 	format: chisel-v1
 	archives:
 		ubuntu:
 			version: 22.04
 			components: [main, universe]
+			v1-public-keys: [test-key]
+	v1-public-keys:
+		test-key:
+			id: ` + testKey.ID + `
+			armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
 `
 
 type testArchive struct {
