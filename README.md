@@ -164,7 +164,7 @@ slices:
             /path/to/temporary/content: {until: mutate}
 
         # (opt) Mutation scripts, to allow for the reproduction of maintainer scripts,
-        # based on Starlark (https://github.com/canonical/starlark)
+        # based on Starlark (https://github.com/google/starlark-go)
         mutate: |
             foo = content.read("/path/to/temporary/content")
             content.write("/path/to/mutable/file/with/default/text", foo)
