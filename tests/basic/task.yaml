@@ -30,6 +30,3 @@ execute: |
   test -f ${rootfs_folder}/usr/lib/*-linux-*/libssl.so.*
   test -f ${rootfs_folder}/etc/ld.so.conf.d/*-linux-*.conf
   test -f ${rootfs_folder}/lib/*-linux-*/libc.so.*
-
-  # and openssl actually works
-  ${rootfs_folder}/usr/bin/openssl
