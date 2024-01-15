@@ -13,9 +13,9 @@ import (
 	"github.com/canonical/chisel/internal/testutil"
 )
 
-func treeDumpProxy(proxy *fsutil.FileCreatorProxy, root string) map[string]string {
+func treeDumpFileCreator(fc *fsutil.FileCreator, root string) map[string]string {
 	result := make(map[string]string)
-	for _, file := range proxy.Files {
+	for _, file := range fc.Files {
 		path := strings.TrimPrefix(file.Path, root)
 		fperm := file.Mode.Perm()
 		if file.Mode&fs.ModeSticky != 0 {
@@ -52,8 +52,8 @@ func (s *S) TestProxy(c *C) {
 		dir := c.MkDir()
 		options := test.options
 		options.Path = filepath.Join(dir, options.Path)
-		proxy := fsutil.NewFileCreatorProxy()
-		err := proxy.Create(&options)
+		fileCreator := fsutil.NewFileCreator()
+		err := fileCreator.Create(&options)
 		if test.error != "" {
 			c.Assert(err, ErrorMatches, test.error)
 			continue
@@ -62,13 +62,13 @@ func (s *S) TestProxy(c *C) {
 		}
 		c.Assert(testutil.TreeDump(dir), DeepEquals, test.result)
 		if test.options.MakeParents {
-			// The proxy does not record the parent directories created
+			// The fileCreator does not record the parent directories created
 			// implicitly.
-			for path, info := range treeDumpProxy(proxy, dir) {
+			for path, info := range treeDumpFileCreator(fileCreator, dir) {
 				c.Assert(info, Equals, test.result[path])
 			}
 		} else {
-			c.Assert(treeDumpProxy(proxy, dir), DeepEquals, test.result)
+			c.Assert(treeDumpFileCreator(fileCreator, dir), DeepEquals, test.result)
 		}
 	}
 }

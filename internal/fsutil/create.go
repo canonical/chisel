@@ -1,7 +1,10 @@
 package fsutil
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"hash"
 	"io"
 	"io/fs"
 	"os"
@@ -18,16 +21,27 @@ type CreateOptions struct {
 	MakeParents bool
 }
 
-type FileCreator interface {
-	Create(o *CreateOptions) error
+type FileInfo struct {
+	Path string
+	Mode fs.FileMode
+	Hash string
+	Size uint
+	Link string
 }
 
-type DefaultFileCreator struct{}
+type FileCreator struct {
+	Files map[string]FileInfo
+}
 
-var _ FileCreator = (*DefaultFileCreator)(nil)
+func NewFileCreator() *FileCreator {
+	return &FileCreator{Files: make(map[string]FileInfo)}
+}
 
 // Creates a filesystem entry according to the provided options.
-func (_ DefaultFileCreator) Create(o *CreateOptions) error {
+func (fc FileCreator) Create(o *CreateOptions) error {
+	rp := readerProxy{inner: o.Data, h: sha256.New()}
+	o.Data = &rp
+
 	var err error
 	if o.MakeParents {
 		if err := os.MkdirAll(filepath.Dir(o.Path), 0755); err != nil {
@@ -43,6 +57,17 @@ func (_ DefaultFileCreator) Create(o *CreateOptions) error {
 		err = createSymlink(o)
 	default:
 		err = fmt.Errorf("unsupported file type: %s", o.Path)
+	}
+
+	if err != nil {
+		fr := FileInfo{
+			Path: o.Path,
+			Mode: o.Mode,
+			Hash: hex.EncodeToString(rp.h.Sum(nil)),
+			Size: rp.size,
+			Link: o.Link,
+		}
+		fc.Files[o.Path] = fr
 	}
 	return err
 }
@@ -91,4 +116,21 @@ func createSymlink(o *CreateOptions) error {
 		return err
 	}
 	return os.Symlink(o.Link, o.Path)
+}
+
+// readerProxy implements the io.Reader interface proxying the calls to its inner io.Reader. On each read, the proxy
+// calculates the file size and hash.
+type readerProxy struct {
+	inner io.Reader
+	h     hash.Hash
+	size  uint
+}
+
+var _ io.Reader = (*readerProxy)(nil)
+
+func (fr *readerProxy) Read(p []byte) (n int, err error) {
+	n, err = fr.inner.Read(p)
+	fr.h.Write(p[:n])
+	fr.size += uint(n)
+	return n, err
 }

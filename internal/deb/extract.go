@@ -25,7 +25,7 @@ type ExtractOptions struct {
 	TargetDir   string
 	Extract     map[string][]ExtractInfo
 	Globbed     map[string][]string
-	FileCreator fsutil.FileCreator
+	FileCreator *fsutil.FileCreator
 }
 
 type ExtractInfo struct {

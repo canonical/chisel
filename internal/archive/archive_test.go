@@ -1,8 +1,9 @@
 package archive_test
 
 import (
-	"github.com/canonical/chisel/internal/fsutil"
 	. "gopkg.in/check.v1"
+
+	"github.com/canonical/chisel/internal/fsutil"
 
 	"debug/elf"
 	"errors"
@@ -403,7 +404,7 @@ func (s *S) testOpenArchiveArch(c *C, arch string) {
 				{Path: "/hostname"},
 			},
 		},
-		FileCreator: fsutil.DefaultFileCreator{},
+		FileCreator: fsutil.NewFileCreator(),
 	})
 	c.Assert(err, IsNil)
 
