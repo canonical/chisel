@@ -2,8 +2,10 @@ package fsutil_test
 
 import (
 	"bytes"
+	"fmt"
 	"io/fs"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	. "gopkg.in/check.v1"
@@ -79,14 +81,52 @@ func (s *S) TestCreate(c *C) {
 		dir := c.MkDir()
 		options := test.options
 		options.Path = filepath.Join(dir, options.Path)
-		err := fsutil.NewFileCreator().Create(&options)
+		fileCreator := fsutil.NewFileCreator()
+		err := fileCreator.Create(&options)
 		if test.error != "" {
 			c.Assert(err, ErrorMatches, test.error)
 			continue
 		} else {
 			c.Assert(err, IsNil)
 		}
-		result := testutil.TreeDump(dir)
-		c.Assert(result, DeepEquals, test.result)
+		c.Assert(testutil.TreeDump(dir), DeepEquals, test.result)
+		c.Assert(testutil.TreeDump(dir), DeepEquals, test.result)
+		if test.options.MakeParents {
+			// The fileCreator does not record the parent directories created
+			// implicitly.
+			for path, info := range treeDumpFileCreator(fileCreator, dir) {
+				c.Assert(info, Equals, test.result[path])
+			}
+		} else {
+			c.Assert(treeDumpFileCreator(fileCreator, dir), DeepEquals, test.result)
+		}
 	}
+}
+
+func treeDumpFileCreator(fc *fsutil.FileCreator, root string) map[string]string {
+	result := make(map[string]string)
+	for _, file := range fc.Files {
+		path := strings.TrimPrefix(file.Path, root)
+		fperm := file.Mode.Perm()
+		if file.Mode&fs.ModeSticky != 0 {
+			fperm |= 01000
+		}
+		switch file.Mode.Type() {
+		case fs.ModeDir:
+			result[path+"/"] = fmt.Sprintf("dir %#o", fperm)
+		case fs.ModeSymlink:
+			result[path] = fmt.Sprintf("symlink %s", file.Link)
+		case 0: // Regular
+			var entry string
+			if file.Size == 0 {
+				entry = fmt.Sprintf("file %#o empty", file.Mode.Perm())
+			} else {
+				entry = fmt.Sprintf("file %#o %s", fperm, file.Hash[:8])
+			}
+			result[path] = entry
+		default:
+			panic(fmt.Errorf("unknown file type %d: %s", file.Mode.Type(), path))
+		}
+	}
+	return result
 }

@@ -58,18 +58,19 @@ func (fc FileCreator) Create(o *CreateOptions) error {
 	default:
 		err = fmt.Errorf("unsupported file type: %s", o.Path)
 	}
-
 	if err != nil {
-		fr := FileInfo{
-			Path: o.Path,
-			Mode: o.Mode,
-			Hash: hex.EncodeToString(rp.h.Sum(nil)),
-			Size: rp.size,
-			Link: o.Link,
-		}
-		fc.Files[o.Path] = fr
+		return err
 	}
-	return err
+
+	fr := FileInfo{
+		Path: o.Path,
+		Mode: o.Mode,
+		Hash: hex.EncodeToString(rp.h.Sum(nil)),
+		Size: rp.size,
+		Link: o.Link,
+	}
+	fc.Files[o.Path] = fr
+	return nil
 }
 
 func createDir(o *CreateOptions) error {
