@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	. "gopkg.in/check.v1"
 
@@ -14,6 +15,10 @@ import (
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/slicer"
 	"github.com/canonical/chisel/internal/testutil"
+)
+
+var (
+	testKey = testutil.PGPKeys["key1"]
 )
 
 type slicerTest struct {
@@ -497,9 +502,15 @@ var slicerTests = []slicerTest{{
 					version: 22.04
 					components: [main, universe]
 					default: true
+					v1-public-keys: [test-key]
 				bar:
 					version: 22.04
 					components: [main]
+					v1-public-keys: [test-key]
+			v1-public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
 		`,
 		"slices/mydir/base-files.yaml": `
 			package: base-files
@@ -517,12 +528,17 @@ var slicerTests = []slicerTest{{
 	},
 }}
 
-const defaultChiselYaml = `
+var defaultChiselYaml = `
 	format: chisel-v1
 	archives:
 		ubuntu:
 			version: 22.04
 			components: [main, universe]
+			v1-public-keys: [test-key]
+	v1-public-keys:
+		test-key:
+			id: ` + testKey.ID + `
+			armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
 `
 
 type testArchive struct {
@@ -547,7 +563,28 @@ func (a *testArchive) Exists(pkg string) bool {
 }
 
 func (s *S) TestRun(c *C) {
-	for _, test := range slicerTests {
+	// Run tests for format chisel-v1.
+	runSlicerTests(c, slicerTests)
+
+	// Run tests for format v1.
+	v1SlicerTests := make([]slicerTest, len(slicerTests))
+	for i, t := range slicerTests {
+		t.error = strings.Replace(t.error, "chisel-v1", "v1", -1)
+		t.error = strings.Replace(t.error, "v1-public-keys", "public-keys", -1)
+		m := map[string]string{}
+		for k, v := range t.release {
+			v = strings.Replace(v, "chisel-v1", "v1", -1)
+			v = strings.Replace(v, "v1-public-keys", "public-keys", -1)
+			m[k] = v
+		}
+		t.release = m
+		v1SlicerTests[i] = t
+	}
+	runSlicerTests(c, v1SlicerTests)
+}
+
+func runSlicerTests(c *C, tests []slicerTest) {
+	for _, test := range tests {
 		c.Logf("Summary: %s", test.summary)
 
 		if _, ok := test.release["chisel.yaml"]; !ok {
