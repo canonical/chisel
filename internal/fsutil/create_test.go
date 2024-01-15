@@ -77,6 +77,10 @@ func (s *S) TestCreate(c *C) {
 	}()
 
 	for _, test := range createTests() {
+		if test.result == nil {
+			// Empty map for no files created.
+			test.result = make(map[string]string)
+		}
 		c.Logf("Options: %v", test.options)
 		dir := c.MkDir()
 		options := test.options
@@ -85,7 +89,6 @@ func (s *S) TestCreate(c *C) {
 		err := fileCreator.Create(&options)
 		if test.error != "" {
 			c.Assert(err, ErrorMatches, test.error)
-			continue
 		} else {
 			c.Assert(err, IsNil)
 		}

@@ -30,6 +30,8 @@ type FileInfo struct {
 }
 
 type FileCreator struct {
+	// Files keeps track of information about the files created. If a file
+	// is created several times it only tracks the latest one.
 	Files map[string]FileInfo
 }
 
