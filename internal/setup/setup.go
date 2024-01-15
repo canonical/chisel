@@ -321,17 +321,19 @@ func readSlices(release *Release, baseDir, dirName string) error {
 type yamlRelease struct {
 	Format   string                 `yaml:"format"`
 	Archives map[string]yamlArchive `yaml:"archives"`
-	PubKeys  map[string]yamlPubKey  `yaml:"v1-public-keys"`
+	PubKeys  map[string]yamlPubKey  `yaml:"public-keys"`
+	// V1PubKeys is used for compatibility with format "chisel-v1".
+	V1PubKeys map[string]yamlPubKey `yaml:"v1-public-keys"`
 }
-
-const yamlReleaseFormat = "chisel-v1"
 
 type yamlArchive struct {
 	Version    string   `yaml:"version"`
 	Suites     []string `yaml:"suites"`
 	Components []string `yaml:"components"`
 	Default    bool     `yaml:"default"`
-	PubKeys    []string `yaml:"v1-public-keys"`
+	PubKeys    []string `yaml:"public-keys"`
+	// V1PubKeys is used for compatibility with format "chisel-v1".
+	V1PubKeys []string `yaml:"v1-public-keys"`
 }
 
 type yamlPackage struct {
@@ -417,8 +419,17 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s: cannot parse release definition: %v", fileName, err)
 	}
-	if yamlVar.Format != yamlReleaseFormat {
-		return nil, fmt.Errorf("%s: expected format %q, got %q", fileName, yamlReleaseFormat, yamlVar.Format)
+	if yamlVar.Format != "chisel-v1" && yamlVar.Format != "v1" {
+		return nil, fmt.Errorf("%s: unknown format %q", fileName, yamlVar.Format)
+	}
+	// If format is "chisel-v1" we have to translate from the yaml key "v1-public-keys" to
+	// "public-keys".
+	if yamlVar.Format == "chisel-v1" {
+		yamlVar.PubKeys = yamlVar.V1PubKeys
+		for name, details := range yamlVar.Archives {
+			details.PubKeys = details.V1PubKeys
+			yamlVar.Archives[name] = details
+		}
 	}
 	if len(yamlVar.Archives) == 0 {
 		return nil, fmt.Errorf("%s: no archives defined", fileName)
@@ -460,7 +471,11 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 			release.DefaultArchive = archiveName
 		}
 		if len(details.PubKeys) == 0 {
-			return nil, fmt.Errorf("%s: archive %q missing v1-public-keys field", fileName, archiveName)
+			if yamlVar.Format == "chisel-v1" {
+				return nil, fmt.Errorf("%s: archive %q missing v1-public-keys field", fileName, archiveName)
+			} else {
+				return nil, fmt.Errorf("%s: archive %q missing public-keys field", fileName, archiveName)
+			}
 		}
 		var archiveKeys []*packet.PublicKey
 		for _, keyName := range details.PubKeys {

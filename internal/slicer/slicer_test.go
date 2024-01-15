@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	. "gopkg.in/check.v1"
 
@@ -562,7 +563,28 @@ func (a *testArchive) Exists(pkg string) bool {
 }
 
 func (s *S) TestRun(c *C) {
-	for _, test := range slicerTests {
+	// Run tests for format chisel-v1.
+	runSlicerTests(c, slicerTests)
+
+	// Run tests for format v1.
+	v1SlicerTests := make([]slicerTest, len(slicerTests))
+	for i, t := range slicerTests {
+		t.error = strings.Replace(t.error, "chisel-v1", "v1", -1)
+		t.error = strings.Replace(t.error, "v1-public-keys", "public-keys", -1)
+		m := map[string]string{}
+		for k, v := range t.release {
+			v = strings.Replace(v, "chisel-v1", "v1", -1)
+			v = strings.Replace(v, "v1-public-keys", "public-keys", -1)
+			m[k] = v
+		}
+		t.release = m
+		v1SlicerTests[i] = t
+	}
+	runSlicerTests(c, v1SlicerTests)
+}
+
+func runSlicerTests(c *C, tests []slicerTest) {
+	for _, test := range tests {
 		c.Logf("Summary: %s", test.summary)
 
 		if _, ok := test.release["chisel.yaml"]; !ok {

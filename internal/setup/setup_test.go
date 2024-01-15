@@ -3,6 +3,7 @@ package setup_test
 import (
 	"os"
 	"path/filepath"
+	"strings"
 
 	"golang.org/x/crypto/openpgp/packet"
 	. "gopkg.in/check.v1"
@@ -33,7 +34,7 @@ var setupTests = []setupTest{{
 			format: foobar
 		`,
 	},
-	relerror: `chisel.yaml: expected format "chisel-v1", got "foobar"`,
+	relerror: `chisel.yaml: unknown format "foobar"`,
 }, {
 	summary: "Missing archives",
 	input: map[string]string{
@@ -1030,7 +1031,28 @@ var defaultChiselYaml = `
 `
 
 func (s *S) TestParseRelease(c *C) {
-	for _, test := range setupTests {
+	// Run tests for format chisel-v1.
+	runParseReleaseTests(c, setupTests)
+
+	// Run tests for format v1.
+	v1SetupTests := make([]setupTest, len(setupTests))
+	for i, t := range setupTests {
+		t.relerror = strings.Replace(t.relerror, "chisel-v1", "v1", -1)
+		t.relerror = strings.Replace(t.relerror, "v1-public-keys", "public-keys", -1)
+		m := map[string]string{}
+		for k, v := range t.input {
+			v = strings.Replace(v, "chisel-v1", "v1", -1)
+			v = strings.Replace(v, "v1-public-keys", "public-keys", -1)
+			m[k] = v
+		}
+		t.input = m
+		v1SetupTests[i] = t
+	}
+	runParseReleaseTests(c, v1SetupTests)
+}
+
+func runParseReleaseTests(c *C, tests []setupTest) {
+	for _, test := range tests {
 		c.Logf("Summary: %s", test.summary)
 
 		if _, ok := test.input["chisel.yaml"]; !ok {
