@@ -83,8 +83,8 @@ func (s *S) TestCreate(c *C) {
 		dir := c.MkDir()
 		options := test.options
 		options.Path = filepath.Join(dir, options.Path)
-		fileCreator := fsutil.NewCreator()
-		err := fileCreator.Create(&options)
+		fsCreator := fsutil.NewCreator()
+		err := fsCreator.Create(&options)
 		if test.error != "" {
 			c.Assert(err, ErrorMatches, test.error)
 		} else {
@@ -92,20 +92,20 @@ func (s *S) TestCreate(c *C) {
 		}
 		c.Assert(testutil.TreeDump(dir), DeepEquals, test.result)
 		if test.options.MakeParents {
-			// The fileCreator does not record the parent directories created
+			// The fsCreator does not record the parent directories created
 			// implicitly.
-			for path, info := range treeDumpFileCreator(fileCreator, dir) {
+			for path, info := range treeDumpFSCreator(fsCreator, dir) {
 				c.Assert(info, Equals, test.result[path])
 			}
 		} else {
-			c.Assert(treeDumpFileCreator(fileCreator, dir), DeepEquals, test.result)
+			c.Assert(treeDumpFSCreator(fsCreator, dir), DeepEquals, test.result)
 		}
 	}
 }
 
-func treeDumpFileCreator(fc *fsutil.Creator, root string) map[string]string {
+func treeDumpFSCreator(cr *fsutil.Creator, root string) map[string]string {
 	result := make(map[string]string)
-	for _, file := range fc.Created {
+	for _, file := range cr.Created {
 		path := strings.TrimPrefix(file.Path, root)
 		fperm := file.Mode.Perm()
 		if file.Mode&fs.ModeSticky != 0 {

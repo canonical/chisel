@@ -40,7 +40,7 @@ func NewCreator() *Creator {
 }
 
 // Creates a filesystem entry according to the provided options.
-func (fc Creator) Create(o *CreateOptions) error {
+func (c Creator) Create(o *CreateOptions) error {
 	rp := readerProxy{inner: o.Data, h: sha256.New()}
 	o.Data = &rp
 
@@ -71,7 +71,7 @@ func (fc Creator) Create(o *CreateOptions) error {
 		Size: rp.size,
 		Link: o.Link,
 	}
-	fc.Created[o.Path] = fr
+	c.Created[o.Path] = fr
 	return nil
 }
 
