@@ -20,55 +20,53 @@ type createTest struct {
 	error   string
 }
 
-func createTests() []createTest {
-	return []createTest{{
-		options: fsutil.CreateOptions{
-			Path:        "foo/bar",
-			Data:        bytes.NewBufferString("data1"),
-			Mode:        0444,
-			MakeParents: true,
-		},
-		result: map[string]string{
-			"/foo/":    "dir 0755",
-			"/foo/bar": "file 0444 5b41362b",
-		},
-	}, {
-		options: fsutil.CreateOptions{
-			Path:        "foo/bar",
-			Link:        "../baz",
-			Mode:        fs.ModeSymlink,
-			MakeParents: true,
-		},
-		result: map[string]string{
-			"/foo/":    "dir 0755",
-			"/foo/bar": "symlink ../baz",
-		},
-	}, {
-		options: fsutil.CreateOptions{
-			Path:        "foo/bar",
-			Mode:        fs.ModeDir | 0444,
-			MakeParents: true,
-		},
-		result: map[string]string{
-			"/foo/":     "dir 0755",
-			"/foo/bar/": "dir 0444",
-		},
-	}, {
-		options: fsutil.CreateOptions{
-			Path: "tmp",
-			Mode: fs.ModeDir | fs.ModeSticky | 0775,
-		},
-		result: map[string]string{
-			"/tmp/": "dir 01775",
-		},
-	}, {
-		options: fsutil.CreateOptions{
-			Path: "foo/bar",
-			Mode: fs.ModeDir | 0775,
-		},
-		error: `.*: no such file or directory`,
-	}}
-}
+var createTests []createTest = []createTest{{
+	options: fsutil.CreateOptions{
+		Path:        "foo/bar",
+		Data:        bytes.NewBufferString("data1"),
+		Mode:        0444,
+		MakeParents: true,
+	},
+	result: map[string]string{
+		"/foo/":    "dir 0755",
+		"/foo/bar": "file 0444 5b41362b",
+	},
+}, {
+	options: fsutil.CreateOptions{
+		Path:        "foo/bar",
+		Link:        "../baz",
+		Mode:        fs.ModeSymlink,
+		MakeParents: true,
+	},
+	result: map[string]string{
+		"/foo/":    "dir 0755",
+		"/foo/bar": "symlink ../baz",
+	},
+}, {
+	options: fsutil.CreateOptions{
+		Path:        "foo/bar",
+		Mode:        fs.ModeDir | 0444,
+		MakeParents: true,
+	},
+	result: map[string]string{
+		"/foo/":     "dir 0755",
+		"/foo/bar/": "dir 0444",
+	},
+}, {
+	options: fsutil.CreateOptions{
+		Path: "tmp",
+		Mode: fs.ModeDir | fs.ModeSticky | 0775,
+	},
+	result: map[string]string{
+		"/tmp/": "dir 01775",
+	},
+}, {
+	options: fsutil.CreateOptions{
+		Path: "foo/bar",
+		Mode: fs.ModeDir | 0775,
+	},
+	error: `.*: no such file or directory`,
+}}
 
 func (s *S) TestCreate(c *C) {
 	oldUmask := syscall.Umask(0)
@@ -76,7 +74,7 @@ func (s *S) TestCreate(c *C) {
 		syscall.Umask(oldUmask)
 	}()
 
-	for _, test := range createTests() {
+	for _, test := range createTests {
 		if test.result == nil {
 			// Empty map for no files created.
 			test.result = make(map[string]string)
@@ -92,7 +90,6 @@ func (s *S) TestCreate(c *C) {
 		} else {
 			c.Assert(err, IsNil)
 		}
-		c.Assert(testutil.TreeDump(dir), DeepEquals, test.result)
 		c.Assert(testutil.TreeDump(dir), DeepEquals, test.result)
 		if test.options.MakeParents {
 			// The fileCreator does not record the parent directories created
