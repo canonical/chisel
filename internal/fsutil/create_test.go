@@ -83,7 +83,7 @@ func (s *S) TestCreate(c *C) {
 		dir := c.MkDir()
 		options := test.options
 		options.Path = filepath.Join(dir, options.Path)
-		fileCreator := fsutil.NewFileCreator()
+		fileCreator := fsutil.NewCreator()
 		err := fileCreator.Create(&options)
 		if test.error != "" {
 			c.Assert(err, ErrorMatches, test.error)
@@ -103,9 +103,9 @@ func (s *S) TestCreate(c *C) {
 	}
 }
 
-func treeDumpFileCreator(fc *fsutil.FileCreator, root string) map[string]string {
+func treeDumpFileCreator(fc *fsutil.Creator, root string) map[string]string {
 	result := make(map[string]string)
-	for _, file := range fc.Files {
+	for _, file := range fc.Created {
 		path := strings.TrimPrefix(file.Path, root)
 		fperm := file.Mode.Perm()
 		if file.Mode&fs.ModeSticky != 0 {

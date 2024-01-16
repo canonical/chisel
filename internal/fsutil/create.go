@@ -21,7 +21,7 @@ type CreateOptions struct {
 	MakeParents bool
 }
 
-type FileInfo struct {
+type Info struct {
 	Path string
 	Mode fs.FileMode
 	Hash string
@@ -29,18 +29,18 @@ type FileInfo struct {
 	Link string
 }
 
-type FileCreator struct {
-	// Files keeps track of information about the files created. If a file
+type Creator struct {
+	// Created keeps track of information about the files created. If a file
 	// is created several times it only tracks the latest one.
-	Files map[string]FileInfo
+	Created map[string]Info
 }
 
-func NewFileCreator() *FileCreator {
-	return &FileCreator{Files: make(map[string]FileInfo)}
+func NewCreator() *Creator {
+	return &Creator{Created: make(map[string]Info)}
 }
 
 // Creates a filesystem entry according to the provided options.
-func (fc FileCreator) Create(o *CreateOptions) error {
+func (fc Creator) Create(o *CreateOptions) error {
 	rp := readerProxy{inner: o.Data, h: sha256.New()}
 	o.Data = &rp
 
@@ -64,14 +64,14 @@ func (fc FileCreator) Create(o *CreateOptions) error {
 		return err
 	}
 
-	fr := FileInfo{
+	fr := Info{
 		Path: o.Path,
 		Mode: o.Mode,
 		Hash: hex.EncodeToString(rp.h.Sum(nil)),
 		Size: rp.size,
 		Link: o.Link,
 	}
-	fc.Files[o.Path] = fr
+	fc.Created[o.Path] = fr
 	return nil
 }
 
