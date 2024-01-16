@@ -21,11 +21,11 @@ import (
 )
 
 type ExtractOptions struct {
-	Package     string
-	TargetDir   string
-	Extract     map[string][]ExtractInfo
-	Globbed     map[string][]string
-	PathCreator *fsutil.Creator
+	Package   string
+	TargetDir string
+	Extract   map[string][]ExtractInfo
+	Globbed   map[string][]string
+	FSCreator *fsutil.Creator
 }
 
 type ExtractInfo struct {
@@ -186,7 +186,7 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 				// Base directory for extracted content. Relevant mainly to preserve
 				// the metadata, since the extracted content itself will also create
 				// any missing directories unaccounted for in the options.
-				err := options.PathCreator.Create(&fsutil.CreateOptions{
+				err := options.FSCreator.Create(&fsutil.CreateOptions{
 					Path:        filepath.Join(options.TargetDir, sourcePath),
 					Mode:        tarHeader.FileInfo().Mode(),
 					MakeParents: true,
@@ -227,7 +227,7 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 			if extractInfo.Mode != 0 {
 				tarHeader.Mode = int64(extractInfo.Mode)
 			}
-			err := options.PathCreator.Create(&fsutil.CreateOptions{
+			err := options.FSCreator.Create(&fsutil.CreateOptions{
 				Path:        targetPath,
 				Mode:        tarHeader.FileInfo().Mode(),
 				Data:        pathReader,

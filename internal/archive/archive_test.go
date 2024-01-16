@@ -501,7 +501,7 @@ func (s *S) testOpenArchiveArch(c *C, release ubuntuRelease, arch string) {
 				{Path: "/hostname"},
 			},
 		},
-		PathCreator: fsutil.NewCreator(),
+		FSCreator: fsutil.NewCreator(),
 	})
 	c.Assert(err, IsNil)
 

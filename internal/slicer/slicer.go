@@ -155,11 +155,11 @@ func Run(options *RunOptions) error {
 		}
 		fileCreator := fsutil.NewCreator()
 		err := deb.Extract(reader, &deb.ExtractOptions{
-			Package:     slice.Package,
-			Extract:     extract[slice.Package],
-			TargetDir:   targetDir,
-			Globbed:     globbedPaths,
-			PathCreator: fileCreator,
+			Package:   slice.Package,
+			Extract:   extract[slice.Package],
+			TargetDir: targetDir,
+			Globbed:   globbedPaths,
+			FSCreator: fileCreator,
 		})
 		reader.Close()
 		packages[slice.Package] = nil
