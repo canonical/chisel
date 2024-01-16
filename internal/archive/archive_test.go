@@ -4,8 +4,6 @@ import (
 	"golang.org/x/crypto/openpgp/packet"
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/chisel/internal/fsutil"
-
 	"debug/elf"
 	"errors"
 	"flag"
@@ -21,6 +19,7 @@ import (
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/archive/testarchive"
 	"github.com/canonical/chisel/internal/deb"
+	"github.com/canonical/chisel/internal/fsutil"
 	"github.com/canonical/chisel/internal/testutil"
 )
 
