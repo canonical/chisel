@@ -28,8 +28,9 @@ func Run(options *RunOptions) error {
 	archives := make(map[string]archive.Archive)
 	extract := make(map[string]map[string][]deb.ExtractInfo)
 	pathInfos := make(map[string]setup.PathInfo)
-	knownPaths := make(map[string]bool)
+	report := NewReport(options.TargetDir)
 
+	knownPaths := make(map[string]bool)
 	knownPaths["/"] = true
 
 	addKnownPath := func(path string) {
@@ -161,6 +162,12 @@ func Run(options *RunOptions) error {
 			Globbed:   globbedPaths,
 			FSCreator: fsCreator,
 		})
+		for _, file := range fsCreator.Created {
+			err := report.AddEntry(slice, file)
+			if err != nil {
+				return err
+			}
+		}
 		reader.Close()
 		packages[slice.Package] = nil
 		if err != nil {
@@ -223,6 +230,12 @@ func Run(options *RunOptions) error {
 			})
 			if err != nil {
 				return err
+			}
+			for _, file := range fsCreator.Created {
+				err := report.AddEntry(slice, file)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
