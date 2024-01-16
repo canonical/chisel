@@ -159,7 +159,7 @@ func Run(options *RunOptions) error {
 			Extract:     extract[slice.Package],
 			TargetDir:   targetDir,
 			Globbed:     globbedPaths,
-			FileCreator: fileCreator,
+			PathCreator: fileCreator,
 		})
 		reader.Close()
 		packages[slice.Package] = nil

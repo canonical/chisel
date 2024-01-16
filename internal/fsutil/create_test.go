@@ -20,7 +20,7 @@ type createTest struct {
 	error   string
 }
 
-var createTests []createTest = []createTest{{
+var createTests = []createTest{{
 	options: fsutil.CreateOptions{
 		Path:        "foo/bar",
 		Data:        bytes.NewBufferString("data1"),

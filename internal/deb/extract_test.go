@@ -291,7 +291,7 @@ func (s *S) TestExtract(c *C) {
 		options := test.options
 		options.Package = "base-files"
 		options.TargetDir = dir
-		options.FileCreator = fsutil.NewCreator()
+		options.PathCreator = fsutil.NewCreator()
 
 		if test.globbed != nil {
 			options.Globbed = make(map[string][]string)
