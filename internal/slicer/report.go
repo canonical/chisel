@@ -3,7 +3,6 @@ package slicer
 import (
 	"fmt"
 	"io/fs"
-	"sync"
 
 	"github.com/canonical/chisel/internal/fsutil"
 	"github.com/canonical/chisel/internal/setup"
@@ -24,17 +23,13 @@ type Report struct {
 	Root string
 	// map indexed by path.
 	Entries map[string]ReportEntry
-	mutex   *sync.Mutex
 }
 
 func NewReport(root string) *Report {
-	return &Report{Entries: make(map[string]ReportEntry), Root: root, mutex: &sync.Mutex{}}
+	return &Report{Entries: make(map[string]ReportEntry), Root: root}
 }
 
 func (r *Report) AddEntry(slice *setup.Slice, entry fsutil.Info) error {
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
-
 	if info, ok := r.Entries[entry.Path]; ok {
 		// If two different slices attempt to create the same regular file,
 		// throw out an error.
