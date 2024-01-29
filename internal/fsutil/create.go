@@ -25,7 +25,7 @@ type Info struct {
 	Path string
 	Mode fs.FileMode
 	Hash string
-	Size uint
+	Size int
 	Link string
 }
 
@@ -40,9 +40,15 @@ func NewCreator() *Creator {
 }
 
 // Creates a filesystem entry according to the provided options.
-func (c Creator) Create(o *CreateOptions) error {
-	rp := readerProxy{inner: o.Data, h: sha256.New()}
-	o.Data = &rp
+func (c *Creator) Create(options *CreateOptions) error {
+	rp := &readerProxy{inner: options.Data, h: sha256.New()}
+	o := &CreateOptions{
+		Path:        options.Path,
+		Mode:        options.Mode,
+		Data:        rp,
+		Link:        options.Link,
+		MakeParents: options.MakeParents,
+	}
 
 	var err error
 	if o.MakeParents {
@@ -64,14 +70,14 @@ func (c Creator) Create(o *CreateOptions) error {
 		return err
 	}
 
-	fr := Info{
+	info := Info{
 		Path: o.Path,
 		Mode: o.Mode,
 		Hash: hex.EncodeToString(rp.h.Sum(nil)),
 		Size: rp.size,
 		Link: o.Link,
 	}
-	c.Created[o.Path] = fr
+	c.Created[o.Path] = info
 	return nil
 }
 
@@ -126,14 +132,14 @@ func createSymlink(o *CreateOptions) error {
 type readerProxy struct {
 	inner io.Reader
 	h     hash.Hash
-	size  uint
+	size  int
 }
 
 var _ io.Reader = (*readerProxy)(nil)
 
-func (fr *readerProxy) Read(p []byte) (n int, err error) {
-	n, err = fr.inner.Read(p)
-	fr.h.Write(p[:n])
-	fr.size += uint(n)
+func (rp *readerProxy) Read(p []byte) (n int, err error) {
+	n, err = rp.inner.Read(p)
+	rp.h.Write(p[:n])
+	rp.size += n
 	return n, err
 }

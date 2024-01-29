@@ -83,8 +83,8 @@ func (s *S) TestCreate(c *C) {
 		dir := c.MkDir()
 		options := test.options
 		options.Path = filepath.Join(dir, options.Path)
-		fsCreator := fsutil.NewCreator()
-		err := fsCreator.Create(&options)
+		creator := fsutil.NewCreator()
+		err := creator.Create(&options)
 		if test.error != "" {
 			c.Assert(err, ErrorMatches, test.error)
 		} else {
@@ -92,13 +92,13 @@ func (s *S) TestCreate(c *C) {
 		}
 		c.Assert(testutil.TreeDump(dir), DeepEquals, test.result)
 		if test.options.MakeParents {
-			// The fsCreator does not record the parent directories created
+			// The creator does not record the parent directories created
 			// implicitly.
-			for path, info := range treeDumpFSCreator(fsCreator, dir) {
+			for path, info := range treeDumpFSCreator(creator, dir) {
 				c.Assert(info, Equals, test.result[path])
 			}
 		} else {
-			c.Assert(treeDumpFSCreator(fsCreator, dir), DeepEquals, test.result)
+			c.Assert(treeDumpFSCreator(creator, dir), DeepEquals, test.result)
 		}
 	}
 }
