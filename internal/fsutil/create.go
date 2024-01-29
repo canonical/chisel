@@ -30,8 +30,8 @@ type Info struct {
 }
 
 type Creator struct {
-	// Created keeps track of information about the files created. If a file
-	// is created several times it only tracks the latest one.
+	// Created keeps track of information about the filesystem entries created.
+	// If an entry is created several times it only tracks the latest one.
 	Created map[string]Info
 }
 

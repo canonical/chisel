@@ -103,6 +103,8 @@ func (s *S) TestCreate(c *C) {
 	}
 }
 
+// treeDumpFSCreator dumps the contents stored in Creator about the filesystem
+// entries created using the same format as [testutil.TreeDump].
 func treeDumpFSCreator(cr *fsutil.Creator, root string) map[string]string {
 	result := make(map[string]string)
 	for _, file := range cr.Created {
