@@ -12,7 +12,7 @@ type ReportEntry struct {
 	Path    string
 	Mode    fs.FileMode
 	Hash    string
-	Size    uint
+	Size    int
 	Mutable bool
 	Slices  map[*setup.Slice]bool
 	Link    string
