@@ -43,9 +43,6 @@ func checkExtractOptions(options *ExtractOptions) error {
 			}
 		}
 	}
-	if options.Creator == nil {
-		options.Creator = fsutil.NewCreator()
-	}
 	return nil
 }
 
@@ -62,8 +59,12 @@ func Extract(pkgReader io.Reader, options *ExtractOptions) (err error) {
 	if err != nil {
 		return err
 	}
+	validOpts := *options
+	if validOpts.Creator == nil {
+		validOpts.Creator = fsutil.NewCreator()
+	}
 
-	_, err = os.Stat(options.TargetDir)
+	_, err = os.Stat(validOpts.TargetDir)
 	if os.IsNotExist(err) {
 		return fmt.Errorf("target directory does not exist")
 	} else if err != nil {
@@ -103,7 +104,7 @@ func Extract(pkgReader io.Reader, options *ExtractOptions) (err error) {
 			dataReader = zstdReader
 		}
 	}
-	return extractData(dataReader, options)
+	return extractData(dataReader, &validOpts)
 }
 
 func extractData(dataReader io.Reader, options *ExtractOptions) error {

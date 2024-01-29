@@ -42,13 +42,10 @@ func NewCreator() *Creator {
 // Creates a filesystem entry according to the provided options.
 func (c *Creator) Create(options *CreateOptions) error {
 	rp := &readerProxy{inner: options.Data, h: sha256.New()}
-	o := &CreateOptions{
-		Path:        options.Path,
-		Mode:        options.Mode,
-		Data:        rp,
-		Link:        options.Link,
-		MakeParents: options.MakeParents,
-	}
+	// Use the proxy instead of the raw Reader.
+	optsCopy := *options
+	optsCopy.Data = rp
+	o := &optsCopy
 
 	var err error
 	if o.MakeParents {
