@@ -39,7 +39,7 @@ func NewCreator() *Creator {
 	return &Creator{Created: make(map[string]Info)}
 }
 
-// Creates a filesystem entry according to the provided options.
+// Create creates a filesystem entry according to the provided options.
 func (c *Creator) Create(options *CreateOptions) error {
 	rp := &readerProxy{inner: options.Data, h: sha256.New()}
 	// Use the proxy instead of the raw Reader.
