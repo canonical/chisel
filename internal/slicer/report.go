@@ -29,9 +29,9 @@ func NewReport(root string) *Report {
 
 func (r *Report) AddEntry(slice *setup.Slice, entry fsutil.Info) error {
 	if info, ok := r.Entries[entry.Path]; ok {
-		// If several slices create the same directory we report all of them.
-		// Two slices cannot try to create the same regular file because of the
-		// validation Chisel does against the slice definitions.
+		// Note: we do not check here whether it is valid that several slices
+		// added the same directory or file. That is done when parsing the slice
+		// definitions files and checking for conflict.
 		info.Slices = append(info.Slices, slice)
 		r.Entries[entry.Path] = info
 	} else {
