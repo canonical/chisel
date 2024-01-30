@@ -39,6 +39,9 @@ var extractTests = []extractTest{{
 			"/dir/several/levels/deep/file": []deb.ExtractInfo{{
 				Path: "/dir/several/levels/deep/file",
 			}},
+			"/dir/nested/": []deb.ExtractInfo{{
+				Path: "/dir/nested/",
+			}},
 			"/other_dir/": []deb.ExtractInfo{{
 				Path: "/other_dir/",
 			}},
@@ -47,6 +50,7 @@ var extractTests = []extractTest{{
 	result: map[string]string{
 		"/dir/":                         "dir 0755",
 		"/dir/file":                     "file 0644 cc55e2ec",
+		"/dir/nested/":                  "dir 0755",
 		"/dir/other_file":               "file 0644 63d5dd49",
 		"/dir/several/":                 "dir 0755",
 		"/dir/several/levels/":          "dir 0755",
@@ -102,13 +106,14 @@ var extractTests = []extractTest{{
 	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
-			"/d*/": []deb.ExtractInfo{{
-				Path: "/d*/",
+			"/*/": []deb.ExtractInfo{{
+				Path: "/*/",
 			}},
 		},
 	},
 	result: map[string]string{
-		"/dir/": "dir 0755",
+		"/dir/":       "dir 0755",
+		"/other_dir/": "dir 0755",
 	},
 }, {
 	summary: "Globbing for files with multiple levels at once",
