@@ -15,17 +15,15 @@ var PackageData = map[string][]byte{}
 
 var testPackageEntries = []TarEntry{
 	Dir(0755, "./"),
-	Dir(0755, "./a1/"),
-	Reg(0644, "./a1/f1", "a1f1"),
-	Reg(0644, "./a1/f2", "a1f2"),
-	Dir(0755, "./a1/b1/"),
-	Reg(0644, "./a1/b1/f1", "a1b1f1"),
-	Reg(0644, "./a1/b1/f2", "a1b1f2"),
-	Dir(0755, "./a1/b1/c1/"),
-	Reg(0644, "./a1/b1/c1/f1", "a1b1c1f1"),
-	Dir(0755, "./a2/"),
-	Dir(0755, "./a2/b1/"),
-	Reg(0644, "./a2/b1/f1", "a2b1f1"),
+	Dir(0755, "./dir/"),
+	Reg(0644, "./dir/file", "12u3q0wej	ajsd"),
+	Reg(0644, "./dir/other_file", "kasjdf0"),
+	Dir(0755, "./dir/nested/"),
+	Reg(0644, "./dir/nested/file", ""),
+	Reg(0644, "./dir/nested/other_file", "1"),
+	Dir(0755, "./dir/several/levels/deep/"),
+	Reg(0644, "./dir/several/levels/deep/file", "129i381		"),
+	Dir(0755, "./other_dir/"),
 }
 
 func init() {
