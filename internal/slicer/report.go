@@ -1,7 +1,6 @@
 package slicer
 
 import (
-	"fmt"
 	"io/fs"
 
 	"github.com/canonical/chisel/internal/fsutil"
@@ -13,7 +12,7 @@ type ReportEntry struct {
 	Mode   fs.FileMode
 	Hash   string
 	Size   int
-	Slices map[*setup.Slice]bool
+	Slices []*setup.Slice
 	Link   string
 }
 
@@ -30,19 +29,10 @@ func NewReport(root string) *Report {
 
 func (r *Report) AddEntry(slice *setup.Slice, entry fsutil.Info) error {
 	if info, ok := r.Entries[entry.Path]; ok {
-		// If two different slices attempt to create the same regular file,
-		// throw out an error.
-		if !info.Mode.IsDir() {
-			var existingSlice *setup.Slice
-			for s := range info.Slices {
-				existingSlice = s
-				break
-			}
-			return fmt.Errorf("slices %s and %s attempted to create the same entry: %s",
-				slice, existingSlice, info.Path)
-		}
 		// If several slices create the same directory we report all of them.
-		info.Slices[slice] = true
+		// Two slices cannot try to create the same regular file because of the
+		// validation Chisel does against the slice definitions.
+		info.Slices = append(info.Slices, slice)
 		r.Entries[entry.Path] = info
 	} else {
 		r.Entries[entry.Path] = ReportEntry{
@@ -50,7 +40,7 @@ func (r *Report) AddEntry(slice *setup.Slice, entry fsutil.Info) error {
 			Mode:   entry.Mode,
 			Hash:   entry.Hash,
 			Size:   entry.Size,
-			Slices: map[*setup.Slice]bool{slice: true},
+			Slices: []*setup.Slice{slice},
 			Link:   entry.Link,
 		}
 	}

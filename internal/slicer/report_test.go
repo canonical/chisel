@@ -10,7 +10,7 @@ import (
 	"github.com/canonical/chisel/internal/slicer"
 )
 
-var mySlice = &setup.Slice{
+var oneSlice = &setup.Slice{
 	Package:   "base-files",
 	Name:      "my-slice",
 	Essential: nil,
@@ -59,13 +59,13 @@ var testFiles = []struct {
 }{{
 	summary: "Regular directory",
 	info:    sampleDir,
-	slice:   mySlice,
+	slice:   oneSlice,
 	expected: slicer.ReportEntry{
 		Path:   "/root/example",
 		Mode:   fs.ModeDir | 0654,
 		Hash:   "example_hash",
 		Size:   1234,
-		Slices: map[*setup.Slice]bool{mySlice: true},
+		Slices: []*setup.Slice{oneSlice},
 		Link:   "",
 	},
 }, {
@@ -77,36 +77,31 @@ var testFiles = []struct {
 		Mode:   fs.ModeDir | 0654,
 		Hash:   "example_hash",
 		Size:   1234,
-		Slices: map[*setup.Slice]bool{mySlice: true, otherSlice: true},
+		Slices: []*setup.Slice{oneSlice, otherSlice},
 		Link:   "",
 	},
 }, {
 	summary: "Regular file",
 	info:    sampleFile,
-	slice:   mySlice,
+	slice:   oneSlice,
 	expected: slicer.ReportEntry{
 		Path:   "/root/exampleFile",
 		Mode:   0777,
 		Hash:   "exampleFile_hash",
 		Size:   5678,
-		Slices: map[*setup.Slice]bool{mySlice: true},
+		Slices: []*setup.Slice{oneSlice},
 		Link:   "",
 	},
 }, {
-	summary: "Regular file, error when created by several slices",
-	info:    sampleFile,
-	slice:   otherSlice,
-	err:     "slices base-files_other-slice and base-files_my-slice attempted to create the same entry: /root/exampleFile",
-}, {
 	summary: "Regular file link",
 	info:    sampleLink,
-	slice:   mySlice,
+	slice:   oneSlice,
 	expected: slicer.ReportEntry{
 		Path:   "/root/exampleLink",
 		Mode:   0777,
 		Hash:   "exampleFile_hash",
 		Size:   5678,
-		Slices: map[*setup.Slice]bool{mySlice: true},
+		Slices: []*setup.Slice{oneSlice},
 		Link:   "/root/exampleFile",
 	},
 }}
