@@ -65,7 +65,7 @@ var extractTests = []extractTest{{
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
 			"/dir/file": []deb.ExtractInfo{{
-				Path: "/other_dir/file_copy",
+				Path: "/foo/file_copy",
 				Mode: 0600,
 			}},
 			"/dir/several/levels/deep/": []deb.ExtractInfo{{
@@ -75,11 +75,10 @@ var extractTests = []extractTest{{
 		},
 	},
 	result: map[string]string{
-		"/foo/":                "dir 0755",
-		"/foo/bar/":            "dir 0755",
-		"/foo/bar/dir_copy/":   "dir 0700",
-		"/other_dir/":          "dir 0755",
-		"/other_dir/file_copy": "file 0600 cc55e2ec",
+		"/foo/":              "dir 0755",
+		"/foo/bar/":          "dir 0755",
+		"/foo/bar/dir_copy/": "dir 0700",
+		"/foo/file_copy":     "file 0600 cc55e2ec",
 	},
 }, {
 
@@ -88,18 +87,18 @@ var extractTests = []extractTest{{
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
 			"/dir/file": []deb.ExtractInfo{{
-				Path: "/dir/foo/file_copy",
+				Path: "/dir/foo/file_copy_1",
 			}, {
-				Path: "/dir/bar/file_copy2",
+				Path: "/dir/bar/file_copy_2",
 			}},
 		},
 	},
 	result: map[string]string{
-		"/dir/":               "dir 0755",
-		"/dir/bar/":           "dir 0755",
-		"/dir/bar/file_copy2": "file 0644 cc55e2ec",
-		"/dir/foo/":           "dir 0755",
-		"/dir/foo/file_copy":  "file 0644 cc55e2ec",
+		"/dir/":                "dir 0755",
+		"/dir/bar/":            "dir 0755",
+		"/dir/bar/file_copy_2": "file 0644 cc55e2ec",
+		"/dir/foo/":            "dir 0755",
+		"/dir/foo/file_copy_1": "file 0644 cc55e2ec",
 	},
 }, {
 	summary: "Globbing a single dir level",
