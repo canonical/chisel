@@ -53,8 +53,8 @@ var packageEntries = map[string][]testutil.TarEntry{
 	},
 }
 
-// filesystem entries of copyright file from base-files package that will be
-// automatically injected into every slice
+// Hardcoded copyright files from test-package package that will be automatically
+// injected into every slice.
 var copyrightEntries = map[string]string{
 	"/usr/":                                 "dir 0755",
 	"/usr/share/":                           "dir 0755",
@@ -568,7 +568,6 @@ func (s *S) TestRun(c *C) {
 		c.Assert(err, IsNil)
 
 		pkgs := map[string][]byte{
-			"base-files":   testutil.PackageData["base-files"],
 			"test-package": testutil.PackageData["test-package"],
 		}
 		for name, entries := range packageEntries {
