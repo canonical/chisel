@@ -19,11 +19,20 @@ var testPackageEntries = []TarEntry{
 	Reg(0644, "./dir/file", "12u3q0wej	ajsd"),
 	Reg(0644, "./dir/other_file", "kasjdf0"),
 	Dir(0755, "./dir/nested/"),
-	Reg(0644, "./dir/nested/file", ""),
+	Reg(0644, "./dir/nested/file", "0jqei"),
 	Reg(0644, "./dir/nested/other_file", "1"),
 	Dir(0755, "./dir/several/levels/deep/"),
 	Reg(0644, "./dir/several/levels/deep/file", "129i381		"),
 	Dir(0755, "./other_dir/"),
+	Dir(01777, "./parent/"),
+	Dir(0764, "./parent/permissions/"),
+	Reg(0755, "./parent/permissions/file", "ajse0"),
+	// Hardcoded copyright paths.
+	Dir(0755, "./usr/"),
+	Dir(0755, "./usr/share/"),
+	Dir(0755, "./usr/share/doc/"),
+	Dir(0755, "./usr/share/doc/test-package/"),
+	Reg(0644, "./usr/share/doc/test-package/copyright", "copyright"),
 }
 
 func init() {

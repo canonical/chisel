@@ -114,6 +114,8 @@ var extractTests = []extractTest{{
 	result: map[string]string{
 		"/dir/":       "dir 0755",
 		"/other_dir/": "dir 0755",
+		"/parent/":    "dir 01777",
+		"/usr/":       "dir 0755",
 	},
 }, {
 	summary: "Globbing for files with multiple levels at once",
@@ -129,7 +131,7 @@ var extractTests = []extractTest{{
 		"/dir/":                         "dir 0755",
 		"/dir/file":                     "file 0644 cc55e2ec",
 		"/dir/nested/":                  "dir 0755",
-		"/dir/nested/file":              "file 0644 empty",
+		"/dir/nested/file":              "file 0644 84237a05",
 		"/dir/nested/other_file":        "file 0644 6b86b273",
 		"/dir/other_file":               "file 0644 63d5dd49",
 		"/dir/several/":                 "dir 0755",
