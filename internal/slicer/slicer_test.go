@@ -156,7 +156,7 @@ var slicerTests = []slicerTest{{
 		`,
 	},
 	result: map[string]string{
-		"/parent/":     "dir 01777", // This is the magic.
+		"/parent/":     "dir 01777",
 		"/parent/new/": "dir 0755",
 	},
 }, {
