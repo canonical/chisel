@@ -2,6 +2,8 @@ package slicer_test
 
 import (
 	"io/fs"
+	"sort"
+	"strings"
 
 	. "gopkg.in/check.v1"
 
@@ -139,6 +141,10 @@ func (s *S) TestReportAddEntry(c *C) {
 		for _, entry := range report.Entries {
 			reportEntries = append(reportEntries, entry)
 		}
+		sort.Slice(reportEntries, func(i, j int) bool {
+			return strings.Compare(reportEntries[i].Path, reportEntries[j].Path) < 0
+		})
+
 		c.Assert(reportEntries, DeepEquals, test.expected, Commentf(test.summary))
 	}
 }
