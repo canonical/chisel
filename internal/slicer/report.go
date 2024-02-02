@@ -30,9 +30,8 @@ func NewReport(root string) *Report {
 
 func (r *Report) AddEntry(slice *setup.Slice, entry fsutil.Info) {
 	if info, ok := r.Entries[entry.Path]; ok {
-		// Note: we do not check here whether it is valid that several slices
-		// added the same directory or file. That is done when parsing the slice
-		// definitions files and checking for conflicts.
+		// Note: we do not check for clashes with the same path. That is done
+		// when parsing the slice definitions files and checking for conflicts.
 		info.Slices = append(info.Slices, slice)
 		r.Entries[entry.Path] = info
 	} else {
