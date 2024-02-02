@@ -16,7 +16,8 @@ type ReportEntry struct {
 	Link   string
 }
 
-// Report holds the information about files created when slicing packages.
+// Report holds the information about files and directories created when slicing
+// packages.
 type Report struct {
 	Root string
 	// map indexed by path.
