@@ -50,7 +50,8 @@ var sampleLink = fsutil.Info{
 	Link: "/root/exampleFile",
 }
 
-var testFiles = []struct {
+// Tests are run sequentially and update the same stateful report.
+var sequentialReportTest = []struct {
 	summary  string
 	info     fsutil.Info
 	slice    *setup.Slice
@@ -108,7 +109,7 @@ var testFiles = []struct {
 
 func (s *S) TestReportAddFile(c *C) {
 	report := slicer.NewReport("/root")
-	for _, test := range testFiles {
+	for _, test := range sequentialReportTest {
 		err := report.AddEntry(test.slice, test.info)
 		if test.err != "" {
 			c.Assert(err, ErrorMatches, test.err, Commentf(test.summary))
