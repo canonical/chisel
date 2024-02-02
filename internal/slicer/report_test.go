@@ -50,72 +50,95 @@ var sampleLink = fsutil.Info{
 	Link: "/root/exampleFile",
 }
 
-// Tests are run sequentially and update the same stateful report.
-var sequentialReportTest = []struct {
+type testEntry struct {
+	info  fsutil.Info
+	slice *setup.Slice
+}
+
+var reportTests = []struct {
 	summary  string
-	info     fsutil.Info
-	slice    *setup.Slice
-	expected slicer.ReportEntry
-	err      string
+	entries  []testEntry
+	expected []slicer.ReportEntry
 }{{
 	summary: "Regular directory",
-	info:    sampleDir,
-	slice:   oneSlice,
-	expected: slicer.ReportEntry{
+	entries: []testEntry{{info: sampleDir, slice: oneSlice}},
+	expected: []slicer.ReportEntry{{
 		Path:   "/root/example",
 		Mode:   fs.ModeDir | 0654,
 		Hash:   "example_hash",
 		Size:   1234,
 		Slices: []*setup.Slice{oneSlice},
 		Link:   "",
-	},
+	}},
 }, {
 	summary: "Regular directory added by several slices",
-	info:    sampleDir,
-	slice:   otherSlice,
-	expected: slicer.ReportEntry{
+	entries: []testEntry{
+		{info: sampleDir, slice: oneSlice},
+		{info: sampleDir, slice: otherSlice},
+	},
+	expected: []slicer.ReportEntry{{
 		Path:   "/root/example",
 		Mode:   fs.ModeDir | 0654,
 		Hash:   "example_hash",
 		Size:   1234,
 		Slices: []*setup.Slice{oneSlice, otherSlice},
 		Link:   "",
-	},
+	}},
 }, {
 	summary: "Regular file",
-	info:    sampleFile,
-	slice:   oneSlice,
-	expected: slicer.ReportEntry{
+	entries: []testEntry{{info: sampleFile, slice: oneSlice}},
+	expected: []slicer.ReportEntry{{
 		Path:   "/root/exampleFile",
 		Mode:   0777,
 		Hash:   "exampleFile_hash",
 		Size:   5678,
 		Slices: []*setup.Slice{oneSlice},
 		Link:   "",
-	},
+	}},
 }, {
 	summary: "Regular file link",
-	info:    sampleLink,
-	slice:   oneSlice,
-	expected: slicer.ReportEntry{
+	entries: []testEntry{{info: sampleLink, slice: oneSlice}},
+	expected: []slicer.ReportEntry{{
 		Path:   "/root/exampleLink",
 		Mode:   0777,
 		Hash:   "exampleFile_hash",
 		Size:   5678,
 		Slices: []*setup.Slice{oneSlice},
 		Link:   "/root/exampleFile",
+	}},
+}, {
+	summary: "Several entries",
+	entries: []testEntry{
+		{info: sampleDir, slice: oneSlice},
+		{info: sampleFile, slice: otherSlice},
 	},
+	expected: []slicer.ReportEntry{{
+		Path:   "/root/example",
+		Mode:   fs.ModeDir | 0654,
+		Hash:   "example_hash",
+		Size:   1234,
+		Slices: []*setup.Slice{oneSlice},
+		Link:   "",
+	}, {
+		Path:   "/root/exampleFile",
+		Mode:   0777,
+		Hash:   "exampleFile_hash",
+		Size:   5678,
+		Slices: []*setup.Slice{otherSlice},
+		Link:   "",
+	}},
 }}
 
 func (s *S) TestReportAddFile(c *C) {
-	report := slicer.NewReport("/root")
-	for _, test := range sequentialReportTest {
-		err := report.AddEntry(test.slice, test.info)
-		if test.err != "" {
-			c.Assert(err, ErrorMatches, test.err, Commentf(test.summary))
-		} else {
-			c.Assert(err, IsNil)
-			c.Assert(report.Entries[test.info.Path], DeepEquals, test.expected, Commentf(test.summary))
+	for _, test := range reportTests {
+		report := slicer.NewReport("/root")
+		for _, entry := range test.entries {
+			report.AddEntry(entry.slice, entry.info)
 		}
+		reportEntries := []slicer.ReportEntry{}
+		for _, entry := range report.Entries {
+			reportEntries = append(reportEntries, entry)
+		}
+		c.Assert(reportEntries, DeepEquals, test.expected, Commentf(test.summary))
 	}
 }

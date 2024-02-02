@@ -163,7 +163,7 @@ func Run(options *RunOptions) error {
 			Creator:   creator,
 		})
 		for _, entry := range creator.Created {
-			err := report.AddEntry(slice, entry)
+			report.AddEntry(slice, entry)
 			if err != nil {
 				return err
 			}
@@ -232,7 +232,7 @@ func Run(options *RunOptions) error {
 				return err
 			}
 			for _, entry := range creator.Created {
-				err := report.AddEntry(slice, entry)
+				report.AddEntry(slice, entry)
 				if err != nil {
 					return err
 				}

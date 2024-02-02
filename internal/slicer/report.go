@@ -27,7 +27,7 @@ func NewReport(root string) *Report {
 	return &Report{Entries: make(map[string]ReportEntry), Root: root}
 }
 
-func (r *Report) AddEntry(slice *setup.Slice, entry fsutil.Info) error {
+func (r *Report) AddEntry(slice *setup.Slice, entry fsutil.Info) {
 	if info, ok := r.Entries[entry.Path]; ok {
 		// Note: we do not check here whether it is valid that several slices
 		// added the same directory or file. That is done when parsing the slice
@@ -44,5 +44,4 @@ func (r *Report) AddEntry(slice *setup.Slice, entry fsutil.Info) error {
 			Link:   entry.Link,
 		}
 	}
-	return nil
 }
