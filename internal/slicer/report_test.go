@@ -50,18 +50,18 @@ var sampleLink = fsutil.Info{
 	Link: "/root/exampleFile",
 }
 
-type testEntry struct {
+type reportTestEntry struct {
 	info  fsutil.Info
 	slice *setup.Slice
 }
 
 var reportTests = []struct {
 	summary  string
-	entries  []testEntry
+	entries  []reportTestEntry
 	expected []slicer.ReportEntry
 }{{
 	summary: "Regular directory",
-	entries: []testEntry{{info: sampleDir, slice: oneSlice}},
+	entries: []reportTestEntry{{info: sampleDir, slice: oneSlice}},
 	expected: []slicer.ReportEntry{{
 		Path:   "/root/example",
 		Mode:   fs.ModeDir | 0654,
@@ -72,7 +72,7 @@ var reportTests = []struct {
 	}},
 }, {
 	summary: "Regular directory added by several slices",
-	entries: []testEntry{
+	entries: []reportTestEntry{
 		{info: sampleDir, slice: oneSlice},
 		{info: sampleDir, slice: otherSlice},
 	},
@@ -86,7 +86,7 @@ var reportTests = []struct {
 	}},
 }, {
 	summary: "Regular file",
-	entries: []testEntry{{info: sampleFile, slice: oneSlice}},
+	entries: []reportTestEntry{{info: sampleFile, slice: oneSlice}},
 	expected: []slicer.ReportEntry{{
 		Path:   "/root/exampleFile",
 		Mode:   0777,
@@ -97,7 +97,7 @@ var reportTests = []struct {
 	}},
 }, {
 	summary: "Regular file link",
-	entries: []testEntry{{info: sampleLink, slice: oneSlice}},
+	entries: []reportTestEntry{{info: sampleLink, slice: oneSlice}},
 	expected: []slicer.ReportEntry{{
 		Path:   "/root/exampleLink",
 		Mode:   0777,
@@ -108,7 +108,7 @@ var reportTests = []struct {
 	}},
 }, {
 	summary: "Several entries",
-	entries: []testEntry{
+	entries: []reportTestEntry{
 		{info: sampleDir, slice: oneSlice},
 		{info: sampleFile, slice: otherSlice},
 	},
