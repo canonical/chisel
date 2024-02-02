@@ -164,9 +164,6 @@ func Run(options *RunOptions) error {
 		})
 		for _, entry := range creator.Created {
 			report.AddEntry(slice, entry)
-			if err != nil {
-				return err
-			}
 		}
 		reader.Close()
 		packages[slice.Package] = nil
@@ -233,9 +230,6 @@ func Run(options *RunOptions) error {
 			}
 			for _, entry := range creator.Created {
 				report.AddEntry(slice, entry)
-				if err != nil {
-					return err
-				}
 			}
 		}
 	}
