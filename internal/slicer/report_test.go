@@ -129,7 +129,7 @@ var reportTests = []struct {
 	}},
 }}
 
-func (s *S) TestReportAddFile(c *C) {
+func (s *S) TestReportAddEntry(c *C) {
 	for _, test := range reportTests {
 		report := slicer.NewReport("/root")
 		for _, entry := range test.entries {
