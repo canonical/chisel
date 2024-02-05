@@ -31,8 +31,6 @@ var otherSlice = &setup.Slice{
 var sampleDir = fsutil.Info{
 	Path: "/root/example",
 	Mode: fs.ModeDir | 0654,
-	Hash: "example_hash",
-	Size: 1234,
 	Link: "",
 }
 
@@ -52,43 +50,39 @@ var sampleLink = fsutil.Info{
 	Link: "/root/exampleFile",
 }
 
-type reportTestEntry struct {
+type sliceAndInfo struct {
 	info  fsutil.Info
 	slice *setup.Slice
 }
 
 var reportTests = []struct {
 	summary  string
-	entries  []reportTestEntry
+	entries  []sliceAndInfo
 	expected []slicer.ReportEntry
 }{{
 	summary: "Regular directory",
-	entries: []reportTestEntry{{info: sampleDir, slice: oneSlice}},
+	entries: []sliceAndInfo{{info: sampleDir, slice: oneSlice}},
 	expected: []slicer.ReportEntry{{
 		Path:   "/root/example",
 		Mode:   fs.ModeDir | 0654,
-		Hash:   "example_hash",
-		Size:   1234,
 		Slices: []*setup.Slice{oneSlice},
 		Link:   "",
 	}},
 }, {
 	summary: "Regular directory added by several slices",
-	entries: []reportTestEntry{
+	entries: []sliceAndInfo{
 		{info: sampleDir, slice: oneSlice},
 		{info: sampleDir, slice: otherSlice},
 	},
 	expected: []slicer.ReportEntry{{
 		Path:   "/root/example",
 		Mode:   fs.ModeDir | 0654,
-		Hash:   "example_hash",
-		Size:   1234,
 		Slices: []*setup.Slice{oneSlice, otherSlice},
 		Link:   "",
 	}},
 }, {
 	summary: "Regular file",
-	entries: []reportTestEntry{{info: sampleFile, slice: oneSlice}},
+	entries: []sliceAndInfo{{info: sampleFile, slice: oneSlice}},
 	expected: []slicer.ReportEntry{{
 		Path:   "/root/exampleFile",
 		Mode:   0777,
@@ -99,7 +93,7 @@ var reportTests = []struct {
 	}},
 }, {
 	summary: "Regular file link",
-	entries: []reportTestEntry{{info: sampleLink, slice: oneSlice}},
+	entries: []sliceAndInfo{{info: sampleLink, slice: oneSlice}},
 	expected: []slicer.ReportEntry{{
 		Path:   "/root/exampleLink",
 		Mode:   0777,
@@ -110,15 +104,13 @@ var reportTests = []struct {
 	}},
 }, {
 	summary: "Several entries",
-	entries: []reportTestEntry{
+	entries: []sliceAndInfo{
 		{info: sampleDir, slice: oneSlice},
 		{info: sampleFile, slice: otherSlice},
 	},
 	expected: []slicer.ReportEntry{{
 		Path:   "/root/example",
 		Mode:   fs.ModeDir | 0654,
-		Hash:   "example_hash",
-		Size:   1234,
 		Slices: []*setup.Slice{oneSlice},
 		Link:   "",
 	}, {
