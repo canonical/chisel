@@ -124,8 +124,8 @@ func createSymlink(o *CreateOptions) error {
 	return os.Symlink(o.Link, o.Path)
 }
 
-// readerProxy implements the io.Reader interface proxying the calls to its inner io.Reader. On each read, the proxy
-// calculates the file size and hash.
+// readerProxy implements the io.Reader interface proxying the calls to its
+// inner io.Reader. On each read, the proxy keeps track of the file size and hash.
 type readerProxy struct {
 	inner io.Reader
 	h     hash.Hash
