@@ -229,9 +229,10 @@ func Run(options *RunOptions) error {
 			if err != nil {
 				return err
 			}
-			for _, entry := range creator.Created {
-				report.AddEntry(slice, entry)
-			}
+		}
+
+		for _, entry := range creator.Created {
+			report.AddEntry(slice, entry)
 		}
 	}
 

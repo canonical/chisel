@@ -32,11 +32,11 @@ type Info struct {
 type Creator struct {
 	// Created keeps track of information about the filesystem entries created.
 	// If an entry is created several times it only tracks the latest one.
-	Created map[string]Info
+	Created []Info
 }
 
 func NewCreator() *Creator {
-	return &Creator{Created: make(map[string]Info)}
+	return &Creator{}
 }
 
 // Create creates a filesystem entry according to the provided options.
@@ -74,7 +74,7 @@ func (c *Creator) Create(options *CreateOptions) error {
 		Size: rp.size,
 		Link: o.Link,
 	}
-	c.Created[o.Path] = info
+	c.Created = append(c.Created, info)
 	return nil
 }
 
