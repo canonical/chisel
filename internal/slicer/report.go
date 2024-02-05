@@ -19,29 +19,32 @@ type ReportEntry struct {
 // Report holds the information about files and directories created when slicing
 // packages.
 type Report struct {
+	// Root is the filesystem path where the all reported content is based.
 	Root string
-	// map indexed by path.
+	// Entries holds all reported content, indexed by their path.
 	Entries map[string]ReportEntry
 }
 
+// NewReport returns an empty report for content that will be based at the
+// provided root path.
 func NewReport(root string) *Report {
 	return &Report{Entries: make(map[string]ReportEntry), Root: root}
 }
 
-func (r *Report) AddEntry(slice *setup.Slice, entry fsutil.Info) {
-	if info, ok := r.Entries[entry.Path]; ok {
+func (r *Report) AddEntry(slice *setup.Slice, info fsutil.Info) {
+	if entry, ok := r.Entries[info.Path]; ok {
 		// Note: we do not check for clashes with the same path. That is done
 		// when parsing the slice definitions files and checking for conflicts.
-		info.Slices = append(info.Slices, slice)
-		r.Entries[entry.Path] = info
+		entry.Slices = append(entry.Slices, slice)
+		r.Entries[info.Path] = entry
 	} else {
-		r.Entries[entry.Path] = ReportEntry{
-			Path:   entry.Path,
-			Mode:   entry.Mode,
-			Hash:   entry.Hash,
-			Size:   entry.Size,
+		r.Entries[info.Path] = ReportEntry{
+			Path:   info.Path,
+			Mode:   info.Mode,
+			Hash:   info.Hash,
+			Size:   info.Size,
 			Slices: []*setup.Slice{slice},
-			Link:   entry.Link,
+			Link:   info.Link,
 		}
 	}
 }
