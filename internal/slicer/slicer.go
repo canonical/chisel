@@ -182,6 +182,8 @@ func Run(options *RunOptions) error {
 	done := make(map[string]bool)
 	for _, slice := range options.Selection.Slices {
 		arch := archives[slice.Package].Options().Arch
+		creator := fsutil.NewCreator()
+
 		for targetPath, pathInfo := range slice.Contents {
 			if len(pathInfo.Arch) > 0 && !contains(pathInfo.Arch, arch) {
 				continue
@@ -217,7 +219,6 @@ func Run(options *RunOptions) error {
 				return fmt.Errorf("internal error: cannot extract path of kind %q", pathInfo.Kind)
 			}
 
-			creator := fsutil.NewCreator()
 			err := creator.Create(&fsutil.CreateOptions{
 				Path:        targetPath,
 				Mode:        tarHeader.FileInfo().Mode(),
