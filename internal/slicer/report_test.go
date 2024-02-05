@@ -2,8 +2,6 @@ package slicer_test
 
 import (
 	"io/fs"
-	"sort"
-	"strings"
 
 	. "gopkg.in/check.v1"
 
@@ -56,71 +54,78 @@ type sliceAndInfo struct {
 }
 
 var reportTests = []struct {
-	summary  string
-	entries  []sliceAndInfo
-	expected []slicer.ReportEntry
+	summary string
+	entries []sliceAndInfo
+	// indexed by path.
+	expected map[string]slicer.ReportEntry
 }{{
 	summary: "Regular directory",
 	entries: []sliceAndInfo{{info: sampleDir, slice: oneSlice}},
-	expected: []slicer.ReportEntry{{
-		Path:   "/root/example",
-		Mode:   fs.ModeDir | 0654,
-		Slices: []*setup.Slice{oneSlice},
-		Link:   "",
-	}},
+	expected: map[string]slicer.ReportEntry{
+		"/root/example": {
+			Path:   "/root/example",
+			Mode:   fs.ModeDir | 0654,
+			Slices: []*setup.Slice{oneSlice},
+			Link:   "",
+		}},
 }, {
 	summary: "Regular directory added by several slices",
 	entries: []sliceAndInfo{
 		{info: sampleDir, slice: oneSlice},
 		{info: sampleDir, slice: otherSlice},
 	},
-	expected: []slicer.ReportEntry{{
-		Path:   "/root/example",
-		Mode:   fs.ModeDir | 0654,
-		Slices: []*setup.Slice{oneSlice, otherSlice},
-		Link:   "",
-	}},
+	expected: map[string]slicer.ReportEntry{
+		"/root/example": {
+			Path:   "/root/example",
+			Mode:   fs.ModeDir | 0654,
+			Slices: []*setup.Slice{oneSlice, otherSlice},
+			Link:   "",
+		}},
 }, {
 	summary: "Regular file",
 	entries: []sliceAndInfo{{info: sampleFile, slice: oneSlice}},
-	expected: []slicer.ReportEntry{{
-		Path:   "/root/exampleFile",
-		Mode:   0777,
-		Hash:   "exampleFile_hash",
-		Size:   5678,
-		Slices: []*setup.Slice{oneSlice},
-		Link:   "",
-	}},
+	expected: map[string]slicer.ReportEntry{
+		"/root/exampleFile": {
+			Path:   "/root/exampleFile",
+			Mode:   0777,
+			Hash:   "exampleFile_hash",
+			Size:   5678,
+			Slices: []*setup.Slice{oneSlice},
+			Link:   "",
+		}},
 }, {
 	summary: "Regular file link",
 	entries: []sliceAndInfo{{info: sampleLink, slice: oneSlice}},
-	expected: []slicer.ReportEntry{{
-		Path:   "/root/exampleLink",
-		Mode:   0777,
-		Hash:   "exampleFile_hash",
-		Size:   5678,
-		Slices: []*setup.Slice{oneSlice},
-		Link:   "/root/exampleFile",
-	}},
+	expected: map[string]slicer.ReportEntry{
+		"/root/exampleLink": {
+			Path:   "/root/exampleLink",
+			Mode:   0777,
+			Hash:   "exampleFile_hash",
+			Size:   5678,
+			Slices: []*setup.Slice{oneSlice},
+			Link:   "/root/exampleFile",
+		}},
 }, {
 	summary: "Several entries",
 	entries: []sliceAndInfo{
 		{info: sampleDir, slice: oneSlice},
 		{info: sampleFile, slice: otherSlice},
 	},
-	expected: []slicer.ReportEntry{{
-		Path:   "/root/example",
-		Mode:   fs.ModeDir | 0654,
-		Slices: []*setup.Slice{oneSlice},
-		Link:   "",
-	}, {
-		Path:   "/root/exampleFile",
-		Mode:   0777,
-		Hash:   "exampleFile_hash",
-		Size:   5678,
-		Slices: []*setup.Slice{otherSlice},
-		Link:   "",
-	}},
+	expected: map[string]slicer.ReportEntry{
+		"/root/example": {
+			Path:   "/root/example",
+			Mode:   fs.ModeDir | 0654,
+			Slices: []*setup.Slice{oneSlice},
+			Link:   "",
+		},
+		"/root/exampleFile": {
+			Path:   "/root/exampleFile",
+			Mode:   0777,
+			Hash:   "exampleFile_hash",
+			Size:   5678,
+			Slices: []*setup.Slice{otherSlice},
+			Link:   "",
+		}},
 }}
 
 func (s *S) TestReportAddEntry(c *C) {
@@ -129,14 +134,6 @@ func (s *S) TestReportAddEntry(c *C) {
 		for _, entry := range test.entries {
 			report.AddEntry(entry.slice, entry.info)
 		}
-		reportEntries := []slicer.ReportEntry{}
-		for _, entry := range report.Entries {
-			reportEntries = append(reportEntries, entry)
-		}
-		sort.Slice(reportEntries, func(i, j int) bool {
-			return strings.Compare(reportEntries[i].Path, reportEntries[j].Path) < 0
-		})
-
-		c.Assert(reportEntries, DeepEquals, test.expected, Commentf(test.summary))
+		c.Assert(report.Entries, DeepEquals, test.expected, Commentf(test.summary))
 	}
 }
