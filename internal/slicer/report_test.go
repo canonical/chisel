@@ -58,6 +58,8 @@ var reportTests = []struct {
 	sliceInfo []sliceAndInfo
 	// indexed by path.
 	expected map[string]slicer.ReportEntry
+	// error after processing the last sliceInfo item.
+	err string
 }{{
 	summary:   "Regular directory",
 	sliceInfo: []sliceAndInfo{{info: sampleDir, slice: oneSlice}},
@@ -126,13 +128,46 @@ var reportTests = []struct {
 			Slices: []*setup.Slice{otherSlice},
 			Link:   "",
 		}},
+}, {
+	summary: "Same path, identical files",
+	sliceInfo: []sliceAndInfo{
+		{info: sampleFile, slice: oneSlice},
+		{info: sampleFile, slice: oneSlice},
+	},
+	expected: map[string]slicer.ReportEntry{
+		"/root/exampleFile": {
+			Path:   "/root/exampleFile",
+			Mode:   0777,
+			Hash:   "exampleFile_hash",
+			Size:   5678,
+			Slices: []*setup.Slice{oneSlice},
+			Link:   "",
+		}},
+}, {
+	summary: "Error for same path distinct files",
+	sliceInfo: []sliceAndInfo{
+		{info: sampleFile, slice: oneSlice},
+		{info: fsutil.Info{
+			Path: sampleFile.Path,
+			Mode: 0,
+			Hash: sampleFile.Hash,
+			Size: sampleFile.Size,
+			Link: sampleFile.Link,
+		}, slice: oneSlice},
+	},
+	err: `internal error: cannot add conflicting data for path "/root/exampleFile"`,
 }}
 
 func (s *S) TestReportAdd(c *C) {
 	for _, test := range reportTests {
 		report := slicer.NewReport("/root")
+		var err error
 		for _, si := range test.sliceInfo {
-			report.Add(si.slice, &si.info)
+			err = report.Add(si.slice, &si.info)
+		}
+		if test.err != "" {
+			c.Assert(err, ErrorMatches, test.err)
+			continue
 		}
 		c.Assert(report.Entries, DeepEquals, test.expected, Commentf(test.summary))
 	}

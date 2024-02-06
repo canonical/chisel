@@ -35,9 +35,9 @@ func NewReport(root string) *Report {
 
 func (r *Report) Add(slice *setup.Slice, info *fsutil.Info) error {
 	if entry, ok := r.Entries[info.Path]; ok {
-		if info.Mode != entry.Mode || info.Link != entry.Link || info.Size !=
-			entry.Size || info.Hash != entry.Hash {
-			return fmt.Errorf("internal error: cannot add conflicting data for path %s", info.Path)
+		if info.Mode != entry.Mode || info.Link != entry.Link ||
+			info.Size != entry.Size || info.Hash != entry.Hash {
+			return fmt.Errorf("internal error: cannot add conflicting data for path %q", info.Path)
 		}
 		if !slices.Contains(entry.Slices, slice) {
 			entry.Slices = append(entry.Slices, slice)
