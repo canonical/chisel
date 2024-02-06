@@ -154,17 +154,20 @@ func Run(options *RunOptions) error {
 		if reader == nil {
 			continue
 		}
-		creator := fsutil.NewCreator()
 		err := deb.Extract(reader, &deb.ExtractOptions{
 			Package:   slice.Package,
 			Extract:   extract[slice.Package],
 			TargetDir: targetDir,
 			Globbed:   globbedPaths,
-			Creator:   creator,
+			Create: func(o *fsutil.CreateOptions) error {
+				info, err := fsutil.Create(o)
+				if err != nil {
+					return err
+				}
+				report.Add(slice, &info)
+				return nil
+			},
 		})
-		for _, entry := range creator.Created {
-			report.AddEntry(slice, entry)
-		}
 		reader.Close()
 		packages[slice.Package] = nil
 		if err != nil {
@@ -182,7 +185,6 @@ func Run(options *RunOptions) error {
 	done := make(map[string]bool)
 	for _, slice := range options.Selection.Slices {
 		arch := archives[slice.Package].Options().Arch
-		creator := fsutil.NewCreator()
 
 		for targetPath, pathInfo := range slice.Contents {
 			if len(pathInfo.Arch) > 0 && !contains(pathInfo.Arch, arch) {
@@ -219,7 +221,7 @@ func Run(options *RunOptions) error {
 				return fmt.Errorf("internal error: cannot extract path of kind %q", pathInfo.Kind)
 			}
 
-			err := creator.Create(&fsutil.CreateOptions{
+			info, err := fsutil.Create(&fsutil.CreateOptions{
 				Path:        targetPath,
 				Mode:        tarHeader.FileInfo().Mode(),
 				Data:        fileContent,
@@ -229,10 +231,10 @@ func Run(options *RunOptions) error {
 			if err != nil {
 				return err
 			}
-		}
-
-		for _, entry := range creator.Created {
-			report.AddEntry(slice, entry)
+			err = report.Add(slice, &info)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

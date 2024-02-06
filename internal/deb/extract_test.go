@@ -6,7 +6,6 @@ import (
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/chisel/internal/deb"
-	"github.com/canonical/chisel/internal/fsutil"
 	"github.com/canonical/chisel/internal/testutil"
 )
 
@@ -291,7 +290,6 @@ func (s *S) TestExtract(c *C) {
 		options := test.options
 		options.Package = "base-files"
 		options.TargetDir = dir
-		options.Creator = fsutil.NewCreator()
 
 		if test.globbed != nil {
 			options.Globbed = make(map[string][]string)

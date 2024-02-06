@@ -29,18 +29,9 @@ type Info struct {
 	Link string
 }
 
-type Creator struct {
-	// Created keeps track of information about the filesystem entries created.
-	// If an entry is created several times it only tracks the latest one.
-	Created []Info
-}
-
-func NewCreator() *Creator {
-	return &Creator{}
-}
-
-// Create creates a filesystem entry according to the provided options.
-func (c *Creator) Create(options *CreateOptions) error {
+// Create creates a filesystem entry according to the provided options and returns
+// the information about the created entry.
+func Create(options *CreateOptions) (Info, error) {
 	rp := &readerProxy{inner: options.Data, h: sha256.New()}
 	// Use the proxy instead of the raw Reader.
 	optsCopy := *options
@@ -50,7 +41,7 @@ func (c *Creator) Create(options *CreateOptions) error {
 	var err error
 	if o.MakeParents {
 		if err := os.MkdirAll(filepath.Dir(o.Path), 0755); err != nil {
-			return err
+			return Info{}, err
 		}
 	}
 	switch o.Mode & fs.ModeType {
@@ -64,7 +55,7 @@ func (c *Creator) Create(options *CreateOptions) error {
 		err = fmt.Errorf("unsupported file type: %s", o.Path)
 	}
 	if err != nil {
-		return err
+		return Info{}, err
 	}
 
 	info := Info{
@@ -74,8 +65,7 @@ func (c *Creator) Create(options *CreateOptions) error {
 		Size: rp.size,
 		Link: o.Link,
 	}
-	c.Created = append(c.Created, info)
-	return nil
+	return info, nil
 }
 
 func createDir(o *CreateOptions) error {

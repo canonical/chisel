@@ -19,7 +19,6 @@ import (
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/archive/testarchive"
 	"github.com/canonical/chisel/internal/deb"
-	"github.com/canonical/chisel/internal/fsutil"
 	"github.com/canonical/chisel/internal/testutil"
 )
 
@@ -501,7 +500,6 @@ func (s *S) testOpenArchiveArch(c *C, release ubuntuRelease, arch string) {
 				{Path: "/hostname"},
 			},
 		},
-		Creator: fsutil.NewCreator(),
 	})
 	c.Assert(err, IsNil)
 

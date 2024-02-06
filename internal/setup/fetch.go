@@ -137,7 +137,7 @@ func extractTar(dataReader io.Reader, targetDir string) error {
 
 		//debugf("Extracting header: %#v", tarHeader)
 
-		err = fsutil.NewCreator().Create(&fsutil.CreateOptions{
+		_, err = fsutil.Create(&fsutil.CreateOptions{
 			Path:        filepath.Join(targetDir, sourcePath),
 			Mode:        tarHeader.FileInfo().Mode(),
 			Data:        tarReader,

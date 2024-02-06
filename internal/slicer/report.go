@@ -1,7 +1,9 @@
 package slicer
 
 import (
+	"fmt"
 	"io/fs"
+	"slices"
 
 	"github.com/canonical/chisel/internal/fsutil"
 	"github.com/canonical/chisel/internal/setup"
@@ -31,11 +33,15 @@ func NewReport(root string) *Report {
 	return &Report{Entries: make(map[string]ReportEntry), Root: root}
 }
 
-func (r *Report) AddEntry(slice *setup.Slice, info fsutil.Info) {
+func (r *Report) Add(slice *setup.Slice, info *fsutil.Info) error {
 	if entry, ok := r.Entries[info.Path]; ok {
-		// Note: we do not check for clashes with the same path. That is done
-		// when parsing the slice definitions files and checking for conflicts.
-		entry.Slices = append(entry.Slices, slice)
+		if info.Mode != entry.Mode || info.Link != entry.Link || info.Size !=
+			entry.Size || info.Hash != entry.Hash {
+			return fmt.Errorf("internal error: cannot add conflicting data for path %s", info.Path)
+		}
+		if !slices.Contains(entry.Slices, slice) {
+			entry.Slices = append(entry.Slices, slice)
+		}
 		r.Entries[info.Path] = entry
 	} else {
 		r.Entries[info.Path] = ReportEntry{
@@ -47,4 +53,5 @@ func (r *Report) AddEntry(slice *setup.Slice, info fsutil.Info) {
 			Link:   info.Link,
 		}
 	}
+	return nil
 }

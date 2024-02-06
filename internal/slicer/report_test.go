@@ -54,13 +54,13 @@ type sliceAndInfo struct {
 }
 
 var reportTests = []struct {
-	summary string
-	entries []sliceAndInfo
+	summary   string
+	sliceInfo []sliceAndInfo
 	// indexed by path.
 	expected map[string]slicer.ReportEntry
 }{{
-	summary: "Regular directory",
-	entries: []sliceAndInfo{{info: sampleDir, slice: oneSlice}},
+	summary:   "Regular directory",
+	sliceInfo: []sliceAndInfo{{info: sampleDir, slice: oneSlice}},
 	expected: map[string]slicer.ReportEntry{
 		"/root/example": {
 			Path:   "/root/example",
@@ -70,7 +70,7 @@ var reportTests = []struct {
 		}},
 }, {
 	summary: "Regular directory added by several slices",
-	entries: []sliceAndInfo{
+	sliceInfo: []sliceAndInfo{
 		{info: sampleDir, slice: oneSlice},
 		{info: sampleDir, slice: otherSlice},
 	},
@@ -82,8 +82,8 @@ var reportTests = []struct {
 			Link:   "",
 		}},
 }, {
-	summary: "Regular file",
-	entries: []sliceAndInfo{{info: sampleFile, slice: oneSlice}},
+	summary:   "Regular file",
+	sliceInfo: []sliceAndInfo{{info: sampleFile, slice: oneSlice}},
 	expected: map[string]slicer.ReportEntry{
 		"/root/exampleFile": {
 			Path:   "/root/exampleFile",
@@ -94,8 +94,8 @@ var reportTests = []struct {
 			Link:   "",
 		}},
 }, {
-	summary: "Regular file link",
-	entries: []sliceAndInfo{{info: sampleLink, slice: oneSlice}},
+	summary:   "Regular file link",
+	sliceInfo: []sliceAndInfo{{info: sampleLink, slice: oneSlice}},
 	expected: map[string]slicer.ReportEntry{
 		"/root/exampleLink": {
 			Path:   "/root/exampleLink",
@@ -107,7 +107,7 @@ var reportTests = []struct {
 		}},
 }, {
 	summary: "Several entries",
-	entries: []sliceAndInfo{
+	sliceInfo: []sliceAndInfo{
 		{info: sampleDir, slice: oneSlice},
 		{info: sampleFile, slice: otherSlice},
 	},
@@ -128,11 +128,11 @@ var reportTests = []struct {
 		}},
 }}
 
-func (s *S) TestReportAddEntry(c *C) {
+func (s *S) TestReportAdd(c *C) {
 	for _, test := range reportTests {
 		report := slicer.NewReport("/root")
-		for _, entry := range test.entries {
-			report.AddEntry(entry.slice, entry.info)
+		for _, si := range test.sliceInfo {
+			report.Add(si.slice, &si.info)
 		}
 		c.Assert(report.Entries, DeepEquals, test.expected, Commentf(test.summary))
 	}
