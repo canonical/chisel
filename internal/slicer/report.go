@@ -3,7 +3,6 @@ package slicer
 import (
 	"fmt"
 	"io/fs"
-	"slices"
 
 	"github.com/canonical/chisel/internal/fsutil"
 	"github.com/canonical/chisel/internal/setup"
@@ -39,9 +38,7 @@ func (r *Report) Add(slice *setup.Slice, info *fsutil.Info) error {
 			info.Size != entry.Size || info.Hash != entry.Hash {
 			return fmt.Errorf("internal error: cannot add conflicting data for path %q", info.Path)
 		}
-		if !slices.Contains(entry.Slices, slice) {
-			entry.Slices = append(entry.Slices, slice)
-		}
+		entry.Slices = append(entry.Slices, slice)
 		r.Entries[info.Path] = entry
 	} else {
 		r.Entries[info.Path] = ReportEntry{
