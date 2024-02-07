@@ -13,7 +13,7 @@ type ReportEntry struct {
 	Mode   fs.FileMode
 	Hash   string
 	Size   int
-	Slices []*setup.Slice
+	Slices map[*setup.Slice]bool
 	Link   string
 }
 
@@ -38,7 +38,7 @@ func (r *Report) Add(slice *setup.Slice, info *fsutil.Info) error {
 			info.Size != entry.Size || info.Hash != entry.Hash {
 			return fmt.Errorf("internal error: cannot add conflicting data for path %q", info.Path)
 		}
-		entry.Slices = append(entry.Slices, slice)
+		entry.Slices[slice] = true
 		r.Entries[info.Path] = entry
 	} else {
 		r.Entries[info.Path] = ReportEntry{
@@ -46,7 +46,7 @@ func (r *Report) Add(slice *setup.Slice, info *fsutil.Info) error {
 			Mode:   info.Mode,
 			Hash:   info.Hash,
 			Size:   info.Size,
-			Slices: []*setup.Slice{slice},
+			Slices: map[*setup.Slice]bool{slice: true},
 			Link:   info.Link,
 		}
 	}

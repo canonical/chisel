@@ -67,7 +67,7 @@ var reportTests = []struct {
 		"/root/exampleDir": {
 			Path:   "/root/exampleDir",
 			Mode:   fs.ModeDir | 0654,
-			Slices: []*setup.Slice{oneSlice},
+			Slices: map[*setup.Slice]bool{oneSlice: true},
 			Link:   "",
 		}},
 }, {
@@ -80,7 +80,7 @@ var reportTests = []struct {
 		"/root/exampleDir": {
 			Path:   "/root/exampleDir",
 			Mode:   fs.ModeDir | 0654,
-			Slices: []*setup.Slice{oneSlice, otherSlice},
+			Slices: map[*setup.Slice]bool{oneSlice: true, otherSlice: true},
 			Link:   "",
 		}},
 }, {
@@ -92,7 +92,7 @@ var reportTests = []struct {
 			Mode:   0777,
 			Hash:   "exampleFile_hash",
 			Size:   5678,
-			Slices: []*setup.Slice{oneSlice},
+			Slices: map[*setup.Slice]bool{oneSlice: true},
 			Link:   "",
 		}},
 }, {
@@ -104,7 +104,7 @@ var reportTests = []struct {
 			Mode:   0777,
 			Hash:   "exampleFile_hash",
 			Size:   5678,
-			Slices: []*setup.Slice{oneSlice},
+			Slices: map[*setup.Slice]bool{oneSlice: true},
 			Link:   "/root/exampleFile",
 		}},
 }, {
@@ -117,7 +117,7 @@ var reportTests = []struct {
 		"/root/exampleDir": {
 			Path:   "/root/exampleDir",
 			Mode:   fs.ModeDir | 0654,
-			Slices: []*setup.Slice{oneSlice},
+			Slices: map[*setup.Slice]bool{oneSlice: true},
 			Link:   "",
 		},
 		"/root/exampleFile": {
@@ -125,7 +125,7 @@ var reportTests = []struct {
 			Mode:   0777,
 			Hash:   "exampleFile_hash",
 			Size:   5678,
-			Slices: []*setup.Slice{otherSlice},
+			Slices: map[*setup.Slice]bool{otherSlice: true},
 			Link:   "",
 		}},
 }, {
@@ -140,7 +140,7 @@ var reportTests = []struct {
 			Mode:   0777,
 			Hash:   "exampleFile_hash",
 			Size:   5678,
-			Slices: []*setup.Slice{oneSlice},
+			Slices: map[*setup.Slice]bool{oneSlice: true},
 			Link:   "",
 		}},
 }, {
