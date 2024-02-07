@@ -638,7 +638,7 @@ func runSlicerTests(c *C, tests []slicerTest) {
 		if test.hackopt != nil {
 			test.hackopt(c, &options)
 		}
-		err = slicer.Run(&options)
+		_, err = slicer.Run(&options)
 		if test.error == "" {
 			c.Assert(err, IsNil)
 		} else {

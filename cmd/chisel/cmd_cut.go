@@ -99,11 +99,12 @@ func (cmd *cmdCut) Execute(args []string) error {
 		archives[archiveName] = openArchive
 	}
 
-	return slicer.Run(&slicer.RunOptions{
+	_, err = slicer.Run(&slicer.RunOptions{
 		Selection: selection,
 		Archives:  archives,
 		TargetDir: cmd.RootDir,
 	})
+	return err
 }
 
 // TODO These need testing, and maybe moving into a common file.
