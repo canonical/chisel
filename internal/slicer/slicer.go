@@ -159,8 +159,8 @@ func Run(options *RunOptions) (*Report, error) {
 			Extract:   extract[slice.Package],
 			TargetDir: targetDir,
 			Globbed:   globbedPaths,
+			// Creates the filesystem entry and adds it to the report.
 			Create: func(o *fsutil.CreateOptions) error {
-				// creates the filesystem entry and adds it to the report.
 				info, err := fsutil.Create(o)
 				if err != nil {
 					return err
@@ -185,7 +185,6 @@ func Run(options *RunOptions) (*Report, error) {
 	done := make(map[string]bool)
 	for _, slice := range options.Selection.Slices {
 		arch := archives[slice.Package].Options().Arch
-
 		for targetPath, pathInfo := range slice.Contents {
 			if len(pathInfo.Arch) > 0 && !contains(pathInfo.Arch, arch) {
 				continue
