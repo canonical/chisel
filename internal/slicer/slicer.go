@@ -160,12 +160,12 @@ func Run(options *RunOptions) error {
 			TargetDir: targetDir,
 			Globbed:   globbedPaths,
 			Create: func(o *fsutil.CreateOptions) error {
+				// creates the filesystem entry and adds it to the report.
 				info, err := fsutil.Create(o)
 				if err != nil {
 					return err
 				}
-				report.Add(slice, &info)
-				return nil
+				return report.Add(slice, &info)
 			},
 		})
 		reader.Close()

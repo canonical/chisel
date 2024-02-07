@@ -43,15 +43,17 @@ func validateExtractOptions(options *ExtractOptions) (*ExtractOptions, error) {
 			}
 		}
 	}
-	validOpts := *options
-	if validOpts.Create == nil {
+
+	if options.Create == nil {
+		validOpts := *options
 		validOpts.Create = func(o *fsutil.CreateOptions) error {
 			_, err := fsutil.Create(o)
 			return err
 		}
+		return &validOpts, nil
 	}
 
-	return &validOpts, nil
+	return options, nil
 }
 
 func Extract(pkgReader io.Reader, options *ExtractOptions) (err error) {

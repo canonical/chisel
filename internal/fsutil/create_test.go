@@ -84,28 +84,23 @@ func (s *S) TestCreate(c *C) {
 		options := test.options
 		options.Path = filepath.Join(dir, options.Path)
 		info, err := fsutil.Create(&options)
+
 		if test.error != "" {
 			c.Assert(err, ErrorMatches, test.error)
 			continue
-		} else {
-			c.Assert(err, IsNil)
 		}
+
+		c.Assert(err, IsNil)
 		c.Assert(testutil.TreeDump(dir), DeepEquals, test.result)
-		if test.options.MakeParents {
-			// The creator does not record the parent directories created
-			// implicitly.
-			for path, info := range treedumpFSInfo(&info, dir) {
-				c.Assert(info, Equals, test.result[path])
-			}
-		} else {
-			c.Assert(treedumpFSInfo(&info, dir), DeepEquals, test.result)
-		}
+		// [fsutil.Create] does not return information about parent directories
+		// created implicitly. We only check for the requested path.
+		c.Assert(dumpFSInfo(&info, dir)[test.options.Path], DeepEquals, test.result[test.options.Path])
 	}
 }
 
-// treedumpFSInfo dumps the contents from the fsutil.Info using the same format
-// as [testutil.TreeDump].
-func treedumpFSInfo(info *fsutil.Info, root string) map[string]string {
+// dumpFSInfo returns the file information in the same format as
+// [testutil.TreeDump].
+func dumpFSInfo(info *fsutil.Info, root string) map[string]string {
 	result := make(map[string]string)
 	path := strings.TrimPrefix(info.Path, root)
 	fperm := info.Mode.Perm()
