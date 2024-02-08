@@ -94,7 +94,7 @@ func (s *S) TestCreate(c *C) {
 		c.Assert(testutil.TreeDump(dir), DeepEquals, test.result)
 		// [fsutil.Create] does not return information about parent directories
 		// created implicitly. We only check for the requested path.
-		c.Assert(dumpFSInfo(&info, dir)[test.options.Path], DeepEquals, test.result[test.options.Path])
+		c.Assert(dumpFSInfo(info, dir)[test.options.Path], DeepEquals, test.result[test.options.Path])
 	}
 }
 

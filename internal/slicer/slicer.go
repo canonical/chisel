@@ -165,7 +165,7 @@ func Run(options *RunOptions) (*Report, error) {
 				if err != nil {
 					return err
 				}
-				return report.Add(slice, &info)
+				return report.Add(slice, info)
 			},
 		})
 		reader.Close()
@@ -230,7 +230,7 @@ func Run(options *RunOptions) (*Report, error) {
 			if err != nil {
 				return nil, err
 			}
-			err = report.Add(slice, &info)
+			err = report.Add(slice, info)
 			if err != nil {
 				return nil, err
 			}

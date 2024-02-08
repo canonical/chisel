@@ -31,7 +31,7 @@ type Info struct {
 
 // Create creates a filesystem entry according to the provided options and returns
 // the information about the created entry.
-func Create(options *CreateOptions) (Info, error) {
+func Create(options *CreateOptions) (*Info, error) {
 	rp := &readerProxy{inner: options.Data, h: sha256.New()}
 	// Use the proxy instead of the raw Reader.
 	optsCopy := *options
@@ -41,7 +41,7 @@ func Create(options *CreateOptions) (Info, error) {
 	var err error
 	if o.MakeParents {
 		if err := os.MkdirAll(filepath.Dir(o.Path), 0755); err != nil {
-			return Info{}, err
+			return nil, err
 		}
 	}
 	switch o.Mode & fs.ModeType {
@@ -55,10 +55,10 @@ func Create(options *CreateOptions) (Info, error) {
 		err = fmt.Errorf("unsupported file type: %s", o.Path)
 	}
 	if err != nil {
-		return Info{}, err
+		return nil, err
 	}
 
-	info := Info{
+	info := &Info{
 		Path: o.Path,
 		Mode: o.Mode,
 		Hash: hex.EncodeToString(rp.h.Sum(nil)),
