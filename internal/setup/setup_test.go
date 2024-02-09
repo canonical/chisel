@@ -1150,7 +1150,7 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 	}
 }
 
-var sliceKeyTests = []struct{
+var sliceKeyTests = []struct {
 	input    string
 	expected setup.SliceKey
 	err      string
