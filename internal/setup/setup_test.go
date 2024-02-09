@@ -1150,13 +1150,11 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 	}
 }
 
-type sliceKeyTest struct {
+var sliceKeyTests = []struct{
 	input    string
 	expected setup.SliceKey
 	err      string
-}
-
-var sliceKeyTests = []sliceKeyTest{{
+}{{
 	input:    "foo_bar",
 	expected: setup.SliceKey{Package: "foo", Slice: "bar"},
 }, {
