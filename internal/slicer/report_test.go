@@ -64,8 +64,8 @@ var reportTests = []struct {
 	summary:      "Regular directory",
 	sliceAndInfo: []sliceAndInfo{{info: sampleDir, slice: oneSlice}},
 	expected: map[string]slicer.ReportEntry{
-		"/root/exampleDir": {
-			Path:   "/root/exampleDir",
+		"/exampleDir": {
+			Path:   "/exampleDir",
 			Mode:   fs.ModeDir | 0654,
 			Slices: map[*setup.Slice]bool{oneSlice: true},
 			Link:   "",
@@ -77,8 +77,8 @@ var reportTests = []struct {
 		{info: sampleDir, slice: otherSlice},
 	},
 	expected: map[string]slicer.ReportEntry{
-		"/root/exampleDir": {
-			Path:   "/root/exampleDir",
+		"/exampleDir": {
+			Path:   "/exampleDir",
 			Mode:   fs.ModeDir | 0654,
 			Slices: map[*setup.Slice]bool{oneSlice: true, otherSlice: true},
 			Link:   "",
@@ -87,8 +87,8 @@ var reportTests = []struct {
 	summary:      "Regular file",
 	sliceAndInfo: []sliceAndInfo{{info: sampleFile, slice: oneSlice}},
 	expected: map[string]slicer.ReportEntry{
-		"/root/exampleFile": {
-			Path:   "/root/exampleFile",
+		"/exampleFile": {
+			Path:   "/exampleFile",
 			Mode:   0777,
 			Hash:   "exampleFile_hash",
 			Size:   5678,
@@ -99,8 +99,8 @@ var reportTests = []struct {
 	summary:      "Regular file link",
 	sliceAndInfo: []sliceAndInfo{{info: sampleLink, slice: oneSlice}},
 	expected: map[string]slicer.ReportEntry{
-		"/root/exampleLink": {
-			Path:   "/root/exampleLink",
+		"/exampleLink": {
+			Path:   "/exampleLink",
 			Mode:   0777,
 			Hash:   "exampleFile_hash",
 			Size:   5678,
@@ -114,14 +114,14 @@ var reportTests = []struct {
 		{info: sampleFile, slice: otherSlice},
 	},
 	expected: map[string]slicer.ReportEntry{
-		"/root/exampleDir": {
-			Path:   "/root/exampleDir",
+		"/exampleDir": {
+			Path:   "/exampleDir",
 			Mode:   fs.ModeDir | 0654,
 			Slices: map[*setup.Slice]bool{oneSlice: true},
 			Link:   "",
 		},
-		"/root/exampleFile": {
-			Path:   "/root/exampleFile",
+		"/exampleFile": {
+			Path:   "/exampleFile",
 			Mode:   0777,
 			Hash:   "exampleFile_hash",
 			Size:   5678,
@@ -135,8 +135,8 @@ var reportTests = []struct {
 		{info: sampleFile, slice: oneSlice},
 	},
 	expected: map[string]slicer.ReportEntry{
-		"/root/exampleFile": {
-			Path:   "/root/exampleFile",
+		"/exampleFile": {
+			Path:   "/exampleFile",
 			Mode:   0777,
 			Hash:   "exampleFile_hash",
 			Size:   5678,
@@ -155,7 +155,7 @@ var reportTests = []struct {
 			Link: sampleFile.Link,
 		}, slice: oneSlice},
 	},
-	err: `internal error: cannot add conflicting data for path "/root/exampleFile"`,
+	err: `internal error: cannot add conflicting data for path "/exampleFile"`,
 }, {
 	summary: "Error for same path distinct hash",
 	sliceAndInfo: []sliceAndInfo{
@@ -168,7 +168,7 @@ var reportTests = []struct {
 			Link: sampleFile.Link,
 		}, slice: oneSlice},
 	},
-	err: `internal error: cannot add conflicting data for path "/root/exampleFile"`,
+	err: `internal error: cannot add conflicting data for path "/exampleFile"`,
 }, {
 	summary: "Error for same path distinct size",
 	sliceAndInfo: []sliceAndInfo{
@@ -181,7 +181,7 @@ var reportTests = []struct {
 			Link: sampleFile.Link,
 		}, slice: oneSlice},
 	},
-	err: `internal error: cannot add conflicting data for path "/root/exampleFile"`,
+	err: `internal error: cannot add conflicting data for path "/exampleFile"`,
 }, {
 	summary: "Error for same path distinct link",
 	sliceAndInfo: []sliceAndInfo{
@@ -194,12 +194,12 @@ var reportTests = []struct {
 			Link: "distinct link",
 		}, slice: oneSlice},
 	},
-	err: `internal error: cannot add conflicting data for path "/root/exampleFile"`,
+	err: `internal error: cannot add conflicting data for path "/exampleFile"`,
 }}
 
 func (s *S) TestReportAdd(c *C) {
 	for _, test := range reportTests {
-		report := slicer.NewReport("/root")
+		report := slicer.NewReport("/root/")
 		var err error
 		for _, si := range test.sliceAndInfo {
 			err = report.Add(si.slice, &si.info)
@@ -208,6 +208,7 @@ func (s *S) TestReportAdd(c *C) {
 			c.Assert(err, ErrorMatches, test.err)
 			continue
 		}
+		c.Assert(err, IsNil)
 		c.Assert(report.Entries, DeepEquals, test.expected, Commentf(test.summary))
 	}
 }

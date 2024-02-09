@@ -3,6 +3,7 @@ package slicer
 import (
 	"fmt"
 	"io/fs"
+	"path/filepath"
 
 	"github.com/canonical/chisel/internal/fsutil"
 	"github.com/canonical/chisel/internal/setup"
@@ -29,20 +30,29 @@ type Report struct {
 // NewReport returns an empty report for content that will be based at the
 // provided root path.
 func NewReport(root string) *Report {
-	return &Report{Entries: make(map[string]ReportEntry), Root: root}
+	return &Report{
+		Root:    root,
+		Entries: make(map[string]ReportEntry),
+	}
 }
 
 func (r *Report) Add(slice *setup.Slice, info *fsutil.Info) error {
-	if entry, ok := r.Entries[info.Path]; ok {
+	relPath, err := filepath.Rel(r.Root, info.Path)
+	if err != nil {
+		return fmt.Errorf("internal error: cannot add path %q outside of root %q", info.Path, r.Root)
+	}
+	relPath = "/" + relPath
+
+	if entry, ok := r.Entries[relPath]; ok {
 		if info.Mode != entry.Mode || info.Link != entry.Link ||
 			info.Size != entry.Size || info.Hash != entry.Hash {
-			return fmt.Errorf("internal error: cannot add conflicting data for path %q", info.Path)
+			return fmt.Errorf("internal error: cannot add conflicting data for path %q", relPath)
 		}
 		entry.Slices[slice] = true
-		r.Entries[info.Path] = entry
+		r.Entries[relPath] = entry
 	} else {
-		r.Entries[info.Path] = ReportEntry{
-			Path:   info.Path,
+		r.Entries[relPath] = ReportEntry{
+			Path:   relPath,
 			Mode:   info.Mode,
 			Hash:   info.Hash,
 			Size:   info.Size,

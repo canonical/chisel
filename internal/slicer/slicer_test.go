@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -22,13 +23,14 @@ var (
 )
 
 type slicerTest struct {
-	summary string
-	arch    string
-	release map[string]string
-	slices  []setup.SliceKey
-	hackopt func(c *C, opts *slicer.RunOptions)
-	result  map[string]string
-	error   string
+	summary      string
+	arch         string
+	release      map[string]string
+	slices       []setup.SliceKey
+	hackopt      func(c *C, opts *slicer.RunOptions)
+	fsResult     map[string]string
+	reportResult map[string]string
+	error        string
 }
 
 var packageEntries = map[string][]testutil.TarEntry{
@@ -84,7 +86,7 @@ var slicerTests = []slicerTest{{
 						/etc/dir/sub/:  {make: true, mode: 01777}
 		`,
 	},
-	result: map[string]string{
+	fsResult: map[string]string{
 		"/usr/":          "dir 0755",
 		"/usr/bin/":      "dir 0755",
 		"/usr/bin/hello": "file 0775 eaf29575",
@@ -95,6 +97,17 @@ var slicerTests = []slicerTest{{
 		"/etc/dir/":      "dir 0755",
 		"/etc/dir/sub/":  "dir 01777",
 		"/etc/passwd":    "file 0644 5b41362b",
+	},
+	reportResult: map[string]string{
+		"/bin/":          "dir 0755 {base-files_myslice}",
+		"/bin/hallo":     "symlink ../usr/bin/hallo {base-files_myslice}",
+		"/etc/":          "dir 0755 {base-files_myslice}",
+		"/etc/dir/sub/":  "dir 01777 {base-files_myslice}",
+		"/etc/passwd":    "file 0644 5b41362b {base-files_myslice}",
+		"/usr/":          "dir 0755 {base-files_myslice}",
+		"/usr/bin/":      "dir 0755 {base-files_myslice}",
+		"/usr/bin/hallo": "file 0775 eaf29575 {base-files_myslice}",
+		"/usr/bin/hello": "file 0775 eaf29575 {base-files_myslice}",
 	},
 }, {
 	summary: "Glob extraction",
@@ -108,10 +121,14 @@ var slicerTests = []slicerTest{{
 						/**/he*o:
 		`,
 	},
-	result: map[string]string{
+	fsResult: map[string]string{
 		"/usr/":          "dir 0755",
 		"/usr/bin/":      "dir 0755",
 		"/usr/bin/hello": "file 0775 eaf29575",
+	},
+	reportResult: map[string]string{
+		"/usr/":          "dir 0755 {base-files_myslice}",
+		"/usr/bin/hello": "file 0775 eaf29575 {base-files_myslice}",
 	},
 }, {
 	summary: "Create new file under extracted directory",
@@ -126,9 +143,13 @@ var slicerTests = []slicerTest{{
 						/tmp/new: {text: data1}
 		`,
 	},
-	result: map[string]string{
+	fsResult: map[string]string{
 		"/tmp/":    "dir 01777", // This is the magic.
 		"/tmp/new": "file 0644 5b41362b",
+	},
+	reportResult: map[string]string{
+		"/tmp/":    "dir 01777 {base-files_myslice}",
+		"/tmp/new": "file 0644 5b41362b {base-files_myslice}",
 	},
 }, {
 	summary: "Create new nested file under extracted directory",
@@ -143,10 +164,14 @@ var slicerTests = []slicerTest{{
 						/tmp/new/sub: {text: data1}
 		`,
 	},
-	result: map[string]string{
+	fsResult: map[string]string{
 		"/tmp/":        "dir 01777", // This is the magic.
 		"/tmp/new/":    "dir 0755",
 		"/tmp/new/sub": "file 0644 5b41362b",
+	},
+	reportResult: map[string]string{
+		"/tmp/":        "dir 01777 {base-files_myslice}",
+		"/tmp/new/sub": "file 0644 5b41362b {base-files_myslice}",
 	},
 }, {
 	summary: "Create new directory under extracted directory",
@@ -161,9 +186,13 @@ var slicerTests = []slicerTest{{
 						/tmp/new/: {make: true}
 		`,
 	},
-	result: map[string]string{
+	fsResult: map[string]string{
 		"/tmp/":     "dir 01777", // This is the magic.
 		"/tmp/new/": "dir 0755",
+	},
+	reportResult: map[string]string{
+		"/tmp/":     "dir 01777 {base-files_myslice}",
+		"/tmp/new/": "dir 0755 {base-files_myslice}",
 	},
 }, {
 	summary: "Conditional architecture",
@@ -183,7 +212,7 @@ var slicerTests = []slicerTest{{
 						/usr/bin/hello3: {copy: /usr/bin/hello, arch: [i386, amd64]}
 		`,
 	},
-	result: map[string]string{
+	fsResult: map[string]string{
 		"/tmp/":           "dir 01777",
 		"/tmp/file1":      "file 0644 5b41362b",
 		"/tmp/file3":      "file 0644 5b41362b",
@@ -191,6 +220,15 @@ var slicerTests = []slicerTest{{
 		"/usr/bin/":       "dir 0755",
 		"/usr/bin/hello1": "file 0775 eaf29575",
 		"/usr/bin/hello3": "file 0775 eaf29575",
+	},
+	reportResult: map[string]string{
+		"/tmp/":           "dir 01777 {base-files_myslice}",
+		"/tmp/file1":      "file 0644 5b41362b {base-files_myslice}",
+		"/tmp/file3":      "file 0644 5b41362b {base-files_myslice}",
+		"/usr/":           "dir 0755 {base-files_myslice}",
+		"/usr/bin/":       "dir 0755 {base-files_myslice}",
+		"/usr/bin/hello1": "file 0775 eaf29575 {base-files_myslice}",
+		"/usr/bin/hello3": "file 0775 eaf29575 {base-files_myslice}",
 	},
 }, {
 	summary: "Script: write a file",
@@ -206,9 +244,13 @@ var slicerTests = []slicerTest{{
 						content.write("/tmp/file1", "data2")
 		`,
 	},
-	result: map[string]string{
+	fsResult: map[string]string{
 		"/tmp/":      "dir 01777",
 		"/tmp/file1": "file 0644 d98cf53e",
+	},
+	reportResult: map[string]string{
+		"/tmp/":      "dir 01777 {base-files_myslice}",
+		"/tmp/file1": "file 0644 5b41362b {base-files_myslice}",
 	},
 }, {
 	summary: "Script: read a file",
@@ -226,11 +268,16 @@ var slicerTests = []slicerTest{{
 						content.write("/foo/file2", data)
 		`,
 	},
-	result: map[string]string{
+	fsResult: map[string]string{
 		"/tmp/":      "dir 01777",
 		"/tmp/file1": "file 0644 5b41362b",
 		"/foo/":      "dir 0755",
 		"/foo/file2": "file 0644 5b41362b",
+	},
+	reportResult: map[string]string{
+		"/foo/file2": "file 0644 d98cf53e {base-files_myslice}",
+		"/tmp/":      "dir 01777 {base-files_myslice}",
+		"/tmp/file1": "file 0644 5b41362b {base-files_myslice}",
 	},
 }, {
 	summary: "Script: use 'until' to remove file after mutate",
@@ -248,10 +295,15 @@ var slicerTests = []slicerTest{{
 						content.write("/foo/file2", data)
 		`,
 	},
-	result: map[string]string{
+	fsResult: map[string]string{
 		"/tmp/":      "dir 01777",
 		"/foo/":      "dir 0755",
 		"/foo/file2": "file 0644 5b41362b",
+	},
+	reportResult: map[string]string{
+		"/foo/file2": "file 0644 d98cf53e {base-files_myslice}",
+		"/tmp/":      "dir 01777 {base-files_myslice}",
+		"/tmp/file1": "file 0644 5b41362b {base-files_myslice}",
 	},
 }, {
 	summary: "Script: use 'until' to remove wildcard after mutate",
@@ -266,9 +318,16 @@ var slicerTests = []slicerTest{{
 						/etc/passwd: {until: mutate, text: data1}
 		`,
 	},
-	result: map[string]string{
+	fsResult: map[string]string{
 		"/usr/": "dir 0755",
 		"/etc/": "dir 0755",
+	},
+	reportResult: map[string]string{
+		"/etc/":          "dir 0755 {base-files_myslice}",
+		"/etc/passwd":    "file 0644 5b41362b {base-files_myslice}",
+		"/usr/":          "dir 0755 {base-files_myslice}",
+		"/usr/bin/":      "dir 0755 {base-files_myslice}",
+		"/usr/bin/hello": "file 0775 eaf29575 {base-files_myslice}",
 	},
 }, {
 	summary: "Script: 'until' does not remove non-empty directories",
@@ -283,10 +342,15 @@ var slicerTests = []slicerTest{{
 						/usr/bin/hallo: {copy: /usr/bin/hello}
 		`,
 	},
-	result: map[string]string{
+	fsResult: map[string]string{
 		"/usr/":          "dir 0755",
 		"/usr/bin/":      "dir 0755",
 		"/usr/bin/hallo": "file 0775 eaf29575",
+	},
+	reportResult: map[string]string{
+		"/usr/":          "dir 0755 {base-files_myslice}",
+		"/usr/bin/":      "dir 0755 {base-files_myslice}",
+		"/usr/bin/hallo": "file 0775 eaf29575 {base-files_myslice}",
 	},
 }, {
 	summary: "Script: cannot write non-mutable files",
@@ -521,10 +585,15 @@ var slicerTests = []slicerTest{{
 						/usr/bin/hello:
 		`,
 	},
-	result: map[string]string{
+	fsResult: map[string]string{
 		"/usr/":          "dir 0755",
 		"/usr/bin/":      "dir 0755",
 		"/usr/bin/hello": "file 0775 eaf29575",
+	},
+	reportResult: map[string]string{
+		"/usr/":          "dir 0755 {base-files_myslice}",
+		"/usr/bin/":      "dir 0755 {base-files_myslice}",
+		"/usr/bin/hello": "file 0775 eaf29575 {base-files_myslice}",
 	},
 }}
 
@@ -638,7 +707,7 @@ func runSlicerTests(c *C, tests []slicerTest) {
 		if test.hackopt != nil {
 			test.hackopt(c, &options)
 		}
-		_, err = slicer.Run(&options)
+		report, err := slicer.Run(&options)
 		if test.error == "" {
 			c.Assert(err, IsNil)
 		} else {
@@ -646,15 +715,62 @@ func runSlicerTests(c *C, tests []slicerTest) {
 			continue
 		}
 
-		if test.result != nil {
-			result := make(map[string]string, len(copyrightEntries)+len(test.result))
+		if test.fsResult != nil {
+			result := make(map[string]string, len(copyrightEntries)+len(test.fsResult))
 			for k, v := range copyrightEntries {
 				result[k] = v
 			}
-			for k, v := range test.result {
+			for k, v := range test.fsResult {
 				result[k] = v
 			}
 			c.Assert(testutil.TreeDump(targetDir), DeepEquals, result)
 		}
+
+		if test.reportResult != nil {
+			result := make(map[string]string, len(copyrightEntries)+len(test.fsResult))
+			for k, v := range copyrightEntries {
+				result[k] = v + " {base-files_myslice}"
+			}
+			for k, v := range test.reportResult {
+				result[k] = v
+			}
+			c.Assert(treeDumpReport(report), DeepEquals, result)
+		}
 	}
+}
+
+// treeDumpReport returns the file information in the same format as
+// [testutil.TreeDump] with the added slices that have installed each path.
+func treeDumpReport(report *slicer.Report) map[string]string {
+	result := make(map[string]string)
+	for _, entry := range report.Entries {
+		fperm := entry.Mode.Perm()
+		if entry.Mode&fs.ModeSticky != 0 {
+			fperm |= 01000
+		}
+		var fsDump string
+		switch entry.Mode.Type() {
+		case fs.ModeDir:
+			entry.Path = entry.Path + "/"
+			fsDump = fmt.Sprintf("dir %#o", fperm)
+		case fs.ModeSymlink:
+			fsDump = fmt.Sprintf("symlink %s", entry.Link)
+		case 0: // Regular
+			if entry.Size == 0 {
+				fsDump = fmt.Sprintf("file %#o empty", entry.Mode.Perm())
+			} else {
+				fsDump = fmt.Sprintf("file %#o %s", fperm, entry.Hash[:8])
+			}
+		default:
+			panic(fmt.Errorf("unknown file type %d: %s", entry.Mode.Type(), entry.Path))
+		}
+
+		// append {slice1, ..., sliceN} to the end of the entry dump.
+		slicesStr := make([]string, 0, len(entry.Slices))
+		for slice := range entry.Slices {
+			slicesStr = append(slicesStr, slice.String())
+		}
+		result[entry.Path] = fmt.Sprintf("%s {%s}", fsDump, strings.Join(slicesStr, ","))
+	}
+	return result
 }
