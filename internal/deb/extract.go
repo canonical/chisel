@@ -34,7 +34,7 @@ type ExtractInfo struct {
 	Optional bool
 }
 
-func validateExtractOptions(options *ExtractOptions) (*ExtractOptions, error) {
+func getValidOptions(options *ExtractOptions) (*ExtractOptions, error) {
 	for extractPath, extractInfos := range options.Extract {
 		isGlob := strings.ContainsAny(extractPath, "*?")
 		if isGlob {
@@ -65,7 +65,7 @@ func Extract(pkgReader io.Reader, options *ExtractOptions) (err error) {
 
 	logf("Extracting files from package %q...", options.Package)
 
-	validOpts, err := validateExtractOptions(options)
+	validOpts, err := getValidOptions(options)
 	if err != nil {
 		return err
 	}
