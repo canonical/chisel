@@ -1194,7 +1194,7 @@ var sliceKeyTests = []struct {
 	input: "-foo_bar",
 	err:   `invalid slice reference: "-foo_bar"`,
 }, {
-	input: "foo+_bar",
+	input:    "foo+_bar",
 	expected: setup.SliceKey{Package: "foo+", Slice: "bar"},
 }, {
 	input:    "foo_slice123",
