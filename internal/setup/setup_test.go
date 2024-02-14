@@ -1194,6 +1194,9 @@ var sliceKeyTests = []struct {
 	input: "-foo_bar",
 	err:   `invalid slice reference: "-foo_bar"`,
 }, {
+	input: "foo+_bar",
+	expected: setup.SliceKey{Package: "foo+", Slice: "bar"},
+}, {
 	input:    "foo_slice123",
 	expected: setup.SliceKey{Package: "foo", Slice: "slice123"},
 }}
@@ -1201,7 +1204,7 @@ var sliceKeyTests = []struct {
 func (s *S) TestParseSliceKey(c *C) {
 	for _, test := range sliceKeyTests {
 		key, err := setup.ParseSliceKey(test.input)
-		if err != nil || test.err != "" {
+		if test.err != "" {
 			c.Assert(err, ErrorMatches, test.err)
 			continue
 		}
