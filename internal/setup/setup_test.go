@@ -1194,8 +1194,8 @@ var sliceKeyTests = []struct {
 	input: "1234_789",
 	err:   `invalid slice reference: "1234_789"`,
 }, {
-	input: "chicken_bar.b.q",
-	err:   `invalid slice reference: "chicken_bar.b.q"`,
+	input: "foo_bar.x.y",
+	err:   `invalid slice reference: "foo_bar.x.y"`,
 }, {
 	input: "foo-_-bar",
 	err:   `invalid slice reference: "foo-_-bar"`,
