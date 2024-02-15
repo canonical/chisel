@@ -1199,6 +1199,30 @@ var sliceKeyTests = []struct {
 }, {
 	input:    "foo_slice123",
 	expected: setup.SliceKey{Package: "foo", Slice: "slice123"},
+}, {
+	input: "foo_bar_baz",
+	err:   `invalid slice reference: "foo_bar_baz"`,
+}, {
+	input:    "g++_bins",
+	expected: setup.SliceKey{Package: "g++", Slice: "bins"},
+}, {
+	input:    "a+_bar",
+	expected: setup.SliceKey{Package: "a+", Slice: "bar"},
+}, {
+	input: "a-_bar",
+	err:   `invalid slice reference: "a-_bar"`,
+}, {
+	input:    "a._bar",
+	expected: setup.SliceKey{Package: "a.", Slice: "bar"},
+}, {
+	input: "+++_bar",
+	err:   `invalid slice reference: .*`,
+}, {
+	input: "..._bar",
+	err:   `invalid slice reference: .*`,
+}, {
+	input: "white space_no-whitespace",
+	err:   `invalid slice reference: "white space_no-whitespace"`,
 }}
 
 func (s *S) TestParseSliceKey(c *C) {
