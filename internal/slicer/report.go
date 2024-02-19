@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/fs"
 	"path/filepath"
+	"strings"
 
 	"github.com/canonical/chisel/internal/fsutil"
 	"github.com/canonical/chisel/internal/setup"
@@ -37,11 +38,10 @@ func NewReport(root string) *Report {
 }
 
 func (r *Report) Add(slice *setup.Slice, info *fsutil.Info) error {
-	relPath, err := filepath.Rel(r.Root, info.Path)
-	if err != nil {
-		return fmt.Errorf("internal error: cannot add path %q outside of root %q", info.Path, r.Root)
+	if !strings.HasPrefix(info.Path, r.Root) {
+		return fmt.Errorf("internal error: cannot add path %q outside out root %q", info.Path, r.Root)
 	}
-	relPath = "/" + relPath
+	relPath := filepath.Clean("/" + strings.TrimPrefix(info.Path, r.Root))
 
 	if entry, ok := r.Entries[relPath]; ok {
 		if info.Mode != entry.Mode || info.Link != entry.Link ||
