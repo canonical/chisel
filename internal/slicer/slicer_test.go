@@ -73,21 +73,21 @@ var slicerTests = []slicerTest{{
 				myslice:
 					contents:
 						/dir/file:
-						/dir/file_copy:  {copy: /dir/file}
-						/other_dir/file: {symlink: ../dir/file}
-						/dir/text_file:  {text: data1}
+						/dir/file-copy:  {copy: /dir/file}
+						/other-dir/file: {symlink: ../dir/file}
+						/dir/text-file:  {text: data1}
 						/dir/foo/bar/:   {make: true, mode: 01777}
 		`,
 	},
 	result: map[string]string{
 		"/dir/":           "dir 0755",
 		"/dir/file":       "file 0644 cc55e2ec",
-		"/dir/file_copy":  "file 0644 cc55e2ec",
+		"/dir/file-copy":  "file 0644 cc55e2ec",
 		"/dir/foo/":       "dir 0755",
 		"/dir/foo/bar/":   "dir 01777",
-		"/dir/text_file":  "file 0644 5b41362b",
-		"/other_dir/":     "dir 0755",
-		"/other_dir/file": "symlink ../dir/file",
+		"/dir/text-file":  "file 0644 5b41362b",
+		"/other-dir/":     "dir 0755",
+		"/other-dir/file": "symlink ../dir/file",
 	},
 }, {
 	summary: "Glob extraction",
@@ -98,14 +98,14 @@ var slicerTests = []slicerTest{{
 			slices:
 				myslice:
 					contents:
-						/**/other_f*e:
+						/**/other-f*e:
 		`,
 	},
 	result: map[string]string{
 		"/dir/":                  "dir 0755",
 		"/dir/nested/":           "dir 0755",
-		"/dir/nested/other_file": "file 0644 6b86b273",
-		"/dir/other_file":        "file 0644 63d5dd49",
+		"/dir/nested/other-file": "file 0644 6b86b273",
+		"/dir/other-file":        "file 0644 63d5dd49",
 	},
 }, {
 	summary: "Create new file under extracted directory and preserve parent directory permissions",
@@ -169,21 +169,21 @@ var slicerTests = []slicerTest{{
 			slices:
 				myslice:
 					contents:
-						/dir/text_file_1: {text: data1, arch: amd64}
-						/dir/text_file_2: {text: data1, arch: i386}
-						/dir/text_file_3: {text: data1, arch: [i386, amd64]}
-						/dir/nested/copy_1: {copy: /dir/nested/file, arch: amd64}
-						/dir/nested/copy_2: {copy: /dir/nested/file, arch: i386}
-						/dir/nested/copy_3: {copy: /dir/nested/file, arch: [i386, amd64]}
+						/dir/text-file-1: {text: data1, arch: amd64}
+						/dir/text-file-2: {text: data1, arch: i386}
+						/dir/text-file-3: {text: data1, arch: [i386, amd64]}
+						/dir/nested/copy-1: {copy: /dir/nested/file, arch: amd64}
+						/dir/nested/copy-2: {copy: /dir/nested/file, arch: i386}
+						/dir/nested/copy-3: {copy: /dir/nested/file, arch: [i386, amd64]}
 		`,
 	},
 	result: map[string]string{
 		"/dir/":              "dir 0755",
-		"/dir/text_file_1":   "file 0644 5b41362b",
-		"/dir/text_file_3":   "file 0644 5b41362b",
+		"/dir/text-file-1":   "file 0644 5b41362b",
+		"/dir/text-file-3":   "file 0644 5b41362b",
 		"/dir/nested/":       "dir 0755",
-		"/dir/nested/copy_1": "file 0644 84237a05",
-		"/dir/nested/copy_3": "file 0644 84237a05",
+		"/dir/nested/copy-1": "file 0644 84237a05",
+		"/dir/nested/copy-3": "file 0644 84237a05",
 	},
 }, {
 	summary: "Script: write a file",
@@ -194,14 +194,14 @@ var slicerTests = []slicerTest{{
 			slices:
 				myslice:
 					contents:
-						/dir/text_file: {text: data1, mutable: true}
+						/dir/text-file: {text: data1, mutable: true}
 					mutate: |
-						content.write("/dir/text_file", "data2")
+						content.write("/dir/text-file", "data2")
 		`,
 	},
 	result: map[string]string{
 		"/dir/":          "dir 0755",
-		"/dir/text_file": "file 0644 d98cf53e",
+		"/dir/text-file": "file 0644 d98cf53e",
 	},
 }, {
 	summary: "Script: read a file",
@@ -212,18 +212,18 @@ var slicerTests = []slicerTest{{
 			slices:
 				myslice:
 					contents:
-						/dir/text_file_1: {text: data1}
-						/foo/text_file_2: {text: data2, mutable: true}
+						/dir/text-file-1: {text: data1}
+						/foo/text-file-2: {text: data2, mutable: true}
 					mutate: |
-						data = content.read("/dir/text_file_1")
-						content.write("/foo/text_file_2", data)
+						data = content.read("/dir/text-file-1")
+						content.write("/foo/text-file-2", data)
 		`,
 	},
 	result: map[string]string{
 		"/dir/":            "dir 0755",
-		"/dir/text_file_1": "file 0644 5b41362b",
+		"/dir/text-file-1": "file 0644 5b41362b",
 		"/foo/":            "dir 0755",
-		"/foo/text_file_2": "file 0644 5b41362b",
+		"/foo/text-file-2": "file 0644 5b41362b",
 	},
 }, {
 	summary: "Script: use 'until' to remove file after mutate",
@@ -234,17 +234,17 @@ var slicerTests = []slicerTest{{
 			slices:
 				myslice:
 					contents:
-						/dir/text_file_1: {text: data1, until: mutate}
-						/foo/text_file_2: {text: data2, mutable: true}
+						/dir/text-file-1: {text: data1, until: mutate}
+						/foo/text-file-2: {text: data2, mutable: true}
 					mutate: |
-						data = content.read("/dir/text_file_1")
-						content.write("/foo/text_file_2", data)
+						data = content.read("/dir/text-file-1")
+						content.write("/foo/text-file-2", data)
 		`,
 	},
 	result: map[string]string{
 		"/dir/":            "dir 0755",
 		"/foo/":            "dir 0755",
-		"/foo/text_file_2": "file 0644 5b41362b",
+		"/foo/text-file-2": "file 0644 5b41362b",
 	},
 }, {
 	summary: "Script: use 'until' to remove wildcard after mutate",
@@ -256,12 +256,12 @@ var slicerTests = []slicerTest{{
 				myslice:
 					contents:
 						/dir/nested**:  {until: mutate}
-						/other_dir/text_file: {until: mutate, text: data1}
+						/other-dir/text-file: {until: mutate, text: data1}
 		`,
 	},
 	result: map[string]string{
 		"/dir/":       "dir 0755",
-		"/other_dir/": "dir 0755",
+		"/other-dir/": "dir 0755",
 	},
 }, {
 	summary: "Script: 'until' does not remove non-empty directories",
@@ -273,13 +273,13 @@ var slicerTests = []slicerTest{{
 				myslice:
 					contents:
 						/dir/nested/: {until: mutate}
-						/dir/nested/file_copy: {copy: /dir/file}
+						/dir/nested/file-copy: {copy: /dir/file}
 		`,
 	},
 	result: map[string]string{
 		"/dir/":                 "dir 0755",
 		"/dir/nested/":          "dir 0755",
-		"/dir/nested/file_copy": "file 0644 cc55e2ec",
+		"/dir/nested/file-copy": "file 0644 cc55e2ec",
 	},
 }, {
 	summary: "Script: cannot write non-mutable files",
@@ -290,12 +290,12 @@ var slicerTests = []slicerTest{{
 			slices:
 				myslice:
 					contents:
-						/dir/text_file: {text: data1}
+						/dir/text-file: {text: data1}
 					mutate: |
-						content.write("/dir/text_file", "data2")
+						content.write("/dir/text-file", "data2")
 		`,
 	},
-	error: `slice test-package_myslice: cannot write file which is not mutable: /dir/text_file`,
+	error: `slice test-package_myslice: cannot write file which is not mutable: /dir/text-file`,
 }, {
 	summary: "Script: cannot read unlisted content",
 	slices:  []setup.SliceKey{{"test-package", "myslice2"}},
@@ -305,13 +305,13 @@ var slicerTests = []slicerTest{{
 			slices:
 				myslice1:
 					contents:
-						/dir/text_file: {text: data1}
+						/dir/text-file: {text: data1}
 				myslice2:
 					mutate: |
-						content.read("/dir/text_file")
+						content.read("/dir/text-file")
 		`,
 	},
-	error: `slice test-package_myslice2: cannot read file which is not selected: /dir/text_file`,
+	error: `slice test-package_myslice2: cannot read file which is not selected: /dir/text-file`,
 }, {
 	summary: "Script: can read globbed content",
 	slices:  []setup.SliceKey{{"test-package", "myslice1"}, {"test-package", "myslice2"}},
@@ -336,9 +336,9 @@ var slicerTests = []slicerTest{{
 			slices:
 				myslice:
 					contents:
-						/dir/text_file: {text: data1}
+						/dir/text-file: {text: data1}
 					mutate: |
-						content.read("/dir/text_file")
+						content.read("/dir/text-file")
 		`,
 	},
 	hackopt: func(c *C, opts *slicer.RunOptions) {
@@ -421,10 +421,10 @@ var slicerTests = []slicerTest{{
 					contents:
 						/**/nested/f?le:
 					mutate: |
-						content.list("/other_dir")
+						content.list("/other-dir")
 		`,
 	},
-	error: `slice test-package_myslice: cannot list directory which is not selected: /other_dir/`,
+	error: `slice test-package_myslice: cannot list directory which is not selected: /other-dir/`,
 }, {
 	summary: "Duplicate copyright symlink is ignored",
 	slices:  []setup.SliceKey{{"copyright-symlink-openssl", "bins"}},
