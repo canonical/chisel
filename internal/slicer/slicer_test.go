@@ -116,12 +116,12 @@ var slicerTests = []slicerTest{{
 			slices:
 				myslice:
 					contents:
-						# Note the missing parent directories here.
+						# Note the missing /parent/ here.
 						/parent/new: {text: data1}
 		`,
 	},
 	result: map[string]string{
-		"/parent/":    "dir 01777",
+		"/parent/":    "dir 01777", // This is the magic.
 		"/parent/new": "file 0644 5b41362b",
 	},
 }, {
@@ -133,17 +133,17 @@ var slicerTests = []slicerTest{{
 			slices:
 				myslice:
 					contents:
-						# Note the missing parent directories here.
+						# Note the missing /parent/ and /parent/permissions/ here.
 						/parent/permissions/new: {text: data1}
 		`,
 	},
 	result: map[string]string{
-		"/parent/":                "dir 01777",
-		"/parent/permissions/":    "dir 0764",
+		"/parent/":                "dir 01777", // This is the magic.
+		"/parent/permissions/":    "dir 0764",  // This is the magic.
 		"/parent/permissions/new": "file 0644 5b41362b",
 	},
 }, {
-	summary: "Create new directory under extracted directory",
+	summary: "Create new directory under extracted directory and preserve parent directory permissions",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
@@ -151,12 +151,12 @@ var slicerTests = []slicerTest{{
 			slices:
 				myslice:
 					contents:
-						# Note the missing parent directories here.
+						# Note the missing /parent/ here.
 						/parent/new/: {make: true}
 		`,
 	},
 	result: map[string]string{
-		"/parent/":     "dir 01777",
+		"/parent/":     "dir 01777", // This is the magic.
 		"/parent/new/": "dir 0755",
 	},
 }, {
