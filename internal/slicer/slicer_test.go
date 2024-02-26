@@ -23,14 +23,19 @@ var (
 )
 
 type slicerTest struct {
-	summary      string
-	arch         string
-	release      map[string]string
-	slices       []setup.SliceKey
-	hackopt      func(c *C, opts *slicer.RunOptions)
-	fsResult     map[string]string
-	reportResult map[string]string
-	error        string
+	summary    string
+	arch       string
+	release    map[string]string
+	slices     []setup.SliceKey
+	hackopt    func(c *C, opts *slicer.RunOptions)
+	filesystem map[string]string
+	// TODO:
+	// The results of the report do not conform to the planned implementation
+	// yet. Namely:
+	// * Parent directories of {text} files are reported even though they should not.
+	// * We do not track removed directories or changes done in Starlark.
+	report map[string]string
+	error  string
 }
 
 var packageEntries = map[string][]testutil.TarEntry{
@@ -86,7 +91,7 @@ var slicerTests = []slicerTest{{
 						/etc/dir/sub/:  {make: true, mode: 01777}
 		`,
 	},
-	fsResult: map[string]string{
+	filesystem: map[string]string{
 		"/usr/":          "dir 0755",
 		"/usr/bin/":      "dir 0755",
 		"/usr/bin/hello": "file 0775 eaf29575",
@@ -98,7 +103,7 @@ var slicerTests = []slicerTest{{
 		"/etc/dir/sub/":  "dir 01777",
 		"/etc/passwd":    "file 0644 5b41362b",
 	},
-	reportResult: map[string]string{
+	report: map[string]string{
 		"/bin/":          "dir 0755 {base-files_myslice}",
 		"/bin/hallo":     "symlink ../usr/bin/hallo {base-files_myslice}",
 		"/etc/":          "dir 0755 {base-files_myslice}",
@@ -121,12 +126,12 @@ var slicerTests = []slicerTest{{
 						/**/he*o:
 		`,
 	},
-	fsResult: map[string]string{
+	filesystem: map[string]string{
 		"/usr/":          "dir 0755",
 		"/usr/bin/":      "dir 0755",
 		"/usr/bin/hello": "file 0775 eaf29575",
 	},
-	reportResult: map[string]string{
+	report: map[string]string{
 		"/usr/":          "dir 0755 {base-files_myslice}",
 		"/usr/bin/hello": "file 0775 eaf29575 {base-files_myslice}",
 	},
@@ -143,11 +148,11 @@ var slicerTests = []slicerTest{{
 						/tmp/new: {text: data1}
 		`,
 	},
-	fsResult: map[string]string{
+	filesystem: map[string]string{
 		"/tmp/":    "dir 01777", // This is the magic.
 		"/tmp/new": "file 0644 5b41362b",
 	},
-	reportResult: map[string]string{
+	report: map[string]string{
 		"/tmp/":    "dir 01777 {base-files_myslice}",
 		"/tmp/new": "file 0644 5b41362b {base-files_myslice}",
 	},
@@ -164,12 +169,12 @@ var slicerTests = []slicerTest{{
 						/tmp/new/sub: {text: data1}
 		`,
 	},
-	fsResult: map[string]string{
+	filesystem: map[string]string{
 		"/tmp/":        "dir 01777", // This is the magic.
 		"/tmp/new/":    "dir 0755",
 		"/tmp/new/sub": "file 0644 5b41362b",
 	},
-	reportResult: map[string]string{
+	report: map[string]string{
 		"/tmp/":        "dir 01777 {base-files_myslice}",
 		"/tmp/new/sub": "file 0644 5b41362b {base-files_myslice}",
 	},
@@ -186,11 +191,11 @@ var slicerTests = []slicerTest{{
 						/tmp/new/: {make: true}
 		`,
 	},
-	fsResult: map[string]string{
+	filesystem: map[string]string{
 		"/tmp/":     "dir 01777", // This is the magic.
 		"/tmp/new/": "dir 0755",
 	},
-	reportResult: map[string]string{
+	report: map[string]string{
 		"/tmp/":     "dir 01777 {base-files_myslice}",
 		"/tmp/new/": "dir 0755 {base-files_myslice}",
 	},
@@ -212,7 +217,7 @@ var slicerTests = []slicerTest{{
 						/usr/bin/hello3: {copy: /usr/bin/hello, arch: [i386, amd64]}
 		`,
 	},
-	fsResult: map[string]string{
+	filesystem: map[string]string{
 		"/tmp/":           "dir 01777",
 		"/tmp/file1":      "file 0644 5b41362b",
 		"/tmp/file3":      "file 0644 5b41362b",
@@ -221,7 +226,7 @@ var slicerTests = []slicerTest{{
 		"/usr/bin/hello1": "file 0775 eaf29575",
 		"/usr/bin/hello3": "file 0775 eaf29575",
 	},
-	reportResult: map[string]string{
+	report: map[string]string{
 		"/tmp/":           "dir 01777 {base-files_myslice}",
 		"/tmp/file1":      "file 0644 5b41362b {base-files_myslice}",
 		"/tmp/file3":      "file 0644 5b41362b {base-files_myslice}",
@@ -244,11 +249,11 @@ var slicerTests = []slicerTest{{
 						content.write("/tmp/file1", "data2")
 		`,
 	},
-	fsResult: map[string]string{
+	filesystem: map[string]string{
 		"/tmp/":      "dir 01777",
 		"/tmp/file1": "file 0644 d98cf53e",
 	},
-	reportResult: map[string]string{
+	report: map[string]string{
 		"/tmp/":      "dir 01777 {base-files_myslice}",
 		"/tmp/file1": "file 0644 5b41362b {base-files_myslice}",
 	},
@@ -268,13 +273,13 @@ var slicerTests = []slicerTest{{
 						content.write("/foo/file2", data)
 		`,
 	},
-	fsResult: map[string]string{
+	filesystem: map[string]string{
 		"/tmp/":      "dir 01777",
 		"/tmp/file1": "file 0644 5b41362b",
 		"/foo/":      "dir 0755",
 		"/foo/file2": "file 0644 5b41362b",
 	},
-	reportResult: map[string]string{
+	report: map[string]string{
 		"/foo/file2": "file 0644 d98cf53e {base-files_myslice}",
 		"/tmp/":      "dir 01777 {base-files_myslice}",
 		"/tmp/file1": "file 0644 5b41362b {base-files_myslice}",
@@ -295,12 +300,12 @@ var slicerTests = []slicerTest{{
 						content.write("/foo/file2", data)
 		`,
 	},
-	fsResult: map[string]string{
+	filesystem: map[string]string{
 		"/tmp/":      "dir 01777",
 		"/foo/":      "dir 0755",
 		"/foo/file2": "file 0644 5b41362b",
 	},
-	reportResult: map[string]string{
+	report: map[string]string{
 		"/foo/file2": "file 0644 d98cf53e {base-files_myslice}",
 		"/tmp/":      "dir 01777 {base-files_myslice}",
 		"/tmp/file1": "file 0644 5b41362b {base-files_myslice}",
@@ -318,11 +323,11 @@ var slicerTests = []slicerTest{{
 						/etc/passwd: {until: mutate, text: data1}
 		`,
 	},
-	fsResult: map[string]string{
+	filesystem: map[string]string{
 		"/usr/": "dir 0755",
 		"/etc/": "dir 0755",
 	},
-	reportResult: map[string]string{
+	report: map[string]string{
 		"/etc/":          "dir 0755 {base-files_myslice}",
 		"/etc/passwd":    "file 0644 5b41362b {base-files_myslice}",
 		"/usr/":          "dir 0755 {base-files_myslice}",
@@ -342,12 +347,12 @@ var slicerTests = []slicerTest{{
 						/usr/bin/hallo: {copy: /usr/bin/hello}
 		`,
 	},
-	fsResult: map[string]string{
+	filesystem: map[string]string{
 		"/usr/":          "dir 0755",
 		"/usr/bin/":      "dir 0755",
 		"/usr/bin/hallo": "file 0775 eaf29575",
 	},
-	reportResult: map[string]string{
+	report: map[string]string{
 		"/usr/":          "dir 0755 {base-files_myslice}",
 		"/usr/bin/":      "dir 0755 {base-files_myslice}",
 		"/usr/bin/hallo": "file 0775 eaf29575 {base-files_myslice}",
@@ -585,12 +590,12 @@ var slicerTests = []slicerTest{{
 						/usr/bin/hello:
 		`,
 	},
-	fsResult: map[string]string{
+	filesystem: map[string]string{
 		"/usr/":          "dir 0755",
 		"/usr/bin/":      "dir 0755",
 		"/usr/bin/hello": "file 0775 eaf29575",
 	},
-	reportResult: map[string]string{
+	report: map[string]string{
 		"/usr/":          "dir 0755 {base-files_myslice}",
 		"/usr/bin/":      "dir 0755 {base-files_myslice}",
 		"/usr/bin/hello": "file 0775 eaf29575 {base-files_myslice}",
@@ -715,23 +720,23 @@ func runSlicerTests(c *C, tests []slicerTest) {
 			continue
 		}
 
-		if test.fsResult != nil {
-			result := make(map[string]string, len(copyrightEntries)+len(test.fsResult))
+		if test.filesystem != nil {
+			result := make(map[string]string, len(copyrightEntries)+len(test.filesystem))
 			for k, v := range copyrightEntries {
 				result[k] = v
 			}
-			for k, v := range test.fsResult {
+			for k, v := range test.filesystem {
 				result[k] = v
 			}
 			c.Assert(testutil.TreeDump(targetDir), DeepEquals, result)
 		}
 
-		if test.reportResult != nil {
-			result := make(map[string]string, len(copyrightEntries)+len(test.fsResult))
+		if test.report != nil {
+			result := make(map[string]string, len(copyrightEntries)+len(test.filesystem))
 			for k, v := range copyrightEntries {
 				result[k] = v + " {base-files_myslice}"
 			}
-			for k, v := range test.reportResult {
+			for k, v := range test.report {
 				result[k] = v
 			}
 			c.Assert(treeDumpReport(report), DeepEquals, result)
