@@ -39,14 +39,19 @@ func NewReport(root string) *Report {
 
 func (r *Report) Add(slice *setup.Slice, info *fsutil.Info) error {
 	if !strings.HasPrefix(info.Path, r.Root) {
-		return fmt.Errorf("internal error: cannot add path %q outside out root %q", info.Path, r.Root)
+		return fmt.Errorf("internal error: cannot add path %q outside of root %q", info.Path, r.Root)
 	}
 	relPath := filepath.Clean("/" + strings.TrimPrefix(info.Path, r.Root))
 
 	if entry, ok := r.Entries[relPath]; ok {
-		if info.Mode != entry.Mode || info.Link != entry.Link ||
-			info.Size != entry.Size || info.Hash != entry.Hash {
-			return fmt.Errorf("internal error: cannot add conflicting data for path %q", relPath)
+		if info.Mode != entry.Mode {
+			return fmt.Errorf("internal error: path %q reported twice with diverging mode: %q != %q", relPath, info.Mode, entry.Mode)
+		} else if info.Link != entry.Link {
+			return fmt.Errorf("internal error: path %q reported twice with diverging link: %q != %q", relPath, info.Link, entry.Link)
+		} else if info.Size != entry.Size {
+			return fmt.Errorf("internal error: path %q reported twice with diverging size: %d != %d", relPath, info.Size, entry.Size)
+		} else if info.Hash != entry.Hash {
+			return fmt.Errorf("internal error: path %q reported twice with diverging hash: %q != %q", relPath, info.Hash, entry.Hash)
 		}
 		entry.Slices[slice] = true
 		r.Entries[relPath] = entry

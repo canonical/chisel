@@ -54,15 +54,15 @@ type sliceAndInfo struct {
 }
 
 var reportTests = []struct {
-	summary      string
-	sliceAndInfo []sliceAndInfo
+	summary string
+	add     []sliceAndInfo
 	// indexed by path.
 	expected map[string]slicer.ReportEntry
-	// error after processing the last sliceAndInfo item.
+	// error after adding the last [sliceAndInfo].
 	err string
 }{{
-	summary:      "Regular directory",
-	sliceAndInfo: []sliceAndInfo{{info: sampleDir, slice: oneSlice}},
+	summary: "Regular directory",
+	add:     []sliceAndInfo{{info: sampleDir, slice: oneSlice}},
 	expected: map[string]slicer.ReportEntry{
 		"/exampleDir": {
 			Path:   "/exampleDir",
@@ -72,7 +72,7 @@ var reportTests = []struct {
 		}},
 }, {
 	summary: "Regular directory added by several slices",
-	sliceAndInfo: []sliceAndInfo{
+	add: []sliceAndInfo{
 		{info: sampleDir, slice: oneSlice},
 		{info: sampleDir, slice: otherSlice},
 	},
@@ -84,8 +84,8 @@ var reportTests = []struct {
 			Link:   "",
 		}},
 }, {
-	summary:      "Regular file",
-	sliceAndInfo: []sliceAndInfo{{info: sampleFile, slice: oneSlice}},
+	summary: "Regular file",
+	add:     []sliceAndInfo{{info: sampleFile, slice: oneSlice}},
 	expected: map[string]slicer.ReportEntry{
 		"/exampleFile": {
 			Path:   "/exampleFile",
@@ -96,8 +96,8 @@ var reportTests = []struct {
 			Link:   "",
 		}},
 }, {
-	summary:      "Regular file link",
-	sliceAndInfo: []sliceAndInfo{{info: sampleLink, slice: oneSlice}},
+	summary: "Regular file link",
+	add:     []sliceAndInfo{{info: sampleLink, slice: oneSlice}},
 	expected: map[string]slicer.ReportEntry{
 		"/exampleLink": {
 			Path:   "/exampleLink",
@@ -109,7 +109,7 @@ var reportTests = []struct {
 		}},
 }, {
 	summary: "Several entries",
-	sliceAndInfo: []sliceAndInfo{
+	add: []sliceAndInfo{
 		{info: sampleDir, slice: oneSlice},
 		{info: sampleFile, slice: otherSlice},
 	},
@@ -130,7 +130,7 @@ var reportTests = []struct {
 		}},
 }, {
 	summary: "Same path, identical files",
-	sliceAndInfo: []sliceAndInfo{
+	add: []sliceAndInfo{
 		{info: sampleFile, slice: oneSlice},
 		{info: sampleFile, slice: oneSlice},
 	},
@@ -145,7 +145,7 @@ var reportTests = []struct {
 		}},
 }, {
 	summary: "Error for same path distinct mode",
-	sliceAndInfo: []sliceAndInfo{
+	add: []sliceAndInfo{
 		{info: sampleFile, slice: oneSlice},
 		{info: fsutil.Info{
 			Path: sampleFile.Path,
@@ -155,10 +155,10 @@ var reportTests = []struct {
 			Link: sampleFile.Link,
 		}, slice: oneSlice},
 	},
-	err: `internal error: cannot add conflicting data for path "/exampleFile"`,
+	err: `internal error: path "/exampleFile" reported twice with diverging mode: "----------" != "-rwxrwxrwx"`,
 }, {
 	summary: "Error for same path distinct hash",
-	sliceAndInfo: []sliceAndInfo{
+	add: []sliceAndInfo{
 		{info: sampleFile, slice: oneSlice},
 		{info: fsutil.Info{
 			Path: sampleFile.Path,
@@ -168,10 +168,10 @@ var reportTests = []struct {
 			Link: sampleFile.Link,
 		}, slice: oneSlice},
 	},
-	err: `internal error: cannot add conflicting data for path "/exampleFile"`,
+	err: `internal error: path "/exampleFile" reported twice with diverging hash: "distinct hash" != "exampleFile_hash"`,
 }, {
 	summary: "Error for same path distinct size",
-	sliceAndInfo: []sliceAndInfo{
+	add: []sliceAndInfo{
 		{info: sampleFile, slice: oneSlice},
 		{info: fsutil.Info{
 			Path: sampleFile.Path,
@@ -181,10 +181,10 @@ var reportTests = []struct {
 			Link: sampleFile.Link,
 		}, slice: oneSlice},
 	},
-	err: `internal error: cannot add conflicting data for path "/exampleFile"`,
+	err: `internal error: path "/exampleFile" reported twice with diverging size: 0 != 5678`,
 }, {
 	summary: "Error for same path distinct link",
-	sliceAndInfo: []sliceAndInfo{
+	add: []sliceAndInfo{
 		{info: sampleFile, slice: oneSlice},
 		{info: fsutil.Info{
 			Path: sampleFile.Path,
@@ -194,14 +194,14 @@ var reportTests = []struct {
 			Link: "distinct link",
 		}, slice: oneSlice},
 	},
-	err: `internal error: cannot add conflicting data for path "/exampleFile"`,
+	err: `internal error: path "/exampleFile" reported twice with diverging link: "distinct link" != ""`,
 }}
 
 func (s *S) TestReportAdd(c *C) {
 	for _, test := range reportTests {
 		report := slicer.NewReport("/root/")
 		var err error
-		for _, si := range test.sliceAndInfo {
+		for _, si := range test.add {
 			err = report.Add(si.slice, &si.info)
 		}
 		if test.err != "" {
