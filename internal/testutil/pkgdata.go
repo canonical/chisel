@@ -20,6 +20,8 @@ var testPackageEntries = []TarEntry{
 	Dir(0755, "./dir/nested/"),
 	Reg(0644, "./dir/nested/file", "0jqei"),
 	Reg(0644, "./dir/nested/other-file", "1"),
+	Dir(0755, "./dir/several/"),
+	Dir(0755, "./dir/several/levels/"),
 	Dir(0755, "./dir/several/levels/deep/"),
 	Reg(0644, "./dir/several/levels/deep/file", "129i381		"),
 	Dir(0755, "./other-dir/"),

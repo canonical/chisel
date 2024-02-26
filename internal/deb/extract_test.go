@@ -105,34 +105,27 @@ var extractTests = []extractTest{{
 	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
-			"/*/": []deb.ExtractInfo{{
-				Path: "/*/",
+			"/dir/s*/": []deb.ExtractInfo{{
+				Path: "/dir/s*/",
 			}},
 		},
 	},
 	result: map[string]string{
-		"/dir/":       "dir 0755",
-		"/other-dir/": "dir 0755",
-		"/parent/":    "dir 01777",
-		"/usr/":       "dir 0755",
+		"/dir/":         "dir 0755",
+		"/dir/several/": "dir 0755",
 	},
 }, {
 	summary: "Globbing for files with multiple levels at once",
 	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
-			"/d**": []deb.ExtractInfo{{
-				Path: "/d**",
+			"/dir/s**": []deb.ExtractInfo{{
+				Path: "/dir/s**",
 			}},
 		},
 	},
 	result: map[string]string{
 		"/dir/":                         "dir 0755",
-		"/dir/file":                     "file 0644 cc55e2ec",
-		"/dir/nested/":                  "dir 0755",
-		"/dir/nested/file":              "file 0644 84237a05",
-		"/dir/nested/other-file":        "file 0644 6b86b273",
-		"/dir/other-file":               "file 0644 63d5dd49",
 		"/dir/several/":                 "dir 0755",
 		"/dir/several/levels/":          "dir 0755",
 		"/dir/several/levels/deep/":     "dir 0755",
@@ -161,7 +154,7 @@ var extractTests = []extractTest{{
 	},
 	globbed: map[string][]string{
 		"/dir/n*/": []string{"/dir/nested/"},
-		"/dir/s**": []string{"/dir/several/levels/deep/", "/dir/several/levels/deep/file"},
+		"/dir/s**": []string{"/dir/several/", "/dir/several/levels/", "/dir/several/levels/deep/", "/dir/several/levels/deep/file"},
 	},
 }, {
 	summary: "Globbing must have matching source and target",
