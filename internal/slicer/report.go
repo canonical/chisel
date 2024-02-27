@@ -37,32 +37,32 @@ func NewReport(root string) *Report {
 	}
 }
 
-func (r *Report) Add(slice *setup.Slice, info *fsutil.Entry) error {
-	if !strings.HasPrefix(info.Path, r.Root) {
-		return fmt.Errorf("cannot add path %q outside of root %q", info.Path, r.Root)
+func (r *Report) Add(slice *setup.Slice, fsEntry *fsutil.Entry) error {
+	if !strings.HasPrefix(fsEntry.Path, r.Root) {
+		return fmt.Errorf("cannot add path %q outside of root %q", fsEntry.Path, r.Root)
 	}
-	relPath := filepath.Clean("/" + strings.TrimPrefix(info.Path, r.Root))
+	relPath := filepath.Clean("/" + strings.TrimPrefix(fsEntry.Path, r.Root))
 
 	if entry, ok := r.Entries[relPath]; ok {
-		if info.Mode != entry.Mode {
-			return fmt.Errorf("path %q reported twice with diverging mode: %q != %q", relPath, info.Mode, entry.Mode)
-		} else if info.Link != entry.Link {
-			return fmt.Errorf("path %q reported twice with diverging link: %q != %q", relPath, info.Link, entry.Link)
-		} else if info.Size != entry.Size {
-			return fmt.Errorf("path %q reported twice with diverging size: %d != %d", relPath, info.Size, entry.Size)
-		} else if info.Hash != entry.Hash {
-			return fmt.Errorf("path %q reported twice with diverging hash: %q != %q", relPath, info.Hash, entry.Hash)
+		if fsEntry.Mode != entry.Mode {
+			return fmt.Errorf("path %q reported twice with diverging mode: %q != %q", relPath, fsEntry.Mode, entry.Mode)
+		} else if fsEntry.Link != entry.Link {
+			return fmt.Errorf("path %q reported twice with diverging link: %q != %q", relPath, fsEntry.Link, entry.Link)
+		} else if fsEntry.Size != entry.Size {
+			return fmt.Errorf("path %q reported twice with diverging size: %d != %d", relPath, fsEntry.Size, entry.Size)
+		} else if fsEntry.Hash != entry.Hash {
+			return fmt.Errorf("path %q reported twice with diverging hash: %q != %q", relPath, fsEntry.Hash, entry.Hash)
 		}
 		entry.Slices[slice] = true
 		r.Entries[relPath] = entry
 	} else {
 		r.Entries[relPath] = ReportEntry{
 			Path:   relPath,
-			Mode:   info.Mode,
-			Hash:   info.Hash,
-			Size:   info.Size,
+			Mode:   fsEntry.Mode,
+			Hash:   fsEntry.Hash,
+			Size:   fsEntry.Size,
 			Slices: map[*setup.Slice]bool{slice: true},
-			Link:   info.Link,
+			Link:   fsEntry.Link,
 		}
 	}
 	return nil

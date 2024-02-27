@@ -83,7 +83,7 @@ func (s *S) TestCreate(c *C) {
 		dir := c.MkDir()
 		options := test.options
 		options.Path = filepath.Join(dir, options.Path)
-		info, err := fsutil.Create(&options)
+		entry, err := fsutil.Create(&options)
 
 		if test.error != "" {
 			c.Assert(err, ErrorMatches, test.error)
@@ -94,34 +94,33 @@ func (s *S) TestCreate(c *C) {
 		c.Assert(testutil.TreeDump(dir), DeepEquals, test.result)
 		// [fsutil.Create] does not return information about parent directories
 		// created implicitly. We only check for the requested path.
-		c.Assert(dumpFSInfo(info, dir)[test.options.Path], DeepEquals, test.result[test.options.Path])
+		c.Assert(dumpFSEntry(entry, dir)[test.options.Path], DeepEquals, test.result[test.options.Path])
 	}
 }
 
-// dumpFSInfo returns the file information in the same format as
-// [testutil.TreeDump].
-func dumpFSInfo(info *fsutil.Entry, root string) map[string]string {
+// dumpFSEntry returns the file entry in the same format as [testutil.TreeDump].
+func dumpFSEntry(fsEntry *fsutil.Entry, root string) map[string]string {
 	result := make(map[string]string)
-	path := strings.TrimPrefix(info.Path, root)
-	fperm := info.Mode.Perm()
-	if info.Mode&fs.ModeSticky != 0 {
+	path := strings.TrimPrefix(fsEntry.Path, root)
+	fperm := fsEntry.Mode.Perm()
+	if fsEntry.Mode&fs.ModeSticky != 0 {
 		fperm |= 01000
 	}
-	switch info.Mode.Type() {
+	switch fsEntry.Mode.Type() {
 	case fs.ModeDir:
 		result[path+"/"] = fmt.Sprintf("dir %#o", fperm)
 	case fs.ModeSymlink:
-		result[path] = fmt.Sprintf("symlink %s", info.Link)
+		result[path] = fmt.Sprintf("symlink %s", fsEntry.Link)
 	case 0: // Regular
 		var entry string
-		if info.Size == 0 {
-			entry = fmt.Sprintf("file %#o empty", info.Mode.Perm())
+		if fsEntry.Size == 0 {
+			entry = fmt.Sprintf("file %#o empty", fsEntry.Mode.Perm())
 		} else {
-			entry = fmt.Sprintf("file %#o %s", fperm, info.Hash[:8])
+			entry = fmt.Sprintf("file %#o %s", fperm, fsEntry.Hash[:8])
 		}
 		result[path] = entry
 	default:
-		panic(fmt.Errorf("unknown file type %d: %s", info.Mode.Type(), path))
+		panic(fmt.Errorf("unknown file type %d: %s", fsEntry.Mode.Type(), path))
 	}
 	return result
 }

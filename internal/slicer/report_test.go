@@ -48,21 +48,21 @@ var sampleLink = fsutil.Entry{
 	Link: "/base/exampleFile",
 }
 
-type sliceAndInfo struct {
-	info  fsutil.Entry
+type sliceAndEntry struct {
+	entry fsutil.Entry
 	slice *setup.Slice
 }
 
 var reportTests = []struct {
 	summary string
-	add     []sliceAndInfo
+	add     []sliceAndEntry
 	// indexed by path.
 	expected map[string]slicer.ReportEntry
-	// error after adding the last [sliceAndInfo].
+	// error after adding the last [sliceAndEntry].
 	err string
 }{{
 	summary: "Regular directory",
-	add:     []sliceAndInfo{{info: sampleDir, slice: oneSlice}},
+	add:     []sliceAndEntry{{entry: sampleDir, slice: oneSlice}},
 	expected: map[string]slicer.ReportEntry{
 		"/exampleDir": {
 			Path:   "/exampleDir",
@@ -72,9 +72,9 @@ var reportTests = []struct {
 		}},
 }, {
 	summary: "Regular directory added by several slices",
-	add: []sliceAndInfo{
-		{info: sampleDir, slice: oneSlice},
-		{info: sampleDir, slice: otherSlice},
+	add: []sliceAndEntry{
+		{entry: sampleDir, slice: oneSlice},
+		{entry: sampleDir, slice: otherSlice},
 	},
 	expected: map[string]slicer.ReportEntry{
 		"/exampleDir": {
@@ -85,7 +85,7 @@ var reportTests = []struct {
 		}},
 }, {
 	summary: "Regular file",
-	add:     []sliceAndInfo{{info: sampleFile, slice: oneSlice}},
+	add:     []sliceAndEntry{{entry: sampleFile, slice: oneSlice}},
 	expected: map[string]slicer.ReportEntry{
 		"/exampleFile": {
 			Path:   "/exampleFile",
@@ -97,7 +97,7 @@ var reportTests = []struct {
 		}},
 }, {
 	summary: "Regular file link",
-	add:     []sliceAndInfo{{info: sampleLink, slice: oneSlice}},
+	add:     []sliceAndEntry{{entry: sampleLink, slice: oneSlice}},
 	expected: map[string]slicer.ReportEntry{
 		"/exampleLink": {
 			Path:   "/exampleLink",
@@ -109,9 +109,9 @@ var reportTests = []struct {
 		}},
 }, {
 	summary: "Several entries",
-	add: []sliceAndInfo{
-		{info: sampleDir, slice: oneSlice},
-		{info: sampleFile, slice: otherSlice},
+	add: []sliceAndEntry{
+		{entry: sampleDir, slice: oneSlice},
+		{entry: sampleFile, slice: otherSlice},
 	},
 	expected: map[string]slicer.ReportEntry{
 		"/exampleDir": {
@@ -130,9 +130,9 @@ var reportTests = []struct {
 		}},
 }, {
 	summary: "Same path, identical files",
-	add: []sliceAndInfo{
-		{info: sampleFile, slice: oneSlice},
-		{info: sampleFile, slice: oneSlice},
+	add: []sliceAndEntry{
+		{entry: sampleFile, slice: oneSlice},
+		{entry: sampleFile, slice: oneSlice},
 	},
 	expected: map[string]slicer.ReportEntry{
 		"/exampleFile": {
@@ -145,9 +145,9 @@ var reportTests = []struct {
 		}},
 }, {
 	summary: "Error for same path distinct mode",
-	add: []sliceAndInfo{
-		{info: sampleFile, slice: oneSlice},
-		{info: fsutil.Entry{
+	add: []sliceAndEntry{
+		{entry: sampleFile, slice: oneSlice},
+		{entry: fsutil.Entry{
 			Path: sampleFile.Path,
 			Mode: 0,
 			Hash: sampleFile.Hash,
@@ -158,9 +158,9 @@ var reportTests = []struct {
 	err: `path "/exampleFile" reported twice with diverging mode: "----------" != "-rwxrwxrwx"`,
 }, {
 	summary: "Error for same path distinct hash",
-	add: []sliceAndInfo{
-		{info: sampleFile, slice: oneSlice},
-		{info: fsutil.Entry{
+	add: []sliceAndEntry{
+		{entry: sampleFile, slice: oneSlice},
+		{entry: fsutil.Entry{
 			Path: sampleFile.Path,
 			Mode: sampleFile.Mode,
 			Hash: "distinct hash",
@@ -171,9 +171,9 @@ var reportTests = []struct {
 	err: `path "/exampleFile" reported twice with diverging hash: "distinct hash" != "exampleFile_hash"`,
 }, {
 	summary: "Error for same path distinct size",
-	add: []sliceAndInfo{
-		{info: sampleFile, slice: oneSlice},
-		{info: fsutil.Entry{
+	add: []sliceAndEntry{
+		{entry: sampleFile, slice: oneSlice},
+		{entry: fsutil.Entry{
 			Path: sampleFile.Path,
 			Mode: sampleFile.Mode,
 			Hash: sampleFile.Hash,
@@ -184,9 +184,9 @@ var reportTests = []struct {
 	err: `path "/exampleFile" reported twice with diverging size: 0 != 5678`,
 }, {
 	summary: "Error for same path distinct link",
-	add: []sliceAndInfo{
-		{info: sampleFile, slice: oneSlice},
-		{info: fsutil.Entry{
+	add: []sliceAndEntry{
+		{entry: sampleFile, slice: oneSlice},
+		{entry: fsutil.Entry{
 			Path: sampleFile.Path,
 			Mode: sampleFile.Mode,
 			Hash: sampleFile.Hash,
@@ -202,7 +202,7 @@ func (s *S) TestReportAdd(c *C) {
 		report := slicer.NewReport("/base/")
 		var err error
 		for _, si := range test.add {
-			err = report.Add(si.slice, &si.info)
+			err = report.Add(si.slice, &si.entry)
 		}
 		if test.err != "" {
 			c.Assert(err, ErrorMatches, test.err)

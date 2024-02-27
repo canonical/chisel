@@ -161,11 +161,11 @@ func Run(options *RunOptions) (*Report, error) {
 			Globbed:   globbedPaths,
 			// Creates the filesystem entry and adds it to the report.
 			Create: func(o *fsutil.CreateOptions) error {
-				info, err := fsutil.Create(o)
+				entry, err := fsutil.Create(o)
 				if err != nil {
 					return err
 				}
-				return report.Add(slice, info)
+				return report.Add(slice, entry)
 			},
 		})
 		reader.Close()
@@ -220,7 +220,7 @@ func Run(options *RunOptions) (*Report, error) {
 				return nil, fmt.Errorf("internal error: cannot extract path of kind %q", pathInfo.Kind)
 			}
 
-			info, err := fsutil.Create(&fsutil.CreateOptions{
+			entry, err := fsutil.Create(&fsutil.CreateOptions{
 				Path:        targetPath,
 				Mode:        tarHeader.FileInfo().Mode(),
 				Data:        fileContent,
@@ -230,7 +230,7 @@ func Run(options *RunOptions) (*Report, error) {
 			if err != nil {
 				return nil, err
 			}
-			err = report.Add(slice, info)
+			err = report.Add(slice, entry)
 			if err != nil {
 				return nil, err
 			}

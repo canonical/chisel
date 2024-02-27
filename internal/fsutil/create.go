@@ -58,14 +58,14 @@ func Create(options *CreateOptions) (*Entry, error) {
 		return nil, err
 	}
 
-	info := &Entry{
+	entry := &Entry{
 		Path: o.Path,
 		Mode: o.Mode,
 		Hash: hex.EncodeToString(rp.h.Sum(nil)),
 		Size: rp.size,
 		Link: o.Link,
 	}
-	return info, nil
+	return entry, nil
 }
 
 func createDir(o *CreateOptions) error {
