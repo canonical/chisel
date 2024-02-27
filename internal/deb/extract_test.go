@@ -2,10 +2,14 @@ package deb_test
 
 import (
 	"bytes"
+	"path/filepath"
+	"sort"
+	"strings"
 
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/chisel/internal/deb"
+	"github.com/canonical/chisel/internal/fsutil"
 	"github.com/canonical/chisel/internal/testutil"
 )
 
@@ -15,7 +19,9 @@ type extractTest struct {
 	options deb.ExtractOptions
 	globbed map[string][]string
 	result  map[string]string
-	error   string
+	// paths which the extractor created explicitly.
+	createdPaths []string
+	error        string
 }
 
 var extractTests = []extractTest{{
@@ -59,6 +65,18 @@ var extractTests = []extractTest{{
 		"/etc/":               "dir 0755",
 		"/etc/os-release":     "symlink ../usr/lib/os-release",
 	},
+	createdPaths: []string{
+		"/etc",
+		"/etc/os-release",
+		"/tmp",
+		"/usr",
+		"/usr/bin",
+		"/usr/bin/hello",
+		"/usr/lib",
+		"/usr/lib/os-release",
+		"/usr/share",
+		"/usr/share/doc",
+	},
 }, {
 
 	summary: "Copy a couple of entries elsewhere",
@@ -82,6 +100,7 @@ var extractTests = []extractTest{{
 		"/usr/foo/bin/hello-2": "file 0600 eaf29575",
 		"/usr/other/":          "dir 0700",
 	},
+	createdPaths: []string{"/usr", "/usr/foo/bin/hello-2", "/usr/other"},
 }, {
 
 	summary: "Copy same file twice",
@@ -101,6 +120,7 @@ var extractTests = []extractTest{{
 		"/usr/bin/hello": "file 0775 eaf29575",
 		"/usr/bin/hallo": "file 0775 eaf29575",
 	},
+	createdPaths: []string{"/usr", "/usr/bin", "/usr/bin/hallo", "/usr/bin/hello"},
 }, {
 	summary: "Globbing a single dir level",
 	pkgdata: testutil.PackageData["base-files"],
@@ -116,6 +136,7 @@ var extractTests = []extractTest{{
 		"/etc/dpkg/":    "dir 0755",
 		"/etc/default/": "dir 0755",
 	},
+	createdPaths: []string{"/etc/default", "/etc/dpkg"},
 }, {
 	summary: "Globbing for files with multiple levels at once",
 	pkgdata: testutil.PackageData["base-files"],
@@ -134,6 +155,14 @@ var extractTests = []extractTest{{
 		"/etc/dpkg/origins/ubuntu": "file 0644 d2537b95",
 		"/etc/default/":            "dir 0755",
 		"/etc/debian_version":      "file 0644 cce26cfe",
+	},
+	createdPaths: []string{
+		"/etc/debian_version",
+		"/etc/default",
+		"/etc/dpkg",
+		"/etc/dpkg/origins",
+		"/etc/dpkg/origins/debian",
+		"/etc/dpkg/origins/ubuntu",
 	},
 }, {
 	summary: "Globbing with reporting of globbed paths",
@@ -158,6 +187,7 @@ var extractTests = []extractTest{{
 		"/etc/dp*/": []string{"/etc/dpkg/"},
 		"/etc/de**": []string{"/etc/debian_version", "/etc/default/"},
 	},
+	createdPaths: []string{"/etc/debian_version", "/etc/default", "/etc/dpkg"},
 }, {
 	summary: "Globbing must have matching source and target",
 	pkgdata: testutil.PackageData["base-files"],
@@ -265,6 +295,7 @@ var extractTests = []extractTest{{
 		"/usr/bin/": "dir 0755",
 		"/tmp/":     "dir 01777",
 	},
+	createdPaths: []string{"/etc", "/tmp", "/usr", "/usr/bin"},
 }, {
 	summary: "Optional entries mixed in cannot be missing",
 	pkgdata: testutil.PackageData["base-files"],
@@ -290,6 +321,13 @@ func (s *S) TestExtract(c *C) {
 		options := test.options
 		options.Package = "base-files"
 		options.TargetDir = dir
+		var createdPaths []string
+		options.Create = func(o *fsutil.CreateOptions) error {
+			relPath := filepath.Clean("/" + strings.TrimPrefix(o.Path, dir))
+			createdPaths = append(createdPaths, relPath)
+			_, err := fsutil.Create(o)
+			return err
+		}
 
 		if test.globbed != nil {
 			options.Globbed = make(map[string][]string)
@@ -306,6 +344,10 @@ func (s *S) TestExtract(c *C) {
 		if test.globbed != nil {
 			c.Assert(options.Globbed, DeepEquals, test.globbed)
 		}
+
+		sort.Strings(createdPaths)
+		sort.Strings(test.createdPaths)
+		c.Assert(createdPaths, DeepEquals, test.createdPaths)
 
 		result := testutil.TreeDump(dir)
 		c.Assert(result, DeepEquals, test.result)
