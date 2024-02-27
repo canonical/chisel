@@ -27,13 +27,13 @@ var otherSlice = &setup.Slice{
 }
 
 var sampleDir = fsutil.Entry{
-	Path: "/root/exampleDir",
+	Path: "/base/exampleDir",
 	Mode: fs.ModeDir | 0654,
 	Link: "",
 }
 
 var sampleFile = fsutil.Entry{
-	Path: "/root/exampleFile",
+	Path: "/base/exampleFile",
 	Mode: 0777,
 	Hash: "exampleFile_hash",
 	Size: 5678,
@@ -41,11 +41,11 @@ var sampleFile = fsutil.Entry{
 }
 
 var sampleLink = fsutil.Entry{
-	Path: "/root/exampleLink",
+	Path: "/base/exampleLink",
 	Mode: 0777,
 	Hash: "exampleFile_hash",
 	Size: 5678,
-	Link: "/root/exampleFile",
+	Link: "/base/exampleFile",
 }
 
 type sliceAndInfo struct {
@@ -105,7 +105,7 @@ var reportTests = []struct {
 			Hash:   "exampleFile_hash",
 			Size:   5678,
 			Slices: map[*setup.Slice]bool{oneSlice: true},
-			Link:   "/root/exampleFile",
+			Link:   "/base/exampleFile",
 		}},
 }, {
 	summary: "Several entries",
@@ -199,7 +199,7 @@ var reportTests = []struct {
 
 func (s *S) TestReportAdd(c *C) {
 	for _, test := range reportTests {
-		report := slicer.NewReport("/root/")
+		report := slicer.NewReport("/base/")
 		var err error
 		for _, si := range test.add {
 			err = report.Add(si.slice, &si.info)
