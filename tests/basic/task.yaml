@@ -31,8 +31,8 @@ execute: |
   test -f ${rootfs_folder}/etc/ld.so.conf.d/*-linux-*.conf
   if [[ "${RELEASE}" == "24.04" ]]
   then
-    libc_base_path="/usr/lib/"
+    libc_base_path="/usr/lib"
   else
-    libc_base_path="/lib/"
+    libc_base_path="/lib"
   fi
-  test -f ${rootfs_folder}${libc_base_path}*-linux-*/libc.so.*
+  test -f ${rootfs_folder}${libc_base_path}/*-linux-*/libc.so.*
