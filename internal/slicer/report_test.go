@@ -26,13 +26,13 @@ var otherSlice = &setup.Slice{
 	Scripts:   setup.SliceScripts{},
 }
 
-var sampleDir = fsutil.Info{
+var sampleDir = fsutil.Entry{
 	Path: "/root/exampleDir",
 	Mode: fs.ModeDir | 0654,
 	Link: "",
 }
 
-var sampleFile = fsutil.Info{
+var sampleFile = fsutil.Entry{
 	Path: "/root/exampleFile",
 	Mode: 0777,
 	Hash: "exampleFile_hash",
@@ -40,7 +40,7 @@ var sampleFile = fsutil.Info{
 	Link: "",
 }
 
-var sampleLink = fsutil.Info{
+var sampleLink = fsutil.Entry{
 	Path: "/root/exampleLink",
 	Mode: 0777,
 	Hash: "exampleFile_hash",
@@ -49,7 +49,7 @@ var sampleLink = fsutil.Info{
 }
 
 type sliceAndInfo struct {
-	info  fsutil.Info
+	info  fsutil.Entry
 	slice *setup.Slice
 }
 
@@ -147,7 +147,7 @@ var reportTests = []struct {
 	summary: "Error for same path distinct mode",
 	add: []sliceAndInfo{
 		{info: sampleFile, slice: oneSlice},
-		{info: fsutil.Info{
+		{info: fsutil.Entry{
 			Path: sampleFile.Path,
 			Mode: 0,
 			Hash: sampleFile.Hash,
@@ -160,7 +160,7 @@ var reportTests = []struct {
 	summary: "Error for same path distinct hash",
 	add: []sliceAndInfo{
 		{info: sampleFile, slice: oneSlice},
-		{info: fsutil.Info{
+		{info: fsutil.Entry{
 			Path: sampleFile.Path,
 			Mode: sampleFile.Mode,
 			Hash: "distinct hash",
@@ -173,7 +173,7 @@ var reportTests = []struct {
 	summary: "Error for same path distinct size",
 	add: []sliceAndInfo{
 		{info: sampleFile, slice: oneSlice},
-		{info: fsutil.Info{
+		{info: fsutil.Entry{
 			Path: sampleFile.Path,
 			Mode: sampleFile.Mode,
 			Hash: sampleFile.Hash,
@@ -186,7 +186,7 @@ var reportTests = []struct {
 	summary: "Error for same path distinct link",
 	add: []sliceAndInfo{
 		{info: sampleFile, slice: oneSlice},
-		{info: fsutil.Info{
+		{info: fsutil.Entry{
 			Path: sampleFile.Path,
 			Mode: sampleFile.Mode,
 			Hash: sampleFile.Hash,

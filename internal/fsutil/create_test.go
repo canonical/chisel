@@ -100,7 +100,7 @@ func (s *S) TestCreate(c *C) {
 
 // dumpFSInfo returns the file information in the same format as
 // [testutil.TreeDump].
-func dumpFSInfo(info *fsutil.Info, root string) map[string]string {
+func dumpFSInfo(info *fsutil.Entry, root string) map[string]string {
 	result := make(map[string]string)
 	path := strings.TrimPrefix(info.Path, root)
 	fperm := info.Mode.Perm()

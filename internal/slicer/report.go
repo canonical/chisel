@@ -37,7 +37,7 @@ func NewReport(root string) *Report {
 	}
 }
 
-func (r *Report) Add(slice *setup.Slice, info *fsutil.Info) error {
+func (r *Report) Add(slice *setup.Slice, info *fsutil.Entry) error {
 	if !strings.HasPrefix(info.Path, r.Root) {
 		return fmt.Errorf("internal error: cannot add path %q outside of root %q", info.Path, r.Root)
 	}
