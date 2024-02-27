@@ -155,7 +155,7 @@ var reportTests = []struct {
 			Link: sampleFile.Link,
 		}, slice: oneSlice},
 	},
-	err: `internal error: path "/exampleFile" reported twice with diverging mode: "----------" != "-rwxrwxrwx"`,
+	err: `path "/exampleFile" reported twice with diverging mode: "----------" != "-rwxrwxrwx"`,
 }, {
 	summary: "Error for same path distinct hash",
 	add: []sliceAndInfo{
@@ -168,7 +168,7 @@ var reportTests = []struct {
 			Link: sampleFile.Link,
 		}, slice: oneSlice},
 	},
-	err: `internal error: path "/exampleFile" reported twice with diverging hash: "distinct hash" != "exampleFile_hash"`,
+	err: `path "/exampleFile" reported twice with diverging hash: "distinct hash" != "exampleFile_hash"`,
 }, {
 	summary: "Error for same path distinct size",
 	add: []sliceAndInfo{
@@ -181,7 +181,7 @@ var reportTests = []struct {
 			Link: sampleFile.Link,
 		}, slice: oneSlice},
 	},
-	err: `internal error: path "/exampleFile" reported twice with diverging size: 0 != 5678`,
+	err: `path "/exampleFile" reported twice with diverging size: 0 != 5678`,
 }, {
 	summary: "Error for same path distinct link",
 	add: []sliceAndInfo{
@@ -194,7 +194,7 @@ var reportTests = []struct {
 			Link: "distinct link",
 		}, slice: oneSlice},
 	},
-	err: `internal error: path "/exampleFile" reported twice with diverging link: "distinct link" != ""`,
+	err: `path "/exampleFile" reported twice with diverging link: "distinct link" != ""`,
 }}
 
 func (s *S) TestReportAdd(c *C) {
