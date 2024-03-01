@@ -2,6 +2,7 @@ package deb_test
 
 import (
 	"bytes"
+	"io/fs"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -20,9 +21,9 @@ type extractTest struct {
 	hackopt func(o *deb.ExtractOptions)
 	globbed map[string][]string
 	result  map[string]string
-	// paths which the extractor created explicitly.
-	createdPaths []string
-	error        string
+	// paths which the extractor did not create explicitly.
+	notCreated []string
+	error      string
 }
 
 var extractTests = []extractTest{{
@@ -66,18 +67,7 @@ var extractTests = []extractTest{{
 		"/etc/":               "dir 0755",
 		"/etc/os-release":     "symlink ../usr/lib/os-release",
 	},
-	createdPaths: []string{
-		"/etc",
-		"/etc/os-release",
-		"/tmp",
-		"/usr",
-		"/usr/bin",
-		"/usr/bin/hello",
-		"/usr/lib",
-		"/usr/lib/os-release",
-		"/usr/share",
-		"/usr/share/doc",
-	},
+	notCreated: []string{},
 }, {
 	summary: "Extract a few entries, nil Create closure",
 	pkgdata: testutil.PackageData["base-files"],
@@ -137,7 +127,7 @@ var extractTests = []extractTest{{
 		"/usr/foo/bin/hello-2": "file 0600 eaf29575",
 		"/usr/other/":          "dir 0700",
 	},
-	createdPaths: []string{"/usr", "/usr/foo/bin/hello-2", "/usr/other"},
+	notCreated: []string{"/usr/foo/", "/usr/foo/bin/"},
 }, {
 	summary: "Copy same file twice",
 	pkgdata: testutil.PackageData["base-files"],
@@ -156,7 +146,7 @@ var extractTests = []extractTest{{
 		"/usr/bin/hello": "file 0775 eaf29575",
 		"/usr/bin/hallo": "file 0775 eaf29575",
 	},
-	createdPaths: []string{"/usr", "/usr/bin", "/usr/bin/hallo", "/usr/bin/hello"},
+	notCreated: []string{},
 }, {
 	summary: "Globbing a single dir level",
 	pkgdata: testutil.PackageData["base-files"],
@@ -172,7 +162,7 @@ var extractTests = []extractTest{{
 		"/etc/dpkg/":    "dir 0755",
 		"/etc/default/": "dir 0755",
 	},
-	createdPaths: []string{"/etc/default", "/etc/dpkg"},
+	notCreated: []string{"/etc/"},
 }, {
 	summary: "Globbing for files with multiple levels at once",
 	pkgdata: testutil.PackageData["base-files"],
@@ -192,14 +182,7 @@ var extractTests = []extractTest{{
 		"/etc/default/":            "dir 0755",
 		"/etc/debian_version":      "file 0644 cce26cfe",
 	},
-	createdPaths: []string{
-		"/etc/debian_version",
-		"/etc/default",
-		"/etc/dpkg",
-		"/etc/dpkg/origins",
-		"/etc/dpkg/origins/debian",
-		"/etc/dpkg/origins/ubuntu",
-	},
+	notCreated: []string{"/etc/"},
 }, {
 	summary: "Globbing with reporting of globbed paths",
 	pkgdata: testutil.PackageData["base-files"],
@@ -223,7 +206,7 @@ var extractTests = []extractTest{{
 		"/etc/dp*/": []string{"/etc/dpkg/"},
 		"/etc/de**": []string{"/etc/debian_version", "/etc/default/"},
 	},
-	createdPaths: []string{"/etc/debian_version", "/etc/default", "/etc/dpkg"},
+	notCreated: []string{"/etc/"},
 }, {
 	summary: "Globbing must have matching source and target",
 	pkgdata: testutil.PackageData["base-files"],
@@ -331,7 +314,7 @@ var extractTests = []extractTest{{
 		"/usr/bin/": "dir 0755",
 		"/tmp/":     "dir 01777",
 	},
-	createdPaths: []string{"/etc", "/tmp", "/usr", "/usr/bin"},
+	notCreated: []string{},
 }, {
 	summary: "Optional entries mixed in cannot be missing",
 	pkgdata: testutil.PackageData["base-files"],
@@ -357,10 +340,13 @@ func (s *S) TestExtract(c *C) {
 		options := test.options
 		options.Package = "base-files"
 		options.TargetDir = dir
-		var createdPaths []string
+		createdPaths := make(map[string]bool)
 		options.Create = func(o *fsutil.CreateOptions) error {
 			relPath := filepath.Clean("/" + strings.TrimPrefix(o.Path, dir))
-			createdPaths = append(createdPaths, relPath)
+			if o.Mode&fs.ModeDir != 0 {
+				relPath = relPath + "/"
+			}
+			createdPaths[relPath] = true
 			_, err := fsutil.Create(o)
 			return err
 		}
@@ -385,9 +371,17 @@ func (s *S) TestExtract(c *C) {
 			c.Assert(options.Globbed, DeepEquals, test.globbed)
 		}
 
-		sort.Strings(createdPaths)
-		sort.Strings(test.createdPaths)
-		c.Assert(createdPaths, DeepEquals, test.createdPaths)
+		if test.notCreated != nil {
+			notCreated := []string{}
+			for path := range test.result {
+				if !createdPaths[path] {
+					notCreated = append(notCreated, path)
+				}
+			}
+			sort.Strings(notCreated)
+			sort.Strings(test.notCreated)
+			c.Assert(notCreated, DeepEquals, test.notCreated)
+		}
 
 		result := testutil.TreeDump(dir)
 		c.Assert(result, DeepEquals, test.result)
