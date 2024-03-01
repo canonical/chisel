@@ -23,13 +23,14 @@ type RunOptions struct {
 	TargetDir string
 }
 
-func Run(options *RunOptions) error {
+func Run(options *RunOptions) (*Report, error) {
 
 	archives := make(map[string]archive.Archive)
 	extract := make(map[string]map[string][]deb.ExtractInfo)
 	pathInfos := make(map[string]setup.PathInfo)
-	knownPaths := make(map[string]bool)
+	report := NewReport(options.TargetDir)
 
+	knownPaths := make(map[string]bool)
 	knownPaths["/"] = true
 
 	addKnownPath := func(path string) {
@@ -65,7 +66,7 @@ func Run(options *RunOptions) error {
 	if !filepath.IsAbs(targetDirAbs) {
 		dir, err := os.Getwd()
 		if err != nil {
-			return fmt.Errorf("cannot obtain current directory: %w", err)
+			return nil, fmt.Errorf("cannot obtain current directory: %w", err)
 		}
 		targetDirAbs = filepath.Join(dir, targetDir)
 	}
@@ -77,10 +78,10 @@ func Run(options *RunOptions) error {
 			archiveName := release.Packages[slice.Package].Archive
 			archive := options.Archives[archiveName]
 			if archive == nil {
-				return fmt.Errorf("archive %q not defined", archiveName)
+				return nil, fmt.Errorf("archive %q not defined", archiveName)
 			}
 			if !archive.Exists(slice.Package) {
-				return fmt.Errorf("slice package %q missing from archive", slice.Package)
+				return nil, fmt.Errorf("slice package %q missing from archive", slice.Package)
 			}
 			archives[slice.Package] = archive
 			extractPackage = make(map[string][]deb.ExtractInfo)
@@ -139,7 +140,7 @@ func Run(options *RunOptions) error {
 		}
 		reader, err := archives[slice.Package].Fetch(slice.Package)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		defer reader.Close()
 		packages[slice.Package] = reader
@@ -153,18 +154,24 @@ func Run(options *RunOptions) error {
 		if reader == nil {
 			continue
 		}
-		creator := fsutil.NewCreator()
 		err := deb.Extract(reader, &deb.ExtractOptions{
 			Package:   slice.Package,
 			Extract:   extract[slice.Package],
 			TargetDir: targetDir,
 			Globbed:   globbedPaths,
-			Creator:   creator,
+			// Creates the filesystem entry and adds it to the report.
+			Create: func(o *fsutil.CreateOptions) error {
+				entry, err := fsutil.Create(o)
+				if err != nil {
+					return err
+				}
+				return report.Add(slice, entry)
+			},
 		})
 		reader.Close()
 		packages[slice.Package] = nil
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -210,11 +217,10 @@ func Run(options *RunOptions) error {
 				tarHeader.Typeflag = tar.TypeSymlink
 				linkTarget = pathInfo.Info
 			default:
-				return fmt.Errorf("internal error: cannot extract path of kind %q", pathInfo.Kind)
+				return nil, fmt.Errorf("internal error: cannot extract path of kind %q", pathInfo.Kind)
 			}
 
-			creator := fsutil.NewCreator()
-			err := creator.Create(&fsutil.CreateOptions{
+			entry, err := fsutil.Create(&fsutil.CreateOptions{
 				Path:        targetPath,
 				Mode:        tarHeader.FileInfo().Mode(),
 				Data:        fileContent,
@@ -222,7 +228,11 @@ func Run(options *RunOptions) error {
 				MakeParents: true,
 			})
 			if err != nil {
-				return err
+				return nil, err
+			}
+			err = report.Add(slice, entry)
+			if err != nil {
+				return nil, err
 			}
 		}
 	}
@@ -273,7 +283,7 @@ func Run(options *RunOptions) error {
 		}
 		err := scripts.Run(&opts)
 		if err != nil {
-			return fmt.Errorf("slice %s: %w", slice, err)
+			return nil, fmt.Errorf("slice %s: %w", slice, err)
 		}
 	}
 
@@ -296,7 +306,7 @@ func Run(options *RunOptions) error {
 					}
 				}
 				if err != nil {
-					return fmt.Errorf("cannot perform 'until' removal: %w", err)
+					return nil, fmt.Errorf("cannot perform 'until' removal: %w", err)
 				}
 			}
 		}
@@ -305,11 +315,11 @@ func Run(options *RunOptions) error {
 		err := os.Remove(realPath)
 		// The non-empty directory error is caught by IsExist as well.
 		if err != nil && !os.IsExist(err) {
-			return fmt.Errorf("cannot perform 'until' removal: %#v", err)
+			return nil, fmt.Errorf("cannot perform 'until' removal: %#v", err)
 		}
 	}
 
-	return nil
+	return report, nil
 }
 
 func contains(l []string, s string) bool {

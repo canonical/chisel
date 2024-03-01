@@ -21,7 +21,7 @@ type CreateOptions struct {
 	MakeParents bool
 }
 
-type Info struct {
+type Entry struct {
 	Path string
 	Mode fs.FileMode
 	Hash string
@@ -29,18 +29,9 @@ type Info struct {
 	Link string
 }
 
-type Creator struct {
-	// Created keeps track of information about the filesystem entries created.
-	// If an entry is created several times it only tracks the latest one.
-	Created map[string]Info
-}
-
-func NewCreator() *Creator {
-	return &Creator{Created: make(map[string]Info)}
-}
-
-// Create creates a filesystem entry according to the provided options.
-func (c *Creator) Create(options *CreateOptions) error {
+// Create creates a filesystem entry according to the provided options and returns
+// the information about the created entry.
+func Create(options *CreateOptions) (*Entry, error) {
 	rp := &readerProxy{inner: options.Data, h: sha256.New()}
 	// Use the proxy instead of the raw Reader.
 	optsCopy := *options
@@ -50,7 +41,7 @@ func (c *Creator) Create(options *CreateOptions) error {
 	var err error
 	if o.MakeParents {
 		if err := os.MkdirAll(filepath.Dir(o.Path), 0755); err != nil {
-			return err
+			return nil, err
 		}
 	}
 	switch o.Mode & fs.ModeType {
@@ -64,18 +55,17 @@ func (c *Creator) Create(options *CreateOptions) error {
 		err = fmt.Errorf("unsupported file type: %s", o.Path)
 	}
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	info := Info{
+	entry := &Entry{
 		Path: o.Path,
 		Mode: o.Mode,
 		Hash: hex.EncodeToString(rp.h.Sum(nil)),
 		Size: rp.size,
 		Link: o.Link,
 	}
-	c.Created[o.Path] = info
-	return nil
+	return entry, nil
 }
 
 func createDir(o *CreateOptions) error {
