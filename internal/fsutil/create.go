@@ -1,7 +1,10 @@
 package fsutil
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"hash"
 	"io"
 	"io/fs"
 	"os"
@@ -18,12 +21,27 @@ type CreateOptions struct {
 	MakeParents bool
 }
 
-// Creates a filesystem entry according to the provided options.
-func Create(o *CreateOptions) error {
+type Entry struct {
+	Path string
+	Mode fs.FileMode
+	Hash string
+	Size int
+	Link string
+}
+
+// Create creates a filesystem entry according to the provided options and returns
+// the information about the created entry.
+func Create(options *CreateOptions) (*Entry, error) {
+	rp := &readerProxy{inner: options.Data, h: sha256.New()}
+	// Use the proxy instead of the raw Reader.
+	optsCopy := *options
+	optsCopy.Data = rp
+	o := &optsCopy
+
 	var err error
 	if o.MakeParents {
 		if err := os.MkdirAll(filepath.Dir(o.Path), 0755); err != nil {
-			return err
+			return nil, err
 		}
 	}
 	switch o.Mode & fs.ModeType {
@@ -36,7 +54,18 @@ func Create(o *CreateOptions) error {
 	default:
 		err = fmt.Errorf("unsupported file type: %s", o.Path)
 	}
-	return err
+	if err != nil {
+		return nil, err
+	}
+
+	entry := &Entry{
+		Path: o.Path,
+		Mode: o.Mode,
+		Hash: hex.EncodeToString(rp.h.Sum(nil)),
+		Size: rp.size,
+		Link: o.Link,
+	}
+	return entry, nil
 }
 
 func createDir(o *CreateOptions) error {
@@ -83,4 +112,21 @@ func createSymlink(o *CreateOptions) error {
 		return err
 	}
 	return os.Symlink(o.Link, o.Path)
+}
+
+// readerProxy implements the io.Reader interface proxying the calls to its
+// inner io.Reader. On each read, the proxy keeps track of the file size and hash.
+type readerProxy struct {
+	inner io.Reader
+	h     hash.Hash
+	size  int
+}
+
+var _ io.Reader = (*readerProxy)(nil)
+
+func (rp *readerProxy) Read(p []byte) (n int, err error) {
+	n, err = rp.inner.Read(p)
+	rp.h.Write(p[:n])
+	rp.size += n
+	return n, err
 }

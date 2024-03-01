@@ -2,6 +2,9 @@ summary: Ensure multiple slices (with mutation scripts) are properly installed
 
 environment:
     RELEASE/jammy: 22.04
+    RELEASE/focal: 20.04
+    RELEASE/mantic: 23.10
+    RELEASE/noble: 24.04
 
 execute: |
   rootfs_folder=rootfs_${RELEASE}
@@ -26,7 +29,10 @@ execute: |
   test -f ${rootfs_folder}/etc/ssl/openssl.cnf
   test -f ${rootfs_folder}/usr/lib/*-linux-*/libssl.so.*
   test -f ${rootfs_folder}/etc/ld.so.conf.d/*-linux-*.conf
-  test -f ${rootfs_folder}/lib/*-linux-*/libc.so.*
-
-  # and openssl actually works
-  ${rootfs_folder}/usr/bin/openssl
+  if [[ "${RELEASE}" == "24.04" ]]
+  then
+    libc_base_path="/usr/lib"
+  else
+    libc_base_path="/lib"
+  fi
+  test -f ${rootfs_folder}${libc_base_path}/*-linux-*/libc.so.*

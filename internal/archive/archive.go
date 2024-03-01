@@ -8,9 +8,12 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/crypto/openpgp/packet"
+
 	"github.com/canonical/chisel/internal/cache"
 	"github.com/canonical/chisel/internal/control"
 	"github.com/canonical/chisel/internal/deb"
+	"github.com/canonical/chisel/internal/pgputil"
 )
 
 type Archive interface {
@@ -26,6 +29,7 @@ type Options struct {
 	Suites     []string
 	Components []string
 	CacheDir   string
+	PubKeys    []*packet.PublicKey
 }
 
 func Open(options *Options) (Archive, error) {
@@ -64,6 +68,7 @@ type ubuntuArchive struct {
 	options Options
 	indexes []*ubuntuIndex
 	cache   *cache.Cache
+	pubKeys []*packet.PublicKey
 }
 
 type ubuntuIndex struct {
@@ -74,7 +79,7 @@ type ubuntuIndex struct {
 	component string
 	release   control.Section
 	packages  control.File
-	cache     *cache.Cache
+	archive   *ubuntuArchive
 }
 
 func (a *ubuntuArchive) Options() *Options {
@@ -140,6 +145,7 @@ func openUbuntu(options *Options) (Archive, error) {
 		cache: &cache.Cache{
 			Dir: options.CacheDir,
 		},
+		pubKeys: options.PubKeys,
 	}
 
 	for _, suite := range options.Suites {
@@ -152,7 +158,7 @@ func openUbuntu(options *Options) (Archive, error) {
 				suite:     suite,
 				component: component,
 				release:   release,
-				cache:     archive.cache,
+				archive:   archive,
 			}
 			if release == nil {
 				err := index.fetchRelease()
@@ -178,20 +184,44 @@ func openUbuntu(options *Options) (Archive, error) {
 
 func (index *ubuntuIndex) fetchRelease() error {
 	logf("Fetching %s %s %s suite details...", index.label, index.version, index.suite)
-	reader, err := index.fetch("Release", "", fetchDefault)
+	reader, err := index.fetch("InRelease", "", fetchDefault)
+	if err != nil {
+		return err
+	}
+	defer reader.Close()
+
+	data, err := io.ReadAll(reader)
 	if err != nil {
 		return err
 	}
 
-	ctrl, err := control.ParseReader("Label", reader)
+	// Decode the signature(s) and verify the InRelease file. The InRelease
+	// file may have multiple signatures from different keys. Verify that at
+	// least one signature is valid against the archive's set of public keys.
+	// Unlike gpg --verify which ensures the verification of all signatures,
+	// this is in line with what apt does internally:
+	// https://salsa.debian.org/apt-team/apt/-/blob/4e344a4/methods/gpgv.cc#L553-557
+	sigs, canonicalBody, err := pgputil.DecodeClearSigned(data)
 	if err != nil {
-		return fmt.Errorf("parsing archive Release file: %v", err)
+		return fmt.Errorf("cannot decode clearsigned InRelease file: %v", err)
+	}
+	err = pgputil.VerifyAnySignature(index.archive.pubKeys, sigs, canonicalBody)
+	if err != nil {
+		return fmt.Errorf("cannot verify signature of the InRelease file")
+	}
+
+	// canonicalBody has <CR><LF> line endings, reverting that to match the
+	// expected control file format.
+	body := strings.ReplaceAll(string(canonicalBody), "\r", "")
+	ctrl, err := control.ParseString("Label", body)
+	if err != nil {
+		return fmt.Errorf("cannot parse InRelease file: %v", err)
 	}
 	section := ctrl.Section("Ubuntu")
 	if section == nil {
 		section = ctrl.Section("UbuntuProFIPS")
 		if section == nil {
-			return fmt.Errorf("corrupted archive Release file: no Ubuntu section")
+			return fmt.Errorf("corrupted archive InRelease file: no Ubuntu section")
 		}
 	}
 	logf("Release date: %s", section.Get("Date"))
@@ -240,7 +270,7 @@ func (index *ubuntuIndex) checkComponents(components []string) error {
 }
 
 func (index *ubuntuIndex) fetch(suffix, digest string, flags fetchFlags) (io.ReadCloser, error) {
-	reader, err := index.cache.Open(digest)
+	reader, err := index.archive.cache.Open(digest)
 	if err == nil {
 		return reader, nil
 	} else if err != cache.MissErr {
@@ -293,7 +323,7 @@ func (index *ubuntuIndex) fetch(suffix, digest string, flags fetchFlags) (io.Rea
 		body = reader
 	}
 
-	writer := index.cache.Create(digest)
+	writer := index.archive.cache.Create(digest)
 	defer writer.Close()
 
 	_, err = io.Copy(writer, body)
@@ -304,5 +334,5 @@ func (index *ubuntuIndex) fetch(suffix, digest string, flags fetchFlags) (io.Rea
 		return nil, fmt.Errorf("cannot fetch from archive: %v", err)
 	}
 
-	return index.cache.Open(writer.Digest())
+	return index.archive.cache.Open(writer.Digest())
 }
