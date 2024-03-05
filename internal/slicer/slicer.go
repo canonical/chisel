@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -158,12 +159,27 @@ func Run(options *RunOptions) (*Report, error) {
 			Package:   slice.Package,
 			Extract:   extract[slice.Package],
 			TargetDir: targetDir,
-			Globbed:   globbedPaths,
 			// Creates the filesystem entry and adds it to the report.
-			Create: func(o *fsutil.CreateOptions) error {
+			Create: func(extractInfo *deb.ExtractInfo, o *fsutil.CreateOptions) error {
 				entry, err := fsutil.Create(o)
 				if err != nil {
 					return err
+				}
+
+				// We only want to keep the entries that were explicitly listed
+				// in the slice definition.
+				if !isListedInSlice(extractInfo, slice) {
+					return nil
+				}
+
+				// Check whether the file was created because it matched a glob.
+				if strings.ContainsAny(extractInfo.Path, "*?") {
+					relPath := filepath.Clean("/" + strings.TrimLeft(o.Path, targetDir))
+					if o.Mode&fs.ModeDir != 0 {
+						relPath = relPath + "/"
+					}
+					globbedPaths[extractInfo.Path] = append(globbedPaths[extractInfo.Path], relPath)
+					addKnownPath(relPath)
 				}
 				return report.Add(slice, entry)
 			},
@@ -172,12 +188,6 @@ func Run(options *RunOptions) (*Report, error) {
 		packages[slice.Package] = nil
 		if err != nil {
 			return nil, err
-		}
-	}
-
-	for _, expandedPaths := range globbedPaths {
-		for _, path := range expandedPaths {
-			addKnownPath(path)
 		}
 	}
 
@@ -325,6 +335,18 @@ func Run(options *RunOptions) (*Report, error) {
 func contains(l []string, s string) bool {
 	for _, si := range l {
 		if si == s {
+			return true
+		}
+	}
+	return false
+}
+
+func isListedInSlice(extractInfo *deb.ExtractInfo, slice *setup.Slice) bool {
+	if extractInfo == nil {
+		return false
+	}
+	for path := range slice.Contents {
+		if extractInfo.Path == path {
 			return true
 		}
 	}

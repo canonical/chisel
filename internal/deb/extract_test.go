@@ -19,7 +19,6 @@ type extractTest struct {
 	pkgdata []byte
 	options deb.ExtractOptions
 	hackopt func(o *deb.ExtractOptions)
-	globbed map[string][]string
 	result  map[string]string
 	// paths which the extractor did not create explicitly.
 	notCreated []string
@@ -179,7 +178,7 @@ var extractTests = []extractTest{{
 	},
 	notCreated: []string{"/dir/"},
 }, {
-	summary: "Globbing with reporting of globbed paths",
+	summary: "Globbing multiple paths",
 	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
@@ -198,10 +197,6 @@ var extractTests = []extractTest{{
 		"/dir/several/levels/":          "dir 0755",
 		"/dir/several/levels/deep/":     "dir 0755",
 		"/dir/several/levels/deep/file": "file 0644 6bc26dff",
-	},
-	globbed: map[string][]string{
-		"/dir/n*/": []string{"/dir/nested/"},
-		"/dir/s**": []string{"/dir/several/", "/dir/several/levels/", "/dir/several/levels/deep/", "/dir/several/levels/deep/file"},
 	},
 	notCreated: []string{"/dir/"},
 }, {
@@ -336,7 +331,7 @@ func (s *S) TestExtract(c *C) {
 		options.Package = "test-package"
 		options.TargetDir = dir
 		createdPaths := make(map[string]bool)
-		options.Create = func(o *fsutil.CreateOptions) error {
+		options.Create = func(_ *deb.ExtractInfo, o *fsutil.CreateOptions) error {
 			relPath := filepath.Clean("/" + strings.TrimPrefix(o.Path, dir))
 			if o.Mode&fs.ModeDir != 0 {
 				relPath = relPath + "/"
@@ -350,20 +345,12 @@ func (s *S) TestExtract(c *C) {
 			test.hackopt(&options)
 		}
 
-		if test.globbed != nil {
-			options.Globbed = make(map[string][]string)
-		}
-
 		err := deb.Extract(bytes.NewBuffer(test.pkgdata), &options)
 		if test.error != "" {
 			c.Assert(err, ErrorMatches, test.error)
 			continue
 		} else {
 			c.Assert(err, IsNil)
-		}
-
-		if test.globbed != nil {
-			c.Assert(options.Globbed, DeepEquals, test.globbed)
 		}
 
 		if test.notCreated != nil {
