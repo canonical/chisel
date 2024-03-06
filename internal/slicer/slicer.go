@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -175,7 +174,7 @@ func Run(options *RunOptions) (*Report, error) {
 				// Check whether the file was created because it matched a glob.
 				if strings.ContainsAny(extractInfo.Path, "*?") {
 					relPath := filepath.Clean("/" + strings.TrimLeft(o.Path, targetDir))
-					if o.Mode&fs.ModeDir != 0 {
+					if o.Mode.IsDir() {
 						relPath = relPath + "/"
 					}
 					globbedPaths[extractInfo.Path] = append(globbedPaths[extractInfo.Path], relPath)

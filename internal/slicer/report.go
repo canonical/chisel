@@ -42,7 +42,7 @@ func (r *Report) Add(slice *setup.Slice, fsEntry *fsutil.Entry) error {
 		return fmt.Errorf("cannot add path %q outside of root %q", fsEntry.Path, r.Root)
 	}
 	relPath := filepath.Clean("/" + strings.TrimPrefix(fsEntry.Path, r.Root))
-	if fsEntry.Mode&fs.ModeDir != 0 {
+	if fsEntry.Mode.IsDir() {
 		relPath = relPath + "/"
 	}
 

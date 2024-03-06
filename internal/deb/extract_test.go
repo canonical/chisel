@@ -2,7 +2,6 @@ package deb_test
 
 import (
 	"bytes"
-	"io/fs"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -333,7 +332,7 @@ func (s *S) TestExtract(c *C) {
 		createdPaths := make(map[string]bool)
 		options.Create = func(_ *deb.ExtractInfo, o *fsutil.CreateOptions) error {
 			relPath := filepath.Clean("/" + strings.TrimPrefix(o.Path, dir))
-			if o.Mode&fs.ModeDir != 0 {
+			if o.Mode.IsDir() {
 				relPath = relPath + "/"
 			}
 			createdPaths[relPath] = true
