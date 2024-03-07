@@ -167,7 +167,10 @@ func Run(options *RunOptions) (*Report, error) {
 
 				// We only want to keep the entries that were explicitly listed
 				// in the slice definition.
-				if !isListedInSlice(extractInfo, slice) {
+				if extractInfo == nil {
+					return nil
+				}
+				if _, ok := slice.Contents[extractInfo.Path]; !ok {
 					return nil
 				}
 
@@ -334,18 +337,6 @@ func Run(options *RunOptions) (*Report, error) {
 func contains(l []string, s string) bool {
 	for _, si := range l {
 		if si == s {
-			return true
-		}
-	}
-	return false
-}
-
-func isListedInSlice(extractInfo *deb.ExtractInfo, slice *setup.Slice) bool {
-	if extractInfo == nil {
-		return false
-	}
-	for path := range slice.Contents {
-		if extractInfo.Path == path {
 			return true
 		}
 	}
