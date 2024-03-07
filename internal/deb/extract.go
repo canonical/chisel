@@ -25,7 +25,7 @@ type ExtractOptions struct {
 	TargetDir string
 	Extract   map[string][]ExtractInfo
 	// Create creates a fs entry given the options. If the entry is extracted from
-	// the tarball extractInfo should not be empty, else nil can be passed.
+	// the tarball, extractInfo should not be empty, else nil can be passed.
 	Create func(extractInfo *ExtractInfo, options *fsutil.CreateOptions) error
 }
 
