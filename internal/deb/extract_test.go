@@ -28,308 +28,303 @@ type extractTest struct {
 
 var extractTests = []extractTest{{
 	summary: "Extract nothing",
-	pkgdata: testutil.PackageData["base-files"],
+	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: nil,
 	},
 	result: map[string]string{},
 }, {
 	summary: "Extract a few entries",
-	pkgdata: testutil.PackageData["base-files"],
+	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
-			"/usr/bin/hello": []deb.ExtractInfo{{
-				Path: "/usr/bin/hello",
+			"/dir/file": []deb.ExtractInfo{{
+				Path: "/dir/file",
 			}},
-			"/etc/os-release": []deb.ExtractInfo{{
-				Path: "/etc/os-release",
+			"/dir/other-file": []deb.ExtractInfo{{
+				Path: "/dir/other-file",
 			}},
-			"/usr/lib/os-release": []deb.ExtractInfo{{
-				Path: "/usr/lib/os-release",
+			"/dir/several/levels/deep/file": []deb.ExtractInfo{{
+				Path: "/dir/several/levels/deep/file",
 			}},
-			"/usr/share/doc/": []deb.ExtractInfo{{
-				Path: "/usr/share/doc/",
+			"/dir/nested/": []deb.ExtractInfo{{
+				Path: "/dir/nested/",
 			}},
-			"/tmp/": []deb.ExtractInfo{{
-				Path: "/tmp/",
+			"/other-dir/": []deb.ExtractInfo{{
+				Path: "/other-dir/",
 			}},
 		},
 	},
 	result: map[string]string{
-		"/tmp/":               "dir 01777",
-		"/usr/":               "dir 0755",
-		"/usr/bin/":           "dir 0755",
-		"/usr/bin/hello":      "file 0775 eaf29575",
-		"/usr/share/":         "dir 0755",
-		"/usr/share/doc/":     "dir 0755",
-		"/usr/lib/":           "dir 0755",
-		"/usr/lib/os-release": "file 0644 ec6fae43",
-		"/etc/":               "dir 0755",
-		"/etc/os-release":     "symlink ../usr/lib/os-release",
+		"/dir/":                         "dir 0755",
+		"/dir/file":                     "file 0644 cc55e2ec",
+		"/dir/nested/":                  "dir 0755",
+		"/dir/other-file":               "file 0644 63d5dd49",
+		"/dir/several/":                 "dir 0755",
+		"/dir/several/levels/":          "dir 0755",
+		"/dir/several/levels/deep/":     "dir 0755",
+		"/dir/several/levels/deep/file": "file 0644 6bc26dff",
+		"/other-dir/":                   "dir 0755",
 	},
 	notCreated: []string{},
 }, {
 	summary: "Extract a few entries, nil Create closure",
-	pkgdata: testutil.PackageData["base-files"],
+	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
-			"/usr/bin/hello": []deb.ExtractInfo{{
-				Path: "/usr/bin/hello",
+			"/dir/file": []deb.ExtractInfo{{
+				Path: "/dir/file",
 			}},
-			"/etc/os-release": []deb.ExtractInfo{{
-				Path: "/etc/os-release",
+			"/dir/other-file": []deb.ExtractInfo{{
+				Path: "/dir/other-file",
 			}},
-			"/usr/lib/os-release": []deb.ExtractInfo{{
-				Path: "/usr/lib/os-release",
+			"/dir/several/levels/deep/file": []deb.ExtractInfo{{
+				Path: "/dir/several/levels/deep/file",
 			}},
-			"/usr/share/doc/": []deb.ExtractInfo{{
-				Path: "/usr/share/doc/",
+			"/dir/nested/": []deb.ExtractInfo{{
+				Path: "/dir/nested/",
 			}},
-			"/tmp/": []deb.ExtractInfo{{
-				Path: "/tmp/",
+			"/other-dir/": []deb.ExtractInfo{{
+				Path: "/other-dir/",
 			}},
 		},
 	},
 	result: map[string]string{
-		"/tmp/":               "dir 01777",
-		"/usr/":               "dir 0755",
-		"/usr/bin/":           "dir 0755",
-		"/usr/bin/hello":      "file 0775 eaf29575",
-		"/usr/share/":         "dir 0755",
-		"/usr/share/doc/":     "dir 0755",
-		"/usr/lib/":           "dir 0755",
-		"/usr/lib/os-release": "file 0644 ec6fae43",
-		"/etc/":               "dir 0755",
-		"/etc/os-release":     "symlink ../usr/lib/os-release",
+		"/dir/":                         "dir 0755",
+		"/dir/file":                     "file 0644 cc55e2ec",
+		"/dir/nested/":                  "dir 0755",
+		"/dir/other-file":               "file 0644 63d5dd49",
+		"/dir/several/":                 "dir 0755",
+		"/dir/several/levels/":          "dir 0755",
+		"/dir/several/levels/deep/":     "dir 0755",
+		"/dir/several/levels/deep/file": "file 0644 6bc26dff",
+		"/other-dir/":                   "dir 0755",
 	},
 	hackopt: func(o *deb.ExtractOptions) {
 		o.Create = nil
 	},
 }, {
 	summary: "Copy a couple of entries elsewhere",
-	pkgdata: testutil.PackageData["base-files"],
+	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
-			"/usr/bin/hello": []deb.ExtractInfo{{
-				Path: "/usr/foo/bin/hello-2",
+			"/dir/file": []deb.ExtractInfo{{
+				Path: "/foo/file-copy",
 				Mode: 0600,
 			}},
-			"/usr/share/": []deb.ExtractInfo{{
-				Path: "/usr/other/",
+			"/dir/several/levels/deep/": []deb.ExtractInfo{{
+				Path: "/foo/bar/dir-copy",
 				Mode: 0700,
 			}},
 		},
 	},
 	result: map[string]string{
-		"/usr/":                "dir 0755",
-		"/usr/foo/":            "dir 0755",
-		"/usr/foo/bin/":        "dir 0755",
-		"/usr/foo/bin/hello-2": "file 0600 eaf29575",
-		"/usr/other/":          "dir 0700",
+		"/foo/":              "dir 0755",
+		"/foo/bar/":          "dir 0755",
+		"/foo/bar/dir-copy/": "dir 0700",
+		"/foo/file-copy":     "file 0600 cc55e2ec",
 	},
-	notCreated: []string{"/usr/foo/", "/usr/foo/bin/"},
+	notCreated: []string{"/foo/", "/foo/bar/"},
 }, {
 	summary: "Copy same file twice",
-	pkgdata: testutil.PackageData["base-files"],
+	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
-			"/usr/bin/hello": []deb.ExtractInfo{{
-				Path: "/usr/bin/hello",
+			"/dir/file": []deb.ExtractInfo{{
+				Path: "/dir/foo/file-copy-1",
 			}, {
-				Path: "/usr/bin/hallo",
+				Path: "/dir/bar/file-copy-2",
 			}},
 		},
 	},
 	result: map[string]string{
-		"/usr/":          "dir 0755",
-		"/usr/bin/":      "dir 0755",
-		"/usr/bin/hello": "file 0775 eaf29575",
-		"/usr/bin/hallo": "file 0775 eaf29575",
+		"/dir/":                "dir 0755",
+		"/dir/bar/":            "dir 0755",
+		"/dir/bar/file-copy-2": "file 0644 cc55e2ec",
+		"/dir/foo/":            "dir 0755",
+		"/dir/foo/file-copy-1": "file 0644 cc55e2ec",
 	},
-	notCreated: []string{},
+	notCreated: []string{"/dir/bar/", "/dir/foo/"},
 }, {
 	summary: "Globbing a single dir level",
-	pkgdata: testutil.PackageData["base-files"],
+	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
-			"/etc/d*/": []deb.ExtractInfo{{
-				Path: "/etc/d*/",
+			"/dir/s*/": []deb.ExtractInfo{{
+				Path: "/dir/s*/",
 			}},
 		},
 	},
 	result: map[string]string{
-		"/etc/":         "dir 0755",
-		"/etc/dpkg/":    "dir 0755",
-		"/etc/default/": "dir 0755",
+		"/dir/":         "dir 0755",
+		"/dir/several/": "dir 0755",
 	},
-	notCreated: []string{"/etc/"},
+	notCreated: []string{"/dir/"},
 }, {
 	summary: "Globbing for files with multiple levels at once",
-	pkgdata: testutil.PackageData["base-files"],
+	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
-			"/etc/d**": []deb.ExtractInfo{{
-				Path: "/etc/d**",
+			"/dir/s**": []deb.ExtractInfo{{
+				Path: "/dir/s**",
 			}},
 		},
 	},
 	result: map[string]string{
-		"/etc/":                    "dir 0755",
-		"/etc/dpkg/":               "dir 0755",
-		"/etc/dpkg/origins/":       "dir 0755",
-		"/etc/dpkg/origins/debian": "file 0644 50f35af8",
-		"/etc/dpkg/origins/ubuntu": "file 0644 d2537b95",
-		"/etc/default/":            "dir 0755",
-		"/etc/debian_version":      "file 0644 cce26cfe",
+		"/dir/":                         "dir 0755",
+		"/dir/several/":                 "dir 0755",
+		"/dir/several/levels/":          "dir 0755",
+		"/dir/several/levels/deep/":     "dir 0755",
+		"/dir/several/levels/deep/file": "file 0644 6bc26dff",
 	},
-	notCreated: []string{"/etc/"},
+	notCreated: []string{"/dir/"},
 }, {
 	summary: "Globbing with reporting of globbed paths",
-	pkgdata: testutil.PackageData["base-files"],
+	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
-			"/etc/de**": []deb.ExtractInfo{{
-				Path: "/etc/de**",
+			"/dir/s**": []deb.ExtractInfo{{
+				Path: "/dir/s**",
 			}},
-			"/etc/dp*/": []deb.ExtractInfo{{
-				Path: "/etc/dp*/",
+			"/dir/n*/": []deb.ExtractInfo{{
+				Path: "/dir/n*/",
 			}},
 		},
 	},
 	result: map[string]string{
-		"/etc/":               "dir 0755",
-		"/etc/dpkg/":          "dir 0755",
-		"/etc/default/":       "dir 0755",
-		"/etc/debian_version": "file 0644 cce26cfe",
+		"/dir/":                         "dir 0755",
+		"/dir/nested/":                  "dir 0755",
+		"/dir/several/":                 "dir 0755",
+		"/dir/several/levels/":          "dir 0755",
+		"/dir/several/levels/deep/":     "dir 0755",
+		"/dir/several/levels/deep/file": "file 0644 6bc26dff",
 	},
 	globbed: map[string][]string{
-		"/etc/dp*/": []string{"/etc/dpkg/"},
-		"/etc/de**": []string{"/etc/debian_version", "/etc/default/"},
+		"/dir/n*/": []string{"/dir/nested/"},
+		"/dir/s**": []string{"/dir/several/", "/dir/several/levels/", "/dir/several/levels/deep/", "/dir/several/levels/deep/file"},
 	},
-	notCreated: []string{"/etc/"},
+	notCreated: []string{"/dir/"},
 }, {
 	summary: "Globbing must have matching source and target",
-	pkgdata: testutil.PackageData["base-files"],
+	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
-			"/etc/d**": []deb.ExtractInfo{{
-				Path: "/etc/g**",
+			"/foo/b**": []deb.ExtractInfo{{
+				Path: "/foo/g**",
 			}},
 		},
 	},
-	error: `cannot extract .*: when using wildcards source and target paths must match: /etc/d\*\*`,
+	error: `cannot extract .*: when using wildcards source and target paths must match: /foo/b\*\*`,
 }, {
 	summary: "Globbing must also have a single target",
-	pkgdata: testutil.PackageData["base-files"],
+	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
-			"/etc/d**": []deb.ExtractInfo{{
-				Path: "/etc/d**",
+			"/foo/b**": []deb.ExtractInfo{{
+				Path: "/foo/b**",
 			}, {
-				Path: "/etc/d**",
+				Path: "/foo/g**",
 			}},
 		},
 	},
-	error: `cannot extract .*: when using wildcards source and target paths must match: /etc/d\*\*`,
+	error: `cannot extract .*: when using wildcards source and target paths must match: /foo/b\*\*`,
 }, {
 	summary: "Globbing cannot change modes",
-	pkgdata: testutil.PackageData["base-files"],
+	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
-			"/etc/d**": []deb.ExtractInfo{{
-				Path: "/etc/d**",
+			"/dir/n**": []deb.ExtractInfo{{
+				Path: "/dir/n**",
 				Mode: 0777,
 			}},
 		},
 	},
-	error: `cannot extract .*: when using wildcards source and target paths must match: /etc/d\*\*`,
+	error: `cannot extract .*: when using wildcards source and target paths must match: /dir/n\*\*`,
 }, {
 	summary: "Missing file",
-	pkgdata: testutil.PackageData["base-files"],
+	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
-			"/etc/passwd": []deb.ExtractInfo{{
-				Path: "/etc/passwd",
+			"/missing-file": []deb.ExtractInfo{{
+				Path: "/missing-file",
 			}},
 		},
 	},
-	error: `cannot extract from package "base-files": no content at /etc/passwd`,
+	error: `cannot extract from package "test-package": no content at /missing-file`,
 }, {
 	summary: "Missing directory",
-	pkgdata: testutil.PackageData["base-files"],
+	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
-			"/etd/": []deb.ExtractInfo{{
-				Path: "/etd/",
+			"/missing-dir/": []deb.ExtractInfo{{
+				Path: "/missing-dir/",
 			}},
 		},
 	},
-	error: `cannot extract from package "base-files": no content at /etd/`,
+	error: `cannot extract from package "test-package": no content at /missing-dir/`,
 }, {
 	summary: "Missing glob",
-	pkgdata: testutil.PackageData["base-files"],
+	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
-			"/etd/**": []deb.ExtractInfo{{
-				Path: "/etd/**",
+			"/missing-dir/**": []deb.ExtractInfo{{
+				Path: "/missing-dir/**",
 			}},
 		},
 	},
-	error: `cannot extract from package "base-files": no content at /etd/\*\*`,
+	error: `cannot extract from package "test-package": no content at /missing-dir/\*\*`,
 }, {
 	summary: "Missing multiple entries",
-	pkgdata: testutil.PackageData["base-files"],
+	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
-			"/etc/passwd": []deb.ExtractInfo{{
-				Path: "/etc/passwd",
+			"/missing-file": []deb.ExtractInfo{{
+				Path: "missing-file",
 			}},
-			"/etd/": []deb.ExtractInfo{{
-				Path: "/etd/",
+			"/missing-dir/": []deb.ExtractInfo{{
+				Path: "/missing-dir/",
 			}},
 		},
 	},
-	error: `cannot extract from package "base-files": no content at:\n- /etc/passwd\n- /etd/`,
+	error: `cannot extract from package "test-package": no content at:\n- /missing-dir/\n- /missing-file`,
 }, {
 	summary: "Optional entries may be missing",
-	pkgdata: testutil.PackageData["base-files"],
+	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
-			"/etc/": []deb.ExtractInfo{{
-				Path: "/etc/",
+			"/dir/": []deb.ExtractInfo{{
+				Path: "/dir/",
 			}},
-			"/usr/foo/hallo": []deb.ExtractInfo{{
-				Path:     "/usr/bin/foo/hallo",
+			"/dir/optional": []deb.ExtractInfo{{
+				Path:     "/other-dir/foo",
 				Optional: true,
 			}},
-			"/other/path/": []deb.ExtractInfo{{
-				Path:     "/tmp/new/path/",
+			"/optional-dir/": []deb.ExtractInfo{{
+				Path:     "/foo/optional-dir/",
 				Optional: true,
 			}},
 		},
 	},
 	result: map[string]string{
-		"/etc/":     "dir 0755",
-		"/usr/":     "dir 0755",
-		"/usr/bin/": "dir 0755",
-		"/tmp/":     "dir 01777",
+		"/dir/":       "dir 0755",
+		"/other-dir/": "dir 0755",
 	},
 	notCreated: []string{},
 }, {
 	summary: "Optional entries mixed in cannot be missing",
-	pkgdata: testutil.PackageData["base-files"],
+	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
-			"/usr/bin/hallo": []deb.ExtractInfo{{
-				Path:     "/usr/bin/hallo",
+			"/dir/missing-file": []deb.ExtractInfo{{
+				Path:     "/dir/optional",
 				Optional: true,
 			}, {
-				Path:     "/usr/bin/hallow",
+				Path:     "/dir/not-optional",
 				Optional: false,
 			}},
 		},
 	},
-	error: `cannot extract from package "base-files": no content at /usr/bin/hallo`,
+	error: `cannot extract from package "test-package": no content at /dir/missing-file`,
 }}
 
 func (s *S) TestExtract(c *C) {
@@ -338,7 +333,7 @@ func (s *S) TestExtract(c *C) {
 		c.Logf("Test: %s", test.summary)
 		dir := c.MkDir()
 		options := test.options
-		options.Package = "base-files"
+		options.Package = "test-package"
 		options.TargetDir = dir
 		createdPaths := make(map[string]bool)
 		options.Create = func(o *fsutil.CreateOptions) error {
