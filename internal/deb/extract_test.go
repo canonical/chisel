@@ -300,8 +300,7 @@ var extractTests = []extractTest{{
 		},
 	},
 	result: map[string]string{
-		"/dir/":       "dir 0755",
-		"/other-dir/": "dir 0755",
+		"/dir/": "dir 0755",
 	},
 	notCreated: []string{},
 }, {

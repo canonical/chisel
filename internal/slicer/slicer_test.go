@@ -33,7 +33,6 @@ type slicerTest struct {
 	// TODO:
 	// The results of the report do not conform to the planned implementation
 	// yet. Namely:
-	// * Parent directories of {text} files are reported even though they should not.
 	// * We do not track removed directories or changes done in Starlark.
 	report map[string]string
 	error  string
@@ -207,6 +206,32 @@ var slicerTests = []slicerTest{{
 		"/parent/new/": "dir 0755 {test-package_myslice}",
 	},
 }, {
+	summary: "Create new file using glob and preserve parent directory permissions",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	pkgs: map[string][]byte{
+		"test-package": testutil.PackageData["test-package"],
+	},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						# Note the missing /parent/ and /parent/permissions/ here.
+						/parent/**:
+		`,
+	},
+	filesystem: map[string]string{
+		"/parent/":                 "dir 01777", // This is the magic.
+		"/parent/permissions/":     "dir 0764",  // This is the magic.
+		"/parent/permissions/file": "file 0755 722c14b3",
+	},
+	report: map[string]string{
+		"/parent/":                 "dir 01777 {test-package_myslice}",
+		"/parent/permissions/":     "dir 0764 {test-package_myslice}",
+		"/parent/permissions/file": "file 0755 722c14b3 {test-package_myslice}",
+	},
+}, {
 	summary: "Conditional architecture",
 	arch:    "amd64",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
@@ -341,8 +366,7 @@ var slicerTests = []slicerTest{{
 		`,
 	},
 	filesystem: map[string]string{
-		// TODO this is the wrong mode for the directory, it should be 01777.
-		"/dir/":     "dir 0755",
+		"/dir/":     "dir 01777",
 		"/dir/file": "file 0644 a441b15f",
 	},
 	report: map[string]string{
@@ -380,8 +404,7 @@ var slicerTests = []slicerTest{{
 		`,
 	},
 	filesystem: map[string]string{
-		// TODO this is the wrong mode for the directory, it should be 01777.
-		"/dir/":     "dir 0755",
+		"/dir/":     "dir 01777",
 		"/dir/file": "file 0644 a441b15f",
 	},
 	report: map[string]string{
