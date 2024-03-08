@@ -190,12 +190,18 @@ slices:
 	err:     `no slice definitions found for: "foo_bar_foo", "a_b", "7_c", "a_b c", "a_b x_y"`,
 }}
 
-const defaultChiselYaml = `
+var testKey = testutil.PGPKeys["key1"]
+var defaultChiselYaml = `
 	format: chisel-v1
 	archives:
 		ubuntu:
 			version: 22.04
 			components: [main, universe]
+			v1-public-keys: [test-key]
+	v1-public-keys:
+		test-key:
+			id: ` + testKey.ID + `
+			armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
 `
 
 var sampleRelease = map[string]string{
