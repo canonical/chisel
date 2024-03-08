@@ -2,8 +2,10 @@ package fsutil_test
 
 import (
 	"bytes"
+	"fmt"
 	"io/fs"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	. "gopkg.in/check.v1"
@@ -73,18 +75,52 @@ func (s *S) TestCreate(c *C) {
 	}()
 
 	for _, test := range createTests {
+		if test.result == nil {
+			// Empty map for no files created.
+			test.result = make(map[string]string)
+		}
 		c.Logf("Options: %v", test.options)
 		dir := c.MkDir()
 		options := test.options
 		options.Path = filepath.Join(dir, options.Path)
-		err := fsutil.Create(&options)
+		entry, err := fsutil.Create(&options)
+
 		if test.error != "" {
 			c.Assert(err, ErrorMatches, test.error)
 			continue
-		} else {
-			c.Assert(err, IsNil)
 		}
-		result := testutil.TreeDump(dir)
-		c.Assert(result, DeepEquals, test.result)
+
+		c.Assert(err, IsNil)
+		c.Assert(testutil.TreeDump(dir), DeepEquals, test.result)
+		// [fsutil.Create] does not return information about parent directories
+		// created implicitly. We only check for the requested path.
+		c.Assert(dumpFSEntry(entry, dir)[test.options.Path], DeepEquals, test.result[test.options.Path])
 	}
+}
+
+// dumpFSEntry returns the file entry in the same format as [testutil.TreeDump].
+func dumpFSEntry(fsEntry *fsutil.Entry, root string) map[string]string {
+	result := make(map[string]string)
+	path := strings.TrimPrefix(fsEntry.Path, root)
+	fperm := fsEntry.Mode.Perm()
+	if fsEntry.Mode&fs.ModeSticky != 0 {
+		fperm |= 01000
+	}
+	switch fsEntry.Mode.Type() {
+	case fs.ModeDir:
+		result[path+"/"] = fmt.Sprintf("dir %#o", fperm)
+	case fs.ModeSymlink:
+		result[path] = fmt.Sprintf("symlink %s", fsEntry.Link)
+	case 0: // Regular
+		var entry string
+		if fsEntry.Size == 0 {
+			entry = fmt.Sprintf("file %#o empty", fsEntry.Mode.Perm())
+		} else {
+			entry = fmt.Sprintf("file %#o %s", fperm, fsEntry.Hash[:8])
+		}
+		result[path] = entry
+	default:
+		panic(fmt.Errorf("unknown file type %d: %s", fsEntry.Mode.Type(), path))
+	}
+	return result
 }

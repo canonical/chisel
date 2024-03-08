@@ -38,3 +38,26 @@ func Reindent(in string) []byte {
 	}
 	return buf.Bytes()
 }
+
+// PrefixEachLine indents each line in the provided string with the prefix.
+func PrefixEachLine(text string, prefix string) string {
+	var result strings.Builder
+	lines := strings.Split(text, "\n")
+	lastNewline := false
+	if strings.HasSuffix(text, "\n") {
+		// Skip iterating over the empty line.
+		lines = lines[:len(lines)-1]
+		lastNewline = true
+	}
+	for i, line := range lines {
+		result.WriteString(prefix)
+		result.WriteString(line)
+		if i == len(lines)-1 && !lastNewline {
+			// Do not add the last newline if the text did not have it to begin with.
+			continue
+		} else {
+			result.WriteString("\n")
+		}
+	}
+	return result.String()
+}

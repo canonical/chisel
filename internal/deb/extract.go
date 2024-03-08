@@ -25,6 +25,7 @@ type ExtractOptions struct {
 	TargetDir string
 	Extract   map[string][]ExtractInfo
 	Globbed   map[string][]string
+	Create    func(options *fsutil.CreateOptions) error
 }
 
 type ExtractInfo struct {
@@ -33,16 +34,26 @@ type ExtractInfo struct {
 	Optional bool
 }
 
-func checkExtractOptions(options *ExtractOptions) error {
+func getValidOptions(options *ExtractOptions) (*ExtractOptions, error) {
 	for extractPath, extractInfos := range options.Extract {
 		isGlob := strings.ContainsAny(extractPath, "*?")
 		if isGlob {
 			if len(extractInfos) != 1 || extractInfos[0].Path != extractPath || extractInfos[0].Mode != 0 {
-				return fmt.Errorf("when using wildcards source and target paths must match: %s", extractPath)
+				return nil, fmt.Errorf("when using wildcards source and target paths must match: %s", extractPath)
 			}
 		}
 	}
-	return nil
+
+	if options.Create == nil {
+		validOpts := *options
+		validOpts.Create = func(o *fsutil.CreateOptions) error {
+			_, err := fsutil.Create(o)
+			return err
+		}
+		return &validOpts, nil
+	}
+
+	return options, nil
 }
 
 func Extract(pkgReader io.Reader, options *ExtractOptions) (err error) {
@@ -54,12 +65,12 @@ func Extract(pkgReader io.Reader, options *ExtractOptions) (err error) {
 
 	logf("Extracting files from package %q...", options.Package)
 
-	err = checkExtractOptions(options)
+	validOpts, err := getValidOptions(options)
 	if err != nil {
 		return err
 	}
 
-	_, err = os.Stat(options.TargetDir)
+	_, err = os.Stat(validOpts.TargetDir)
 	if os.IsNotExist(err) {
 		return fmt.Errorf("target directory does not exist")
 	} else if err != nil {
@@ -99,7 +110,7 @@ func Extract(pkgReader io.Reader, options *ExtractOptions) (err error) {
 			dataReader = zstdReader
 		}
 	}
-	return extractData(dataReader, options)
+	return extractData(dataReader, validOpts)
 }
 
 func extractData(dataReader io.Reader, options *ExtractOptions) error {
@@ -185,7 +196,7 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 				// Base directory for extracted content. Relevant mainly to preserve
 				// the metadata, since the extracted content itself will also create
 				// any missing directories unaccounted for in the options.
-				err := fsutil.Create(&fsutil.CreateOptions{
+				err := options.Create(&fsutil.CreateOptions{
 					Path:        filepath.Join(options.TargetDir, sourcePath),
 					Mode:        tarHeader.FileInfo().Mode(),
 					MakeParents: true,
@@ -226,7 +237,7 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 			if extractInfo.Mode != 0 {
 				tarHeader.Mode = int64(extractInfo.Mode)
 			}
-			err := fsutil.Create(&fsutil.CreateOptions{
+			err := options.Create(&fsutil.CreateOptions{
 				Path:        targetPath,
 				Mode:        tarHeader.FileInfo().Mode(),
 				Data:        pathReader,

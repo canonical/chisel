@@ -1,6 +1,7 @@
 package archive_test
 
 import (
+	"golang.org/x/crypto/openpgp/packet"
 	. "gopkg.in/check.v1"
 
 	"debug/elf"
@@ -18,6 +19,7 @@ import (
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/archive/testarchive"
 	"github.com/canonical/chisel/internal/deb"
+	"github.com/canonical/chisel/internal/testutil"
 )
 
 type httpSuite struct {
@@ -31,9 +33,17 @@ type httpSuite struct {
 	header    http.Header
 	status    int
 	restore   func()
+	privKey   *packet.PrivateKey
+	pubKey    *packet.PublicKey
 }
 
 var _ = Suite(&httpSuite{})
+
+var (
+	key1          = testutil.PGPKeys["key1"]
+	key2          = testutil.PGPKeys["key2"]
+	keyUbuntu2018 = testutil.PGPKeys["key-ubuntu-2018"]
+)
 
 func (s *httpSuite) SetUpTest(c *C) {
 	s.logf = c.Logf
@@ -46,6 +56,8 @@ func (s *httpSuite) SetUpTest(c *C) {
 	s.header = nil
 	s.status = 200
 	s.restore = archive.FakeDo(s.Do)
+	s.privKey = key1.PrivKey
+	s.pubKey = key1.PubKey
 }
 
 func (s *httpSuite) TearDownTest(c *C) {
@@ -97,6 +109,7 @@ func (s *httpSuite) prepareArchiveAdjustRelease(suite, version, arch string, com
 		Suite:   suite,
 		Version: version,
 		Label:   "Ubuntu",
+		PrivKey: s.privKey,
 	}
 	for i, component := range components {
 		index := &testarchive.PackageIndex{
@@ -172,6 +185,7 @@ func (s *httpSuite) TestOptionErrors(c *C) {
 	cacheDir := c.MkDir()
 	for _, test := range optionErrorTests {
 		test.options.CacheDir = cacheDir
+		test.options.PubKeys = append(test.options.PubKeys, s.pubKey)
 		_, err := archive.Open(&test.options)
 		c.Assert(err, ErrorMatches, test.error)
 	}
@@ -188,6 +202,7 @@ func (s *httpSuite) TestFetchPackage(c *C) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
+		PubKeys:    []*packet.PublicKey{s.pubKey},
 	}
 
 	archive, err := archive.Open(&options)
@@ -217,6 +232,7 @@ func (s *httpSuite) TestFetchPortsPackage(c *C) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
+		PubKeys:    []*packet.PublicKey{s.pubKey},
 	}
 
 	archive, err := archive.Open(&options)
@@ -254,6 +270,7 @@ func (s *httpSuite) TestFetchSecurityPackage(c *C) {
 		Arch:       "amd64",
 		Suites:     []string{"jammy", "jammy-security", "jammy-updates"},
 		Components: []string{"main", "universe"},
+		PubKeys:    []*packet.PublicKey{s.pubKey},
 	}
 
 	archive, err := archive.Open(&options)
@@ -284,6 +301,7 @@ func (s *httpSuite) TestArchiveLabels(c *C) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
+		PubKeys:    []*packet.PublicKey{s.pubKey},
 	}
 
 	_, err := archive.Open(&options)
@@ -298,6 +316,7 @@ func (s *httpSuite) TestArchiveLabels(c *C) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
+		PubKeys:    []*packet.PublicKey{s.pubKey},
 	}
 
 	_, err = archive.Open(&options)
@@ -312,6 +331,7 @@ func (s *httpSuite) TestArchiveLabels(c *C) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
+		PubKeys:    []*packet.PublicKey{s.pubKey},
 	}
 
 	_, err = archive.Open(&options)
@@ -326,10 +346,57 @@ func (s *httpSuite) TestArchiveLabels(c *C) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
+		PubKeys:    []*packet.PublicKey{s.pubKey},
 	}
 
 	_, err = archive.Open(&options)
 	c.Assert(err, ErrorMatches, `.*\bno Ubuntu section`)
+}
+
+type verifyArchiveReleaseTest struct {
+	summary string
+	pubKeys []*packet.PublicKey
+	error   string
+}
+
+var verifyArchiveReleaseTests = []verifyArchiveReleaseTest{{
+	summary: "A valid public key",
+	pubKeys: []*packet.PublicKey{key1.PubKey},
+}, {
+	summary: "No public key to verify with",
+	error:   `cannot verify signature of the InRelease file`,
+}, {
+	summary: "Wrong public key",
+	pubKeys: []*packet.PublicKey{key2.PubKey},
+	error:   `cannot verify signature of the InRelease file`,
+}, {
+	summary: "Multiple public keys (invalid, valid)",
+	pubKeys: []*packet.PublicKey{key2.PubKey, key1.PubKey},
+}}
+
+func (s *httpSuite) TestVerifyArchiveRelease(c *C) {
+	for _, test := range verifyArchiveReleaseTests {
+		c.Logf("Summary: %s", test.summary)
+
+		s.prepareArchive("jammy", "22.04", "amd64", []string{"main", "universe"})
+
+		options := archive.Options{
+			Label:      "ubuntu",
+			Version:    "22.04",
+			Arch:       "amd64",
+			Suites:     []string{"jammy"},
+			Components: []string{"main", "universe"},
+			CacheDir:   c.MkDir(),
+			PubKeys:    test.pubKeys,
+		}
+
+		_, err := archive.Open(&options)
+		if test.error != "" {
+			c.Assert(err, ErrorMatches, test.error)
+		} else {
+			c.Assert(err, IsNil)
+		}
+	}
 }
 
 func read(r io.Reader) string {
@@ -349,10 +416,38 @@ func (s *S) TestRealArchive(c *C) {
 	if !*realArchiveFlag {
 		c.Skip("--real-archive not provided")
 	}
-	for _, arch := range elfToDebArch {
-		s.testOpenArchiveArch(c, arch)
+	for _, release := range ubuntuReleases {
+		for _, arch := range elfToDebArch {
+			s.testOpenArchiveArch(c, release, arch)
+		}
 	}
 }
+
+type ubuntuRelease struct {
+	name           string
+	version        string
+	archivePubKeys []*packet.PublicKey
+}
+
+var ubuntuReleases = []ubuntuRelease{{
+	name:    "focal",
+	version: "20.04",
+	archivePubKeys: []*packet.PublicKey{
+		keyUbuntu2018.PubKey,
+	},
+}, {
+	name:    "jammy",
+	version: "22.04",
+	archivePubKeys: []*packet.PublicKey{
+		keyUbuntu2018.PubKey,
+	},
+}, {
+	name:    "noble",
+	version: "24.04",
+	archivePubKeys: []*packet.PublicKey{
+		keyUbuntu2018.PubKey,
+	},
+}}
 
 var elfToDebArch = map[elf.Machine]string{
 	elf.EM_386:     "i386",
@@ -373,14 +468,17 @@ func (s *S) checkArchitecture(c *C, arch string, binaryPath string) {
 	c.Assert(binaryArch, Equals, arch)
 }
 
-func (s *S) testOpenArchiveArch(c *C, arch string) {
+func (s *S) testOpenArchiveArch(c *C, release ubuntuRelease, arch string) {
+	c.Logf("Checking ubuntu archive %s %s...", release.name, arch)
+
 	options := archive.Options{
 		Label:      "ubuntu",
-		Version:    "22.04",
+		Version:    release.version,
 		Arch:       arch,
-		Suites:     []string{"jammy"},
+		Suites:     []string{release.name},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
+		PubKeys:    release.archivePubKeys,
 	}
 
 	archive, err := archive.Open(&options)
@@ -408,8 +506,8 @@ func (s *S) testOpenArchiveArch(c *C, arch string) {
 	data, err := os.ReadFile(filepath.Join(extractDir, "copyright"))
 	c.Assert(err, IsNil)
 
-	copyrightTop := "This package was written by Peter Tobias <tobias@et-inf.fho-emden.de>\non Thu, 16 Jan 1997 01:00:34 +0100."
-	c.Assert(strings.HasPrefix(string(data), copyrightTop), Equals, true)
+	copyrightTop := "This package was written by Peter Tobias <tobias@et-inf.fho-emden.de>"
+	c.Assert(strings.Contains(string(data), copyrightTop), Equals, true)
 
 	s.checkArchitecture(c, arch, filepath.Join(extractDir, "hostname"))
 }

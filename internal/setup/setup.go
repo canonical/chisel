@@ -9,9 +9,11 @@ import (
 	"regexp"
 	"strings"
 
+	"golang.org/x/crypto/openpgp/packet"
 	"gopkg.in/yaml.v3"
 
 	"github.com/canonical/chisel/internal/deb"
+	"github.com/canonical/chisel/internal/pgputil"
 	"github.com/canonical/chisel/internal/strdist"
 )
 
@@ -30,6 +32,7 @@ type Archive struct {
 	Version    string
 	Suites     []string
 	Components []string
+	PubKeys    []*packet.PublicKey
 }
 
 // Package holds a collection of slices that represent parts of themselves.
@@ -325,16 +328,20 @@ func readSlices(release *Release, baseDir, dirName string) error {
 
 type yamlRelease struct {
 	Format   string                 `yaml:"format"`
-	Archives map[string]yamlArchive `yaml:"archives`
+	Archives map[string]yamlArchive `yaml:"archives"`
+	PubKeys  map[string]yamlPubKey  `yaml:"public-keys"`
+	// V1PubKeys is used for compatibility with format "chisel-v1".
+	V1PubKeys map[string]yamlPubKey `yaml:"v1-public-keys"`
 }
-
-const yamlReleaseFormat = "chisel-v1"
 
 type yamlArchive struct {
 	Version    string   `yaml:"version"`
 	Suites     []string `yaml:"suites"`
 	Components []string `yaml:"components"`
 	Default    bool     `yaml:"default"`
+	PubKeys    []string `yaml:"public-keys"`
+	// V1PubKeys is used for compatibility with format "chisel-v1".
+	V1PubKeys []string `yaml:"v1-public-keys"`
 }
 
 type yamlPackage struct {
@@ -411,6 +418,11 @@ type yamlSlice struct {
 	Mutate    string               `yaml:"mutate,omitempty"`
 }
 
+type yamlPubKey struct {
+	ID    string `yaml:"id"`
+	Armor string `yaml:"armor"`
+}
+
 var ubuntuAdjectives = map[string]string{
 	"18.04": "bionic",
 	"20.04": "focal",
@@ -429,16 +441,38 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 
 	yamlVar := yamlRelease{}
 	dec := yaml.NewDecoder(bytes.NewBuffer(data))
-	dec.KnownFields(true)
+	dec.KnownFields(false)
 	err := dec.Decode(&yamlVar)
 	if err != nil {
 		return nil, fmt.Errorf("%s: cannot parse release definition: %v", fileName, err)
 	}
-	if yamlVar.Format != yamlReleaseFormat {
-		return nil, fmt.Errorf("%s: expected format %q, got %q", fileName, yamlReleaseFormat, yamlVar.Format)
+	if yamlVar.Format != "chisel-v1" && yamlVar.Format != "v1" {
+		return nil, fmt.Errorf("%s: unknown format %q", fileName, yamlVar.Format)
+	}
+	// If format is "chisel-v1" we have to translate from the yaml key "v1-public-keys" to
+	// "public-keys".
+	if yamlVar.Format == "chisel-v1" {
+		yamlVar.PubKeys = yamlVar.V1PubKeys
+		for name, details := range yamlVar.Archives {
+			details.PubKeys = details.V1PubKeys
+			yamlVar.Archives[name] = details
+		}
 	}
 	if len(yamlVar.Archives) == 0 {
 		return nil, fmt.Errorf("%s: no archives defined", fileName)
+	}
+
+	// Decode the public keys and match against provided IDs.
+	pubKeys := make(map[string]*packet.PublicKey, len(yamlVar.PubKeys))
+	for keyName, yamlPubKey := range yamlVar.PubKeys {
+		key, err := pgputil.DecodePubKey([]byte(yamlPubKey.Armor))
+		if err != nil {
+			return nil, fmt.Errorf("%s: cannot decode public key %q: %w", fileName, keyName, err)
+		}
+		if yamlPubKey.ID != key.KeyIdString() {
+			return nil, fmt.Errorf("%s: public key %q armor has incorrect ID: expected %q, got %q", fileName, keyName, yamlPubKey.ID, key.KeyIdString())
+		}
+		pubKeys[keyName] = key
 	}
 
 	for archiveName, details := range yamlVar.Archives {
@@ -463,11 +497,27 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		if details.Default {
 			release.DefaultArchive = archiveName
 		}
+		if len(details.PubKeys) == 0 {
+			if yamlVar.Format == "chisel-v1" {
+				return nil, fmt.Errorf("%s: archive %q missing v1-public-keys field", fileName, archiveName)
+			} else {
+				return nil, fmt.Errorf("%s: archive %q missing public-keys field", fileName, archiveName)
+			}
+		}
+		var archiveKeys []*packet.PublicKey
+		for _, keyName := range details.PubKeys {
+			key, ok := pubKeys[keyName]
+			if !ok {
+				return nil, fmt.Errorf("%s: archive %q refers to undefined public key %q", fileName, archiveName, keyName)
+			}
+			archiveKeys = append(archiveKeys, key)
+		}
 		release.Archives[archiveName] = &Archive{
 			Name:       archiveName,
 			Version:    details.Version,
 			Suites:     details.Suites,
 			Components: details.Components,
+			PubKeys:    archiveKeys,
 		}
 	}
 
@@ -483,7 +533,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 
 	yamlPkg := yamlPackage{}
 	dec := yaml.NewDecoder(bytes.NewBuffer(data))
-	dec.KnownFields(true)
+	dec.KnownFields(false)
 	err := dec.Decode(&yamlPkg)
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse package %q slice definitions: %v", pkgName, err)
