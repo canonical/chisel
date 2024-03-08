@@ -77,13 +77,12 @@ func (cmd *cmdFind) Execute(args []string) error {
 func fuzzyMatchSlice(slice *setup.Slice, query string) bool {
 	const maxStrDist = 1
 
-	// check if the query is a substring of the pkg_slice slice name
+	// Check if the query is a substring of the pkg_slice slice name.
 	if strings.Contains(slice.String(), query) {
 		return true
 	}
-	// check if the query string is at most ``maxStrDist`` Levenshtein [1]
-	// distance away from the pkg_slice slice name.
-	// [1] https://en.wikipedia.org/wiki/Levenshtein_distance
+	// Check if the query string is at most ``maxStrDist`` Levenshtein distance
+	// away from the pkg_slice slice name.
 	dist := strdist.Distance(slice.String(), query, strdist.StandardCost, maxStrDist+1)
 	return dist <= maxStrDist
 }
