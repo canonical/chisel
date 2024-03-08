@@ -242,17 +242,14 @@ func order(pkgs map[string]*Package, keys []SliceKey) ([]SliceKey, error) {
 	return order, nil
 }
 
-var pkgNameExpStr = `([a-z0-9](?:-?[.a-z0-9+]){1,})`
-var sliceNameExpStr = `([a-z](?:-?[a-z0-9]){2,})`
-
 // fnameExp matches the slice definition file basename.
-var fnameExp = regexp.MustCompile(`^` + pkgNameExpStr + `\.yaml$`)
+var fnameExp = regexp.MustCompile(`^([a-z0-9](?:-?[.a-z0-9+]){1,})\.yaml$`)
 
 // snameExp matches only the slice name, without the leading package name.
-var snameExp = regexp.MustCompile(`^` + sliceNameExpStr + `$`)
+var snameExp = regexp.MustCompile(`^([a-z](?:-?[a-z0-9]){2,})$`)
 
 // knameExp matches the slice full name in pkg_slice format.
-var knameExp = regexp.MustCompile(`^` + pkgNameExpStr + `_` + sliceNameExpStr + `$`)
+var knameExp = regexp.MustCompile(`^([a-z0-9](?:-?[.a-z0-9+]){1,})_([a-z](?:-?[a-z0-9]){2,})$`)
 
 func ParseSliceKey(sliceKey string) (SliceKey, error) {
 	match := knameExp.FindStringSubmatch(sliceKey)
