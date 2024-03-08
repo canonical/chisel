@@ -887,7 +887,7 @@ func (s *S) TestPackageMarshalYAML(c *C) {
 		`,
 	}
 
-	// write and parse the sample release
+	// Write and parse the sample release.
 	dir := c.MkDir()
 	for path, data := range sampleRelease {
 		fpath := filepath.Join(dir, path)
@@ -901,7 +901,7 @@ func (s *S) TestPackageMarshalYAML(c *C) {
 	c.Assert(release, NotNil)
 	c.Assert(release.Path, Equals, dir)
 
-	// write and parse the changed release
+	// Write and parse the changed release.
 	newDir := c.MkDir()
 	for _, pkg := range release.Packages {
 		data, err := yaml.Marshal(pkg)
@@ -924,8 +924,8 @@ func (s *S) TestPackageMarshalYAML(c *C) {
 	c.Assert(newRelease, NotNil)
 	c.Assert(newRelease.Path, Equals, newDir)
 
-	// check that both parsed releases (old and new) are equal.
-	// release paths are irrelevant for this comparison.
+	// Check that both parsed releases (old and new) are equal.
+	// Release paths are irrelevant for this comparison.
 	release.Path = ""
 	newRelease.Path = ""
 	c.Assert(newRelease, DeepEquals, release)

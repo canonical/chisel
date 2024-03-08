@@ -75,7 +75,7 @@ func (cmd *infoCmd) Execute(args []string) error {
 }
 
 // selectPackageSlices takes in a release and a list of query strings
-// of package names and/or slice names, and returns a list of Packages
+// of package names and/or slice names, and returns a list of packages
 // containing the found slices. It also returns a list of query
 // strings that were not found.
 func selectPackageSlices(release *setup.Release, queries []string) (packages []*setup.Package, notFound []string) {

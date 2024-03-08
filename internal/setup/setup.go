@@ -396,8 +396,8 @@ func (ya yamlArch) MarshalYAML() (interface{}, error) {
 type yamlMode uint
 
 func (ym yamlMode) MarshalYAML() (interface{}, error) {
-	// workaround for marshalling integers in octal format
-	// ref: https://github.com/go-yaml/yaml/issues/420
+	// Workaround for marshalling integers in octal format.
+	// Ref: https://github.com/go-yaml/yaml/issues/420.
 	return &yaml.Node{
 		Kind:  yaml.ScalarNode,
 		Tag:   "!!int",

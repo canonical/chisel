@@ -1,12 +1,11 @@
 package main_test
 
 import (
-	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 
 	. "gopkg.in/check.v1"
-	"gopkg.in/yaml.v3"
 
 	chisel "github.com/canonical/chisel/cmd/chisel"
 	"github.com/canonical/chisel/internal/testutil"
@@ -158,7 +157,7 @@ slices:
 	summary: "No slices found",
 	input:   sampleRelease,
 	query:   []string{"foo", "bar_foo"},
-	err:     ".*no slice definitions found for: .*foo.*bar_foo.*",
+	err:     `no slice definitions found for: "foo", "bar_foo"`,
 }, {
 	summary: "Some slices found, others not found",
 	input:   sampleRelease,
@@ -174,11 +173,11 @@ slices:
                 make: true
                 mode: 0644
 `,
-	err: ".*no slice definitions found for: .*foo.*bar_foo.*",
+	err: `no slice definitions found for: "foo", "bar_foo"`,
 }, {
 	summary: "No args",
 	input:   sampleRelease,
-	err:     ".*required argument.*not provided.*",
+	err:     "the required argument `<pkg|slice> (at least 1 argument)` was not provided",
 }, {
 	summary: "Empty, whitespace args",
 	input:   sampleRelease,
@@ -188,7 +187,7 @@ slices:
 	summary: "Bad format slices",
 	input:   sampleRelease,
 	query:   []string{"foo_bar_foo", "a_b", "7_c", "a_b c", "a_b x_y"},
-	err:     ".*no slice definitions found for:.*",
+	err:     `no slice definitions found for: "foo_bar_foo", "a_b", "7_c", "a_b c", "a_b x_y"`,
 }}
 
 const defaultChiselYaml = `
@@ -254,30 +253,14 @@ func (s *ChiselSuite) TestInfoCommand(c *C) {
 			err = os.WriteFile(fpath, testutil.Reindent(data), 0644)
 			c.Assert(err, IsNil)
 		}
-
-		prefix := []string{"info"}
-		if len(test.query) > 0 {
-			prefix = append(prefix, "--release", dir)
-		}
-		test.query = append(prefix, test.query...)
+		test.query = append([]string{"info", "--release", dir}, test.query...)
 
 		_, err := chisel.Parser().ParseArgs(test.query)
 		if test.err != "" {
 			c.Assert(err, ErrorMatches, test.err)
 			continue
-		} else {
-			c.Assert(err, IsNil)
 		}
-
-		// parse the expected and output YAMLs and compare
-		var testYAML interface{}
-		dec := yaml.NewDecoder(bytes.NewBuffer([]byte(test.stdout)))
-		err = dec.Decode(&testYAML)
 		c.Assert(err, IsNil)
-		var outputYAML interface{}
-		dec = yaml.NewDecoder(bytes.NewBuffer([]byte(s.Stdout())))
-		err = dec.Decode(&outputYAML)
-		c.Assert(err, IsNil)
-		c.Assert(testYAML, DeepEquals, outputYAML)
+		c.Assert(strings.TrimSpace(s.Stdout()), Equals, strings.TrimSpace(test.stdout))
 	}
 }
