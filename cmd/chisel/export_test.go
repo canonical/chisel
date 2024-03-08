@@ -17,3 +17,5 @@ func FakeIsStdinTTY(t bool) (restore func()) {
 		isStdinTTY = oldIsStdinTTY
 	}
 }
+
+var FindSlices = findSlices
