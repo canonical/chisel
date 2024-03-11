@@ -26,6 +26,7 @@ type slicerTest struct {
 	summary    string
 	arch       string
 	release    map[string]string
+	pkgs       map[string][]byte
 	slices     []setup.SliceKey
 	hackopt    func(c *C, opts *slicer.RunOptions)
 	filesystem map[string]string
@@ -65,14 +66,13 @@ var packageEntries = map[string][]testutil.TarEntry{
 	},
 }
 
-// Hardcoded copyright files from test-package package that will be automatically
-// injected into every slice.
-var copyrightEntries = map[string]string{
-	"/usr/":                                 "dir 0755",
-	"/usr/share/":                           "dir 0755",
-	"/usr/share/doc/":                       "dir 0755",
-	"/usr/share/doc/test-package/":          "dir 0755",
-	"/usr/share/doc/test-package/copyright": "file 0644 c2fca2aa",
+var testPackageCopyrightEntries = []testutil.TarEntry{
+	// Hardcoded copyright paths.
+	testutil.Dir(0755, "./usr/"),
+	testutil.Dir(0755, "./usr/share/"),
+	testutil.Dir(0755, "./usr/share/doc/"),
+	testutil.Dir(0755, "./usr/share/doc/test-package/"),
+	testutil.Reg(0644, "./usr/share/doc/test-package/copyright", "copyright"),
 }
 
 var slicerTests = []slicerTest{{
@@ -102,12 +102,10 @@ var slicerTests = []slicerTest{{
 		"/other-dir/file": "symlink ../dir/file",
 	},
 	report: map[string]string{
-		"/dir/":           "dir 0755 {test-package_myslice}",
 		"/dir/file":       "file 0644 cc55e2ec {test-package_myslice}",
 		"/dir/file-copy":  "file 0644 cc55e2ec {test-package_myslice}",
 		"/dir/foo/bar/":   "dir 01777 {test-package_myslice}",
 		"/dir/text-file":  "file 0644 5b41362b {test-package_myslice}",
-		"/other-dir/":     "dir 0755 {test-package_myslice}",
 		"/other-dir/file": "symlink ../dir/file {test-package_myslice}",
 	},
 }, {
@@ -150,7 +148,6 @@ var slicerTests = []slicerTest{{
 		"/parent/new": "file 0644 5b41362b",
 	},
 	report: map[string]string{
-		"/parent/":    "dir 01777 {test-package_myslice}",
 		"/parent/new": "file 0644 5b41362b {test-package_myslice}",
 	},
 }, {
@@ -172,8 +169,6 @@ var slicerTests = []slicerTest{{
 		"/parent/permissions/new": "file 0644 5b41362b",
 	},
 	report: map[string]string{
-		"/parent/":                "dir 01777 {test-package_myslice}",
-		"/parent/permissions/":    "dir 0764 {test-package_myslice}",
 		"/parent/permissions/new": "file 0644 5b41362b {test-package_myslice}",
 	},
 }, {
@@ -194,7 +189,6 @@ var slicerTests = []slicerTest{{
 		"/parent/new/": "dir 0755",
 	},
 	report: map[string]string{
-		"/parent/":     "dir 01777 {test-package_myslice}",
 		"/parent/new/": "dir 0755 {test-package_myslice}",
 	},
 }, {
@@ -224,12 +218,191 @@ var slicerTests = []slicerTest{{
 		"/dir/nested/copy-3": "file 0644 84237a05",
 	},
 	report: map[string]string{
-		"/dir/":              "dir 0755 {test-package_myslice}",
-		"/dir/nested/":       "dir 0755 {test-package_myslice}",
 		"/dir/nested/copy-1": "file 0644 84237a05 {test-package_myslice}",
 		"/dir/nested/copy-3": "file 0644 84237a05 {test-package_myslice}",
 		"/dir/text-file-1":   "file 0644 5b41362b {test-package_myslice}",
 		"/dir/text-file-3":   "file 0644 5b41362b {test-package_myslice}",
+	},
+}, {
+	summary: "Copyright is installed",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	pkgs: map[string][]byte{
+		// Add the copyright entries to the package.
+		"test-package": testutil.MustMakeDeb(append(testutil.TestPackageEntries, testPackageCopyrightEntries...)),
+	},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/dir/file:
+		`,
+	},
+	filesystem: map[string]string{
+		"/dir/":     "dir 0755",
+		"/dir/file": "file 0644 cc55e2ec",
+		// Hardcoded copyright entries.
+		"/usr/":                                 "dir 0755",
+		"/usr/share/":                           "dir 0755",
+		"/usr/share/doc/":                       "dir 0755",
+		"/usr/share/doc/test-package/":          "dir 0755",
+		"/usr/share/doc/test-package/copyright": "file 0644 c2fca2aa",
+	},
+	report: map[string]string{
+		"/dir/file": "file 0644 cc55e2ec {test-package_myslice}",
+	},
+}, {
+	summary: "Install two packages",
+	slices: []setup.SliceKey{
+		{"test-package", "myslice"},
+		{"other-package", "myslice"}},
+	pkgs: map[string][]byte{
+		"test-package":  testutil.PackageData["test-package"],
+		"other-package": testutil.PackageData["other-package"],
+	},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/dir/file:
+						/foo/: {make: true}
+		`,
+		"slices/mydir/other-package.yaml": `
+			package: other-package
+			slices:
+				myslice:
+					contents:
+						/file:
+						/bar/: {make: true}
+		`,
+	},
+	filesystem: map[string]string{
+		"/bar/":     "dir 0755",
+		"/dir/":     "dir 0755",
+		"/dir/file": "file 0644 cc55e2ec",
+		"/file":     "file 0644 fc02ca0e",
+		"/foo/":     "dir 0755",
+	},
+	report: map[string]string{
+		"/foo/":     "dir 0755 {test-package_myslice}",
+		"/dir/file": "file 0644 cc55e2ec {test-package_myslice}",
+		"/bar/":     "dir 0755 {other-package_myslice}",
+		"/file":     "file 0644 fc02ca0e {other-package_myslice}",
+	},
+}, {
+	summary: "Install two packages, explicit path has preference over implicit parent",
+	slices: []setup.SliceKey{
+		{"implicit-parent", "myslice"},
+		{"explicit-dir", "myslice"}},
+	pkgs: map[string][]byte{
+		"implicit-parent": testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./dir/"),
+			testutil.Reg(0644, "./dir/file", "random"),
+		}),
+		"explicit-dir": testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(01777, "./dir/"),
+		}),
+	},
+	release: map[string]string{
+		"slices/mydir/implicit-parent.yaml": `
+			package: implicit-parent
+			slices:
+				myslice:
+					contents:
+						/dir/file:
+		`,
+		"slices/mydir/explicit-dir.yaml": `
+			package: explicit-dir
+			slices:
+				myslice:
+					contents:
+						/dir/:
+		`,
+	},
+	filesystem: map[string]string{
+		// TODO this is the wrong mode for the directory, it should be 01777.
+		"/dir/":     "dir 0755",
+		"/dir/file": "file 0644 a441b15f",
+	},
+	report: map[string]string{
+		"/dir/":     "dir 01777 {explicit-dir_myslice}",
+		"/dir/file": "file 0644 a441b15f {implicit-parent_myslice}",
+	},
+}, {
+	summary: "Install two packages, explicit path has preference over implicit parent (reverse order)",
+	slices: []setup.SliceKey{
+		{"explicit-dir", "myslice"},
+		{"implicit-parent", "myslice"}},
+	pkgs: map[string][]byte{
+		"implicit-parent": testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./dir/"),
+			testutil.Reg(0644, "./dir/file", "random"),
+		}),
+		"explicit-dir": testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(01777, "./dir/"),
+		}),
+	},
+	release: map[string]string{
+		"slices/mydir/implicit-parent.yaml": `
+			package: implicit-parent
+			slices:
+				myslice:
+					contents:
+						/dir/file:
+		`,
+		"slices/mydir/explicit-dir.yaml": `
+			package: explicit-dir
+			slices:
+				myslice:
+					contents:
+						/dir/:
+		`,
+	},
+	filesystem: map[string]string{
+		// TODO this is the wrong mode for the directory, it should be 01777.
+		"/dir/":     "dir 0755",
+		"/dir/file": "file 0644 a441b15f",
+	},
+	report: map[string]string{
+		"/dir/":     "dir 01777 {explicit-dir_myslice}",
+		"/dir/file": "file 0644 a441b15f {implicit-parent_myslice}",
+	},
+}, {
+	summary: "Valid same file in two slices in different packages",
+	slices: []setup.SliceKey{
+		{"test-package", "myslice"},
+		{"other-package", "myslice"}},
+	pkgs: map[string][]byte{
+		"test-package":  testutil.PackageData["test-package"],
+		"other-package": testutil.PackageData["other-package"],
+	},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/textFile: {text: SAME_TEXT}
+		`,
+		"slices/mydir/other-package.yaml": `
+			package: other-package
+			slices:
+				myslice:
+					contents:
+						/textFile: {text: SAME_TEXT}
+		`,
+	},
+	filesystem: map[string]string{
+		"/textFile": "file 0644 c6c83d10",
+	},
+	report: map[string]string{
+		// Note: This is the only case where two slices can declare the same
+		// file without conflicts.
+		// TODO which slice(s) should own the file.
+		"/textFile": "file 0644 c6c83d10 {other-package_myslice}",
 	},
 }, {
 	summary: "Script: write a file",
@@ -250,7 +423,6 @@ var slicerTests = []slicerTest{{
 		"/dir/text-file": "file 0644 d98cf53e",
 	},
 	report: map[string]string{
-		"/dir/":          "dir 0755 {test-package_myslice}",
 		"/dir/text-file": "file 0644 5b41362b {test-package_myslice}",
 	},
 }, {
@@ -276,7 +448,6 @@ var slicerTests = []slicerTest{{
 		"/foo/text-file-2": "file 0644 5b41362b",
 	},
 	report: map[string]string{
-		"/dir/":            "dir 0755 {test-package_myslice}",
 		"/dir/text-file-1": "file 0644 5b41362b {test-package_myslice}",
 		"/foo/text-file-2": "file 0644 d98cf53e {test-package_myslice}",
 	},
@@ -302,7 +473,7 @@ var slicerTests = []slicerTest{{
 		"/foo/text-file-2": "file 0644 5b41362b",
 	},
 	report: map[string]string{
-		"/dir/":            "dir 0755 {test-package_myslice}",
+		// TODO this path needs to be removed from the report.
 		"/dir/text-file-1": "file 0644 5b41362b {test-package_myslice}",
 		"/foo/text-file-2": "file 0644 d98cf53e {test-package_myslice}",
 	},
@@ -324,11 +495,12 @@ var slicerTests = []slicerTest{{
 		"/other-dir/": "dir 0755",
 	},
 	report: map[string]string{
+		// TODO These first three entries should be removed from the report.
 		"/dir/nested/":           "dir 0755 {test-package_myslice}",
 		"/dir/nested/file":       "file 0644 84237a05 {test-package_myslice}",
 		"/dir/nested/other-file": "file 0644 6b86b273 {test-package_myslice}",
-		"/other-dir/":            "dir 0755 {test-package_myslice}",
-		"/other-dir/text-file":   "file 0644 5b41362b {test-package_myslice}",
+
+		"/other-dir/text-file": "file 0644 5b41362b {test-package_myslice}",
 	},
 }, {
 	summary: "Script: 'until' does not remove non-empty directories",
@@ -349,7 +521,6 @@ var slicerTests = []slicerTest{{
 		"/dir/nested/file-copy": "file 0644 cc55e2ec",
 	},
 	report: map[string]string{
-		"/dir/":                 "dir 0755 {test-package_myslice}",
 		"/dir/nested/":          "dir 0755 {test-package_myslice}",
 		"/dir/nested/file-copy": "file 0644 cc55e2ec {test-package_myslice}",
 	},
@@ -500,6 +671,10 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Duplicate copyright symlink is ignored",
 	slices:  []setup.SliceKey{{"copyright-symlink-openssl", "bins"}},
+	pkgs: map[string][]byte{
+		"copyright-symlink-openssl": testutil.MustMakeDeb(packageEntries["copyright-symlink-openssl"]),
+		"copyright-symlink-libssl3": testutil.MustMakeDeb(packageEntries["copyright-symlink-libssl3"]),
+	},
 	release: map[string]string{
 		"slices/mydir/copyright-symlink-libssl3.yaml": `
 			package: copyright-symlink-libssl3
@@ -592,8 +767,6 @@ var slicerTests = []slicerTest{{
 		"/dir/nested/file": "file 0644 84237a05",
 	},
 	report: map[string]string{
-		"/dir/":            "dir 0755 {test-package_myslice}",
-		"/dir/nested/":     "dir 0755 {test-package_myslice}",
 		"/dir/nested/file": "file 0644 84237a05 {test-package_myslice}",
 	},
 }}
@@ -661,6 +834,12 @@ func runSlicerTests(c *C, tests []slicerTest) {
 			test.release["chisel.yaml"] = string(defaultChiselYaml)
 		}
 
+		if test.pkgs == nil {
+			test.pkgs = map[string][]byte{
+				"test-package": testutil.PackageData["test-package"],
+			}
+		}
+
 		releaseDir := c.MkDir()
 		for path, data := range test.release {
 			fpath := filepath.Join(releaseDir, path)
@@ -676,14 +855,6 @@ func runSlicerTests(c *C, tests []slicerTest) {
 		selection, err := setup.Select(release, test.slices)
 		c.Assert(err, IsNil)
 
-		pkgs := map[string][]byte{
-			"test-package": testutil.PackageData["test-package"],
-		}
-		for name, entries := range packageEntries {
-			deb, err := testutil.MakeDeb(entries)
-			c.Assert(err, IsNil)
-			pkgs[name] = deb
-		}
 		archives := map[string]archive.Archive{}
 		for name, setupArchive := range release.Archives {
 			archive := &testArchive{
@@ -694,7 +865,7 @@ func runSlicerTests(c *C, tests []slicerTest) {
 					Components: setupArchive.Components,
 					Arch:       test.arch,
 				},
-				pkgs: pkgs,
+				pkgs: test.pkgs,
 			}
 			archives[name] = archive
 		}
@@ -717,25 +888,11 @@ func runSlicerTests(c *C, tests []slicerTest) {
 		}
 
 		if test.filesystem != nil {
-			result := make(map[string]string, len(copyrightEntries)+len(test.filesystem))
-			for k, v := range copyrightEntries {
-				result[k] = v
-			}
-			for k, v := range test.filesystem {
-				result[k] = v
-			}
-			c.Assert(testutil.TreeDump(targetDir), DeepEquals, result)
+			c.Assert(testutil.TreeDump(targetDir), DeepEquals, test.filesystem)
 		}
 
 		if test.report != nil {
-			result := make(map[string]string, len(copyrightEntries)+len(test.filesystem))
-			for k, v := range copyrightEntries {
-				result[k] = v + " {test-package_myslice}"
-			}
-			for k, v := range test.report {
-				result[k] = v
-			}
-			c.Assert(treeDumpReport(report), DeepEquals, result)
+			c.Assert(treeDumpReport(report), DeepEquals, test.report)
 		}
 	}
 }
@@ -752,7 +909,6 @@ func treeDumpReport(report *slicer.Report) map[string]string {
 		var fsDump string
 		switch entry.Mode.Type() {
 		case fs.ModeDir:
-			entry.Path = entry.Path + "/"
 			fsDump = fmt.Sprintf("dir %#o", fperm)
 		case fs.ModeSymlink:
 			fsDump = fmt.Sprintf("symlink %s", entry.Link)
