@@ -1015,6 +1015,54 @@ var setupTests = []setupTest{{
 		`,
 	},
 	relerror: `chisel.yaml: public key "extra-key" armor has incorrect ID: expected "9568570379BF1F43", got "854BAF1AA9D76600"`,
+}, {
+	summary: "Short package name",
+	input: map[string]string{
+		"slices/mydir/jq.yaml": `
+			package: jq
+			slices:
+				bins:
+					contents:
+						/usr/bin/jq:
+		`,
+	},
+	release: &setup.Release{
+		DefaultArchive: "ubuntu",
+
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"jq": {
+				Archive: "ubuntu",
+				Name:    "jq",
+				Path:    "slices/mydir/jq.yaml",
+				Slices: map[string]*setup.Slice{
+					"bins": {
+						Package: "jq",
+						Name:    "bins",
+						Contents: map[string]setup.PathInfo{
+							"/usr/bin/jq": {Kind: "copy"},
+						},
+					},
+				},
+			},
+		},
+	},
+}, {
+	summary: "Very short, invalid package name",
+	input: map[string]string{
+		"slices/mydir/a.yaml": `
+			package: a
+		`,
+	},
+	relerror: `invalid slice definition filename: "a.yaml"`,
 }}
 
 var defaultChiselYaml = `
@@ -1099,5 +1147,92 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 				c.Assert(selection, DeepEquals, test.selection)
 			}
 		}
+	}
+}
+
+var sliceKeyTests = []struct {
+	input    string
+	expected setup.SliceKey
+	err      string
+}{{
+	input:    "foo_bar",
+	expected: setup.SliceKey{Package: "foo", Slice: "bar"},
+}, {
+	input:    "fo_bar",
+	expected: setup.SliceKey{Package: "fo", Slice: "bar"},
+}, {
+	input:    "1234_bar",
+	expected: setup.SliceKey{Package: "1234", Slice: "bar"},
+}, {
+	input:    "foo1.1-2-3_bar",
+	expected: setup.SliceKey{Package: "foo1.1-2-3", Slice: "bar"},
+}, {
+	input:    "foo-pkg_dashed-slice-name",
+	expected: setup.SliceKey{Package: "foo-pkg", Slice: "dashed-slice-name"},
+}, {
+	input:    "foo+_bar",
+	expected: setup.SliceKey{Package: "foo+", Slice: "bar"},
+}, {
+	input:    "foo_slice123",
+	expected: setup.SliceKey{Package: "foo", Slice: "slice123"},
+}, {
+	input:    "g++_bins",
+	expected: setup.SliceKey{Package: "g++", Slice: "bins"},
+}, {
+	input:    "a+_bar",
+	expected: setup.SliceKey{Package: "a+", Slice: "bar"},
+}, {
+	input:    "a._bar",
+	expected: setup.SliceKey{Package: "a.", Slice: "bar"},
+}, {
+	input: "foo_ba",
+	err:   `invalid slice reference: "foo_ba"`,
+}, {
+	input: "f_bar",
+	err:   `invalid slice reference: "f_bar"`,
+}, {
+	input: "1234_789",
+	err:   `invalid slice reference: "1234_789"`,
+}, {
+	input: "foo_bar.x.y",
+	err:   `invalid slice reference: "foo_bar.x.y"`,
+}, {
+	input: "foo-_-bar",
+	err:   `invalid slice reference: "foo-_-bar"`,
+}, {
+	input: "foo_bar-",
+	err:   `invalid slice reference: "foo_bar-"`,
+}, {
+	input: "foo-_bar",
+	err:   `invalid slice reference: "foo-_bar"`,
+}, {
+	input: "-foo_bar",
+	err:   `invalid slice reference: "-foo_bar"`,
+}, {
+	input: "foo_bar_baz",
+	err:   `invalid slice reference: "foo_bar_baz"`,
+}, {
+	input: "a-_bar",
+	err:   `invalid slice reference: "a-_bar"`,
+}, {
+	input: "+++_bar",
+	err:   `invalid slice reference: "\+\+\+_bar"`,
+}, {
+	input: "..._bar",
+	err:   `invalid slice reference: "\.\.\._bar"`,
+}, {
+	input: "white space_no-whitespace",
+	err:   `invalid slice reference: "white space_no-whitespace"`,
+}}
+
+func (s *S) TestParseSliceKey(c *C) {
+	for _, test := range sliceKeyTests {
+		key, err := setup.ParseSliceKey(test.input)
+		if test.err != "" {
+			c.Assert(err, ErrorMatches, test.err)
+			continue
+		}
+		c.Assert(err, IsNil)
+		c.Assert(key, DeepEquals, test.expected)
 	}
 }

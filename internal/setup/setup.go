@@ -242,9 +242,14 @@ func order(pkgs map[string]*Package, keys []SliceKey) ([]SliceKey, error) {
 	return order, nil
 }
 
-var fnameExp = regexp.MustCompile(`^([a-z0-9](?:-?[.a-z0-9+]){2,})\.yaml$`)
+// fnameExp matches the slice definition file basename.
+var fnameExp = regexp.MustCompile(`^([a-z0-9](?:-?[.a-z0-9+]){1,})\.yaml$`)
+
+// snameExp matches only the slice name, without the leading package name.
 var snameExp = regexp.MustCompile(`^([a-z](?:-?[a-z0-9]){2,})$`)
-var knameExp = regexp.MustCompile(`^([a-z0-9](?:-?[.a-z0-9+]){2,})_([a-z](?:-?[a-z0-9]){2,})$`)
+
+// knameExp matches the slice full name in pkg_slice format.
+var knameExp = regexp.MustCompile(`^([a-z0-9](?:-?[.a-z0-9+]){1,})_([a-z](?:-?[a-z0-9]){2,})$`)
 
 func ParseSliceKey(sliceKey string) (SliceKey, error) {
 	match := knameExp.FindStringSubmatch(sliceKey)
@@ -291,7 +296,7 @@ func readSlices(release *Release, baseDir, dirName string) error {
 		}
 		match := fnameExp.FindStringSubmatch(entry.Name())
 		if match == nil {
-			return fmt.Errorf("invalid slice definition filename: %q\")", entry.Name())
+			return fmt.Errorf("invalid slice definition filename: %q", entry.Name())
 		}
 
 		pkgName := match[1]
