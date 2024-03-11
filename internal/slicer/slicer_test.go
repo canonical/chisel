@@ -77,9 +77,6 @@ var testPackageCopyrightEntries = []testutil.TarEntry{
 var slicerTests = []slicerTest{{
 	summary: "Basic slicing",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
-	pkgs: map[string][]byte{
-		"test-package": testutil.PackageData["test-package"],
-	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -113,9 +110,6 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Glob extraction",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
-	pkgs: map[string][]byte{
-		"test-package": testutil.PackageData["test-package"],
-	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -138,9 +132,6 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Create new file under extracted directory and preserve parent directory permissions",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
-	pkgs: map[string][]byte{
-		"test-package": testutil.PackageData["test-package"],
-	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -161,9 +152,6 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Create new nested file under extracted directory and preserve parent directory permissions",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
-	pkgs: map[string][]byte{
-		"test-package": testutil.PackageData["test-package"],
-	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -185,9 +173,6 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Create new directory under extracted directory and preserve parent directory permissions",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
-	pkgs: map[string][]byte{
-		"test-package": testutil.PackageData["test-package"],
-	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -235,9 +220,6 @@ var slicerTests = []slicerTest{{
 	summary: "Conditional architecture",
 	arch:    "amd64",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
-	pkgs: map[string][]byte{
-		"test-package": testutil.PackageData["test-package"],
-	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -448,9 +430,6 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Script: write a file",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
-	pkgs: map[string][]byte{
-		"test-package": testutil.PackageData["test-package"],
-	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -472,9 +451,6 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Script: read a file",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
-	pkgs: map[string][]byte{
-		"test-package": testutil.PackageData["test-package"],
-	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -501,9 +477,6 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Script: use 'until' to remove file after mutate",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
-	pkgs: map[string][]byte{
-		"test-package": testutil.PackageData["test-package"],
-	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -530,9 +503,6 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Script: use 'until' to remove wildcard after mutate",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
-	pkgs: map[string][]byte{
-		"test-package": testutil.PackageData["test-package"],
-	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -558,9 +528,6 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Script: 'until' does not remove non-empty directories",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
-	pkgs: map[string][]byte{
-		"test-package": testutil.PackageData["test-package"],
-	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -583,9 +550,6 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Script: cannot write non-mutable files",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
-	pkgs: map[string][]byte{
-		"test-package": testutil.PackageData["test-package"],
-	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -601,9 +565,6 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Script: cannot read unlisted content",
 	slices:  []setup.SliceKey{{"test-package", "myslice2"}},
-	pkgs: map[string][]byte{
-		"test-package": testutil.PackageData["test-package"],
-	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -620,9 +581,6 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Script: can read globbed content",
 	slices:  []setup.SliceKey{{"test-package", "myslice1"}, {"test-package", "myslice2"}},
-	pkgs: map[string][]byte{
-		"test-package": testutil.PackageData["test-package"],
-	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -638,9 +596,6 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Relative content root directory must not error",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
-	pkgs: map[string][]byte{
-		"test-package": testutil.PackageData["test-package"],
-	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -661,9 +616,6 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Can list parent directories of normal paths",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
-	pkgs: map[string][]byte{
-		"test-package": testutil.PackageData["test-package"],
-	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -683,9 +635,6 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Cannot list unselected directory",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
-	pkgs: map[string][]byte{
-		"test-package": testutil.PackageData["test-package"],
-	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -701,9 +650,6 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Cannot list file path as a directory",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
-	pkgs: map[string][]byte{
-		"test-package": testutil.PackageData["test-package"],
-	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -719,9 +665,6 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Can list parent directories of globs",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
-	pkgs: map[string][]byte{
-		"test-package": testutil.PackageData["test-package"],
-	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -736,9 +679,6 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Cannot list directories not matched by glob",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
-	pkgs: map[string][]byte{
-		"test-package": testutil.PackageData["test-package"],
-	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -783,9 +723,6 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Can list unclean directory paths",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
-	pkgs: map[string][]byte{
-		"test-package": testutil.PackageData["test-package"],
-	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -805,9 +742,6 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Cannot read directories",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
-	pkgs: map[string][]byte{
-		"test-package": testutil.PackageData["test-package"],
-	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -823,9 +757,6 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Non-default archive",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
-	pkgs: map[string][]byte{
-		"test-package": testutil.PackageData["test-package"],
-	},
 	release: map[string]string{
 		"chisel.yaml": `
 			format: chisel-v1
@@ -924,6 +855,12 @@ func runSlicerTests(c *C, tests []slicerTest) {
 
 		if _, ok := test.release["chisel.yaml"]; !ok {
 			test.release["chisel.yaml"] = string(defaultChiselYaml)
+		}
+
+		if test.pkgs == nil {
+			test.pkgs = map[string][]byte{
+				"test-package": testutil.PackageData["test-package"],
+			}
 		}
 
 		releaseDir := c.MkDir()

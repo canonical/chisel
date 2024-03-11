@@ -200,7 +200,13 @@ var reportTests = []struct {
 	add: []sliceAndEntry{
 		{entry: fsutil.Entry{Path: "/file"}, slice: oneSlice},
 	},
-	err: `cannot add path "/file" outside of root "/base"`,
+	err: `cannot add path "/file" outside of root "/base/"`,
+}, {
+	summary: "File name has root prefix but without the directory slash",
+	add: []sliceAndEntry{
+		{entry: fsutil.Entry{Path: "/basefile"}, slice: oneSlice},
+	},
+	err: `cannot add path "/basefile" outside of root "/base/"`,
 }}
 
 func (s *S) TestReportAdd(c *C) {
