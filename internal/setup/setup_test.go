@@ -1063,6 +1063,197 @@ var setupTests = []setupTest{{
 		`,
 	},
 	relerror: `invalid slice definition filename: "a.yaml"`,
+}, {
+	summary: "Package essentials with same package slice",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			essential:
+				- mypkg_essential
+			slices:
+				slice1:
+					contents:
+						/file:
+						/foo/bar/baz:
+				slice2:
+					contents:
+						/d**:
+				essential:
+					contents:
+						/essential-file:
+		`,
+	},
+	release: &setup.Release{
+		DefaultArchive: "ubuntu",
+
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Archive: "ubuntu",
+				Name:    "mypkg",
+				Path:    "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{
+					"slice1": {
+						Package: "mypkg",
+						Name:    "slice1",
+						Essential: []setup.SliceKey{
+							{"mypkg", "essential"},
+						},
+						Contents: map[string]setup.PathInfo{
+							"/file":        {Kind: "copy"},
+							"/foo/bar/baz": {Kind: "copy"},
+						},
+					},
+					"slice2": {
+						Package: "mypkg",
+						Name:    "slice2",
+						Essential: []setup.SliceKey{
+							{"mypkg", "essential"},
+						},
+						Contents: map[string]setup.PathInfo{
+							"/d**": {Kind: "glob"},
+						},
+					},
+					"essential": {
+						Package: "mypkg",
+						Name:    "essential",
+						Essential: []setup.SliceKey{
+							{"mypkg", "essential"},
+						},
+						Contents: map[string]setup.PathInfo{
+							"/essential-file": {Kind: "copy"},
+						},
+					},
+				},
+			},
+		},
+	},
+}, {
+	summary: "Package essentials with several slices",
+	input: map[string]string{
+		"slices/mydir/myotherpkg.yaml": `
+			package: myotherpkg
+			slices:
+				essential:
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			essential:
+				- myotherpkg_essential
+				- mypkg_essential
+			slices:
+				slice1:
+					contents:
+						/file:
+						/foo/bar/baz:
+				slice2:
+					contents:
+						/d**:
+				essential:
+					contents:
+						/essential-file:
+		`,
+	},
+	release: &setup.Release{
+		DefaultArchive: "ubuntu",
+
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Archive: "ubuntu",
+				Name:    "mypkg",
+				Path:    "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{
+					"slice1": {
+						Package: "mypkg",
+						Name:    "slice1",
+						Essential: []setup.SliceKey{
+							{"myotherpkg", "essential"},
+							{"mypkg", "essential"},
+						},
+						Contents: map[string]setup.PathInfo{
+							"/file":        {Kind: "copy"},
+							"/foo/bar/baz": {Kind: "copy"},
+						},
+					},
+					"slice2": {
+						Package: "mypkg",
+						Name:    "slice2",
+						Essential: []setup.SliceKey{
+							{"myotherpkg", "essential"},
+							{"mypkg", "essential"},
+						},
+						Contents: map[string]setup.PathInfo{
+							"/d**": {Kind: "glob"},
+						},
+					},
+					"essential": {
+						Package: "mypkg",
+						Name:    "essential",
+						Essential: []setup.SliceKey{
+							{"myotherpkg", "essential"},
+							{"mypkg", "essential"},
+						},
+						Contents: map[string]setup.PathInfo{
+							"/essential-file": {Kind: "copy"},
+						},
+					},
+				},
+			},
+			"myotherpkg": {
+				Archive: "ubuntu",
+				Name:    "myotherpkg",
+				Path:    "slices/mydir/myotherpkg.yaml",
+				Slices: map[string]*setup.Slice{
+					"essential": {
+						Package: "myotherpkg",
+						Name:    "essential",
+					},
+				},
+			},
+		},
+	},
+}, {
+	summary: "Package essentials loop",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			essential:
+				- mypkg_essential1
+				- mypkg_essential2
+			slices:
+				slice1:
+					contents:
+						/file:
+						/foo/bar/baz:
+				slice2:
+					contents:
+						/d**:
+				essential1:
+					contents:
+						/essential-file:
+				essential2:
+					contents:
+						/essential-folder/:
+		`,
+	},
+	relerror: "essential loop detected: mypkg_essential1, mypkg_essential2",
 }}
 
 var defaultChiselYaml = `

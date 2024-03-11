@@ -342,9 +342,10 @@ type yamlArchive struct {
 }
 
 type yamlPackage struct {
-	Name    string               `yaml:"package"`
-	Archive string               `yaml:"archive"`
-	Slices  map[string]yamlSlice `yaml:"slices"`
+	Name      string               `yaml:"package"`
+	Archive   string               `yaml:"archive"`
+	Essential []string             `yaml:"essential"`
+	Slices    map[string]yamlSlice `yaml:"slices"`
 }
 
 type yamlPath struct {
@@ -535,8 +536,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 				Mutate: yamlSlice.Mutate,
 			},
 		}
-
-		for _, refName := range yamlSlice.Essential {
+		for _, refName := range append(yamlSlice.Essential, yamlPkg.Essential...) {
 			sliceKey, err := ParseSliceKey(refName)
 			if err != nil {
 				return nil, fmt.Errorf("invalid slice reference %q in %s", refName, pkgPath)
