@@ -162,11 +162,11 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 	}
 
 	// When creating a file we will iterate through its parent directories and
-	// create them with the permissions defined in the tar.
+	// create them with the permissions defined in the tarball.
 	//
 	// The assumption is that the tar entries of the parent directories appear
 	// before the entry for the file itself. This is the case for .deb files but
-	// not for all tar archives.
+	// not for all tarballs.
 	tarDirPermissions := make(map[string]fs.FileMode)
 	tarReader := tar.NewReader(dataReader)
 	for {
