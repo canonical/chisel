@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -24,8 +25,10 @@ type ExtractOptions struct {
 	Package   string
 	TargetDir string
 	Extract   map[string][]ExtractInfo
-	Globbed   map[string][]string
-	Create    func(options *fsutil.CreateOptions) error
+	// Create can optionally be set to control the creation of extracted entries.
+	// extractInfo is set to the matching entry in Extract, and is nil in cases where
+	// the created entry is implicit and unlisted (for example, parent directories).
+	Create func(extractInfo *ExtractInfo, options *fsutil.CreateOptions) error
 }
 
 type ExtractInfo struct {
@@ -46,7 +49,7 @@ func getValidOptions(options *ExtractOptions) (*ExtractOptions, error) {
 
 	if options.Create == nil {
 		validOpts := *options
-		validOpts.Create = func(o *fsutil.CreateOptions) error {
+		validOpts.Create = func(_ *ExtractInfo, o *fsutil.CreateOptions) error {
 			_, err := fsutil.Create(o)
 			return err
 		}
@@ -157,6 +160,13 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 		}
 	}
 
+	// When creating a file we will iterate through its parent directories and
+	// create them with the permissions defined in the tarball.
+	//
+	// The assumption is that the tar entries of the parent directories appear
+	// before the entry for the file itself. This is the case for .deb files but
+	// not for all tarballs.
+	tarDirPermissions := make(map[string]fs.FileMode)
 	tarReader := tar.NewReader(dataReader)
 	for {
 		tarHeader, err := tarReader.Next()
@@ -178,6 +188,9 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 		}
 
 		sourceIsDir := sourcePath[len(sourcePath)-1] == '/'
+		if sourceIsDir {
+			tarDirPermissions[sourcePath] = tarHeader.FileInfo().Mode()
+		}
 
 		//debugf("Extracting header: %#v", tarHeader)
 
@@ -185,30 +198,16 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 		if globPath != "" {
 			extractInfos = options.Extract[globPath]
 			delete(pendingPaths, globPath)
-			if options.Globbed != nil {
-				options.Globbed[globPath] = append(options.Globbed[globPath], sourcePath)
-			}
 		} else {
 			extractInfos, ok = options.Extract[sourcePath]
 			if ok {
 				delete(pendingPaths, sourcePath)
-			} else {
-				// Base directory for extracted content. Relevant mainly to preserve
-				// the metadata, since the extracted content itself will also create
-				// any missing directories unaccounted for in the options.
-				err := options.Create(&fsutil.CreateOptions{
-					Path:        filepath.Join(options.TargetDir, sourcePath),
-					Mode:        tarHeader.FileInfo().Mode(),
-					MakeParents: true,
-				})
-				if err != nil {
-					return err
-				}
-				continue
 			}
 		}
 
 		var contentCache []byte
+		// contentIsCached is used when extracting the same file to multiple
+		// targets to avoid reading it from disk several times.
 		var contentIsCached = len(extractInfos) > 1 && !sourceIsDir && globPath == ""
 		if contentIsCached {
 			// Read and cache the content so it may be reused.
@@ -228,22 +227,50 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 			if contentIsCached {
 				pathReader = bytes.NewReader(contentCache)
 			}
-			var targetPath string
+			var relPath string
 			if globPath == "" {
-				targetPath = filepath.Join(options.TargetDir, extractInfo.Path)
+				relPath = extractInfo.Path
 			} else {
-				targetPath = filepath.Join(options.TargetDir, sourcePath)
+				relPath = sourcePath
 			}
 			if extractInfo.Mode != 0 {
 				tarHeader.Mode = int64(extractInfo.Mode)
 			}
-			err := options.Create(&fsutil.CreateOptions{
-				Path:        targetPath,
+			// Create the parent directories using the permissions from the tarball.
+			parents := orderedParentDirs(relPath)
+			for _, path := range parents {
+				if path == "/" {
+					continue
+				}
+				perm, ok := tarDirPermissions[path]
+				if !ok {
+					continue
+				}
+				absPath := filepath.Join(options.TargetDir, path)
+				if _, err := os.Stat(absPath); !os.IsNotExist(err) {
+					// We dont want to this implicit parent directory to overwrite
+					// an existing directory.
+					continue
+				}
+				fsOptions := &fsutil.CreateOptions{
+					Path:        absPath,
+					Mode:        perm,
+					MakeParents: true,
+				}
+				err := options.Create(nil, fsOptions)
+				if err != nil {
+					return err
+				}
+			}
+			// Create the entry itself.
+			createOptions := &fsutil.CreateOptions{
+				Path:        filepath.Join(options.TargetDir, relPath),
 				Mode:        tarHeader.FileInfo().Mode(),
 				Data:        pathReader,
 				Link:        tarHeader.Linkname,
 				MakeParents: true,
-			})
+			}
+			err := options.Create(&extractInfo, createOptions)
 			if err != nil {
 				return err
 			}
@@ -267,4 +294,22 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 	}
 
 	return nil
+}
+
+func orderedParentDirs(path string) []string {
+	var parents []string
+	path = filepath.Clean(path)
+	for {
+		path = filepath.Dir(path)
+		if path == "/" {
+			break
+		}
+		parents = append(parents, path+"/")
+	}
+
+	// Reverse the list.
+	for i := 0; i < len(parents)/2; i++ {
+		parents[i], parents[len(parents)-i-1] = parents[len(parents)-i-1], parents[i]
+	}
+	return parents
 }

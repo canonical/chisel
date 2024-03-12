@@ -39,6 +39,7 @@ func Create(options *CreateOptions) (*Entry, error) {
 	o := &optsCopy
 
 	var err error
+	var hash string
 	if o.MakeParents {
 		if err := os.MkdirAll(filepath.Dir(o.Path), 0755); err != nil {
 			return nil, err
@@ -47,6 +48,7 @@ func Create(options *CreateOptions) (*Entry, error) {
 	switch o.Mode & fs.ModeType {
 	case 0:
 		err = createFile(o)
+		hash = hex.EncodeToString(rp.h.Sum(nil))
 	case fs.ModeDir:
 		err = createDir(o)
 	case fs.ModeSymlink:
@@ -61,7 +63,7 @@ func Create(options *CreateOptions) (*Entry, error) {
 	entry := &Entry{
 		Path: o.Path,
 		Mode: o.Mode,
-		Hash: hex.EncodeToString(rp.h.Sum(nil)),
+		Hash: hash,
 		Size: rp.size,
 		Link: o.Link,
 	}

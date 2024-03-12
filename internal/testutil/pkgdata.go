@@ -12,7 +12,7 @@ import (
 
 var PackageData = map[string][]byte{}
 
-var testPackageEntries = []TarEntry{
+var TestPackageEntries = []TarEntry{
 	Dir(0755, "./"),
 	Dir(0755, "./dir/"),
 	Reg(0644, "./dir/file", "12u3q0wej	ajsd"),
@@ -28,16 +28,16 @@ var testPackageEntries = []TarEntry{
 	Dir(01777, "./parent/"),
 	Dir(0764, "./parent/permissions/"),
 	Reg(0755, "./parent/permissions/file", "ajse0"),
-	// Hardcoded copyright paths.
-	Dir(0755, "./usr/"),
-	Dir(0755, "./usr/share/"),
-	Dir(0755, "./usr/share/doc/"),
-	Dir(0755, "./usr/share/doc/test-package/"),
-	Reg(0644, "./usr/share/doc/test-package/copyright", "copyright"),
+}
+
+var OtherPackageEntries = []TarEntry{
+	Dir(0755, "./"),
+	Reg(0644, "./file", "masfdko"),
 }
 
 func init() {
-	PackageData["test-package"] = MustMakeDeb(testPackageEntries)
+	PackageData["test-package"] = MustMakeDeb(TestPackageEntries)
+	PackageData["other-package"] = MustMakeDeb(OtherPackageEntries)
 }
 
 type TarEntry struct {
