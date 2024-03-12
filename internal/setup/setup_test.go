@@ -1105,78 +1105,40 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 
 // Test YAML marshalling of setup.Package and setup.Slice
 func (s *S) TestPackageMarshalYAML(c *C) {
-	sampleRelease := map[string]string{
-		"chisel.yaml": string(defaultChiselYaml),
-		"slices/mypkg.yaml": `
-			package: mypkg
+	for _, test := range setupTests {
+		c.Logf("Summary: %s", test.summary)
 
-			slices:
-				foo:
-					contents:
-						/etc/foo:
-						/etc/foo-dir/: {make: true, mode: 0644}
-				bar:
-					essential:
-						- mypkg_foo
-					contents:
-						/bin/bar:
-						/etc/bar.conf: {text: TODO, mutable: true, arch: riscv64}
-						/lib/*-linux-*/bar.so: {arch: [amd64,arm64,i386]}
-						/usr/bin/bar: {symlink: /bin/bar}
-						/usr/bin/baz: {copy: /bin/bar}
-						/usr/lib/bar*.so:
-						/usr/share/bar/*.conf: {until: mutate}
-					mutate: |
-						dir = "/usr/share/bar/"
-						conf = [content.read(dir + path) for path in content.list(dir)]
-						content.write("/etc/bar.conf", "".join(conf))
-				baz:
-					essential:
-						- mypkg_foo
-						- mypkg_bar
-		`,
-	}
+		if test.relerror == "" || test.release == nil {
+			continue
+		}
 
-	// Write and parse the sample release.
-	dir := c.MkDir()
-	for path, data := range sampleRelease {
-		fpath := filepath.Join(dir, path)
+		data, ok := test.input["chisel.yaml"]
+		if !ok {
+			data = string(defaultChiselYaml)
+		}
+
+		dir := c.MkDir()
+		// Write chisel.yaml.
+		fpath := filepath.Join(dir, "chisel.yaml")
 		err := os.MkdirAll(filepath.Dir(fpath), 0755)
 		c.Assert(err, IsNil)
 		err = os.WriteFile(fpath, testutil.Reindent(data), 0644)
 		c.Assert(err, IsNil)
+		// Write the packages YAML.
+		for _, pkg := range test.release.Packages {
+			fpath = filepath.Join(dir, pkg.Path)
+			err = os.MkdirAll(filepath.Dir(fpath), 0755)
+			c.Assert(err, IsNil)
+			pkgData, err := yaml.Marshal(pkg)
+			c.Assert(err, IsNil)
+			err = os.WriteFile(fpath, testutil.Reindent(string(pkgData)), 0644)
+			c.Assert(err, IsNil)
+		}
+
+		release, err := setup.ReadRelease(dir)
+		c.Assert(err, IsNil)
+
+		release.Path = ""
+		c.Assert(release, DeepEquals, test.release)
 	}
-	release, err := setup.ReadRelease(dir)
-	c.Assert(err, IsNil)
-	c.Assert(release, NotNil)
-	c.Assert(release.Path, Equals, dir)
-
-	// Write and parse the changed release.
-	newDir := c.MkDir()
-	for _, pkg := range release.Packages {
-		data, err := yaml.Marshal(pkg)
-		c.Assert(err, IsNil)
-		fpath := filepath.Join(newDir, pkg.Path)
-		err = os.MkdirAll(filepath.Dir(fpath), 0755)
-		c.Assert(err, IsNil)
-		err = os.WriteFile(fpath, testutil.Reindent(string(data)), 0644)
-		c.Assert(err, IsNil)
-	}
-	err = os.WriteFile(
-		filepath.Join(newDir, "chisel.yaml"),
-		testutil.Reindent(sampleRelease["chisel.yaml"]),
-		0644,
-	)
-	c.Assert(err, IsNil)
-
-	newRelease, err := setup.ReadRelease(newDir)
-	c.Assert(err, IsNil)
-	c.Assert(newRelease, NotNil)
-	c.Assert(newRelease.Path, Equals, newDir)
-
-	// Check that both parsed releases (old and new) are equal.
-	// Release paths are irrelevant for this comparison.
-	release.Path = ""
-	newRelease.Path = ""
-	c.Assert(newRelease, DeepEquals, release)
 }
