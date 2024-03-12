@@ -1151,7 +1151,6 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 	}
 }
 
-// Test YAML marshalling of setup.Package and setup.Slice
 func (s *S) TestPackageMarshalYAML(c *C) {
 	for _, test := range setupTests {
 		c.Logf("Summary: %s", test.summary)
