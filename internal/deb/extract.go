@@ -9,7 +9,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"slices"
 	"sort"
 	"strings"
 	"syscall"
@@ -308,6 +307,9 @@ func orderedParentDirs(path string) []string {
 		parents = append(parents, path+"/")
 	}
 
-	slices.Reverse(parents)
+	// Reverse the list.
+	for i := 0; i < len(parents)/2; i++ {
+		parents[i], parents[len(parents)-i-1] = parents[len(parents)-i-1], parents[i]
+	}
 	return parents
 }
