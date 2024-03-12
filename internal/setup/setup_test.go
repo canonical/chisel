@@ -7,6 +7,7 @@ import (
 
 	"golang.org/x/crypto/openpgp/packet"
 	. "gopkg.in/check.v1"
+	"gopkg.in/yaml.v3"
 
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/testutil"
@@ -1147,6 +1148,45 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 				c.Assert(selection, DeepEquals, test.selection)
 			}
 		}
+	}
+}
+
+func (s *S) TestPackageMarshalYAML(c *C) {
+	for _, test := range setupTests {
+		c.Logf("Summary: %s", test.summary)
+
+		if test.relerror == "" || test.release == nil {
+			continue
+		}
+
+		data, ok := test.input["chisel.yaml"]
+		if !ok {
+			data = string(defaultChiselYaml)
+		}
+
+		dir := c.MkDir()
+		// Write chisel.yaml.
+		fpath := filepath.Join(dir, "chisel.yaml")
+		err := os.MkdirAll(filepath.Dir(fpath), 0755)
+		c.Assert(err, IsNil)
+		err = os.WriteFile(fpath, testutil.Reindent(data), 0644)
+		c.Assert(err, IsNil)
+		// Write the packages YAML.
+		for _, pkg := range test.release.Packages {
+			fpath = filepath.Join(dir, pkg.Path)
+			err = os.MkdirAll(filepath.Dir(fpath), 0755)
+			c.Assert(err, IsNil)
+			pkgData, err := yaml.Marshal(pkg)
+			c.Assert(err, IsNil)
+			err = os.WriteFile(fpath, testutil.Reindent(string(pkgData)), 0644)
+			c.Assert(err, IsNil)
+		}
+
+		release, err := setup.ReadRelease(dir)
+		c.Assert(err, IsNil)
+
+		release.Path = ""
+		c.Assert(release, DeepEquals, test.release)
 	}
 }
 
