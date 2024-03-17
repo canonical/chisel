@@ -39,7 +39,7 @@ type Path struct {
 	FinalSHA256 string   `json:"final_sha256,omitempty"`
 	Size        uint64   `json:"size,omitempty"`
 	Link        string   `json:"link,omitempty"`
-	HardLinkID  uint64   `json:"hard_link_id,omitempty"`
+	Inode       uint64   `json:"inode,omitempty"`
 }
 
 type Content struct {
@@ -292,7 +292,7 @@ func manifestAddReport(dbw *jsonwall.DBWriter, report *Report) error {
 			FinalSHA256: entry.FinalSHA256,
 			Size:        uint64(entry.Size),
 			Link:        entry.Link,
-			HardLinkID:  entry.HardLinkID,
+			Inode:       entry.Inode,
 		})
 		if err != nil {
 			return err
@@ -345,10 +345,10 @@ func fastValidate(options *WriteOptions) (err error) {
 				return fmt.Errorf("path %q refers to missing slice %s", entry.Path, slice.String())
 			}
 		}
-		if entry.HardLinkID != 0 {
+		if entry.Inode != 0 {
 			// TODO remove the following line after upgrading to Go 1.22 or higher.
 			e := entry
-			hardLinkGroups[e.HardLinkID] = append(hardLinkGroups[e.HardLinkID], &e)
+			hardLinkGroups[e.Inode] = append(hardLinkGroups[e.Inode], &e)
 		}
 	}
 	// Entries within a hard link group must have same content.

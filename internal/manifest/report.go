@@ -18,8 +18,9 @@ type ReportEntry struct {
 	Slices      map[*setup.Slice]bool
 	Link        string
 	FinalSHA256 string
-	// If HardLinkID is greater than 0, all entries with the same id represent hard links to the same inode.
-	HardLinkID uint64
+	// If Inode is greater than 0, all entries represent hard links to the same
+	// inode.
+	Inode uint64
 }
 
 // Report holds the information about files and directories created when slicing
@@ -29,9 +30,9 @@ type Report struct {
 	Root string
 	// Entries holds all reported content, indexed by their path.
 	Entries map[string]ReportEntry
-	// lastHardLinkID is used internally to allocate unique HardLinkID for hard
+	// lastInode is used internally to allocate unique Inode for hard
 	// links.
-	lastHardLinkID uint64
+	lastInode uint64
 }
 
 // NewReport returns an empty report for content that will be based at the
@@ -57,7 +58,7 @@ func (r *Report) Add(slice *setup.Slice, fsEntry *fsutil.Entry) error {
 		return fmt.Errorf("cannot add path to report: %s", err)
 	}
 
-	var hardLinkID uint64
+	var inode uint64
 	fsEntryCpy := *fsEntry
 	if fsEntry.HardLink {
 		relLinkPath, _ := r.sanitizeAbsPath(fsEntry.Link, false)
@@ -65,12 +66,12 @@ func (r *Report) Add(slice *setup.Slice, fsEntry *fsutil.Entry) error {
 		if !ok {
 			return fmt.Errorf("cannot add hard link %s to report: target %s not previously added", relPath, relLinkPath)
 		}
-		if entry.HardLinkID == 0 {
-			r.lastHardLinkID += 1
-			entry.HardLinkID = r.lastHardLinkID
+		if entry.Inode == 0 {
+			r.lastInode += 1
+			entry.Inode = r.lastInode
 			r.Entries[relLinkPath] = entry
 		}
-		hardLinkID = entry.HardLinkID
+		inode = entry.Inode
 		fsEntryCpy.SHA256 = entry.SHA256
 		fsEntryCpy.Size = entry.Size
 		fsEntryCpy.Link = entry.Link
@@ -90,13 +91,13 @@ func (r *Report) Add(slice *setup.Slice, fsEntry *fsutil.Entry) error {
 		r.Entries[relPath] = entry
 	} else {
 		r.Entries[relPath] = ReportEntry{
-			Path:       relPath,
-			Mode:       fsEntry.Mode,
-			SHA256:     fsEntryCpy.SHA256,
-			Size:       fsEntryCpy.Size,
-			Slices:     map[*setup.Slice]bool{slice: true},
-			Link:       fsEntryCpy.Link,
-			HardLinkID: hardLinkID,
+			Path:   relPath,
+			Mode:   fsEntry.Mode,
+			SHA256: fsEntryCpy.SHA256,
+			Size:   fsEntryCpy.Size,
+			Slices: map[*setup.Slice]bool{slice: true},
+			Link:   fsEntryCpy.Link,
+			Inode:  inode,
 		}
 	}
 	return nil
