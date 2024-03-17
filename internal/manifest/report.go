@@ -60,7 +60,8 @@ func (r *Report) Add(slice *setup.Slice, fsEntry *fsutil.Entry) error {
 
 	var inode uint64
 	fsEntryCpy := *fsEntry
-	if fsEntry.HardLink {
+	if fsEntry.Mode.IsRegular() && fsEntry.Link != "" {
+		// Hard link.
 		relLinkPath, _ := r.sanitizeAbsPath(fsEntry.Link, false)
 		entry, ok := r.Entries[relLinkPath]
 		if !ok {

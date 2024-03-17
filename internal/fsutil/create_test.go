@@ -162,6 +162,23 @@ var createTests = []createTest{{
 	},
 	error: `link /[^ ]*/file /[^ ]*/hardlink: file exists`,
 }, {
+	summary: "Hard link to symlink",
+	options: fsutil.CreateOptions{
+		Path:        "hardlink",
+		Link:        "bar",
+		Mode:        0644,
+		MakeParents: true,
+	},
+	hackopt: func(c *C, dir string, opts *fsutil.CreateOptions) {
+		err := os.Symlink("foo", filepath.Join(dir, "bar"))
+		c.Assert(err, IsNil)
+		opts.Link = filepath.Join(dir, opts.Link)
+	},
+	result: map[string]string{
+		"/bar":      "symlink foo <1>",
+		"/hardlink": "symlink foo <1>",
+	},
+}, {
 	summary: "The mode of a dir can be overridden",
 	options: fsutil.CreateOptions{
 		Path:         "foo",
@@ -285,10 +302,12 @@ func (s *S) TestCreate(c *C) {
 		c.Assert(err, IsNil)
 		c.Assert(testutil.TreeDump(dir), DeepEquals, test.result)
 
-		if entry.HardLink {
+		if options.Mode.IsRegular() && options.Link != "" {
 			// We should test hard link entries differently because
 			// fsutil.Create does not return hash or size when it creates hard
 			// links.
+			c.Assert(entry.Link, Equals, options.Link)
+			c.Assert(entry.Mode.IsRegular(), Equals, true)
 			pathInfo, err := os.Lstat(entry.Path)
 			c.Assert(err, IsNil)
 			linkInfo, err := os.Lstat(entry.Link)

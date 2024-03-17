@@ -212,7 +212,7 @@ func Run(options *RunOptions) error {
 			data := pathData{
 				mutable:  mutable,
 				until:    until,
-				hardLink: entry.HardLink,
+				hardLink: entry.Mode.IsRegular() && entry.Link != "",
 			}
 			addKnownPath(knownPaths, relPath, data)
 		}

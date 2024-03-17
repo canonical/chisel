@@ -365,7 +365,7 @@ func fastValidate(options *WriteOptions) (err error) {
 		})
 		e0 := entries[0]
 		for _, e := range entries[1:] {
-			if e.Link != e0.Link || e.Mode != e0.Mode || e.SHA256 != e0.SHA256 ||
+			if e.Link != e0.Link || unixPerm(e.Mode) != unixPerm(e0.Mode) || e.SHA256 != e0.SHA256 ||
 				e.Size != e0.Size || e.FinalSHA256 != e0.FinalSHA256 {
 				return fmt.Errorf("hard linked paths %q and %q have diverging contents", e0.Path, e.Path)
 			}
@@ -385,9 +385,6 @@ func validateReportEntry(entry *ReportEntry) (err error) {
 	switch entry.Mode & fs.ModeType {
 	case 0:
 		// Regular file.
-		if entry.Link != "" {
-			return fmt.Errorf("link set for regular file")
-		}
 	case fs.ModeDir:
 		if entry.Link != "" {
 			return fmt.Errorf("link set for directory")

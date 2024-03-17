@@ -27,12 +27,11 @@ type CreateOptions struct {
 }
 
 type Entry struct {
-	Path     string
-	Mode     fs.FileMode
-	SHA256   string
-	Size     int
-	Link     string
-	HardLink bool
+	Path   string
+	Mode   fs.FileMode
+	SHA256 string
+	Size   int
+	Link   string
 }
 
 // Create creates a filesystem entry according to the provided options and returns
@@ -48,7 +47,6 @@ func Create(options *CreateOptions) (*Entry, error) {
 
 	var err error
 	var hash string
-	var hardLink bool
 	if o.MakeParents {
 		if err := os.MkdirAll(filepath.Dir(o.Path), 0755); err != nil {
 			return nil, err
@@ -59,7 +57,6 @@ func Create(options *CreateOptions) (*Entry, error) {
 	case 0:
 		if o.Link != "" {
 			err = createHardLink(o)
-			hardLink = true
 		} else {
 			err = createFile(o)
 			hash = hex.EncodeToString(rp.h.Sum(nil))
@@ -75,12 +72,21 @@ func Create(options *CreateOptions) (*Entry, error) {
 		return nil, err
 	}
 
+	// Entry should describe the created file, not the target the link points to.
 	s, err := os.Lstat(o.Path)
 	if err != nil {
 		return nil, err
 	}
 	mode := s.Mode()
-	if o.OverrideMode && mode != o.Mode && o.Link == "" {
+	if o.Link != "" {
+		if options.Mode.IsRegular() {
+			// Hard link.
+			// In the case where the hard link points to a symlink the entry
+			// should identify the created file and not the symlink. A hard link
+			// is identified by the mode being regular and link not empty.
+			mode = mode &^ fs.ModeSymlink
+		}
+	} else if o.OverrideMode && mode != o.Mode {
 		err := os.Chmod(o.Path, o.Mode)
 		if err != nil {
 			return nil, err
@@ -89,12 +95,11 @@ func Create(options *CreateOptions) (*Entry, error) {
 	}
 
 	entry := &Entry{
-		Path:     o.Path,
-		Mode:     mode,
-		SHA256:   hash,
-		Size:     rp.size,
-		Link:     o.Link,
-		HardLink: hardLink,
+		Path:   o.Path,
+		Mode:   mode,
+		SHA256: hash,
+		Size:   rp.size,
+		Link:   o.Link,
 	}
 	return entry, nil
 }

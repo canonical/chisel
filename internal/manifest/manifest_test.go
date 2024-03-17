@@ -408,20 +408,6 @@ var generateManifestTests = []struct {
 	packageInfo: []*archive.PackageInfo{},
 	error:       `internal error: invalid manifest: slice package1_slice1 refers to missing package "package1"`,
 }, {
-	summary: "Invalid path: link set for regular file",
-	report: &manifest.Report{
-		Root: "/",
-		Entries: map[string]manifest.ReportEntry{
-			"/file": {
-				Path:   "/file",
-				Mode:   0456,
-				Slices: map[*setup.Slice]bool{slice1: true},
-				Link:   "something",
-			},
-		},
-	},
-	error: `internal error: invalid manifest: path "/file" has invalid options: link set for regular file`,
-}, {
 	summary: "Invalid path: slices is empty",
 	report: &manifest.Report{
 		Root: "/",
