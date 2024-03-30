@@ -17,7 +17,6 @@ type ReportEntry struct {
 	Size      int
 	Slices    map[*setup.Slice]bool
 	Link      string
-	Mutated   bool
 	FinalHash string
 }
 
@@ -88,7 +87,10 @@ func (r *Report) Mutate(fsEntry *fsutil.Entry) error {
 	if entry.Mode.IsDir() {
 		return fmt.Errorf("cannot mutate path in report: %s is a directory", relPath)
 	}
-	entry.Mutated = true
+	if entry.Hash == fsEntry.Hash {
+		// Content has not changed, nothing to do.
+		return nil
+	}
 	entry.FinalHash = fsEntry.Hash
 	entry.Size = fsEntry.Size
 	r.Entries[relPath] = entry

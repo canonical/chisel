@@ -239,8 +239,22 @@ var reportTests = []struct {
 			Size:      5688,
 			Slices:    map[*setup.Slice]bool{oneSlice: true},
 			Link:      "",
-			Mutated:   true,
 			FinalHash: "example-file_hash_changed",
+		}},
+}, {
+	summary: "Calling mutated with identical content to initial file",
+	add: []sliceAndEntry{
+		{entry: sampleFile, slice: oneSlice},
+	},
+	mutate: []*fsutil.Entry{&sampleFile},
+	expected: map[string]slicer.ReportEntry{
+		"/example-file": {
+			Path:   "/example-file",
+			Mode:   0777,
+			Hash:   "example-file_hash",
+			Size:   5678,
+			Slices: map[*setup.Slice]bool{oneSlice: true},
+			Link:   "",
 		}},
 }, {
 	summary: "Mutated paths must refer to previously added entries",

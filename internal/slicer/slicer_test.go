@@ -954,7 +954,7 @@ func treeDumpReport(report *slicer.Report) map[string]string {
 		case 0: // Regular
 			if entry.Size == 0 {
 				fsDump = fmt.Sprintf("file %#o empty", entry.Mode.Perm())
-			} else if entry.Mutated {
+			} else if entry.FinalHash != "" {
 				fsDump = fmt.Sprintf("file %#o %s %s", fperm, entry.Hash[:8], entry.FinalHash[:8])
 			} else {
 				fsDump = fmt.Sprintf("file %#o %s", fperm, entry.Hash[:8])
