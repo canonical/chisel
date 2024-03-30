@@ -1,4 +1,4 @@
-package main_test
+package cut_test
 
 import (
 	"io"
@@ -9,8 +9,9 @@ import (
 	"github.com/klauspost/compress/zstd"
 	. "gopkg.in/check.v1"
 
-	chisel "github.com/canonical/chisel/cmd/chisel"
 	"github.com/canonical/chisel/internal/archive"
+	"github.com/canonical/chisel/internal/cut"
+	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/testutil"
 )
 
@@ -21,7 +22,7 @@ var (
 type cutTest struct {
 	summary    string
 	release    map[string]string
-	slices     []string
+	slices     []setup.SliceKey
 	pkgs       map[string][]byte
 	filesystem map[string]string
 	db         string
@@ -47,7 +48,10 @@ var cutTests = []cutTest{{
 						/db/**: {generate: manifest}
 		`,
 	},
-	slices: []string{"test-package_myslice", "test-package_manifest"},
+	slices: []setup.SliceKey{
+		{"test-package", "myslice"},
+		{"test-package", "manifest"},
+	},
 	filesystem: map[string]string{
 		"/db/":            "dir 0755",
 		"/db/chisel.db":   "file 0644 b30549a5",
@@ -113,7 +117,10 @@ var cutTests = []cutTest{{
 						/db/**: {generate: manifest}
 		`,
 	},
-	slices: []string{"test-package_myslice", "test-package_manifest"},
+	slices: []setup.SliceKey{
+		{"test-package", "myslice"},
+		{"test-package", "manifest"},
+	},
 	filesystem: map[string]string{
 		"/db/":                     "dir 0755",
 		"/db/chisel.db":            "file 0644 bf5da1cb",
@@ -198,7 +205,9 @@ var cutTests = []cutTest{{
 						/db-2/**: {generate: manifest}
 		`,
 	},
-	slices: []string{"test-package_myslice"},
+	slices: []setup.SliceKey{
+		{"test-package", "myslice"},
+	},
 	filesystem: map[string]string{
 		"/db-1/":          "dir 0755",
 		"/db-1/chisel.db": "file 0644 9948ee09",
@@ -239,7 +248,9 @@ var cutTests = []cutTest{{
 						/db/**: {generate: manifest}
 		`,
 	},
-	slices: []string{"test-package_myslice"},
+	slices: []setup.SliceKey{
+		{"test-package", "myslice"},
+	},
 	filesystem: map[string]string{
 		"/dir/":           "dir 0755",
 		"/dir/file":       "file 0644 cc55e2ec",
@@ -275,7 +286,10 @@ var cutTests = []cutTest{{
 			),
 		),
 	},
-	slices: []string{"test-package_myslice", "test-package_manifest"},
+	slices: []setup.SliceKey{
+		{"test-package", "myslice"},
+		{"test-package", "manifest"},
+	},
 	filesystem: map[string]string{
 		"/db/":                                  "dir 0755",
 		"/db/chisel.db":                         "file 0644 d4807ac9",
@@ -314,7 +328,9 @@ var cutTests = []cutTest{{
 			append(testutil.TestPackageEntries, testutil.Dir(0764, "./db/")),
 		),
 	},
-	slices: []string{"test-package_manifest"},
+	slices: []setup.SliceKey{
+		{"test-package", "manifest"},
+	},
 	filesystem: map[string]string{
 		// Parent directory permissions are preserved.
 		"/db/":          "dir 0764",
@@ -343,7 +359,7 @@ var defaultChiselYaml = `
 			armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
 `
 
-func (s *ChiselSuite) TestCut(c *C) {
+func (s *S) TestCut(c *C) {
 	for _, test := range cutTests {
 		c.Logf("Summary: %s", test.summary)
 
@@ -366,25 +382,32 @@ func (s *ChiselSuite) TestCut(c *C) {
 			c.Assert(err, IsNil)
 		}
 
-		restore := chisel.FakeOpenArchive(func(opts *archive.Options) (archive.Archive, error) {
-			return &testutil.TestArchive{
-				Opts: *opts,
+		release, err := setup.ReadRelease(releaseDir)
+		c.Assert(err, IsNil)
+
+		selection, err := setup.Select(release, test.slices)
+		c.Assert(err, IsNil)
+
+		archives := map[string]archive.Archive{}
+		for name, setupArchive := range release.Archives {
+			archive := &testutil.TestArchive{
+				Opts: archive.Options{
+					Label:      setupArchive.Name,
+					Version:    setupArchive.Version,
+					Suites:     setupArchive.Suites,
+					Components: setupArchive.Components,
+				},
 				Pkgs: test.pkgs,
-			}, nil
-		})
-		defer restore()
+			}
+			archives[name] = archive
+		}
 
 		targetDir := c.MkDir()
-		args := []string{"cut", "--release", releaseDir + "/", "--root", targetDir + "/"}
-		args = append(args, test.slices...)
-
-		extra, err := chisel.Parser().ParseArgs(args)
-		if test.err != "" {
-			c.Assert(err, ErrorMatches, test.err)
-			continue
-		}
-		c.Assert(err, IsNil)
-		c.Assert(len(extra), Equals, 0)
+		cut.Run(&cut.RunOptions{
+			Selection: selection,
+			Archives:  archives,
+			TargetDir: targetDir,
+		})
 
 		if test.filesystem != nil {
 			c.Assert(testutil.TreeDump(targetDir), DeepEquals, test.filesystem)
