@@ -27,7 +27,7 @@ type slicerTest struct {
 	release    map[string]string
 	pkgs       map[string][]byte
 	slices     []setup.SliceKey
-	hackopt    func(c *C, opts *slicer.RunOptions)
+	hackopt    func(c *C, opts *slicer.SliceOptions)
 	filesystem map[string]string
 	report     map[string]string
 	error      string
@@ -623,7 +623,7 @@ var slicerTests = []slicerTest{{
 						content.write("/dir/text-file", "data2")
 		`,
 	},
-	hackopt: func(c *C, opts *slicer.RunOptions) {
+	hackopt: func(c *C, opts *slicer.SliceOptions) {
 		dir, err := os.Getwd()
 		c.Assert(err, IsNil)
 		opts.TargetDir, err = filepath.Rel(dir, opts.TargetDir)
@@ -957,7 +957,7 @@ func runSlicerTests(c *C, tests []slicerTest) {
 		}
 
 		targetDir := c.MkDir()
-		options := slicer.RunOptions{
+		options := slicer.SliceOptions{
 			Selection:   selection,
 			PkgArchives: pkgArchives,
 			TargetDir:   targetDir,
@@ -965,7 +965,7 @@ func runSlicerTests(c *C, tests []slicerTest) {
 		if test.hackopt != nil {
 			test.hackopt(c, &options)
 		}
-		report, err := slicer.Run(&options)
+		report, err := slicer.Slice(&options)
 		if test.error == "" {
 			c.Assert(err, IsNil)
 		} else {

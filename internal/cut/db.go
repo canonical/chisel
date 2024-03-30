@@ -1,4 +1,4 @@
-package main
+package cut
 
 import (
 	"path/filepath"

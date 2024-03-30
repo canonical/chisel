@@ -17,13 +17,17 @@ import (
 	"github.com/canonical/chisel/internal/setup"
 )
 
-type RunOptions struct {
+type SliceOptions struct {
 	Selection   *setup.Selection
 	PkgArchives map[string]archive.Archive
 	TargetDir   string
 }
 
-func Run(options *RunOptions) (*Report, error) {
+// Slice install a selection of slices in [SliceOptions.TargetDir]. For each
+// slice it looks up the package name in [SliceOptions.PkgArchives] to fetch
+// it from the archive.
+// Note: Slice does not create the content for `generate` path kinds.
+func Slice(options *SliceOptions) (*Report, error) {
 
 	pkgArchives := options.PkgArchives
 	extract := make(map[string]map[string][]deb.ExtractInfo)
