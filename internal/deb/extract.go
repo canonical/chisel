@@ -24,8 +24,10 @@ type ExtractOptions struct {
 	Package   string
 	TargetDir string
 	Extract   map[string][]ExtractInfo
-	Globbed   map[string][]string
-	Create    func(options *fsutil.CreateOptions) error
+	// Create can optionally be set to control the creation of extracted entries.
+	// extractInfo is set to the matching entry in Extract, and is nil in cases where
+	// the created entry is implicit and unlisted (for example, parent directories).
+	Create func(extractInfo *ExtractInfo, options *fsutil.CreateOptions) error
 }
 
 type ExtractInfo struct {
@@ -46,7 +48,7 @@ func getValidOptions(options *ExtractOptions) (*ExtractOptions, error) {
 
 	if options.Create == nil {
 		validOpts := *options
-		validOpts.Create = func(o *fsutil.CreateOptions) error {
+		validOpts.Create = func(_ *ExtractInfo, o *fsutil.CreateOptions) error {
 			_, err := fsutil.Create(o)
 			return err
 		}
@@ -185,9 +187,6 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 		if globPath != "" {
 			extractInfos = options.Extract[globPath]
 			delete(pendingPaths, globPath)
-			if options.Globbed != nil {
-				options.Globbed[globPath] = append(options.Globbed[globPath], sourcePath)
-			}
 		} else {
 			extractInfos, ok = options.Extract[sourcePath]
 			if ok {
@@ -196,11 +195,12 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 				// Base directory for extracted content. Relevant mainly to preserve
 				// the metadata, since the extracted content itself will also create
 				// any missing directories unaccounted for in the options.
-				err := options.Create(&fsutil.CreateOptions{
+				createOptions := &fsutil.CreateOptions{
 					Path:        filepath.Join(options.TargetDir, sourcePath),
 					Mode:        tarHeader.FileInfo().Mode(),
 					MakeParents: true,
-				})
+				}
+				err := options.Create(nil, createOptions)
 				if err != nil {
 					return err
 				}
@@ -237,13 +237,14 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 			if extractInfo.Mode != 0 {
 				tarHeader.Mode = int64(extractInfo.Mode)
 			}
-			err := options.Create(&fsutil.CreateOptions{
+			createOptions := &fsutil.CreateOptions{
 				Path:        targetPath,
 				Mode:        tarHeader.FileInfo().Mode(),
 				Data:        pathReader,
 				Link:        tarHeader.Linkname,
 				MakeParents: true,
-			})
+			}
+			err := options.Create(&extractInfo, createOptions)
 			if err != nil {
 				return err
 			}

@@ -27,7 +27,7 @@ var otherSlice = &setup.Slice{
 }
 
 var sampleDir = fsutil.Entry{
-	Path: "/base/exampleDir",
+	Path: "/base/exampleDir/",
 	Mode: fs.ModeDir | 0654,
 	Link: "",
 }
@@ -64,8 +64,8 @@ var reportTests = []struct {
 	summary: "Regular directory",
 	add:     []sliceAndEntry{{entry: sampleDir, slice: oneSlice}},
 	expected: map[string]slicer.ReportEntry{
-		"/exampleDir": {
-			Path:   "/exampleDir",
+		"/exampleDir/": {
+			Path:   "/exampleDir/",
 			Mode:   fs.ModeDir | 0654,
 			Slices: map[*setup.Slice]bool{oneSlice: true},
 			Link:   "",
@@ -77,8 +77,8 @@ var reportTests = []struct {
 		{entry: sampleDir, slice: otherSlice},
 	},
 	expected: map[string]slicer.ReportEntry{
-		"/exampleDir": {
-			Path:   "/exampleDir",
+		"/exampleDir/": {
+			Path:   "/exampleDir/",
 			Mode:   fs.ModeDir | 0654,
 			Slices: map[*setup.Slice]bool{oneSlice: true, otherSlice: true},
 			Link:   "",
@@ -114,8 +114,8 @@ var reportTests = []struct {
 		{entry: sampleFile, slice: otherSlice},
 	},
 	expected: map[string]slicer.ReportEntry{
-		"/exampleDir": {
-			Path:   "/exampleDir",
+		"/exampleDir/": {
+			Path:   "/exampleDir/",
 			Mode:   fs.ModeDir | 0654,
 			Slices: map[*setup.Slice]bool{oneSlice: true},
 			Link:   "",
@@ -195,6 +195,18 @@ var reportTests = []struct {
 		}, slice: oneSlice},
 	},
 	err: `path "/exampleFile" reported twice with diverging link: "distinct link" != ""`,
+}, {
+	summary: "Error for path outside root",
+	add: []sliceAndEntry{
+		{entry: fsutil.Entry{Path: "/file"}, slice: oneSlice},
+	},
+	err: `cannot add path "/file" outside of root "/base/"`,
+}, {
+	summary: "File name has root prefix but without the directory slash",
+	add: []sliceAndEntry{
+		{entry: fsutil.Entry{Path: "/basefile"}, slice: oneSlice},
+	},
+	err: `cannot add path "/basefile" outside of root "/base/"`,
 }}
 
 func (s *S) TestReportAdd(c *C) {

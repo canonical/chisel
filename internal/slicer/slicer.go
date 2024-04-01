@@ -158,12 +158,30 @@ func Run(options *RunOptions) (*Report, error) {
 			Package:   slice.Package,
 			Extract:   extract[slice.Package],
 			TargetDir: targetDir,
-			Globbed:   globbedPaths,
 			// Creates the filesystem entry and adds it to the report.
-			Create: func(o *fsutil.CreateOptions) error {
+			Create: func(extractInfo *deb.ExtractInfo, o *fsutil.CreateOptions) error {
 				entry, err := fsutil.Create(o)
 				if err != nil {
 					return err
+				}
+
+				// We only want to keep the entries that were explicitly listed
+				// in the slice definition.
+				if extractInfo == nil {
+					return nil
+				}
+				if _, ok := slice.Contents[extractInfo.Path]; !ok {
+					return nil
+				}
+
+				// Check whether the file was created because it matched a glob.
+				if strings.ContainsAny(extractInfo.Path, "*?") {
+					relPath := filepath.Clean("/" + strings.TrimLeft(o.Path, targetDir))
+					if o.Mode.IsDir() {
+						relPath = relPath + "/"
+					}
+					globbedPaths[extractInfo.Path] = append(globbedPaths[extractInfo.Path], relPath)
+					addKnownPath(relPath)
 				}
 				return report.Add(slice, entry)
 			},
@@ -172,12 +190,6 @@ func Run(options *RunOptions) (*Report, error) {
 		packages[slice.Package] = nil
 		if err != nil {
 			return nil, err
-		}
-	}
-
-	for _, expandedPaths := range globbedPaths {
-		for _, path := range expandedPaths {
-			addKnownPath(path)
 		}
 	}
 

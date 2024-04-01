@@ -32,7 +32,7 @@ type Report struct {
 // provided root path.
 func NewReport(root string) *Report {
 	return &Report{
-		Root:    root,
+		Root:    filepath.Clean(root) + "/",
 		Entries: make(map[string]ReportEntry),
 	}
 }
@@ -42,6 +42,9 @@ func (r *Report) Add(slice *setup.Slice, fsEntry *fsutil.Entry) error {
 		return fmt.Errorf("cannot add path %q outside of root %q", fsEntry.Path, r.Root)
 	}
 	relPath := filepath.Clean("/" + strings.TrimPrefix(fsEntry.Path, r.Root))
+	if fsEntry.Mode.IsDir() {
+		relPath = relPath + "/"
+	}
 
 	if entry, ok := r.Entries[relPath]; ok {
 		if fsEntry.Mode != entry.Mode {
