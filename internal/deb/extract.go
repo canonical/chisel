@@ -166,7 +166,7 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 	// The assumption is that the tar entries of the parent directories appear
 	// before the entry for the file itself. This is the case for .deb files but
 	// not for all tarballs.
-	tarDirPermissions := make(map[string]fs.FileMode)
+	tarDirMode := make(map[string]fs.FileMode)
 	tarReader := tar.NewReader(dataReader)
 	for {
 		tarHeader, err := tarReader.Next()
@@ -189,7 +189,7 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 
 		sourceIsDir := sourcePath[len(sourcePath)-1] == '/'
 		if sourceIsDir {
-			tarDirPermissions[sourcePath] = tarHeader.FileInfo().Mode()
+			tarDirMode[sourcePath] = tarHeader.FileInfo().Mode()
 		}
 
 		//debugf("Extracting header: %#v", tarHeader)
@@ -200,14 +200,13 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 			delete(pendingPaths, globPath)
 		} else {
 			extractInfos, ok = options.Extract[sourcePath]
-			if ok {
-				delete(pendingPaths, sourcePath)
+			if !ok {
+				continue
 			}
+			delete(pendingPaths, sourcePath)
 		}
 
 		var contentCache []byte
-		// contentIsCached is used when extracting the same file to multiple
-		// targets to avoid reading it from disk several times.
 		var contentIsCached = len(extractInfos) > 1 && !sourceIsDir && globPath == ""
 		if contentIsCached {
 			// Read and cache the content so it may be reused.
@@ -237,12 +236,12 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 				tarHeader.Mode = int64(extractInfo.Mode)
 			}
 			// Create the parent directories using the permissions from the tarball.
-			parents := orderedParentDirs(relPath)
+			parents := parentDirs(relPath)
 			for _, path := range parents {
 				if path == "/" {
 					continue
 				}
-				perm, ok := tarDirPermissions[path]
+				mode, ok := tarDirMode[path]
 				if !ok {
 					continue
 				}
@@ -252,12 +251,12 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 					// an existing directory.
 					continue
 				}
-				fsOptions := &fsutil.CreateOptions{
+				createOptions := &fsutil.CreateOptions{
 					Path:        absPath,
-					Mode:        perm,
+					Mode:        mode,
 					MakeParents: true,
 				}
-				err := options.Create(nil, fsOptions)
+				err := options.Create(nil, createOptions)
 				if err != nil {
 					return err
 				}
@@ -296,7 +295,7 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 	return nil
 }
 
-func orderedParentDirs(path string) []string {
+func parentDirs(path string) []string {
 	var parents []string
 	path = filepath.Clean(path)
 	for {
