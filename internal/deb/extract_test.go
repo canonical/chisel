@@ -318,6 +318,25 @@ var extractTests = []extractTest{{
 		},
 	},
 	error: `cannot extract from package "test-package": no content at /dir/missing-file`,
+}, {
+	summary: "Extract non-ASCII path and preserve parent directories permissions",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		testutil.Dir(0755, "./"),
+		testutil.Dir(0766, "./日本/"),
+		testutil.Reg(0644, "./日本/語", "whatever"),
+	}),
+	options: deb.ExtractOptions{
+		Extract: map[string][]deb.ExtractInfo{
+			"/日本/語": []deb.ExtractInfo{{
+				Path: "/日本/語",
+			}},
+		},
+	},
+	result: map[string]string{
+		"/日本/":  "dir 0766",
+		"/日本/語": "file 0644 85738f8f",
+	},
+	notCreated: []string{},
 }}
 
 func (s *S) TestExtract(c *C) {

@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 	"syscall"
+	"unicode/utf8"
 
 	"github.com/blakesmith/ar"
 	"github.com/klauspost/compress/zstd"
@@ -296,19 +297,16 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 }
 
 func parentDirs(path string) []string {
-	var parents []string
 	path = filepath.Clean(path)
-	for {
-		path = filepath.Dir(path)
-		if path == "/" {
-			break
+	parents := make([]string, strings.Count(path, "/"))
+	count := 0
+	for i, width := 0, 0; i < len(path); i += width {
+		c, w := utf8.DecodeRuneInString(path[i:])
+		if c == '/' {
+			parents[count] = path[:i+w]
+			count++
 		}
-		parents = append(parents, path+"/")
-	}
-
-	// Reverse the list.
-	for i := 0; i < len(parents)/2; i++ {
-		parents[i], parents[len(parents)-i-1] = parents[len(parents)-i-1], parents[i]
+		width = w
 	}
 	return parents
 }
