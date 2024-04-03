@@ -246,6 +246,8 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 				if !ok {
 					continue
 				}
+				delete(tarDirMode, path)
+
 				absPath := filepath.Join(options.TargetDir, path)
 				if _, err := os.Stat(absPath); !os.IsNotExist(err) {
 					// We dont want to this implicit parent directory to overwrite
