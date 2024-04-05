@@ -30,13 +30,8 @@ type slicerTest struct {
 	slices     []setup.SliceKey
 	hackopt    func(c *C, opts *slicer.RunOptions)
 	filesystem map[string]string
-	// TODO:
-	// The results of the report do not conform to the planned implementation
-	// yet. Namely:
-	// * Parent directories of {text} files are reported even though they should not.
-	// * We do not track removed directories or changes done in Starlark.
-	report map[string]string
-	error  string
+	report     map[string]string
+	error      string
 }
 
 var packageEntries = map[string][]testutil.TarEntry{
@@ -192,6 +187,32 @@ var slicerTests = []slicerTest{{
 		"/parent/new/": "dir 0755 {test-package_myslice}",
 	},
 }, {
+	summary: "Create new file using glob and preserve parent directory permissions",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	pkgs: map[string][]byte{
+		"test-package": testutil.PackageData["test-package"],
+	},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						# Note the missing /parent/ and /parent/permissions/ here.
+						/parent/**:
+		`,
+	},
+	filesystem: map[string]string{
+		"/parent/":                 "dir 01777", // This is the magic.
+		"/parent/permissions/":     "dir 0764",  // This is the magic.
+		"/parent/permissions/file": "file 0755 722c14b3",
+	},
+	report: map[string]string{
+		"/parent/":                 "dir 01777 {test-package_myslice}",
+		"/parent/permissions/":     "dir 0764 {test-package_myslice}",
+		"/parent/permissions/file": "file 0755 722c14b3 {test-package_myslice}",
+	},
+}, {
 	summary: "Conditional architecture",
 	arch:    "amd64",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
@@ -323,8 +344,7 @@ var slicerTests = []slicerTest{{
 		`,
 	},
 	filesystem: map[string]string{
-		// TODO this is the wrong mode for the directory, it should be 01777.
-		"/dir/":     "dir 0755",
+		"/dir/":     "dir 01777",
 		"/dir/file": "file 0644 a441b15f",
 	},
 	report: map[string]string{
@@ -362,8 +382,7 @@ var slicerTests = []slicerTest{{
 		`,
 	},
 	filesystem: map[string]string{
-		// TODO this is the wrong mode for the directory, it should be 01777.
-		"/dir/":     "dir 0755",
+		"/dir/":     "dir 01777",
 		"/dir/file": "file 0644 a441b15f",
 	},
 	report: map[string]string{
@@ -423,7 +442,7 @@ var slicerTests = []slicerTest{{
 		"/dir/text-file": "file 0644 d98cf53e",
 	},
 	report: map[string]string{
-		"/dir/text-file": "file 0644 5b41362b {test-package_myslice}",
+		"/dir/text-file": "file 0644 5b41362b d98cf53e {test-package_myslice}",
 	},
 }, {
 	summary: "Script: read a file",
@@ -449,7 +468,7 @@ var slicerTests = []slicerTest{{
 	},
 	report: map[string]string{
 		"/dir/text-file-1": "file 0644 5b41362b {test-package_myslice}",
-		"/foo/text-file-2": "file 0644 d98cf53e {test-package_myslice}",
+		"/foo/text-file-2": "file 0644 d98cf53e 5b41362b {test-package_myslice}",
 	},
 }, {
 	summary: "Script: use 'until' to remove file after mutate",
@@ -473,9 +492,7 @@ var slicerTests = []slicerTest{{
 		"/foo/text-file-2": "file 0644 5b41362b",
 	},
 	report: map[string]string{
-		// TODO this path needs to be removed from the report.
-		"/dir/text-file-1": "file 0644 5b41362b {test-package_myslice}",
-		"/foo/text-file-2": "file 0644 d98cf53e {test-package_myslice}",
+		"/foo/text-file-2": "file 0644 d98cf53e 5b41362b {test-package_myslice}",
 	},
 }, {
 	summary: "Script: use 'until' to remove wildcard after mutate",
@@ -494,14 +511,7 @@ var slicerTests = []slicerTest{{
 		"/dir/":       "dir 0755",
 		"/other-dir/": "dir 0755",
 	},
-	report: map[string]string{
-		// TODO These first three entries should be removed from the report.
-		"/dir/nested/":           "dir 0755 {test-package_myslice}",
-		"/dir/nested/file":       "file 0644 84237a05 {test-package_myslice}",
-		"/dir/nested/other-file": "file 0644 6b86b273 {test-package_myslice}",
-
-		"/other-dir/text-file": "file 0644 5b41362b {test-package_myslice}",
-	},
+	report: map[string]string{},
 }, {
 	summary: "Script: 'until' does not remove non-empty directories",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
@@ -521,7 +531,6 @@ var slicerTests = []slicerTest{{
 		"/dir/nested/file-copy": "file 0644 cc55e2ec",
 	},
 	report: map[string]string{
-		"/dir/nested/":          "dir 0755 {test-package_myslice}",
 		"/dir/nested/file-copy": "file 0644 cc55e2ec {test-package_myslice}",
 	},
 }, {
@@ -539,6 +548,35 @@ var slicerTests = []slicerTest{{
 		`,
 	},
 	error: `slice test-package_myslice: cannot write file which is not mutable: /dir/text-file`,
+}, {
+	summary: "Script: cannot write to unlisted file",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+					mutate: |
+						content.write("/dir/text-file", "data")
+		`,
+	},
+	error: `slice test-package_myslice: cannot write to unlisted file: /dir/text-file`,
+}, {
+	summary: "Script: cannot write to directory",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/dir/: {make: true}
+					mutate: |
+						content.write("/dir/", "data")
+		`,
+	},
+	error: `slice test-package_myslice: cannot write to directory: /dir/`,
 }, {
 	summary: "Script: cannot read unlisted content",
 	slices:  []setup.SliceKey{{"test-package", "myslice2"}},
@@ -579,9 +617,10 @@ var slicerTests = []slicerTest{{
 			slices:
 				myslice:
 					contents:
-						/dir/text-file: {text: data1}
+						/dir/text-file: {text: data1, mutable: true}
 					mutate: |
 						content.read("/dir/text-file")
+						content.write("/dir/text-file", "data2")
 		`,
 	},
 	hackopt: func(c *C, opts *slicer.RunOptions) {
@@ -915,6 +954,8 @@ func treeDumpReport(report *slicer.Report) map[string]string {
 		case 0: // Regular
 			if entry.Size == 0 {
 				fsDump = fmt.Sprintf("file %#o empty", entry.Mode.Perm())
+			} else if entry.Mutated {
+				fsDump = fmt.Sprintf("file %#o %s %s", fperm, entry.Hash[:8], entry.FinalHash[:8])
 			} else {
 				fsDump = fmt.Sprintf("file %#o %s", fperm, entry.Hash[:8])
 			}

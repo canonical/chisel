@@ -74,7 +74,7 @@ func createDir(o *CreateOptions) error {
 	debugf("Creating directory: %s (mode %#o)", o.Path, o.Mode)
 	err := os.Mkdir(o.Path, o.Mode)
 	if os.IsExist(err) {
-		err = os.Chmod(o.Path, o.Mode)
+		return nil
 	}
 	return err
 }

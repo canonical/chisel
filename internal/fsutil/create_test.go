@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -16,6 +17,7 @@ import (
 
 type createTest struct {
 	options fsutil.CreateOptions
+	hackdir func(c *C, dir string)
 	result  map[string]string
 	error   string
 }
@@ -66,6 +68,18 @@ var createTests = []createTest{{
 		Mode: fs.ModeDir | 0775,
 	},
 	error: `.*: no such file or directory`,
+}, {
+	options: fsutil.CreateOptions{
+		Path: "foo",
+		Mode: fs.ModeDir | 0775,
+	},
+	hackdir: func(c *C, dir string) {
+		c.Assert(os.Mkdir(filepath.Join(dir, "foo/"), fs.ModeDir|0765), IsNil)
+	},
+	result: map[string]string{
+		// mode is not updated.
+		"/foo/": "dir 0765",
+	},
 }}
 
 func (s *S) TestCreate(c *C) {
@@ -81,6 +95,9 @@ func (s *S) TestCreate(c *C) {
 		}
 		c.Logf("Options: %v", test.options)
 		dir := c.MkDir()
+		if test.hackdir != nil {
+			test.hackdir(c, dir)
+		}
 		options := test.options
 		options.Path = filepath.Join(dir, options.Path)
 		entry, err := fsutil.Create(&options)

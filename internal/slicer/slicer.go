@@ -28,8 +28,6 @@ func Run(options *RunOptions) (*Report, error) {
 	archives := make(map[string]archive.Archive)
 	extract := make(map[string]map[string][]deb.ExtractInfo)
 	pathInfos := make(map[string]setup.PathInfo)
-	report := NewReport(options.TargetDir)
-
 	knownPaths := make(map[string]bool)
 	knownPaths["/"] = true
 
@@ -60,16 +58,17 @@ func Run(options *RunOptions) (*Report, error) {
 		syscall.Umask(oldUmask)
 	}()
 
-	release := options.Selection.Release
 	targetDir := filepath.Clean(options.TargetDir)
-	targetDirAbs := targetDir
-	if !filepath.IsAbs(targetDirAbs) {
+	if !filepath.IsAbs(targetDir) {
 		dir, err := os.Getwd()
 		if err != nil {
 			return nil, fmt.Errorf("cannot obtain current directory: %w", err)
 		}
-		targetDirAbs = filepath.Join(dir, targetDir)
+		targetDir = filepath.Join(dir, targetDir)
 	}
+
+	report := NewReport(targetDir)
+	release := options.Selection.Release
 
 	// Build information to process the selection.
 	for _, slice := range options.Selection.Slices {
@@ -183,6 +182,16 @@ func Run(options *RunOptions) (*Report, error) {
 					globbedPaths[extractInfo.Path] = append(globbedPaths[extractInfo.Path], relPath)
 					addKnownPath(relPath)
 				}
+
+				// Do not add paths with "until: mutate".
+				pathInfo, ok := pathInfos[extractInfo.Path]
+				if !ok {
+					return fmt.Errorf("internal error: cannot find path info for %q", extractInfo.Path)
+				}
+				if pathInfo.Until == setup.UntilMutate {
+					return nil
+				}
+
 				return report.Add(slice, entry)
 			},
 		})
@@ -242,9 +251,13 @@ func Run(options *RunOptions) (*Report, error) {
 			if err != nil {
 				return nil, err
 			}
-			err = report.Add(slice, entry)
-			if err != nil {
-				return nil, err
+
+			// Do not add paths with "until: mutate".
+			if pathInfo.Until != setup.UntilMutate {
+				err = report.Add(slice, entry)
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 	}
@@ -252,7 +265,14 @@ func Run(options *RunOptions) (*Report, error) {
 	// Run mutation scripts. Order is fundamental here as
 	// dependencies must run before dependents.
 	checkWrite := func(path string) error {
-		if !pathInfos[path].Mutable {
+		pi, ok := pathInfos[path]
+		if !ok {
+			return fmt.Errorf("cannot write to unlisted file: %s", path)
+		}
+		if pi.Kind == setup.DirPath {
+			return fmt.Errorf("cannot write to directory: %s", path)
+		}
+		if !pi.Mutable {
 			return fmt.Errorf("cannot write file which is not mutable: %s", path)
 		}
 		return nil
@@ -280,10 +300,21 @@ func Run(options *RunOptions) (*Report, error) {
 		}
 		return err
 	}
+	createFile := func(opts *fsutil.CreateOptions) error {
+		if opts.Mode.IsDir() {
+			return fmt.Errorf("internal error: cannot create or modify a directory from a Starlark script")
+		}
+		entry, err := fsutil.Create(opts)
+		if err != nil {
+			return err
+		}
+		return report.Mutate(entry)
+	}
 	content := &scripts.ContentValue{
-		RootDir:    targetDirAbs,
+		RootDir:    targetDir,
 		CheckWrite: checkWrite,
 		CheckRead:  checkRead,
+		CreateFile: createFile,
 	}
 	for _, slice := range options.Selection.Slices {
 		opts := scripts.RunOptions{
