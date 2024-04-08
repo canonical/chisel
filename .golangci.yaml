@@ -51,5 +51,9 @@ issues:
       text: "globalLogger.*unused"
       linters:
         - unused
+    - path: "^.*.go$"
+      text: "\"golang.org/x/crypto/openpgp/\\w+\" is deprecated"
+      linters:
+        - staticcheck
   max-issues-per-linter: 0
   max-same-issues: 0
