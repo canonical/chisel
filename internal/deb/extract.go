@@ -12,7 +12,6 @@ import (
 	"sort"
 	"strings"
 	"syscall"
-	"unicode/utf8"
 
 	"github.com/blakesmith/ar"
 	"github.com/klauspost/compress/zstd"
@@ -302,13 +301,11 @@ func parentDirs(path string) []string {
 	path = filepath.Clean(path)
 	parents := make([]string, strings.Count(path, "/"))
 	count := 0
-	for i, width := 0, 0; i < len(path); i += width {
-		c, w := utf8.DecodeRuneInString(path[i:])
+	for i, c := range path {
 		if c == '/' {
-			parents[count] = path[:i+w]
+			parents[count] = path[:i+1]
 			count++
 		}
-		width = w
 	}
 	return parents
 }
