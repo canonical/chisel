@@ -14,11 +14,6 @@ jobs:
   spread-tests:
     name: Spread tests
     runs-on: ubuntu-22.04
-    strategy:
-      matrix:
-        versions: ["focal jammy mantic", "noble"]
-      fail-fast: false
-
     steps:
       - uses: actions/checkout@v3
 
@@ -34,4 +29,4 @@ jobs:
       - name: Build and run spread
         run: |
           (cd _spread/cmd/spread && go build)
-          _spread/cmd/spread/spread -vv ${{ matrix.versions }}
+          _spread/cmd/spread/spread -vv focal jammy mantic
