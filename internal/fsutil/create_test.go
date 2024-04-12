@@ -70,9 +70,8 @@ var createTests = []createTest{{
 	error: `.*: no such file or directory`,
 }, {
 	options: fsutil.CreateOptions{
-		Path:         "foo",
-		Mode:         fs.ModeDir | 0775,
-		OverrideMode: false,
+		Path: "foo",
+		Mode: fs.ModeDir | 0775,
 	},
 	hackdir: func(c *C, dir string) {
 		c.Assert(os.Mkdir(filepath.Join(dir, "foo/"), fs.ModeDir|0765), IsNil)
@@ -80,19 +79,6 @@ var createTests = []createTest{{
 	result: map[string]string{
 		// mode is not updated.
 		"/foo/": "dir 0765",
-	},
-}, {
-	options: fsutil.CreateOptions{
-		Path:         "foo",
-		Mode:         fs.ModeDir | 0775,
-		OverrideMode: true,
-	},
-	hackdir: func(c *C, dir string) {
-		c.Assert(os.Mkdir(filepath.Join(dir, "foo/"), fs.ModeDir|0765), IsNil)
-	},
-	result: map[string]string{
-		// mode is updated.
-		"/foo/": "dir 0775",
 	},
 }}
 

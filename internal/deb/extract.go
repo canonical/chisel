@@ -251,9 +251,6 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 					Path:        filepath.Join(options.TargetDir, path),
 					Mode:        mode,
 					MakeParents: true,
-					// We dont want this implicit parent directory to overwrite
-					// an existing directory.
-					OverrideMode: false,
 				}
 				err := options.Create(nil, createOptions)
 				if err != nil {

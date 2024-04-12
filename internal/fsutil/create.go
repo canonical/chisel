@@ -16,8 +16,6 @@ type CreateOptions struct {
 	Mode fs.FileMode
 	Data io.Reader
 	Link string
-	// If OverrideMode is true and a directory exists, its mode will be modified.
-	OverrideMode bool
 	// If MakeParents is true, missing parent directories of Path are
 	// created with permissions 0755.
 	MakeParents bool
@@ -76,10 +74,7 @@ func createDir(o *CreateOptions) error {
 	debugf("Creating directory: %s (mode %#o)", o.Path, o.Mode)
 	err := os.Mkdir(o.Path, o.Mode)
 	if os.IsExist(err) {
-		if !o.OverrideMode {
-			return nil
-		}
-		err = os.Chmod(o.Path, o.Mode)
+		return nil
 	}
 	return err
 }
