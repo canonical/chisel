@@ -1215,9 +1215,7 @@ var setupTests = []setupTest{{
 				- mypkg_slice2
 			slices:
 				slice1:
-					contents:
 				slice2:
-					contents:
 		`,
 	},
 	relerror: "essential loop detected: mypkg_slice1, mypkg_slice2",
@@ -1232,7 +1230,6 @@ var setupTests = []setupTest{{
 				slice1:
 					essential:
 						- mypkg_slice1
-					contents:
 		`,
 	},
 	relerror: `cannot add slice to itself as essential "mypkg_slice1" in slices/mydir/mypkg.yaml`,
