@@ -134,8 +134,9 @@ var setupTests = []setupTest{{
 				Path:    "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice1": {
-						Package: "mypkg",
-						Name:    "myslice1",
+						Package:   "mypkg",
+						Name:      "myslice1",
+						Essential: map[setup.SliceKey]bool{},
 						Contents: map[string]setup.PathInfo{
 							"/file/path1":  {Kind: "copy"},
 							"/file/path2":  {Kind: "copy", Info: "/other/path"},
@@ -148,16 +149,17 @@ var setupTests = []setupTest{{
 					"myslice2": {
 						Package: "mypkg",
 						Name:    "myslice2",
-						Essential: []setup.SliceKey{
-							{"mypkg", "myslice1"},
+						Essential: map[setup.SliceKey]bool{
+							{"mypkg", "myslice1"}: true,
 						},
 						Contents: map[string]setup.PathInfo{
 							"/another/path": {Kind: "copy"},
 						},
 					},
 					"myslice3": {
-						Package: "mypkg",
-						Name:    "myslice3",
+						Package:   "mypkg",
+						Name:      "myslice3",
+						Essential: map[setup.SliceKey]bool{},
 						Scripts: setup.SliceScripts{
 							Mutate: "something",
 						},
@@ -196,12 +198,14 @@ var setupTests = []setupTest{{
 				Path:    "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice1": {
-						Package: "mypkg",
-						Name:    "myslice1",
+						Package:   "mypkg",
+						Name:      "myslice1",
+						Essential: map[setup.SliceKey]bool{},
 					},
 					"myslice2": {
-						Package: "mypkg",
-						Name:    "myslice2",
+						Package:   "mypkg",
+						Name:      "myslice2",
+						Essential: map[setup.SliceKey]bool{},
 					},
 				},
 			},
@@ -294,8 +298,9 @@ var setupTests = []setupTest{{
 	selslices: []setup.SliceKey{{"mypkg1", "myslice1"}},
 	selection: &setup.Selection{
 		Slices: []*setup.Slice{{
-			Package: "mypkg1",
-			Name:    "myslice1",
+			Package:   "mypkg1",
+			Name:      "myslice1",
+			Essential: map[setup.SliceKey]bool{},
 		}},
 	},
 }, {
@@ -317,13 +322,14 @@ var setupTests = []setupTest{{
 	selslices: []setup.SliceKey{{"mypkg2", "myslice2"}},
 	selection: &setup.Selection{
 		Slices: []*setup.Slice{{
-			Package: "mypkg1",
-			Name:    "myslice1",
+			Package:   "mypkg1",
+			Name:      "myslice1",
+			Essential: map[setup.SliceKey]bool{},
 		}, {
 			Package: "mypkg2",
 			Name:    "myslice2",
-			Essential: []setup.SliceKey{
-				{"mypkg1", "myslice1"},
+			Essential: map[setup.SliceKey]bool{
+				{"mypkg1", "myslice1"}: true,
 			},
 		}},
 	},
@@ -457,15 +463,17 @@ var setupTests = []setupTest{{
 				Path:    "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice1": {
-						Package: "mypkg",
-						Name:    "myslice1",
+						Package:   "mypkg",
+						Name:      "myslice1",
+						Essential: map[setup.SliceKey]bool{},
 						Contents: map[string]setup.PathInfo{
 							"/file/*": {Kind: "glob"},
 						},
 					},
 					"myslice2": {
-						Package: "mypkg",
-						Name:    "myslice2",
+						Package:   "mypkg",
+						Name:      "myslice2",
+						Essential: map[setup.SliceKey]bool{},
 						Contents: map[string]setup.PathInfo{
 							"/another/**": {Kind: "glob"},
 						},
@@ -672,8 +680,9 @@ var setupTests = []setupTest{{
 				Path:    "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
-						Package: "mypkg",
-						Name:    "myslice",
+						Package:   "mypkg",
+						Name:      "myslice",
+						Essential: map[setup.SliceKey]bool{},
 						Contents: map[string]setup.PathInfo{
 							"/path": {Kind: "copy", Arch: []string{"i386"}},
 						},
@@ -712,8 +721,9 @@ var setupTests = []setupTest{{
 				Path:    "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
-						Package: "mypkg",
-						Name:    "myslice",
+						Package:   "mypkg",
+						Name:      "myslice",
+						Essential: map[setup.SliceKey]bool{},
 						Contents: map[string]setup.PathInfo{
 							"/path": {Kind: "copy", Arch: []string{"i386", "amd64"}},
 						},
@@ -753,8 +763,9 @@ var setupTests = []setupTest{{
 				Path:    "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
-						Package: "mypkg",
-						Name:    "myslice",
+						Package:   "mypkg",
+						Name:      "myslice",
+						Essential: map[setup.SliceKey]bool{},
 						Contents: map[string]setup.PathInfo{
 							"/nonempty": {Kind: "text", Info: "foo"},
 							"/empty":    {Kind: "text", Info: ""},
@@ -866,8 +877,9 @@ var setupTests = []setupTest{{
 				Path:    "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
-						Package: "mypkg",
-						Name:    "myslice",
+						Package:   "mypkg",
+						Name:      "myslice",
+						Essential: map[setup.SliceKey]bool{},
 						Contents: map[string]setup.PathInfo{
 							"/path": {Kind: "copy"},
 						},
@@ -1045,8 +1057,9 @@ var setupTests = []setupTest{{
 				Path:    "slices/mydir/jq.yaml",
 				Slices: map[string]*setup.Slice{
 					"bins": {
-						Package: "jq",
-						Name:    "bins",
+						Package:   "jq",
+						Name:      "bins",
+						Essential: map[setup.SliceKey]bool{},
 						Contents: map[string]setup.PathInfo{
 							"/usr/bin/jq": {Kind: "copy"},
 						},
@@ -1078,8 +1091,6 @@ var setupTests = []setupTest{{
 						- mypkg_slice1
 						- mypkg_slice4
 				slice4:
-					essential:
-						- mypkg_slice2
 		`,
 	},
 	release: &setup.Release{
@@ -1102,29 +1113,29 @@ var setupTests = []setupTest{{
 					"slice1": {
 						Package: "mypkg",
 						Name:    "slice1",
-						Essential: []setup.SliceKey{
-							{"mypkg", "slice2"},
+						Essential: map[setup.SliceKey]bool{
+							{"mypkg", "slice2"}: true,
 						},
 					},
 					"slice2": {
-						Package: "mypkg",
-						Name:    "slice2",
+						Package:   "mypkg",
+						Name:      "slice2",
+						Essential: map[setup.SliceKey]bool{},
 					},
 					"slice3": {
 						Package: "mypkg",
 						Name:    "slice3",
-						Essential: []setup.SliceKey{
-							{"mypkg", "slice2"},
-							{"mypkg", "slice1"},
-							{"mypkg", "slice4"},
+						Essential: map[setup.SliceKey]bool{
+							{"mypkg", "slice2"}: true,
+							{"mypkg", "slice1"}: true,
+							{"mypkg", "slice4"}: true,
 						},
 					},
 					"slice4": {
 						Package: "mypkg",
 						Name:    "slice4",
-						Essential: []setup.SliceKey{
-							{"mypkg", "slice2"},
-							{"mypkg", "slice2"},
+						Essential: map[setup.SliceKey]bool{
+							{"mypkg", "slice2"}: true,
 						},
 					},
 				},
@@ -1173,17 +1184,17 @@ var setupTests = []setupTest{{
 					"slice1": {
 						Package: "mypkg",
 						Name:    "slice1",
-						Essential: []setup.SliceKey{
-							{"myotherpkg", "slice2"},
-							{"mypkg", "slice2"},
-							{"myotherpkg", "slice1"},
+						Essential: map[setup.SliceKey]bool{
+							{"myotherpkg", "slice2"}: true,
+							{"mypkg", "slice2"}:      true,
+							{"myotherpkg", "slice1"}: true,
 						},
 					},
 					"slice2": {
 						Package: "mypkg",
 						Name:    "slice2",
-						Essential: []setup.SliceKey{
-							{"myotherpkg", "slice2"},
+						Essential: map[setup.SliceKey]bool{
+							{"myotherpkg", "slice2"}: true,
 						},
 					},
 				},
@@ -1194,12 +1205,14 @@ var setupTests = []setupTest{{
 				Path:    "slices/mydir/myotherpkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"slice1": {
-						Package: "myotherpkg",
-						Name:    "slice1",
+						Package:   "myotherpkg",
+						Name:      "slice1",
+						Essential: map[setup.SliceKey]bool{},
 					},
 					"slice2": {
-						Package: "myotherpkg",
-						Name:    "slice2",
+						Package:   "myotherpkg",
+						Name:      "slice2",
+						Essential: map[setup.SliceKey]bool{},
 					},
 				},
 			},
@@ -1233,6 +1246,35 @@ var setupTests = []setupTest{{
 		`,
 	},
 	relerror: `cannot add slice to itself as essential "mypkg_slice1" in slices/mydir/mypkg.yaml`,
+}, {
+	summary: "Package essentials clashes with slice essentials",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			essential:
+				- mypkg_slice2
+			slices:
+				slice1:
+					essential:
+						- mypkg_slice2
+				slice2:
+		`,
+	},
+	relerror: `cannot add "mypkg_slice2" twice in essentials for slice "mypkg_slice1" in slices/mydir/mypkg.yaml`,
+}, {
+	summary: "Duplicated slice essentials",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				slice1:
+					essential:
+						- mypkg_slice2
+						- mypkg_slice2
+				slice2:
+		`,
+	},
+	relerror: `cannot add "mypkg_slice2" twice in essentials for slice "mypkg_slice1" in slices/mydir/mypkg.yaml`,
 }}
 
 var defaultChiselYaml = `

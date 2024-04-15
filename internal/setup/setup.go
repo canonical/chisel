@@ -47,7 +47,7 @@ type Package struct {
 type Slice struct {
 	Package   string
 	Name      string
-	Essential []SliceKey
+	Essential map[SliceKey]bool
 	Contents  map[string]PathInfo
 	Scripts   SliceScripts
 }
@@ -217,15 +217,15 @@ func order(pkgs map[string]*Package, keys []SliceKey) ([]SliceKey, error) {
 		slice := pkg.Slices[key.Slice]
 		fqslice := slice.String()
 		predecessors := successors[fqslice]
-		for _, req := range slice.Essential {
+		for req := range slice.Essential {
 			fqreq := req.String()
 			if reqpkg, ok := pkgs[req.Package]; !ok || reqpkg.Slices[req.Slice] == nil {
 				return nil, fmt.Errorf("%s requires %s, but slice is missing", fqslice, fqreq)
 			}
 			predecessors = append(predecessors, fqreq)
+			pending = append(pending, req)
 		}
 		successors[fqslice] = predecessors
-		pending = append(pending, slice.Essential...)
 	}
 
 	// Sort them up.
@@ -535,6 +535,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 			Scripts: SliceScripts{
 				Mutate: yamlSlice.Mutate,
 			},
+			Essential: map[SliceKey]bool{},
 		}
 		for _, refName := range yamlPkg.Essential {
 			sliceKey, err := ParseSliceKey(refName)
@@ -545,7 +546,10 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 				// Do not add the slice to its own essentials list.
 				continue
 			}
-			slice.Essential = append(slice.Essential, sliceKey)
+			if _, ok := slice.Essential[sliceKey]; ok {
+				return nil, fmt.Errorf("cannot reference slice %q twice in essentials for slice %q in %s", refName, slice.String(), pkgPath)
+			}
+			slice.Essential[sliceKey] = true
 		}
 		for _, refName := range yamlSlice.Essential {
 			sliceKey, err := ParseSliceKey(refName)
@@ -555,7 +559,10 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 			if sliceKey.Package == slice.Package && sliceKey.Slice == slice.Name {
 				return nil, fmt.Errorf("cannot add slice to itself as essential %q in %s", refName, pkgPath)
 			}
-			slice.Essential = append(slice.Essential, sliceKey)
+			if _, ok := slice.Essential[sliceKey]; ok {
+				return nil, fmt.Errorf("cannot add %q twice in essentials for slice %q in %s", refName, slice.String(), pkgPath)
+			}
+			slice.Essential[sliceKey] = true
 		}
 
 		if len(yamlSlice.Contents) > 0 {
