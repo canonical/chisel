@@ -1237,8 +1237,6 @@ var setupTests = []setupTest{{
 	input: map[string]string{
 		"slices/mydir/mypkg.yaml": `
 			package: mypkg
-			essential:
-				- mypkg_slice1
 			slices:
 				slice1:
 					essential:
