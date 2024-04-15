@@ -1078,6 +1078,8 @@ var setupTests = []setupTest{{
 						- mypkg_slice1
 						- mypkg_slice4
 				slice4:
+					essential:
+						- mypkg_slice2
 		`,
 	},
 	release: &setup.Release{
@@ -1121,6 +1123,7 @@ var setupTests = []setupTest{{
 						Package: "mypkg",
 						Name:    "slice4",
 						Essential: []setup.SliceKey{
+							{"mypkg", "slice2"},
 							{"mypkg", "slice2"},
 						},
 					},
