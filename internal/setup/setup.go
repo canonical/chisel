@@ -536,10 +536,24 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 				Mutate: yamlSlice.Mutate,
 			},
 		}
-		for _, refName := range append(yamlSlice.Essential, yamlPkg.Essential...) {
+		for _, refName := range yamlPkg.Essential {
 			sliceKey, err := ParseSliceKey(refName)
 			if err != nil {
 				return nil, fmt.Errorf("invalid slice reference %q in %s", refName, pkgPath)
+			}
+			if sliceKey.Package == slice.Package && sliceKey.Slice == slice.Name {
+				// Do not add the slice to its own essentials list.
+				continue
+			}
+			slice.Essential = append(slice.Essential, sliceKey)
+		}
+		for _, refName := range yamlSlice.Essential {
+			sliceKey, err := ParseSliceKey(refName)
+			if err != nil {
+				return nil, fmt.Errorf("invalid slice reference %q in %s", refName, pkgPath)
+			}
+			if sliceKey.Package == slice.Package && sliceKey.Slice == slice.Name {
+				return nil, fmt.Errorf("cannot add slice to itself as essential %q in %s", refName, pkgPath)
 			}
 			slice.Essential = append(slice.Essential, sliceKey)
 		}
