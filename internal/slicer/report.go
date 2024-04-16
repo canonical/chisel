@@ -32,11 +32,15 @@ type Report struct {
 
 // NewReport returns an empty report for content that will be based at the
 // provided root path.
-func NewReport(root string) *Report {
-	return &Report{
+func NewReport(root string) (*Report, error) {
+	if !filepath.IsAbs(root) {
+		return nil, fmt.Errorf("cannot use relative path for report root: %q", root)
+	}
+	report := &Report{
 		Root:    filepath.Clean(root) + "/",
 		Entries: make(map[string]ReportEntry),
 	}
+	return report, nil
 }
 
 func (r *Report) Add(slice *setup.Slice, fsEntry *fsutil.Entry) error {

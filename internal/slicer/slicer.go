@@ -67,7 +67,10 @@ func Run(options *RunOptions) (*Report, error) {
 		targetDir = filepath.Join(dir, targetDir)
 	}
 
-	report := NewReport(targetDir)
+	report, err := NewReport(targetDir)
+	if err != nil {
+		return nil, fmt.Errorf("internal error: cannot create report: %w", err)
+	}
 	release := options.Selection.Release
 
 	// Build information to process the selection.

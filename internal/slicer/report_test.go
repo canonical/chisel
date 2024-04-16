@@ -255,8 +255,9 @@ var reportTests = []struct {
 
 func (s *S) TestReport(c *C) {
 	for _, test := range reportTests {
-		report := slicer.NewReport("/base/")
 		var err error
+		report, err := slicer.NewReport("/base/")
+		c.Assert(err, IsNil)
 		for _, si := range test.add {
 			err = report.Add(si.slice, &si.entry)
 		}
@@ -270,4 +271,9 @@ func (s *S) TestReport(c *C) {
 		c.Assert(err, IsNil)
 		c.Assert(report.Entries, DeepEquals, test.expected, Commentf(test.summary))
 	}
+}
+
+func (s *S) TestRootRelativePath(c *C) {
+	_, err := slicer.NewReport("../base/")
+	c.Assert(err, ErrorMatches, `cannot use relative path for report root: "../base/"`)
 }
