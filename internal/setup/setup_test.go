@@ -1258,6 +1258,20 @@ var setupTests = []setupTest{{
 	},
 	relerror: `slice mypkg_slice1 lists essential redundantly: mypkg_slice2`,
 }, {
+	summary: "Duplicated package essentials",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			essential:
+				- mypkg_slice1
+				- mypkg_slice1
+			slices:
+				slice1:
+				slice2:
+		`,
+	},
+	relerror: `slice mypkg_slice2 lists essential redundantly: mypkg_slice1`,
+}, {
 	summary: "Bad slice reference in slice essential",
 	input: map[string]string{
 		"slices/mydir/mypkg.yaml": `
