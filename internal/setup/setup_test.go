@@ -1242,7 +1242,7 @@ var setupTests = []setupTest{{
 				slice2:
 		`,
 	},
-	relerror: `cannot add "mypkg_slice2" twice in essentials for slice "mypkg_slice1" in slices/mydir/mypkg.yaml`,
+	relerror: `slice mypkg_slice1 lists essential redundantly: mypkg_slice2`,
 }, {
 	summary: "Duplicated slice essentials",
 	input: map[string]string{
@@ -1256,7 +1256,31 @@ var setupTests = []setupTest{{
 				slice2:
 		`,
 	},
-	relerror: `cannot add "mypkg_slice2" twice in essentials for slice "mypkg_slice1" in slices/mydir/mypkg.yaml`,
+	relerror: `slice mypkg_slice1 lists essential redundantly: mypkg_slice2`,
+}, {
+	summary: "Bad slice reference in slice essential",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				slice1:
+					essential:
+						- mypkg-slice
+		`,
+	},
+	relerror: `package "mypkg" has invalid essential slice reference: "mypkg-slice"`,
+}, {
+	summary: "Bad slice reference in package essential",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			essential:
+				- mypkg-slice
+			slices:
+				slice1:
+		`,
+	},
+	relerror: `package "mypkg" has invalid essential slice reference: "mypkg-slice"`,
 }}
 
 var defaultChiselYaml = `

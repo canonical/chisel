@@ -539,7 +539,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 		for _, refName := range yamlPkg.Essential {
 			sliceKey, err := ParseSliceKey(refName)
 			if err != nil {
-				return nil, fmt.Errorf("invalid slice reference %q in %s", refName, pkgPath)
+				return nil, fmt.Errorf("package %q has invalid essential slice reference: %q", pkgName, refName)
 			}
 			if sliceKey.Package == slice.Package && sliceKey.Slice == slice.Name {
 				// Do not add the slice to its own essentials list.
@@ -553,14 +553,14 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 				}
 			}
 			if duplicated {
-				return nil, fmt.Errorf("cannot reference slice %q twice in essentials for slice %q in %s", refName, slice.String(), pkgPath)
+				return nil, fmt.Errorf("slice %s lists essential redundantly: %s", slice, refName)
 			}
 			slice.Essential = append(slice.Essential, sliceKey)
 		}
 		for _, refName := range yamlSlice.Essential {
 			sliceKey, err := ParseSliceKey(refName)
 			if err != nil {
-				return nil, fmt.Errorf("invalid slice reference %q in %s", refName, pkgPath)
+				return nil, fmt.Errorf("package %q has invalid essential slice reference: %q", pkgName, refName)
 			}
 			if sliceKey.Package == slice.Package && sliceKey.Slice == slice.Name {
 				return nil, fmt.Errorf("cannot add slice to itself as essential %q in %s", refName, pkgPath)
@@ -573,7 +573,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 				}
 			}
 			if duplicated {
-				return nil, fmt.Errorf("cannot add %q twice in essentials for slice %q in %s", refName, slice.String(), pkgPath)
+				return nil, fmt.Errorf("slice %s lists essential redundantly: %s", slice, refName)
 			}
 			slice.Essential = append(slice.Essential, sliceKey)
 		}
