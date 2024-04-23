@@ -95,11 +95,11 @@ func (r *Report) Mutate(fsEntry *fsutil.Entry) error {
 	return nil
 }
 
-func (r *Report) sanitizeAbsPath(path string, isDir bool) (string, error) {
+func (r *Report) sanitizeAbsPath(path string, isDir bool) (relPath string, err error) {
 	if !strings.HasPrefix(path, r.Root) {
 		return "", fmt.Errorf("%q outside of root %q", path, r.Root)
 	}
-	relPath := filepath.Clean("/" + strings.TrimPrefix(path, r.Root))
+	relPath = filepath.Clean("/" + strings.TrimPrefix(path, r.Root))
 	if isDir {
 		relPath = relPath + "/"
 	}
