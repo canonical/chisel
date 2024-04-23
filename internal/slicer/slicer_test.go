@@ -561,7 +561,7 @@ var slicerTests = []slicerTest{{
 						content.write("/dir/text-file", "data")
 		`,
 	},
-	error: `slice test-package_myslice: cannot write to unlisted file: /dir/text-file`,
+	error: `slice test-package_myslice: cannot write file which is not mutable: /dir/text-file`,
 }, {
 	summary: "Script: cannot write to directory",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
@@ -576,7 +576,7 @@ var slicerTests = []slicerTest{{
 						content.write("/dir/", "data")
 		`,
 	},
-	error: `slice test-package_myslice: cannot write to directory: /dir/`,
+	error: `slice test-package_myslice: cannot write file which is not mutable: /dir/`,
 }, {
 	summary: "Script: cannot read unlisted content",
 	slices:  []setup.SliceKey{{"test-package", "myslice2"}},

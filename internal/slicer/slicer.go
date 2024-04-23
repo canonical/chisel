@@ -172,7 +172,8 @@ func Run(options *RunOptions) (*Report, error) {
 				if extractInfo == nil {
 					return nil
 				}
-				if _, ok := slice.Contents[extractInfo.Path]; !ok {
+				pathInfo, ok := slice.Contents[extractInfo.Path]
+				if !ok {
 					return nil
 				}
 
@@ -187,14 +188,9 @@ func Run(options *RunOptions) (*Report, error) {
 				}
 
 				// Do not add paths with "until: mutate".
-				pathInfo, ok := pathInfos[extractInfo.Path]
-				if !ok {
-					return fmt.Errorf("internal error: cannot find path info for %q", extractInfo.Path)
-				}
 				if pathInfo.Until == setup.UntilMutate {
 					return nil
 				}
-
 				return report.Add(slice, entry)
 			},
 		})
@@ -268,14 +264,7 @@ func Run(options *RunOptions) (*Report, error) {
 	// Run mutation scripts. Order is fundamental here as
 	// dependencies must run before dependents.
 	checkWrite := func(path string) error {
-		pi, ok := pathInfos[path]
-		if !ok {
-			return fmt.Errorf("cannot write to unlisted file: %s", path)
-		}
-		if pi.Kind == setup.DirPath {
-			return fmt.Errorf("cannot write to directory: %s", path)
-		}
-		if !pi.Mutable {
+		if !pathInfos[path].Mutable {
 			return fmt.Errorf("cannot write file which is not mutable: %s", path)
 		}
 		return nil
