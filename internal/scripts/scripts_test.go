@@ -260,14 +260,10 @@ func (s *S) TestScripts(c *C) {
 			RootDir:    rootDir,
 			CheckRead:  test.checkr,
 			CheckWrite: test.checkw,
-			CreateFile: func(opts *fsutil.CreateOptions) error {
-				relPath := filepath.Clean("/" + strings.TrimPrefix(opts.Path, rootDir))
-				if opts.Mode.IsDir() {
-					relPath = relPath + "/"
-				}
+			Mutated: func(entry *fsutil.Entry) error {
+				relPath := filepath.Clean("/" + strings.TrimPrefix(entry.Path, rootDir))
 				mutatedFiles = append(mutatedFiles, relPath)
-				_, err := fsutil.Create(opts)
-				return err
+				return nil
 			},
 		}
 		namespace := map[string]scripts.Value{

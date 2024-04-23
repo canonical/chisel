@@ -303,21 +303,14 @@ func Run(options *RunOptions) (*Report, error) {
 		}
 		return err
 	}
-	createFile := func(opts *fsutil.CreateOptions) error {
-		if opts.Mode.IsDir() {
-			return fmt.Errorf("internal error: cannot create or modify a directory from a Starlark script")
-		}
-		entry, err := fsutil.Create(opts)
-		if err != nil {
-			return err
-		}
+	mutated := func(entry *fsutil.Entry) error {
 		return report.Mutate(entry)
 	}
 	content := &scripts.ContentValue{
 		RootDir:    targetDir,
 		CheckWrite: checkWrite,
 		CheckRead:  checkRead,
-		CreateFile: createFile,
+		Mutated:    mutated,
 	}
 	for _, slice := range options.Selection.Slices {
 		opts := scripts.RunOptions{
