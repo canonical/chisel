@@ -292,14 +292,11 @@ func Run(options *RunOptions) (*Report, error) {
 		}
 		return err
 	}
-	mutated := func(entry *fsutil.Entry) error {
-		return report.Mutate(entry)
-	}
 	content := &scripts.ContentValue{
 		RootDir:    targetDir,
 		CheckWrite: checkWrite,
 		CheckRead:  checkRead,
-		Mutated:    mutated,
+		Mutated:    report.Mutate,
 	}
 	for _, slice := range options.Selection.Slices {
 		opts := scripts.RunOptions{
