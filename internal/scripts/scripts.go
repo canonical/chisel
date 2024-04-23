@@ -182,7 +182,7 @@ func (c *ContentValue) Write(thread *starlark.Thread, fn *starlark.Builtin, args
 		Mode: fs.FileMode(0644),
 	})
 	if err != nil {
-		return nil, err
+		return nil, c.polishError(path, err)
 	}
 	err = c.Mutated(entry)
 	if err != nil {
