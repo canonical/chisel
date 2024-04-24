@@ -25,6 +25,7 @@ var (
 	Stdout io.Writer = os.Stdout
 	Stderr io.Writer = os.Stderr
 	// overridden for testing
+	openArchive  = archive.Open
 	ReadPassword = term.ReadPassword
 	// set to logger.Panicf in testing
 	//noticef = logger.Noticef
@@ -327,6 +328,7 @@ func run() error {
 	deb.SetLogger(log.Default())
 	setup.SetLogger(log.Default())
 	slicer.SetLogger(log.Default())
+	SetLogger(log.Default())
 
 	parser := Parser()
 	xtra, err := parser.Parse()

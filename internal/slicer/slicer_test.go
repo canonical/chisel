@@ -2,9 +2,7 @@ package slicer_test
 
 import (
 	"archive/tar"
-	"bytes"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -813,6 +811,7 @@ var slicerTests = []slicerTest{{
 	slices: []setup.SliceKey{
 		{"test-package", "myslice1"},
 		{"test-package", "myslice2"},
+		{"test-package", "manifest"},
 	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
@@ -829,6 +828,9 @@ var slicerTests = []slicerTest{{
 					contents:
 						/dir/other-file:
 						/dir/text-file:  {text: data1}
+				manifest:
+					contents:
+						/db/**: {generate: manifest}
 		`,
 	},
 	filesystem: map[string]string{
@@ -864,27 +866,6 @@ var defaultChiselYaml = `
 			id: ` + testKey.ID + `
 			armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
 `
-
-type testArchive struct {
-	options archive.Options
-	pkgs    map[string][]byte
-}
-
-func (a *testArchive) Options() *archive.Options {
-	return &a.options
-}
-
-func (a *testArchive) Fetch(pkg string) (io.ReadCloser, error) {
-	if data, ok := a.pkgs[pkg]; ok {
-		return io.NopCloser(bytes.NewBuffer(data)), nil
-	}
-	return nil, fmt.Errorf("attempted to open %q package", pkg)
-}
-
-func (a *testArchive) Exists(pkg string) bool {
-	_, ok := a.pkgs[pkg]
-	return ok
-}
 
 func (s *S) TestRun(c *C) {
 	// Run tests for format chisel-v1.
@@ -938,24 +919,28 @@ func runSlicerTests(c *C, tests []slicerTest) {
 
 		archives := map[string]archive.Archive{}
 		for name, setupArchive := range release.Archives {
-			archive := &testArchive{
-				options: archive.Options{
+			archive := &testutil.TestArchive{
+				Opts: archive.Options{
 					Label:      setupArchive.Name,
 					Version:    setupArchive.Version,
 					Suites:     setupArchive.Suites,
 					Components: setupArchive.Components,
 					Arch:       test.arch,
 				},
-				pkgs: test.pkgs,
+				Pkgs: test.pkgs,
 			}
 			archives[name] = archive
+		}
+		pkgArchives := make(map[string]archive.Archive)
+		for _, pkg := range release.Packages {
+			pkgArchives[pkg.Name] = archives[pkg.Archive]
 		}
 
 		targetDir := c.MkDir()
 		options := slicer.RunOptions{
-			Selection: selection,
-			Archives:  archives,
-			TargetDir: targetDir,
+			Selection:   selection,
+			PkgArchives: pkgArchives,
+			TargetDir:   targetDir,
 		}
 		if test.hackopt != nil {
 			test.hackopt(c, &options)

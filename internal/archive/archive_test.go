@@ -399,6 +399,45 @@ func (s *httpSuite) TestVerifyArchiveRelease(c *C) {
 	}
 }
 
+func (s *httpSuite) TestPackageInfo(c *C) {
+	s.prepareArchive("jammy", "22.04", "amd64", []string{"main", "universe"})
+
+	options := archive.Options{
+		Label:      "ubuntu",
+		Version:    "22.04",
+		Arch:       "amd64",
+		Suites:     []string{"jammy"},
+		Components: []string{"main", "universe"},
+		CacheDir:   c.MkDir(),
+		PubKeys:    []*packet.PublicKey{s.pubKey},
+	}
+
+	testArchive, err := archive.Open(&options)
+	c.Assert(err, IsNil)
+
+	info1, err := testArchive.Info("mypkg1")
+	c.Assert(err, IsNil)
+	c.Assert(info1, DeepEquals, &archive.PackageInfo{
+		Name:    "mypkg1",
+		Version: "1.1",
+		Arch:    "amd64",
+		Hash:    "1f08ef04cfe7a8087ee38a1ea35fa1810246648136c3c42d5a61ad6503d85e05",
+	})
+
+	info3, err := testArchive.Info("mypkg3")
+	c.Assert(err, IsNil)
+	c.Assert(info3, DeepEquals, &archive.PackageInfo{
+		Name:    "mypkg3",
+		Version: "1.3",
+		Arch:    "amd64",
+		Hash:    "fe377bf13ba1a5cb287cb4e037e6e7321281c929405ae39a72358ef0f5d179aa",
+	})
+
+	info99, err := testArchive.Info("mypkg99")
+	c.Assert(err, NotNil)
+	c.Assert(info99, IsNil)
+}
+
 func read(r io.Reader) string {
 	data, err := io.ReadAll(r)
 	if err != nil {

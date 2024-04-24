@@ -18,14 +18,14 @@ import (
 )
 
 type RunOptions struct {
-	Selection *setup.Selection
-	Archives  map[string]archive.Archive
-	TargetDir string
+	Selection   *setup.Selection
+	PkgArchives map[string]archive.Archive
+	TargetDir   string
 }
 
 func Run(options *RunOptions) (*Report, error) {
 
-	archives := make(map[string]archive.Archive)
+	pkgArchives := options.PkgArchives
 	extract := make(map[string]map[string][]deb.ExtractInfo)
 	pathInfos := make(map[string]setup.PathInfo)
 	pkgSlices := make(map[string][]*setup.Slice)
@@ -61,7 +61,6 @@ func Run(options *RunOptions) (*Report, error) {
 		syscall.Umask(oldUmask)
 	}()
 
-	release := options.Selection.Release
 	targetDir := filepath.Clean(options.TargetDir)
 	targetDirAbs := targetDir
 	if !filepath.IsAbs(targetDirAbs) {
@@ -77,19 +76,10 @@ func Run(options *RunOptions) (*Report, error) {
 		pkgSlices[slice.Package] = append(pkgSlices[slice.Package], slice)
 		extractPackage := extract[slice.Package]
 		if extractPackage == nil {
-			archiveName := release.Packages[slice.Package].Archive
-			archive := options.Archives[archiveName]
-			if archive == nil {
-				return nil, fmt.Errorf("archive %q not defined", archiveName)
-			}
-			if !archive.Exists(slice.Package) {
-				return nil, fmt.Errorf("slice package %q missing from archive", slice.Package)
-			}
-			archives[slice.Package] = archive
 			extractPackage = make(map[string][]deb.ExtractInfo)
 			extract[slice.Package] = extractPackage
 		}
-		arch := archives[slice.Package].Options().Arch
+		arch := pkgArchives[slice.Package].Options().Arch
 		copyrightPath := "/usr/share/doc/" + slice.Package + "/copyright"
 		addKnownPath(copyrightPath)
 		hasCopyright := false
@@ -144,7 +134,7 @@ func Run(options *RunOptions) (*Report, error) {
 		if packages[slice.Package] != nil {
 			continue
 		}
-		reader, err := archives[slice.Package].Fetch(slice.Package)
+		reader, err := pkgArchives[slice.Package].Fetch(slice.Package)
 		if err != nil {
 			return nil, err
 		}
@@ -211,7 +201,7 @@ func Run(options *RunOptions) (*Report, error) {
 	// Create new content not coming from packages.
 	done := make(map[string]bool)
 	for _, slice := range options.Selection.Slices {
-		arch := archives[slice.Package].Options().Arch
+		arch := pkgArchives[slice.Package].Options().Arch
 		for targetPath, pathInfo := range slice.Contents {
 			if len(pathInfo.Arch) > 0 && !contains(pathInfo.Arch, arch) {
 				continue

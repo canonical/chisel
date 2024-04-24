@@ -1,15 +1,21 @@
 package main
 
 import (
-	"github.com/jessevdk/go-flags"
-
 	"fmt"
+	"io"
+	"io/fs"
 	"os"
+	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
+
+	"github.com/jessevdk/go-flags"
+	"github.com/klauspost/compress/zstd"
 
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/cache"
+	"github.com/canonical/chisel/internal/jsonwall"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/slicer"
 )
@@ -82,29 +88,250 @@ func (cmd *cmdCut) Execute(args []string) error {
 		return err
 	}
 
+	archives, err := openArchives(release, cmd.Arch)
+	if err != nil {
+		return err
+	}
+	pkgArchives, err := selectPkgArchives(archives, selection)
+	if err != nil {
+		return err
+	}
+
+	report, err := slicer.Run(&slicer.RunOptions{
+		Selection:   selection,
+		PkgArchives: pkgArchives,
+		TargetDir:   cmd.RootDir,
+	})
+	if err != nil {
+		return err
+	}
+
+	manifestSlices := locateManifestSlices(selection.Slices)
+	if len(manifestSlices) > 0 {
+		pkgInfo := []*archive.PackageInfo{}
+		for pkg, archive := range pkgArchives {
+			info, err := archive.Info(pkg)
+			if err != nil {
+				return err
+			}
+			pkgInfo = append(pkgInfo, info)
+		}
+		manifestWriter, err := generateManifest(&generateManifestOptions{
+			ManifestSlices: manifestSlices,
+			PackageInfo:    pkgInfo,
+			Slices:         selection.Slices,
+			Report:         report,
+		})
+		if err != nil {
+			return err
+		}
+		manifestPaths := []string{}
+		for path := range manifestSlices {
+			manifestPath := filepath.Join(cmd.RootDir, getManifestPath(path))
+			manifestPaths = append(manifestPaths, manifestPath)
+		}
+		err = writeManifests(manifestWriter, manifestPaths)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// openArchives opens the archives listed in the release for a particular
+// architecture. It returns a map of archives indexed by archive name.
+func openArchives(release *setup.Release, arch string) (map[string]archive.Archive, error) {
 	archives := make(map[string]archive.Archive)
 	for archiveName, archiveInfo := range release.Archives {
-		openArchive, err := archive.Open(&archive.Options{
+		archive, err := openArchive(&archive.Options{
 			Label:      archiveName,
 			Version:    archiveInfo.Version,
-			Arch:       cmd.Arch,
+			Arch:       arch,
 			Suites:     archiveInfo.Suites,
 			Components: archiveInfo.Components,
 			CacheDir:   cache.DefaultDir("chisel"),
 			PubKeys:    archiveInfo.PubKeys,
 		})
 		if err != nil {
-			return err
+			return nil, err
 		}
-		archives[archiveName] = openArchive
+		archives[archiveName] = archive
+	}
+	return archives, nil
+}
+
+// selectePkgArchives selects the appropriate archive for each selected slice
+// package. It returns a map of archives indexed by package names.
+func selectPkgArchives(archives map[string]archive.Archive, selection *setup.Selection) (map[string]archive.Archive, error) {
+	pkgArchives := make(map[string]archive.Archive)
+	for _, s := range selection.Slices {
+		pkg := selection.Release.Packages[s.Package]
+		if _, ok := pkgArchives[pkg.Name]; ok {
+			continue
+		}
+		archive := archives[pkg.Archive]
+		if archive == nil {
+			return nil, fmt.Errorf("archive %q not defined", pkg.Archive)
+		}
+		if !archive.Exists(pkg.Name) {
+			return nil, fmt.Errorf("slice package %q missing from archive", pkg.Name)
+		}
+		pkgArchives[pkg.Name] = archive
+	}
+	return pkgArchives, nil
+}
+
+// locateManifestSlices finds the paths marked with "generate:manifest" and
+// returns a map from said path to all the slices that declare it.
+func locateManifestSlices(slices []*setup.Slice) map[string][]*setup.Slice {
+	manifestSlices := make(map[string][]*setup.Slice)
+	for _, s := range slices {
+		for path, info := range s.Contents {
+			if info.Generate == setup.GenerateManifest {
+				if manifestSlices[path] == nil {
+					manifestSlices[path] = []*setup.Slice{}
+				}
+				manifestSlices[path] = append(manifestSlices[path], s)
+			}
+		}
+	}
+	return manifestSlices
+}
+
+const dbMode fs.FileMode = 0644
+
+type generateManifestOptions struct {
+	// Map of slices indexed by paths which contain an entry tagged "generate: manifest".
+	ManifestSlices map[string][]*setup.Slice
+	PackageInfo    []*archive.PackageInfo
+	Slices         []*setup.Slice
+	Report         *slicer.Report
+}
+
+// generateManifest generates the Chisel manifest(s) at the specified paths. It
+// returns the paths inside the rootfs where the manifest(s) are generated.
+func generateManifest(opts *generateManifestOptions) (*jsonwall.DBWriter, error) {
+	dbw := jsonwall.NewDBWriter(&jsonwall.DBWriterOptions{
+		Schema: dbSchema,
+	})
+
+	// Add packages to the manifest.
+	for _, info := range opts.PackageInfo {
+		err := dbw.Add(&dbPackage{
+			Kind:    "package",
+			Name:    info.Name,
+			Version: info.Version,
+			Digest:  info.Hash,
+			Arch:    info.Arch,
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+	// Add slices to the manifest.
+	for _, s := range opts.Slices {
+		err := dbw.Add(&dbSlice{
+			Kind: "slice",
+			Name: s.String(),
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+	// Add paths and contents to the manifest.
+	for _, entry := range opts.Report.Entries {
+		sliceNames := []string{}
+		for s := range entry.Slices {
+			err := dbw.Add(&dbContent{
+				Kind:  "content",
+				Slice: s.String(),
+				Path:  entry.Path,
+			})
+			if err != nil {
+				return nil, err
+			}
+			sliceNames = append(sliceNames, s.String())
+		}
+		sort.Strings(sliceNames)
+		err := dbw.Add(&dbPath{
+			Kind:   "path",
+			Path:   entry.Path,
+			Mode:   fmt.Sprintf("0%o", unixPerm(entry.Mode)),
+			Slices: sliceNames,
+			Hash:   entry.Hash,
+			Size:   uint64(entry.Size),
+			Link:   entry.Link,
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+	// Add the manifest path and content entries.
+	for path, slices := range opts.ManifestSlices {
+		fPath := getManifestPath(path)
+		sliceNames := []string{}
+		for _, s := range slices {
+			err := dbw.Add(&dbContent{
+				Kind:  "content",
+				Slice: s.String(),
+				Path:  fPath,
+			})
+			if err != nil {
+				return nil, err
+			}
+			sliceNames = append(sliceNames, s.String())
+		}
+		sort.Strings(sliceNames)
+		err := dbw.Add(&dbPath{
+			Kind:   "path",
+			Path:   fPath,
+			Mode:   fmt.Sprintf("0%o", unixPerm(dbMode)),
+			Slices: sliceNames,
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	_, err = slicer.Run(&slicer.RunOptions{
-		Selection: selection,
-		Archives:  archives,
-		TargetDir: cmd.RootDir,
-	})
+	return dbw, nil
+}
+
+// writeManifests writes all added entries and generates the manifest file(s).
+func writeManifests(writer *jsonwall.DBWriter, paths []string) (err error) {
+	files := []io.Writer{}
+	for _, path := range paths {
+		if err = os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			return err
+		}
+
+		logf("Generating manifest at %s...", path)
+		file, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, dbMode)
+		if err != nil {
+			return err
+		}
+		files = append(files, file)
+		defer file.Close()
+	}
+
+	// Using a MultiWriter allows to compress the data only once and write the
+	// compressed data to each path.
+	w, err := zstd.NewWriter(io.MultiWriter(files...))
+	if err != nil {
+		return err
+	}
+	defer w.Close()
+
+	_, err = writer.WriteTo(w)
 	return err
+}
+
+func unixPerm(mode fs.FileMode) (perm uint32) {
+	perm = uint32(mode.Perm())
+	if mode&fs.ModeSticky != 0 {
+		perm |= 01000
+	}
+	return perm
 }
 
 // TODO These need testing, and maybe moving into a common file.
