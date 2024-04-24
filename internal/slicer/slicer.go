@@ -29,7 +29,6 @@ func Run(options *RunOptions) (*Report, error) {
 	extract := make(map[string]map[string][]deb.ExtractInfo)
 	pathInfos := make(map[string]setup.PathInfo)
 	pkgSlices := make(map[string][]*setup.Slice)
-	report := NewReport(options.TargetDir)
 
 	knownPaths := make(map[string]bool)
 	knownPaths["/"] = true
@@ -62,13 +61,17 @@ func Run(options *RunOptions) (*Report, error) {
 	}()
 
 	targetDir := filepath.Clean(options.TargetDir)
-	targetDirAbs := targetDir
-	if !filepath.IsAbs(targetDirAbs) {
+	if !filepath.IsAbs(targetDir) {
 		dir, err := os.Getwd()
 		if err != nil {
 			return nil, fmt.Errorf("cannot obtain current directory: %w", err)
 		}
-		targetDirAbs = filepath.Join(dir, targetDir)
+		targetDir = filepath.Join(dir, targetDir)
+	}
+
+	report, err := NewReport(targetDir)
+	if err != nil {
+		return nil, fmt.Errorf("internal error: cannot create report: %w", err)
 	}
 
 	// Build information to process the selection.
@@ -166,17 +169,9 @@ func Run(options *RunOptions) (*Report, error) {
 				if extractInfo == nil {
 					return nil
 				}
-				if _, ok := pathInfos[extractInfo.Path]; !ok {
+				pathInfo, ok := pathInfos[extractInfo.Path]
+				if !ok {
 					return nil
-				}
-				for _, s := range pkgSlices[slice.Package] {
-					if _, ok := s.Contents[extractInfo.Path]; !ok {
-						continue
-					}
-					err := report.Add(s, entry)
-					if err != nil {
-						return err
-					}
 				}
 
 				// Check whether the file was created because it matched a glob.
@@ -187,6 +182,21 @@ func Run(options *RunOptions) (*Report, error) {
 					}
 					globbedPaths[extractInfo.Path] = append(globbedPaths[extractInfo.Path], relPath)
 					addKnownPath(relPath)
+				}
+
+				// Do not add paths with "until: mutate".
+				if pathInfo.Until == setup.UntilMutate {
+					return nil
+				}
+
+				for _, s := range pkgSlices[slice.Package] {
+					if _, ok := s.Contents[extractInfo.Path]; !ok {
+						continue
+					}
+					err := report.Add(s, entry)
+					if err != nil {
+						return err
+					}
 				}
 				return nil
 			},
@@ -209,7 +219,7 @@ func Run(options *RunOptions) (*Report, error) {
 			if pathInfo.Kind == setup.CopyPath || pathInfo.Kind == setup.GlobPath || pathInfo.Kind == setup.GeneratePath {
 				continue
 			}
-			if done[targetPath] {
+			if done[targetPath] && pathInfo.Until != setup.UntilMutate {
 				// The content created would have had the same properties. We
 				// are only adding the slice to the existing report entry.
 				report.Entries[targetPath].Slices[slice] = true
@@ -252,9 +262,13 @@ func Run(options *RunOptions) (*Report, error) {
 			if err != nil {
 				return nil, err
 			}
-			err = report.Add(slice, entry)
-			if err != nil {
-				return nil, err
+
+			// Do not add paths with "until: mutate".
+			if pathInfo.Until != setup.UntilMutate {
+				err = report.Add(slice, entry)
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 	}
@@ -291,9 +305,10 @@ func Run(options *RunOptions) (*Report, error) {
 		return err
 	}
 	content := &scripts.ContentValue{
-		RootDir:    targetDirAbs,
+		RootDir:    targetDir,
 		CheckWrite: checkWrite,
 		CheckRead:  checkRead,
+		Mutated:    report.Mutate,
 	}
 	for _, slice := range options.Selection.Slices {
 		opts := scripts.RunOptions{

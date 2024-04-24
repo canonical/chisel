@@ -4,9 +4,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 
 	. "gopkg.in/check.v1"
 
+	"github.com/canonical/chisel/internal/fsutil"
 	"github.com/canonical/chisel/internal/scripts"
 	"github.com/canonical/chisel/internal/testutil"
 )
@@ -17,6 +20,7 @@ type scriptsTest struct {
 	hackdir func(c *C, dir string)
 	script  string
 	result  map[string]string
+	mutated []string
 	checkr  func(path string) error
 	checkw  func(path string) error
 	error   string
@@ -44,6 +48,10 @@ var scriptsTests = []scriptsTest{{
 		"/foo/file1.txt": "file 0644 5b41362b",
 		"/foo/file2.txt": "file 0644 d98cf53e",
 	},
+	mutated: []string{
+		"/foo/file1.txt",
+		"/foo/file2.txt",
+	},
 }, {
 	summary: "Read a file",
 	content: map[string]string{
@@ -58,6 +66,9 @@ var scriptsTests = []scriptsTest{{
 		"/foo/":          "dir 0755",
 		"/foo/file1.txt": "file 0644 5b41362b",
 		"/foo/file2.txt": "file 0644 5b41362b",
+	},
+	mutated: []string{
+		"/foo/file2.txt",
 	},
 }, {
 	summary: "List a directory",
@@ -76,6 +87,33 @@ var scriptsTests = []scriptsTest{{
 		"/foo/file2.txt": "file 0644 47c22b01", // "bar/,foo/"
 		"/bar/":          "dir 0755",
 		"/bar/file3.txt": "file 0644 5b41362b",
+	},
+	mutated: []string{
+		"/foo/file1.txt",
+		"/foo/file2.txt",
+	},
+}, {
+	summary: "Mode is not changed when writing to a file",
+	content: map[string]string{
+		"foo/file1.txt": ``,
+		"foo/file2.txt": ``,
+	},
+	hackdir: func(c *C, dir string) {
+		fpath1 := filepath.Join(dir, "foo/file1.txt")
+		_ = os.Chmod(fpath1, 0744)
+	},
+	script: `
+		content.write("/foo/file1.txt", "data1")
+		content.write("/foo/file2.txt", "data2")
+	`,
+	result: map[string]string{
+		"/foo/":          "dir 0755",
+		"/foo/file1.txt": "file 0744 5b41362b",
+		"/foo/file2.txt": "file 0644 d98cf53e",
+	},
+	mutated: []string{
+		"/foo/file1.txt",
+		"/foo/file2.txt",
 	},
 }, {
 	summary: "Forbid relative paths",
@@ -217,10 +255,16 @@ func (s *S) TestScripts(c *C) {
 			test.hackdir(c, rootDir)
 		}
 
+		var mutatedFiles []string
 		content := &scripts.ContentValue{
 			RootDir:    rootDir,
 			CheckRead:  test.checkr,
 			CheckWrite: test.checkw,
+			Mutated: func(entry *fsutil.Entry) error {
+				relPath := filepath.Clean("/" + strings.TrimPrefix(entry.Path, rootDir))
+				mutatedFiles = append(mutatedFiles, relPath)
+				return nil
+			},
 		}
 		namespace := map[string]scripts.Value{
 			"content": content,
@@ -237,6 +281,10 @@ func (s *S) TestScripts(c *C) {
 		}
 
 		c.Assert(testutil.TreeDump(rootDir), DeepEquals, test.result)
+
+		sort.Strings(mutatedFiles)
+		sort.Strings(test.mutated)
+		c.Assert(mutatedFiles, DeepEquals, test.mutated)
 	}
 }
 

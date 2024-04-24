@@ -48,6 +48,12 @@ var sampleLink = fsutil.Entry{
 	Link: "/base/exampleFile",
 }
 
+var sampleFileMutated = fsutil.Entry{
+	Path: sampleFile.Path,
+	Hash: sampleFile.Hash + "_changed",
+	Size: sampleFile.Size + 10,
+}
+
 type sliceAndEntry struct {
 	entry fsutil.Entry
 	slice *setup.Slice
@@ -56,6 +62,7 @@ type sliceAndEntry struct {
 var reportTests = []struct {
 	summary string
 	add     []sliceAndEntry
+	mutate  []*fsutil.Entry
 	// indexed by path.
 	expected map[string]slicer.ReportEntry
 	// error after adding the last [sliceAndEntry].
@@ -200,21 +207,62 @@ var reportTests = []struct {
 	add: []sliceAndEntry{
 		{entry: fsutil.Entry{Path: "/file"}, slice: oneSlice},
 	},
-	err: `cannot add path "/file" outside of root "/base/"`,
+	err: `cannot add path: "/file" outside of root "/base/"`,
+}, {
+	summary: "Error for mutated path outside root",
+	mutate:  []*fsutil.Entry{{Path: "/file"}},
+	err:     `cannot mutate path: "/file" outside of root "/base/"`,
 }, {
 	summary: "File name has root prefix but without the directory slash",
 	add: []sliceAndEntry{
 		{entry: fsutil.Entry{Path: "/basefile"}, slice: oneSlice},
 	},
-	err: `cannot add path "/basefile" outside of root "/base/"`,
+	err: `cannot add path: "/basefile" outside of root "/base/"`,
+}, {
+	summary: "Add mutated regular file",
+	add: []sliceAndEntry{
+		{entry: sampleFile, slice: oneSlice},
+		{entry: sampleDir, slice: oneSlice},
+	},
+	mutate: []*fsutil.Entry{&sampleFileMutated},
+	expected: map[string]slicer.ReportEntry{
+		"/exampleDir/": {
+			Path:   "/exampleDir/",
+			Mode:   fs.ModeDir | 0654,
+			Slices: map[*setup.Slice]bool{oneSlice: true},
+			Link:   "",
+		},
+		"/exampleFile": {
+			Path:      "/exampleFile",
+			Mode:      0777,
+			Hash:      "exampleFile_hash",
+			Size:      5688,
+			Slices:    map[*setup.Slice]bool{oneSlice: true},
+			Link:      "",
+			Mutated:   true,
+			FinalHash: "exampleFile_hash_changed",
+		}},
+}, {
+	summary: "Mutated paths must refer to previously added entries",
+	mutate:  []*fsutil.Entry{&sampleFileMutated},
+	err:     `cannot mutate path "/exampleFile": no entry in report`,
+}, {
+	summary: "Cannot mutate directory",
+	add:     []sliceAndEntry{{entry: sampleDir, slice: oneSlice}},
+	mutate:  []*fsutil.Entry{&sampleDir},
+	err:     `cannot mutate directory "/exampleDir/"`,
 }}
 
-func (s *S) TestReportAdd(c *C) {
+func (s *S) TestReport(c *C) {
 	for _, test := range reportTests {
-		report := slicer.NewReport("/base/")
 		var err error
+		report, err := slicer.NewReport("/base/")
+		c.Assert(err, IsNil)
 		for _, si := range test.add {
 			err = report.Add(si.slice, &si.entry)
+		}
+		for _, e := range test.mutate {
+			err = report.Mutate(e)
 		}
 		if test.err != "" {
 			c.Assert(err, ErrorMatches, test.err)
@@ -223,4 +271,9 @@ func (s *S) TestReportAdd(c *C) {
 		c.Assert(err, IsNil)
 		c.Assert(report.Entries, DeepEquals, test.expected, Commentf(test.summary))
 	}
+}
+
+func (s *S) TestRootRelativePath(c *C) {
+	_, err := slicer.NewReport("../base/")
+	c.Assert(err, ErrorMatches, `cannot use relative path for report root: "../base/"`)
 }

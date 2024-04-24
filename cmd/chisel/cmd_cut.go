@@ -255,13 +255,14 @@ func generateManifest(opts *generateManifestOptions) (*jsonwall.DBWriter, error)
 		}
 		sort.Strings(sliceNames)
 		err := dbw.Add(&dbPath{
-			Kind:   "path",
-			Path:   entry.Path,
-			Mode:   fmt.Sprintf("0%o", unixPerm(entry.Mode)),
-			Slices: sliceNames,
-			Hash:   entry.Hash,
-			Size:   uint64(entry.Size),
-			Link:   entry.Link,
+			Kind:      "path",
+			Path:      entry.Path,
+			Mode:      fmt.Sprintf("0%o", unixPerm(entry.Mode)),
+			Slices:    sliceNames,
+			Hash:      entry.Hash,
+			FinalHash: entry.FinalHash,
+			Size:      uint64(entry.Size),
+			Link:      entry.Link,
 		})
 		if err != nil {
 			return nil, err
