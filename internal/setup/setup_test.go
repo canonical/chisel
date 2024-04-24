@@ -1063,6 +1063,242 @@ var setupTests = []setupTest{{
 		`,
 	},
 	relerror: `invalid slice definition filename: "a.yaml"`,
+}, {
+	summary: "Specify generate: manifest",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+					contents:
+						/path/**: {generate: "manifest"}
+		`,
+	},
+	release: &setup.Release{
+		DefaultArchive: "ubuntu",
+
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Archive: "ubuntu",
+				Name:    "mypkg",
+				Path:    "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{
+					"myslice": {
+						Package: "mypkg",
+						Name:    "myslice",
+						Contents: map[string]setup.PathInfo{
+							"/path/**": {Kind: "generate", Generate: "manifest"},
+						},
+					},
+				},
+			},
+		},
+	},
+	selslices: []setup.SliceKey{{"mypkg", "myslice"}},
+	selection: &setup.Selection{
+		Slices: []*setup.Slice{{
+			Package: "mypkg",
+			Name:    "myslice",
+			Contents: map[string]setup.PathInfo{
+				"/path/**": {Kind: "generate", Generate: "manifest"},
+			},
+		}},
+	},
+}, {
+	summary: "Can specify generate with bogus value but cannot select those slices",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+					contents:
+						/path/**: {generate: "foo"}
+		`,
+	},
+	release: &setup.Release{
+		DefaultArchive: "ubuntu",
+
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Archive: "ubuntu",
+				Name:    "mypkg",
+				Path:    "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{
+					"myslice": {
+						Package: "mypkg",
+						Name:    "myslice",
+						Contents: map[string]setup.PathInfo{
+							"/path/**": {Kind: "generate", Generate: "foo"},
+						},
+					},
+				},
+			},
+		},
+	},
+	selslices: []setup.SliceKey{{"mypkg", "myslice"}},
+	selerror:  `slice mypkg_myslice has invalid 'generate' for path /path/\*\*: "foo", consider an update if available`,
+}, {
+	summary: "Paths with generate: manifest must have trailing /**",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+					contents:
+						/path/: {generate: "manifest"}
+		`,
+	},
+	relerror: `slice mypkg_myslice has invalid generate path /path/: does not end with /\*\*`,
+}, {
+	summary: "Paths with generate: manifest must not have any other wildcard except the trailing **",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+					contents:
+						/pat*h/to/dir/**: {generate: "manifest"}
+		`,
+	},
+	relerror: `slice mypkg_myslice has invalid generate path /pat\*h/to/dir/\*\*: contains wildcard characters in addition to trailing \*\*`,
+}, {
+	summary: "Same paths conflict if one is generate and the other is not",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+					contents:
+						/path/**: {generate: "manifest"}
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+			slices:
+				myslice:
+					contents:
+						/path/**:
+		`,
+	},
+	relerror: `slices mypkg_myslice and mypkg2_myslice conflict on /path/\*\*`,
+}, {
+	summary: "Generate paths can be the same across packages",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+					contents:
+						/path/**: {generate: manifest}
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+			slices:
+				myslice:
+					contents:
+						/path/**: {generate: manifest}
+		`,
+	},
+	release: &setup.Release{
+		DefaultArchive: "ubuntu",
+
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Archive: "ubuntu",
+				Name:    "mypkg",
+				Path:    "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{
+					"myslice": {
+						Package: "mypkg",
+						Name:    "myslice",
+						Contents: map[string]setup.PathInfo{
+							"/path/**": {Kind: "generate", Generate: "manifest"},
+						},
+					},
+				},
+			},
+			"mypkg2": {
+				Archive: "ubuntu",
+				Name:    "mypkg2",
+				Path:    "slices/mydir/mypkg2.yaml",
+				Slices: map[string]*setup.Slice{
+					"myslice": {
+						Package: "mypkg2",
+						Name:    "myslice",
+						Contents: map[string]setup.PathInfo{
+							"/path/**": {Kind: "generate", Generate: "manifest"},
+						},
+					},
+				},
+			},
+		},
+	},
+}, {
+	summary: "Generate paths cannot conflict with any other path",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+					contents:
+						/path/**: {generate: manifest}
+						/path/file:
+		`,
+	},
+	relerror: `slices mypkg_myslice and mypkg_myslice conflict on /path/file and /path/\*\*`,
+}, {
+	summary: "Generate paths cannot conflict with any other path across slices",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice1:
+					contents:
+						/path/file:
+				myslice2:
+					contents:
+						/path/**: {generate: manifest}
+		`,
+	},
+	relerror: `slices mypkg_myslice1 and mypkg_myslice2 conflict on /path/file and /path/\*\*`,
+}, {
+	summary: `No other options in "generate" paths`,
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+					contents:
+						/path/**: {generate: "manifest", until: mutate}
+		`,
+	},
+	relerror: `slice mypkg_myslice path /path/\*\* has invalid generate options`,
 }}
 
 var defaultChiselYaml = `

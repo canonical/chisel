@@ -115,6 +115,10 @@ func Run(options *RunOptions) (*Report, error) {
 				if sourcePath == copyrightPath && targetPath == copyrightPath {
 					hasCopyright = true
 				}
+			} else if pathInfo.Kind == setup.GeneratePath {
+				// "GeneratePath" type implies generating new files. Thus, we do
+				// not want to extract anything from the package.
+				continue
 			} else {
 				targetDir := filepath.Dir(strings.TrimRight(targetPath, "/")) + "/"
 				if targetDir == "" || targetDir == "/" {
@@ -212,7 +216,7 @@ func Run(options *RunOptions) (*Report, error) {
 			if len(pathInfo.Arch) > 0 && !contains(pathInfo.Arch, arch) {
 				continue
 			}
-			if pathInfo.Kind == setup.CopyPath || pathInfo.Kind == setup.GlobPath {
+			if pathInfo.Kind == setup.CopyPath || pathInfo.Kind == setup.GlobPath || pathInfo.Kind == setup.GeneratePath {
 				continue
 			}
 			if done[targetPath] {

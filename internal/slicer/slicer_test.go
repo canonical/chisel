@@ -89,6 +89,7 @@ var slicerTests = []slicerTest{{
 						/other-dir/file: {symlink: ../dir/file}
 						/dir/text-file:  {text: data1}
 						/dir/foo/bar/:   {make: true, mode: 01777}
+						/db/**: {generate: manifest}
 		`,
 	},
 	filesystem: map[string]string{
@@ -793,6 +794,20 @@ var slicerTests = []slicerTest{{
 	report: map[string]string{
 		"/dir/nested/file": "file 0644 84237a05 {test-package_myslice}",
 	},
+}, {
+	summary: "Generate (manifest) directory is not extracted from package if exists",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/dir/nested/**: {generate: manifest}
+		`,
+	},
+	filesystem: map[string]string{},
+	report:     map[string]string{},
 }, {
 	summary: "Multiple slices of same package",
 	slices: []setup.SliceKey{
