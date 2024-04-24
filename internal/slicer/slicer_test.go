@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	. "gopkg.in/check.v1"
@@ -425,7 +426,7 @@ var slicerTests = []slicerTest{{
 		// Note: This is the only case where two slices can declare the same
 		// file without conflicts.
 		// TODO which slice(s) should own the file.
-		"/textFile": "file 0644 c6c83d10 {other-package_myslice}",
+		"/textFile": "file 0644 c6c83d10 {other-package_myslice,test-package_myslice}",
 	},
 }, {
 	summary: "Script: write a file",
@@ -792,6 +793,48 @@ var slicerTests = []slicerTest{{
 	report: map[string]string{
 		"/dir/nested/file": "file 0644 84237a05 {test-package_myslice}",
 	},
+}, {
+	summary: "Multiple slices of same package",
+	slices: []setup.SliceKey{
+		{"test-package", "myslice1"},
+		{"test-package", "myslice2"},
+	},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice1:
+					contents:
+						/dir/file:
+						/dir/file-copy:  {copy: /dir/file}
+						/other-dir/file: {symlink: ../dir/file}
+						/dir/text-file:  {text: data1}
+						/dir/foo/bar/:   {make: true, mode: 01777}
+				myslice2:
+					contents:
+						/dir/other-file:
+						/dir/text-file:  {text: data1}
+		`,
+	},
+	filesystem: map[string]string{
+		"/dir/":           "dir 0755",
+		"/dir/file":       "file 0644 cc55e2ec",
+		"/dir/file-copy":  "file 0644 cc55e2ec",
+		"/dir/foo/":       "dir 0755",
+		"/dir/foo/bar/":   "dir 01777",
+		"/dir/other-file": "file 0644 63d5dd49",
+		"/dir/text-file":  "file 0644 5b41362b",
+		"/other-dir/":     "dir 0755",
+		"/other-dir/file": "symlink ../dir/file",
+	},
+	report: map[string]string{
+		"/dir/file":       "file 0644 cc55e2ec {test-package_myslice1}",
+		"/dir/file-copy":  "file 0644 cc55e2ec {test-package_myslice1}",
+		"/dir/foo/bar/":   "dir 01777 {test-package_myslice1}",
+		"/dir/other-file": "file 0644 63d5dd49 {test-package_myslice2}",
+		"/dir/text-file":  "file 0644 5b41362b {test-package_myslice1,test-package_myslice2}",
+		"/other-dir/file": "symlink ../dir/file {test-package_myslice1}",
+	},
 }}
 
 var defaultChiselYaml = `
@@ -950,6 +993,7 @@ func treeDumpReport(report *slicer.Report) map[string]string {
 		for slice := range entry.Slices {
 			slicesStr = append(slicesStr, slice.String())
 		}
+		sort.Strings(slicesStr)
 		result[entry.Path] = fmt.Sprintf("%s {%s}", fsDump, strings.Join(slicesStr, ","))
 	}
 	return result

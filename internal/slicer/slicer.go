@@ -28,6 +28,7 @@ func Run(options *RunOptions) (*Report, error) {
 	archives := make(map[string]archive.Archive)
 	extract := make(map[string]map[string][]deb.ExtractInfo)
 	pathInfos := make(map[string]setup.PathInfo)
+	pkgSlices := make(map[string][]*setup.Slice)
 	report := NewReport(options.TargetDir)
 
 	knownPaths := make(map[string]bool)
@@ -73,6 +74,7 @@ func Run(options *RunOptions) (*Report, error) {
 
 	// Build information to process the selection.
 	for _, slice := range options.Selection.Slices {
+		pkgSlices[slice.Package] = append(pkgSlices[slice.Package], slice)
 		extractPackage := extract[slice.Package]
 		if extractPackage == nil {
 			archiveName := release.Packages[slice.Package].Archive
@@ -170,8 +172,17 @@ func Run(options *RunOptions) (*Report, error) {
 				if extractInfo == nil {
 					return nil
 				}
-				if _, ok := slice.Contents[extractInfo.Path]; !ok {
+				if _, ok := pathInfos[extractInfo.Path]; !ok {
 					return nil
+				}
+				for _, s := range pkgSlices[slice.Package] {
+					if _, ok := s.Contents[extractInfo.Path]; !ok {
+						continue
+					}
+					err := report.Add(s, entry)
+					if err != nil {
+						return err
+					}
 				}
 
 				// Check whether the file was created because it matched a glob.
@@ -183,7 +194,7 @@ func Run(options *RunOptions) (*Report, error) {
 					globbedPaths[extractInfo.Path] = append(globbedPaths[extractInfo.Path], relPath)
 					addKnownPath(relPath)
 				}
-				return report.Add(slice, entry)
+				return nil
 			},
 		})
 		reader.Close()
@@ -201,8 +212,13 @@ func Run(options *RunOptions) (*Report, error) {
 			if len(pathInfo.Arch) > 0 && !contains(pathInfo.Arch, arch) {
 				continue
 			}
-			if done[targetPath] || pathInfo.Kind == setup.CopyPath || pathInfo.Kind == setup.GlobPath {
+			if pathInfo.Kind == setup.CopyPath || pathInfo.Kind == setup.GlobPath {
 				continue
+			}
+			if done[targetPath] {
+				// The content created would have had the same properties. We
+				// are only adding the slice to the existing report entry.
+				report.Entries[targetPath].Slices[slice] = true
 			}
 			done[targetPath] = true
 			targetPath = filepath.Join(targetDir, targetPath)
