@@ -162,7 +162,7 @@ func ReadRelease(dir string) (*Release, error) {
 func (r *Release) validate() error {
 	keys := []SliceKey(nil)
 	paths := make(map[string]*Slice)
-	// globs contains paths with kind GlobPath and GeneratePath.
+	// globs contains all glob paths including GeneratePath(s).
 	globs := make(map[string]*Slice)
 
 	// Check for info conflicts and prepare for following checks.
@@ -172,6 +172,8 @@ func (r *Release) validate() error {
 			for newPath, newInfo := range new.Contents {
 				if old, ok := paths[newPath]; ok {
 					oldInfo := old.Contents[newPath]
+					// Note that if extracting content (CopyPath or GlobPath )
+					// from the same package the content can never be in conflict.
 					if !newInfo.SameContent(&oldInfo) || (newInfo.Kind == CopyPath || newInfo.Kind == GlobPath) && new.Package != old.Package {
 						if old.Package > new.Package || old.Package == new.Package && old.Name > new.Name {
 							old, new = new, old
@@ -197,10 +199,13 @@ func (r *Release) validate() error {
 	// Check for glob conflicts.
 	for newPath, new := range globs {
 		for oldPath, old := range paths {
-			if new.Package == old.Package && new.Contents[newPath].Kind == GlobPath {
+			// Same entry, no conflict.
+			if new == old && newPath == oldPath {
 				continue
 			}
-			if new == old && newPath == oldPath {
+			// Content extracted (not generated) from the same package can never
+			// be in conflict.
+			if new.Package == old.Package && new.Contents[newPath].Kind == GlobPath && old.Contents[oldPath].Kind != GeneratePath {
 				continue
 			}
 			if strdist.GlobPath(newPath, oldPath) {

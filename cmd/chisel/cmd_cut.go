@@ -125,12 +125,27 @@ func (cmd *cmdCut) Execute(args []string) error {
 		if err != nil {
 			return err
 		}
-		manifestPaths := []string{}
-		for path := range manifestSlices {
-			manifestPath := filepath.Join(cmd.RootDir, getManifestPath(path))
-			manifestPaths = append(manifestPaths, manifestPath)
+		files := []io.Writer{}
+		for generatePath := range manifestSlices {
+			relPath := getManifestPath(generatePath)
+			logf("Generating manifest at %s...", relPath)
+			absPath := filepath.Join(cmd.RootDir, relPath)
+			if err = os.MkdirAll(filepath.Dir(absPath), 0755); err != nil {
+				return err
+			}
+			file, err := os.OpenFile(absPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, dbMode)
+			if err != nil {
+				return err
+			}
+			files = append(files, file)
+			defer file.Close()
 		}
-		err = writeManifests(manifestWriter, manifestPaths)
+		w, err := zstd.NewWriter(io.MultiWriter(files...))
+		if err != nil {
+			return err
+		}
+		defer w.Close()
+		_, err = manifestWriter.WriteTo(w)
 		if err != nil {
 			return err
 		}
@@ -296,35 +311,6 @@ func generateManifest(opts *generateManifestOptions) (*jsonwall.DBWriter, error)
 	}
 
 	return dbw, nil
-}
-
-// writeManifests writes all added entries and generates the manifest file(s).
-func writeManifests(writer *jsonwall.DBWriter, paths []string) (err error) {
-	files := []io.Writer{}
-	for _, path := range paths {
-		if err = os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-			return err
-		}
-
-		logf("Generating manifest at %s...", path)
-		file, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, dbMode)
-		if err != nil {
-			return err
-		}
-		files = append(files, file)
-		defer file.Close()
-	}
-
-	// Using a MultiWriter allows to compress the data only once and write the
-	// compressed data to each path.
-	w, err := zstd.NewWriter(io.MultiWriter(files...))
-	if err != nil {
-		return err
-	}
-	defer w.Close()
-
-	_, err = writer.WriteTo(w)
-	return err
 }
 
 func unixPerm(mode fs.FileMode) (perm uint32) {
