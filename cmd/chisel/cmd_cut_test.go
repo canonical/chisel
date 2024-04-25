@@ -116,8 +116,6 @@ var cutTests = []cutTest{{
 	pkgs: map[string][]byte{
 		"test-package": testutil.MustMakeDeb(
 			append(testutil.TestPackageEntries,
-				// Creating the db does not preserve the parent directory
-				// permissions.
 				testutil.Dir(0764, "./db/"),
 				// Copyright is extracted implicitly if exists, even if the path
 				// is not listed in any slice. However, they will not be listed
@@ -132,7 +130,8 @@ var cutTests = []cutTest{{
 	},
 	slices: []string{"test-package_myslice", "test-package_manifest"},
 	filesystem: map[string]string{
-		"/db/":                                  "dir 0755",
+		// Parent directory permissions preserved for the db.
+		"/db/":                                  "dir 0764",
 		"/db/chisel.db":                         "file 0644 bf5da1cb",
 		"/dir/":                                 "dir 0755",
 		"/dir/all-text":                         "file 0644 8067926c",

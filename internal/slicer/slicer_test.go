@@ -809,7 +809,7 @@ var slicerTests = []slicerTest{{
 		"/dir/nested/file": "file 0644 84237a05 {test-package_myslice}",
 	},
 }, {
-	summary: "Generate (manifest) directory is not extracted from package if exists",
+	summary: "Generate directory is not extracted from package if exists, only parent directories",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
@@ -820,8 +820,12 @@ var slicerTests = []slicerTest{{
 						/dir/nested/**: {generate: manifest}
 		`,
 	},
-	filesystem: map[string]string{},
-	report:     map[string]string{},
+	filesystem: map[string]string{
+		// Note that db is not created when calling slicer directly.
+		"/dir/":        "dir 0755",
+		"/dir/nested/": "dir 0755",
+	},
+	report: map[string]string{},
 }, {
 	summary: "Multiple slices of same package",
 	slices: []setup.SliceKey{

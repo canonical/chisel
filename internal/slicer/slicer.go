@@ -108,15 +108,13 @@ func Run(options *RunOptions) (*Report, error) {
 				if sourcePath == copyrightPath && targetPath == copyrightPath {
 					hasCopyright = true
 				}
-			} else if pathInfo.Kind == setup.GeneratePath {
-				// "GeneratePath" type implies generating new files. Thus, we do
-				// not want to extract anything from the package.
-				continue
 			} else {
 				targetDir := filepath.Dir(strings.TrimRight(targetPath, "/")) + "/"
 				if targetDir == "" || targetDir == "/" {
 					continue
 				}
+				// Note: for the parent not to be an empty directory the content
+				// in target path needs to be created later on.
 				extractPackage[targetDir] = append(extractPackage[targetDir], deb.ExtractInfo{
 					Path:     targetDir,
 					Optional: true,
