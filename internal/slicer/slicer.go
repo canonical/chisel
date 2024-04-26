@@ -218,9 +218,11 @@ func Run(options *RunOptions) (*Report, error) {
 				continue
 			}
 			if done[targetPath] && pathInfo.Until != setup.UntilMutate {
-				// The content created would have had the same properties. We
-				// are only adding the slice to the existing report entry.
+				// The content not coming from packages is the same regardless
+				// of the slice. We create it once but attribute it to all of
+				// the slices.
 				report.Entries[targetPath].Slices[slice] = true
+				continue
 			}
 			done[targetPath] = true
 			targetPath = filepath.Join(targetDir, targetPath)
