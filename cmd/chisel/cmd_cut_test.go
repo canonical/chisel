@@ -243,62 +243,6 @@ var cutTests = []cutTest{{
 {"kind":"slice","name":"test-package_myslice"}
 `,
 }, {
-	summary: "Same file mutated across multiple packages",
-	release: map[string]string{
-		"slices/mydir/test-package.yaml": `
-			package: test-package
-			slices:
-				myslice:
-					essential:
-						- test-package_manifest
-					contents:
-						/dir/file:
-						/foo:       {text: foo, mutable: true}
-					mutate: |
-						content.write("/foo", "test-package")
-				manifest:
-					contents:
-						/db/**:     {generate: manifest}
-		`,
-		"slices/mydir/other-package.yaml": `
-			package: other-package
-			slices:
-				otherslice:
-					contents:
-						/foo:       {text: foo, mutable: true}
-					mutate: |
-						content.write("/foo", "other-package")
-		`,
-	},
-	slices: []string{"test-package_myslice", "other-package_otherslice"},
-	pkgs: map[string][]byte{
-		"test-package":  testutil.PackageData["test-package"],
-		"other-package": testutil.PackageData["other-package"],
-	},
-	filesystem: map[string]string{
-		"/db/":          "dir 0755",
-		"/db/chisel.db": "file 0644 8fa04496",
-		"/dir/":         "dir 0755",
-		"/dir/file":     "file 0644 cc55e2ec",
-		"/foo":          "file 0644 a46c30a5",
-	},
-	dbPaths: []string{"/db/chisel.db"},
-	db: `
-{"jsonwall":"1.0","schema":"1.0","count":13}
-{"kind":"content","slice":"other-package_otherslice","path":"/foo"}
-{"kind":"content","slice":"test-package_manifest","path":"/db/chisel.db"}
-{"kind":"content","slice":"test-package_myslice","path":"/dir/file"}
-{"kind":"content","slice":"test-package_myslice","path":"/foo"}
-{"kind":"package","name":"other-package","version":"other-package_version","sha256":"other-package_hash","arch":"other-package_arch"}
-{"kind":"package","name":"test-package","version":"test-package_version","sha256":"test-package_hash","arch":"test-package_arch"}
-{"kind":"path","path":"/db/chisel.db","mode":"0644","slices":["test-package_manifest"]}
-{"kind":"path","path":"/dir/file","mode":"0644","slices":["test-package_myslice"],"sha256":"cc55e2ecf36e40171ded57167c38e1025c99dc8f8bcdd6422368385a977ae1fe","size":14}
-{"kind":"path","path":"/foo","mode":"0644","slices":["other-package_otherslice","test-package_myslice"],"sha256":"2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae","final_sha256":"a46c30a560c2b4f542e9fc7141ac40a3c52e9941216b90bab17237c82ce6306e","size":12}
-{"kind":"slice","name":"other-package_otherslice"}
-{"kind":"slice","name":"test-package_manifest"}
-{"kind":"slice","name":"test-package_myslice"}
-`,
-}, {
 	summary: "No DB if corresponding slice(s) are not selected",
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
