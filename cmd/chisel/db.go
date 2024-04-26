@@ -3,6 +3,8 @@ package main
 import (
 	"path/filepath"
 	"strings"
+
+	"github.com/canonical/chisel/internal/setup"
 )
 
 const dbFile = "chisel.db"
@@ -43,4 +45,21 @@ type dbContent struct {
 func getManifestPath(generatePath string) string {
 	dir := filepath.Clean(strings.TrimSuffix(generatePath, "**"))
 	return filepath.Join(dir, dbFile)
+}
+
+// locateManifestSlices finds the paths marked with "generate:manifest" and
+// returns a map from said path to all the slices that declare it.
+func locateManifestSlices(slices []*setup.Slice) map[string][]*setup.Slice {
+	manifestSlices := make(map[string][]*setup.Slice)
+	for _, s := range slices {
+		for path, info := range s.Contents {
+			if info.Generate == setup.GenerateManifest {
+				if manifestSlices[path] == nil {
+					manifestSlices[path] = []*setup.Slice{}
+				}
+				manifestSlices[path] = append(manifestSlices[path], s)
+			}
+		}
+	}
+	return manifestSlices
 }

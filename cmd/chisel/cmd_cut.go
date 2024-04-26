@@ -197,23 +197,6 @@ func selectPkgArchives(archives map[string]archive.Archive, selection *setup.Sel
 	return pkgArchives, nil
 }
 
-// locateManifestSlices finds the paths marked with "generate:manifest" and
-// returns a map from said path to all the slices that declare it.
-func locateManifestSlices(slices []*setup.Slice) map[string][]*setup.Slice {
-	manifestSlices := make(map[string][]*setup.Slice)
-	for _, s := range slices {
-		for path, info := range s.Contents {
-			if info.Generate == setup.GenerateManifest {
-				if manifestSlices[path] == nil {
-					manifestSlices[path] = []*setup.Slice{}
-				}
-				manifestSlices[path] = append(manifestSlices[path], s)
-			}
-		}
-	}
-	return manifestSlices
-}
-
 const dbMode fs.FileMode = 0644
 
 type generateManifestOptions struct {
