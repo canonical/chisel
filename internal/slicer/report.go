@@ -46,18 +46,18 @@ func NewReport(root string) (*Report, error) {
 func (r *Report) Add(slice *setup.Slice, fsEntry *fsutil.Entry) error {
 	relPath, err := r.sanitizeAbsPath(fsEntry.Path, fsEntry.Mode.IsDir())
 	if err != nil {
-		return fmt.Errorf("cannot add path: %s", err)
+		return fmt.Errorf("cannot add path to report: %s", err)
 	}
 
 	if entry, ok := r.Entries[relPath]; ok {
 		if fsEntry.Mode != entry.Mode {
-			return fmt.Errorf("path %q reported twice with diverging mode: %q != %q", relPath, fsEntry.Mode, entry.Mode)
+			return fmt.Errorf("path %s reported twice with diverging mode: %q != %q", relPath, fsEntry.Mode, entry.Mode)
 		} else if fsEntry.Link != entry.Link {
-			return fmt.Errorf("path %q reported twice with diverging link: %q != %q", relPath, fsEntry.Link, entry.Link)
+			return fmt.Errorf("path %s reported twice with diverging link: %q != %q", relPath, fsEntry.Link, entry.Link)
 		} else if fsEntry.Size != entry.Size {
-			return fmt.Errorf("path %q reported twice with diverging size: %d != %d", relPath, fsEntry.Size, entry.Size)
+			return fmt.Errorf("path %s reported twice with diverging size: %d != %d", relPath, fsEntry.Size, entry.Size)
 		} else if fsEntry.Hash != entry.Hash {
-			return fmt.Errorf("path %q reported twice with diverging hash: %q != %q", relPath, fsEntry.Hash, entry.Hash)
+			return fmt.Errorf("path %s reported twice with diverging hash: %q != %q", relPath, fsEntry.Hash, entry.Hash)
 		}
 		entry.Slices[slice] = true
 		r.Entries[relPath] = entry
@@ -78,15 +78,15 @@ func (r *Report) Add(slice *setup.Slice, fsEntry *fsutil.Entry) error {
 func (r *Report) Mutate(fsEntry *fsutil.Entry) error {
 	relPath, err := r.sanitizeAbsPath(fsEntry.Path, fsEntry.Mode.IsDir())
 	if err != nil {
-		return fmt.Errorf("cannot mutate path: %w", err)
+		return fmt.Errorf("cannot mutate path in report: %s", err)
 	}
 
 	entry, ok := r.Entries[relPath]
 	if !ok {
-		return fmt.Errorf("cannot mutate path %q: no entry in report", relPath)
+		return fmt.Errorf("cannot mutate path in report: %s not previously added", relPath)
 	}
 	if entry.Mode.IsDir() {
-		return fmt.Errorf("cannot mutate directory %q", relPath)
+		return fmt.Errorf("cannot mutate path in report: %s is a directory", relPath)
 	}
 	entry.Mutated = true
 	entry.FinalHash = fsEntry.Hash
@@ -97,7 +97,7 @@ func (r *Report) Mutate(fsEntry *fsutil.Entry) error {
 
 func (r *Report) sanitizeAbsPath(path string, isDir bool) (relPath string, err error) {
 	if !strings.HasPrefix(path, r.Root) {
-		return "", fmt.Errorf("%q outside of root %q", path, r.Root)
+		return "", fmt.Errorf("%s outside of root %s", path, r.Root)
 	}
 	relPath = filepath.Clean("/" + strings.TrimPrefix(path, r.Root))
 	if isDir {

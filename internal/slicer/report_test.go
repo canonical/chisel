@@ -162,7 +162,7 @@ var reportTests = []struct {
 			Link: sampleFile.Link,
 		}, slice: oneSlice},
 	},
-	err: `path "/exampleFile" reported twice with diverging mode: "----------" != "-rwxrwxrwx"`,
+	err: `path /exampleFile reported twice with diverging mode: "----------" != "-rwxrwxrwx"`,
 }, {
 	summary: "Error for same path distinct hash",
 	add: []sliceAndEntry{
@@ -175,7 +175,7 @@ var reportTests = []struct {
 			Link: sampleFile.Link,
 		}, slice: oneSlice},
 	},
-	err: `path "/exampleFile" reported twice with diverging hash: "distinct hash" != "exampleFile_hash"`,
+	err: `path /exampleFile reported twice with diverging hash: "distinct hash" != "exampleFile_hash"`,
 }, {
 	summary: "Error for same path distinct size",
 	add: []sliceAndEntry{
@@ -188,7 +188,7 @@ var reportTests = []struct {
 			Link: sampleFile.Link,
 		}, slice: oneSlice},
 	},
-	err: `path "/exampleFile" reported twice with diverging size: 0 != 5678`,
+	err: `path /exampleFile reported twice with diverging size: 0 != 5678`,
 }, {
 	summary: "Error for same path distinct link",
 	add: []sliceAndEntry{
@@ -201,23 +201,23 @@ var reportTests = []struct {
 			Link: "distinct link",
 		}, slice: oneSlice},
 	},
-	err: `path "/exampleFile" reported twice with diverging link: "distinct link" != ""`,
+	err: `path /exampleFile reported twice with diverging link: "distinct link" != ""`,
 }, {
 	summary: "Error for path outside root",
 	add: []sliceAndEntry{
 		{entry: fsutil.Entry{Path: "/file"}, slice: oneSlice},
 	},
-	err: `cannot add path: "/file" outside of root "/base/"`,
+	err: `cannot add path to report: /file outside of root /base/`,
 }, {
 	summary: "Error for mutated path outside root",
 	mutate:  []*fsutil.Entry{{Path: "/file"}},
-	err:     `cannot mutate path: "/file" outside of root "/base/"`,
+	err:     `cannot mutate path in report: /file outside of root /base/`,
 }, {
 	summary: "File name has root prefix but without the directory slash",
 	add: []sliceAndEntry{
 		{entry: fsutil.Entry{Path: "/basefile"}, slice: oneSlice},
 	},
-	err: `cannot add path: "/basefile" outside of root "/base/"`,
+	err: `cannot add path to report: /basefile outside of root /base/`,
 }, {
 	summary: "Add mutated regular file",
 	add: []sliceAndEntry{
@@ -245,12 +245,12 @@ var reportTests = []struct {
 }, {
 	summary: "Mutated paths must refer to previously added entries",
 	mutate:  []*fsutil.Entry{&sampleFileMutated},
-	err:     `cannot mutate path "/exampleFile": no entry in report`,
+	err:     `cannot mutate path in report: /exampleFile not previously added`,
 }, {
 	summary: "Cannot mutate directory",
 	add:     []sliceAndEntry{{entry: sampleDir, slice: oneSlice}},
 	mutate:  []*fsutil.Entry{&sampleDir},
-	err:     `cannot mutate directory "/exampleDir/"`,
+	err:     `cannot mutate path in report: /exampleDir/ is a directory`,
 }}
 
 func (s *S) TestReport(c *C) {

@@ -3,7 +3,6 @@ package scripts
 import (
 	"bytes"
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -179,7 +178,6 @@ func (c *ContentValue) Write(thread *starlark.Thread, fn *starlark.Builtin, args
 	entry, err := fsutil.Create(&fsutil.CreateOptions{
 		Path: fpath,
 		Data: bytes.NewReader(fdata),
-		Mode: fs.FileMode(0644),
 	})
 	if err != nil {
 		return nil, c.polishError(path, err)
