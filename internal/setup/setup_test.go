@@ -1242,7 +1242,7 @@ var setupTests = []setupTest{{
 				slice2:
 		`,
 	},
-	relerror: `slice mypkg_slice1 lists essential redundantly: mypkg_slice2`,
+	relerror: `slice mypkg_slice1 defined with redundant essential slice: mypkg_slice2`,
 }, {
 	summary: "Duplicated slice essentials",
 	input: map[string]string{
@@ -1256,7 +1256,7 @@ var setupTests = []setupTest{{
 				slice2:
 		`,
 	},
-	relerror: `slice mypkg_slice1 lists essential redundantly: mypkg_slice2`,
+	relerror: `slice mypkg_slice1 defined with redundant essential slice: mypkg_slice2`,
 }, {
 	summary: "Duplicated package essentials",
 	input: map[string]string{
@@ -1270,7 +1270,7 @@ var setupTests = []setupTest{{
 				slice2:
 		`,
 	},
-	relerror: `slice mypkg_slice2 lists essential redundantly: mypkg_slice1`,
+	relerror: `package mypkg defined with redundant essential slice: mypkg_slice1`,
 }, {
 	summary: "Bad slice reference in slice essential",
 	input: map[string]string{

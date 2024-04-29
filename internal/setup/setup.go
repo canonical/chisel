@@ -546,14 +546,10 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 				continue
 			}
 			// TODO replace with slices.Contains once it is stable.
-			duplicated := false
 			for _, sk := range slice.Essential {
 				if sk == sliceKey {
-					duplicated = true
+					return nil, fmt.Errorf("package %s defined with redundant essential slice: %s", pkgName, refName)
 				}
-			}
-			if duplicated {
-				return nil, fmt.Errorf("slice %s lists essential redundantly: %s", slice, refName)
 			}
 			slice.Essential = append(slice.Essential, sliceKey)
 		}
@@ -566,14 +562,10 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 				return nil, fmt.Errorf("cannot add slice to itself as essential %q in %s", refName, pkgPath)
 			}
 			// TODO replace with slices.Contains once it is stable.
-			duplicated := false
 			for _, sk := range slice.Essential {
 				if sk == sliceKey {
-					duplicated = true
+					return nil, fmt.Errorf("slice %s defined with redundant essential slice: %s", slice, refName)
 				}
-			}
-			if duplicated {
-				return nil, fmt.Errorf("slice %s lists essential redundantly: %s", slice, refName)
 			}
 			slice.Essential = append(slice.Essential, sliceKey)
 		}
