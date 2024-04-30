@@ -33,6 +33,9 @@ func Run(options *RunOptions) error {
 		PkgArchives: pkgArchives,
 		TargetDir:   options.TargetDir,
 	})
+	if err != nil {
+		return err
+	}
 
 	manifestSlices := locateManifestSlices(options.Selection.Slices)
 	if len(manifestSlices) > 0 {
