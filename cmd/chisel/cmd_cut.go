@@ -99,7 +99,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 func openArchives(release *setup.Release, arch string) (map[string]archive.Archive, error) {
 	archives := make(map[string]archive.Archive)
 	for archiveName, archiveInfo := range release.Archives {
-		archive, err := openArchive(&archive.Options{
+		archive, err := archive.Open(&archive.Options{
 			Label:      archiveName,
 			Version:    archiveInfo.Version,
 			Arch:       arch,

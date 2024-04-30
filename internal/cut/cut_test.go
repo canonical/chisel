@@ -403,11 +403,16 @@ func (s *S) TestCut(c *C) {
 		}
 
 		targetDir := c.MkDir()
-		cut.Run(&cut.RunOptions{
+		err = cut.Run(&cut.RunOptions{
 			Selection: selection,
 			Archives:  archives,
 			TargetDir: targetDir,
 		})
+		if test.err != "" {
+			c.Assert(err, ErrorMatches, test.err)
+			continue
+		}
+		c.Assert(err, IsNil)
 
 		if test.filesystem != nil {
 			c.Assert(testutil.TreeDump(targetDir), DeepEquals, test.filesystem)

@@ -25,7 +25,6 @@ var (
 	Stdout io.Writer = os.Stdout
 	Stderr io.Writer = os.Stderr
 	// overridden for testing
-	openArchive  = archive.Open
 	ReadPassword = term.ReadPassword
 	// set to logger.Panicf in testing
 	//noticef = logger.Noticef
