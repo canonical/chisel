@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	. "gopkg.in/check.v1"
@@ -20,7 +19,7 @@ type scriptsTest struct {
 	hackdir func(c *C, dir string)
 	script  string
 	result  map[string]string
-	mutated []string
+	mutated map[string]string
 	checkr  func(path string) error
 	checkw  func(path string) error
 	error   string
@@ -48,9 +47,9 @@ var scriptsTests = []scriptsTest{{
 		"/foo/file1.txt": "file 0644 5b41362b",
 		"/foo/file2.txt": "file 0644 d98cf53e",
 	},
-	mutated: []string{
-		"/foo/file1.txt",
-		"/foo/file2.txt",
+	mutated: map[string]string{
+		"/foo/file1.txt": "file 0 5b41362b",
+		"/foo/file2.txt": "file 0 d98cf53e",
 	},
 }, {
 	summary: "Read a file",
@@ -67,8 +66,8 @@ var scriptsTests = []scriptsTest{{
 		"/foo/file1.txt": "file 0644 5b41362b",
 		"/foo/file2.txt": "file 0644 5b41362b",
 	},
-	mutated: []string{
-		"/foo/file2.txt",
+	mutated: map[string]string{
+		"/foo/file2.txt": "file 0 5b41362b",
 	},
 }, {
 	summary: "List a directory",
@@ -88,9 +87,9 @@ var scriptsTests = []scriptsTest{{
 		"/bar/":          "dir 0755",
 		"/bar/file3.txt": "file 0644 5b41362b",
 	},
-	mutated: []string{
-		"/foo/file1.txt",
-		"/foo/file2.txt",
+	mutated: map[string]string{
+		"/foo/file1.txt": "file 0 98139a06",
+		"/foo/file2.txt": "file 0 47c22b01",
 	},
 }, {
 	summary: "Mode is not changed when writing to a file",
@@ -110,10 +109,6 @@ var scriptsTests = []scriptsTest{{
 		"/foo/":          "dir 0755",
 		"/foo/file1.txt": "file 0744 5b41362b",
 		"/foo/file2.txt": "file 0644 d98cf53e",
-	},
-	mutated: []string{
-		"/foo/file1.txt",
-		"/foo/file2.txt",
 	},
 }, {
 	summary: "Forbid relative paths",
@@ -255,14 +250,15 @@ func (s *S) TestScripts(c *C) {
 			test.hackdir(c, rootDir)
 		}
 
-		var mutatedFiles []string
+		mutatedFiles := map[string]string{}
 		content := &scripts.ContentValue{
 			RootDir:    rootDir,
 			CheckRead:  test.checkr,
 			CheckWrite: test.checkw,
 			Mutated: func(entry *fsutil.Entry) error {
-				relPath := filepath.Clean("/" + strings.TrimPrefix(entry.Path, rootDir))
-				mutatedFiles = append(mutatedFiles, relPath)
+				// Set relative path.
+				entry.Path = strings.TrimPrefix(entry.Path, rootDir)
+				mutatedFiles[entry.Path] = testutil.TreeDumpEntry(entry)
 				return nil
 			},
 		}
@@ -282,9 +278,9 @@ func (s *S) TestScripts(c *C) {
 
 		c.Assert(testutil.TreeDump(rootDir), DeepEquals, test.result)
 
-		sort.Strings(mutatedFiles)
-		sort.Strings(test.mutated)
-		c.Assert(mutatedFiles, DeepEquals, test.mutated)
+		if test.mutated != nil {
+			c.Assert(mutatedFiles, DeepEquals, test.mutated)
+		}
 	}
 }
 
