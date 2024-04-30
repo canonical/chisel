@@ -255,6 +255,8 @@ var reportTests = []struct {
 			Size:   5678,
 			Slices: map[*setup.Slice]bool{oneSlice: true},
 			Link:   "",
+			// FinalHash is not updated.
+			FinalHash: "",
 		}},
 }, {
 	summary: "Mutated paths must refer to previously added entries",
