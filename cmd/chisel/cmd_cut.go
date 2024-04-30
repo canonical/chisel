@@ -176,7 +176,7 @@ func openArchives(release *setup.Release, arch string) (map[string]archive.Archi
 	return archives, nil
 }
 
-// selectePkgArchives selects the appropriate archive for each selected slice
+// selectPkgArchives selects the appropriate archive for each selected slice
 // package. It returns a map of archives indexed by package names.
 func selectPkgArchives(archives map[string]archive.Archive, selection *setup.Selection) (map[string]archive.Archive, error) {
 	pkgArchives := make(map[string]archive.Archive)
