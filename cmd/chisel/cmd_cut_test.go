@@ -113,52 +113,31 @@ var cutTests = []cutTest{{
 						/db/**: {generate: manifest}
 		`,
 	},
-	pkgs: map[string][]byte{
-		"test-package": testutil.MustMakeDeb(
-			append(testutil.TestPackageEntries,
-				testutil.Dir(0764, "./db/"),
-				// Copyright is extracted implicitly if exists, even if the path
-				// is not listed in any slice. However, they will not be listed
-				// in the db below.
-				testutil.Dir(0755, "./usr/"),
-				testutil.Dir(0755, "./usr/share/"),
-				testutil.Dir(0755, "./usr/share/doc/"),
-				testutil.Dir(0755, "./usr/share/doc/test-package/"),
-				testutil.Reg(0644, "./usr/share/doc/test-package/copyright", "copyright"),
-			),
-		),
-	},
 	slices: []string{"test-package_myslice", "test-package_manifest"},
 	filesystem: map[string]string{
-		// Parent directory permissions preserved for the db.
-		"/db/":                                  "dir 0764",
-		"/db/chisel.db":                         "file 0644 bf5da1cb",
-		"/dir/":                                 "dir 0755",
-		"/dir/all-text":                         "file 0644 8067926c",
-		"/dir/file":                             "file 0644 cc55e2ec",
-		"/dir/file-copy":                        "file 0644 cc55e2ec",
-		"/dir/file-copy-2":                      "file 0644 cc55e2ec",
-		"/dir/foo/":                             "dir 0755",
-		"/dir/foo/bar/":                         "dir 01777",
-		"/dir/link/":                            "dir 0755",
-		"/dir/link/file":                        "symlink /dir/file",
-		"/dir/link/file-2":                      "symlink ../file",
-		"/dir/several/":                         "dir 0755",
-		"/dir/several/levels/":                  "dir 0755",
-		"/dir/text/":                            "dir 0755",
-		"/dir/text/file":                        "file 0644 5b41362b",
-		"/dir/text/file-2":                      "file 0755 d98cf53e",
-		"/dir/text/file-3":                      "file 0644 2c26b46b",
-		"/dir/text/file-5":                      "file 0755 empty",
-		"/dir/text/file-6":                      "symlink ./file-3",
-		"/parent/":                              "dir 01777",
-		"/parent/permissions/":                  "dir 0764",
-		"/parent/permissions/file":              "file 0755 722c14b3",
-		"/usr/":                                 "dir 0755",
-		"/usr/share/":                           "dir 0755",
-		"/usr/share/doc/":                       "dir 0755",
-		"/usr/share/doc/test-package/":          "dir 0755",
-		"/usr/share/doc/test-package/copyright": "file 0644 c2fca2aa",
+		"/db/":                     "dir 0755",
+		"/db/chisel.db":            "file 0644 bf5da1cb",
+		"/dir/":                    "dir 0755",
+		"/dir/all-text":            "file 0644 8067926c",
+		"/dir/file":                "file 0644 cc55e2ec",
+		"/dir/file-copy":           "file 0644 cc55e2ec",
+		"/dir/file-copy-2":         "file 0644 cc55e2ec",
+		"/dir/foo/":                "dir 0755",
+		"/dir/foo/bar/":            "dir 01777",
+		"/dir/link/":               "dir 0755",
+		"/dir/link/file":           "symlink /dir/file",
+		"/dir/link/file-2":         "symlink ../file",
+		"/dir/several/":            "dir 0755",
+		"/dir/several/levels/":     "dir 0755",
+		"/dir/text/":               "dir 0755",
+		"/dir/text/file":           "file 0644 5b41362b",
+		"/dir/text/file-2":         "file 0755 d98cf53e",
+		"/dir/text/file-3":         "file 0644 2c26b46b",
+		"/dir/text/file-5":         "file 0755 empty",
+		"/dir/text/file-6":         "symlink ./file-3",
+		"/parent/":                 "dir 01777",
+		"/parent/permissions/":     "dir 0764",
+		"/parent/permissions/file": "file 0755 722c14b3",
 	},
 	dbPaths: []string{"/db/chisel.db"},
 	db: `
@@ -271,6 +250,84 @@ var cutTests = []cutTest{{
 		"/other-dir/":     "dir 0755",
 		"/other-dir/file": "symlink ../dir/file",
 	},
+}, {
+	summary: "Copyright is extracted implicitly but not recorded in the db",
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/dir/file:
+				manifest:
+					contents:
+						/db/**: {generate: manifest}
+		`,
+	},
+	pkgs: map[string][]byte{
+		"test-package": testutil.MustMakeDeb(
+			append(testutil.TestPackageEntries,
+				testutil.Dir(0755, "./usr/"),
+				testutil.Dir(0755, "./usr/share/"),
+				testutil.Dir(0755, "./usr/share/doc/"),
+				testutil.Dir(0755, "./usr/share/doc/test-package/"),
+				testutil.Reg(0644, "./usr/share/doc/test-package/copyright", "copyright"),
+			),
+		),
+	},
+	slices: []string{"test-package_myslice", "test-package_manifest"},
+	filesystem: map[string]string{
+		"/db/":                                  "dir 0755",
+		"/db/chisel.db":                         "file 0644 d4807ac9",
+		"/dir/":                                 "dir 0755",
+		"/dir/file":                             "file 0644 cc55e2ec",
+		"/usr/":                                 "dir 0755",
+		"/usr/share/":                           "dir 0755",
+		"/usr/share/doc/":                       "dir 0755",
+		"/usr/share/doc/test-package/":          "dir 0755",
+		"/usr/share/doc/test-package/copyright": "file 0644 c2fca2aa",
+	},
+	db: `
+{"jsonwall":"1.0","schema":"1.0","count":8}
+{"kind":"content","slice":"test-package_manifest","path":"/db/chisel.db"}
+{"kind":"content","slice":"test-package_myslice","path":"/dir/file"}
+{"kind":"package","name":"test-package","version":"test-package_version","sha256":"test-package_hash","arch":"test-package_arch"}
+{"kind":"path","path":"/db/chisel.db","mode":"0644","slices":["test-package_manifest"]}
+{"kind":"path","path":"/dir/file","mode":"0644","slices":["test-package_myslice"],"sha256":"cc55e2ecf36e40171ded57167c38e1025c99dc8f8bcdd6422368385a977ae1fe","size":14}
+{"kind":"slice","name":"test-package_manifest"}
+{"kind":"slice","name":"test-package_myslice"}
+`,
+	dbPaths: []string{"/db/chisel.db"},
+}, {
+	summary: "Implicit parent permissions for manifest directory",
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				manifest:
+					contents:
+						/db/**: {generate: manifest}
+		`,
+	},
+	pkgs: map[string][]byte{
+		"test-package": testutil.MustMakeDeb(
+			append(testutil.TestPackageEntries, testutil.Dir(0764, "./db/")),
+		),
+	},
+	slices: []string{"test-package_manifest"},
+	filesystem: map[string]string{
+		// Parent directory permissions are preserved.
+		"/db/":          "dir 0764",
+		"/db/chisel.db": "file 0644 bb9dc358",
+	},
+	db: `
+{"jsonwall":"1.0","schema":"1.0","count":5}
+{"kind":"content","slice":"test-package_manifest","path":"/db/chisel.db"}
+{"kind":"package","name":"test-package","version":"test-package_version","sha256":"test-package_hash","arch":"test-package_arch"}
+{"kind":"path","path":"/db/chisel.db","mode":"0644","slices":["test-package_manifest"]}
+{"kind":"slice","name":"test-package_manifest"}
+`,
+	dbPaths: []string{"/db/chisel.db"},
 }}
 
 var defaultChiselYaml = `
