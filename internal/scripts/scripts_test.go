@@ -87,9 +87,33 @@ var scriptsTests = []scriptsTest{{
 		"/bar/":          "dir 0755",
 		"/bar/file3.txt": "file 0644 5b41362b",
 	},
+}, {
+	summary: "Mutated is called for modified files only",
+	content: map[string]string{
+		"foo/file1.txt": `placeholder`,
+		"foo/file2.txt": `placeholder`,
+		// This file is not mutable, it cannot be written to.
+		"foo/file3.txt": `placeholder`,
+	},
+	script: `
+		content.write("/foo/file1.txt", "data1")
+		content.write("/foo/file2.txt", "data2")
+	`,
+	checkw: func(p string) error {
+		if p == "foo/file3.txt" {
+			return fmt.Errorf("no write: %s", p)
+		}
+		return nil
+	},
+	result: map[string]string{
+		"/foo/":          "dir 0755",
+		"/foo/file1.txt": "file 0644 5b41362b",
+		"/foo/file2.txt": "file 0644 d98cf53e",
+		"/foo/file3.txt": "file 0644 40978892",
+	},
 	mutated: map[string]string{
-		"/foo/file1.txt": "file 0 98139a06",
-		"/foo/file2.txt": "file 0 47c22b01",
+		"/foo/file1.txt": "file 0 5b41362b",
+		"/foo/file2.txt": "file 0 d98cf53e",
 	},
 }, {
 	summary: "Mode is not changed when writing to a file",
