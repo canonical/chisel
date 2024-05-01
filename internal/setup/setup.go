@@ -64,7 +64,7 @@ const (
 	GlobPath    PathKind = "glob"
 	TextPath    PathKind = "text"
 	SymlinkPath PathKind = "symlink"
-	// GeneratePath is a special kind of globs with the following format:
+	// GeneratePath is a special kind of glob path with the following format:
 	//   /absolute/explicit/path/to/dir/**
 	// Wildcard characters can only appear at the end as **, and the path before
 	// those wildcards must be a directory.
@@ -172,7 +172,7 @@ func (r *Release) validate() error {
 			for newPath, newInfo := range new.Contents {
 				if old, ok := paths[newPath]; ok {
 					oldInfo := old.Contents[newPath]
-					// Note that if extracting content (CopyPath or GlobPath )
+					// Note that if extracting content (CopyPath or GlobPath)
 					// from the same package the content can never be in conflict.
 					if !newInfo.SameContent(&oldInfo) || (newInfo.Kind == CopyPath || newInfo.Kind == GlobPath) && new.Package != old.Package {
 						if old.Package > new.Package || old.Package == new.Package && old.Name > new.Name {

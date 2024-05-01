@@ -47,7 +47,7 @@ func Run(options *RunOptions) error {
 			}
 			pkgInfo = append(pkgInfo, info)
 		}
-		manifestWriter, err := generateManifest(&generateManifestOptions{
+		manifestWriter, err := generateDB(&generateDBOptions{
 			ManifestSlices: manifestSlices,
 			PackageInfo:    pkgInfo,
 			Slices:         options.Selection.Slices,
@@ -116,7 +116,7 @@ func unixPerm(mode fs.FileMode) (perm uint32) {
 
 const dbMode fs.FileMode = 0644
 
-type generateManifestOptions struct {
+type generateDBOptions struct {
 	// Map of slices indexed by paths which contain an entry tagged "generate: manifest".
 	ManifestSlices map[string][]*setup.Slice
 	PackageInfo    []*archive.PackageInfo
@@ -124,15 +124,15 @@ type generateManifestOptions struct {
 	Report         *slicer.Report
 }
 
-// generateManifest generates the Chisel manifest(s) at the specified paths. It
+// generateDB generates the Chisel manifest(s) at the specified paths. It
 // returns the paths inside the rootfs where the manifest(s) are generated.
-func generateManifest(opts *generateManifestOptions) (*jsonwall.DBWriter, error) {
+func generateDB(options *generateDBOptions) (*jsonwall.DBWriter, error) {
 	dbw := jsonwall.NewDBWriter(&jsonwall.DBWriterOptions{
 		Schema: dbSchema,
 	})
 
-	// Add packages to the manifest.
-	for _, info := range opts.PackageInfo {
+	// Add packages to the db.
+	for _, info := range options.PackageInfo {
 		err := dbw.Add(&dbPackage{
 			Kind:    "package",
 			Name:    info.Name,
@@ -144,8 +144,8 @@ func generateManifest(opts *generateManifestOptions) (*jsonwall.DBWriter, error)
 			return nil, err
 		}
 	}
-	// Add slices to the manifest.
-	for _, s := range opts.Slices {
+	// Add slices to the db.
+	for _, s := range options.Slices {
 		err := dbw.Add(&dbSlice{
 			Kind: "slice",
 			Name: s.String(),
@@ -154,8 +154,8 @@ func generateManifest(opts *generateManifestOptions) (*jsonwall.DBWriter, error)
 			return nil, err
 		}
 	}
-	// Add paths and contents to the manifest.
-	for _, entry := range opts.Report.Entries {
+	// Add paths and contents to the db.
+	for _, entry := range options.Report.Entries {
 		sliceNames := []string{}
 		for s := range entry.Slices {
 			err := dbw.Add(&dbContent{
@@ -183,8 +183,8 @@ func generateManifest(opts *generateManifestOptions) (*jsonwall.DBWriter, error)
 			return nil, err
 		}
 	}
-	// Add the manifest path and content entries.
-	for path, slices := range opts.ManifestSlices {
+	// Add the manifest path and content entries to the db.
+	for path, slices := range options.ManifestSlices {
 		fPath := getManifestPath(path)
 		sliceNames := []string{}
 		for _, s := range slices {

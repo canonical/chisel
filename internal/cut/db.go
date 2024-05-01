@@ -40,8 +40,8 @@ type dbContent struct {
 	Path  string `json:"path"`
 }
 
-// getManifestPath parses the "generate" path and returns the absolute path of
-// the location to be generated.
+// getManifestPath parses the "generate" glob path to get the regular path to its
+// directory.
 func getManifestPath(generatePath string) string {
 	dir := filepath.Clean(strings.TrimSuffix(generatePath, "**"))
 	return filepath.Join(dir, dbFile)

@@ -13,6 +13,7 @@ import (
 	"golang.org/x/term"
 
 	"github.com/canonical/chisel/internal/archive"
+	"github.com/canonical/chisel/internal/cut"
 	"github.com/canonical/chisel/internal/deb"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/slicer"
@@ -327,7 +328,7 @@ func run() error {
 	deb.SetLogger(log.Default())
 	setup.SetLogger(log.Default())
 	slicer.SetLogger(log.Default())
-	SetLogger(log.Default())
+	cut.SetLogger(log.Default())
 
 	parser := Parser()
 	xtra, err := parser.Parse()

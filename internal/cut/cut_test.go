@@ -292,6 +292,7 @@ var cutTests = []cutTest{{
 		"/usr/share/doc/test-package/":          "dir 0755",
 		"/usr/share/doc/test-package/copyright": "file 0644 c2fca2aa",
 	},
+	dbPaths: []string{"/manifest/chisel.db"},
 	db: `
 {"jsonwall":"1.0","schema":"1.0","count":8}
 {"kind":"content","slice":"test-package_manifest","path":"/manifest/chisel.db"}
@@ -302,7 +303,6 @@ var cutTests = []cutTest{{
 {"kind":"slice","name":"test-package_manifest"}
 {"kind":"slice","name":"test-package_myslice"}
 `,
-	dbPaths: []string{"/manifest/chisel.db"},
 }, {
 	summary: "Implicit parent permissions for manifest directory",
 	release: map[string]string{
