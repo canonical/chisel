@@ -45,7 +45,7 @@ var cutTests = []cutTest{{
 						/dir/foo/bar/:   {make: true, mode: 01777}
 				manifest:
 					contents:
-						/db/**: {generate: manifest}
+						/manifest/**: {generate: manifest}
 		`,
 	},
 	slices: []setup.SliceKey{
@@ -53,32 +53,32 @@ var cutTests = []cutTest{{
 		{"test-package", "manifest"},
 	},
 	filesystem: map[string]string{
-		"/db/":            "dir 0755",
-		"/db/chisel.db":   "file 0644 b30549a5",
-		"/dir/":           "dir 0755",
-		"/dir/file":       "file 0644 cc55e2ec",
-		"/dir/file-copy":  "file 0644 cc55e2ec",
-		"/dir/foo/":       "dir 0755",
-		"/dir/foo/bar/":   "dir 01777",
-		"/dir/text-file":  "file 0644 5b41362b",
-		"/other-dir/":     "dir 0755",
-		"/other-dir/file": "symlink ../dir/file",
+		"/manifest/":          "dir 0755",
+		"/manifest/chisel.db": "file 0644 99a1ff16",
+		"/dir/":               "dir 0755",
+		"/dir/file":           "file 0644 cc55e2ec",
+		"/dir/file-copy":      "file 0644 cc55e2ec",
+		"/dir/foo/":           "dir 0755",
+		"/dir/foo/bar/":       "dir 01777",
+		"/dir/text-file":      "file 0644 5b41362b",
+		"/other-dir/":         "dir 0755",
+		"/other-dir/file":     "symlink ../dir/file",
 	},
-	dbPaths: []string{"/db/chisel.db"},
+	dbPaths: []string{"/manifest/chisel.db"},
 	db: `
 {"jsonwall":"1.0","schema":"1.0","count":16}
-{"kind":"content","slice":"test-package_manifest","path":"/db/chisel.db"}
+{"kind":"content","slice":"test-package_manifest","path":"/manifest/chisel.db"}
 {"kind":"content","slice":"test-package_myslice","path":"/dir/file"}
 {"kind":"content","slice":"test-package_myslice","path":"/dir/file-copy"}
 {"kind":"content","slice":"test-package_myslice","path":"/dir/foo/bar/"}
 {"kind":"content","slice":"test-package_myslice","path":"/dir/text-file"}
 {"kind":"content","slice":"test-package_myslice","path":"/other-dir/file"}
 {"kind":"package","name":"test-package","version":"test-package_version","sha256":"test-package_hash","arch":"test-package_arch"}
-{"kind":"path","path":"/db/chisel.db","mode":"0644","slices":["test-package_manifest"]}
 {"kind":"path","path":"/dir/file","mode":"0644","slices":["test-package_myslice"],"sha256":"cc55e2ecf36e40171ded57167c38e1025c99dc8f8bcdd6422368385a977ae1fe","size":14}
 {"kind":"path","path":"/dir/file-copy","mode":"0644","slices":["test-package_myslice"],"sha256":"cc55e2ecf36e40171ded57167c38e1025c99dc8f8bcdd6422368385a977ae1fe","size":14}
 {"kind":"path","path":"/dir/foo/bar/","mode":"01777","slices":["test-package_myslice"]}
 {"kind":"path","path":"/dir/text-file","mode":"0644","slices":["test-package_myslice"],"sha256":"5b41362bc82b7f3d56edc5a306db22105707d01ff4819e26faef9724a2d406c9","size":5}
+{"kind":"path","path":"/manifest/chisel.db","mode":"0644","slices":["test-package_manifest"]}
 {"kind":"path","path":"/other-dir/file","mode":"0644","slices":["test-package_myslice"],"link":"../dir/file"}
 {"kind":"slice","name":"test-package_manifest"}
 {"kind":"slice","name":"test-package_myslice"}
@@ -114,7 +114,7 @@ var cutTests = []cutTest{{
 						content.write("/dir/all-text", "".join(data))
 				manifest:
 					contents:
-						/db/**: {generate: manifest}
+						/manifest/**: {generate: manifest}
 		`,
 	},
 	slices: []setup.SliceKey{
@@ -122,8 +122,8 @@ var cutTests = []cutTest{{
 		{"test-package", "manifest"},
 	},
 	filesystem: map[string]string{
-		"/db/":                     "dir 0755",
-		"/db/chisel.db":            "file 0644 bf5da1cb",
+		"/manifest/":               "dir 0755",
+		"/manifest/chisel.db":      "file 0644 a4c4c1d2",
 		"/dir/":                    "dir 0755",
 		"/dir/all-text":            "file 0644 8067926c",
 		"/dir/file":                "file 0644 cc55e2ec",
@@ -146,10 +146,10 @@ var cutTests = []cutTest{{
 		"/parent/permissions/":     "dir 0764",
 		"/parent/permissions/file": "file 0755 722c14b3",
 	},
-	dbPaths: []string{"/db/chisel.db"},
+	dbPaths: []string{"/manifest/chisel.db"},
 	db: `
 {"jsonwall":"1.0","schema":"1.0","count":38}
-{"kind":"content","slice":"test-package_manifest","path":"/db/chisel.db"}
+{"kind":"content","slice":"test-package_manifest","path":"/manifest/chisel.db"}
 {"kind":"content","slice":"test-package_myslice","path":"/dir/all-text"}
 {"kind":"content","slice":"test-package_myslice","path":"/dir/file"}
 {"kind":"content","slice":"test-package_myslice","path":"/dir/file-copy"}
@@ -167,7 +167,6 @@ var cutTests = []cutTest{{
 {"kind":"content","slice":"test-package_myslice","path":"/parent/permissions/"}
 {"kind":"content","slice":"test-package_myslice","path":"/parent/permissions/file"}
 {"kind":"package","name":"test-package","version":"test-package_version","sha256":"test-package_hash","arch":"test-package_arch"}
-{"kind":"path","path":"/db/chisel.db","mode":"0644","slices":["test-package_manifest"]}
 {"kind":"path","path":"/dir/all-text","mode":"0644","slices":["test-package_myslice"],"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","final_sha256":"8067926c032c090867013d14fb0eb21ae858344f62ad07086fd32375845c91a6","size":21}
 {"kind":"path","path":"/dir/file","mode":"0644","slices":["test-package_myslice"],"sha256":"cc55e2ecf36e40171ded57167c38e1025c99dc8f8bcdd6422368385a977ae1fe","size":14}
 {"kind":"path","path":"/dir/file-copy","mode":"0644","slices":["test-package_myslice"],"sha256":"cc55e2ecf36e40171ded57167c38e1025c99dc8f8bcdd6422368385a977ae1fe","size":14}
@@ -181,6 +180,7 @@ var cutTests = []cutTest{{
 {"kind":"path","path":"/dir/text/file-3","mode":"0644","slices":["test-package_myslice"],"sha256":"f60f2d65da046fcaaf8a10bd96b5630104b629e111aff46ce89792e1caa11b18","final_sha256":"2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae","size":3}
 {"kind":"path","path":"/dir/text/file-5","mode":"0755","slices":["test-package_myslice"],"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"}
 {"kind":"path","path":"/dir/text/file-6","mode":"0644","slices":["test-package_myslice"],"link":"./file-3"}
+{"kind":"path","path":"/manifest/chisel.db","mode":"0644","slices":["test-package_manifest"]}
 {"kind":"path","path":"/parent/","mode":"01777","slices":["test-package_myslice"]}
 {"kind":"path","path":"/parent/permissions/","mode":"0764","slices":["test-package_myslice"]}
 {"kind":"path","path":"/parent/permissions/file","mode":"0755","slices":["test-package_myslice"],"sha256":"722c14b3fe33f2a36e4e02c0034951d2a6820ad11e0bd633ffa90d09754640cc","size":5}
@@ -193,42 +193,43 @@ var cutTests = []cutTest{{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
 			slices:
-				myslice:
-					essential:
-						- test-package_manifest
+				manifest-1:
 					contents:
 						/dir/file:
-						/db-1/**:   {generate: manifest}
-				manifest:
+						/manifest-1/**:   {generate: manifest}
+				manifest-2:
 					contents:
-						/db-1/**:   {generate: manifest}
-						/db-2/**: {generate: manifest}
+						/dir/other-file:
+						/manifest-2/**: {generate: manifest}
 		`,
 	},
 	slices: []setup.SliceKey{
-		{"test-package", "myslice"},
+		{"test-package", "manifest-1"},
+		{"test-package", "manifest-2"},
 	},
 	filesystem: map[string]string{
-		"/db-1/":          "dir 0755",
-		"/db-1/chisel.db": "file 0644 9948ee09",
-		"/db-2/":          "dir 0755",
-		"/db-2/chisel.db": "file 0644 9948ee09",
-		"/dir/":           "dir 0755",
-		"/dir/file":       "file 0644 cc55e2ec",
+		"/dir/":                 "dir 0755",
+		"/dir/file":             "file 0644 cc55e2ec",
+		"/dir/other-file":       "file 0644 63d5dd49",
+		"/manifest-1/":          "dir 0755",
+		"/manifest-1/chisel.db": "file 0644 67047a13",
+		"/manifest-2/":          "dir 0755",
+		"/manifest-2/chisel.db": "file 0644 67047a13",
 	},
-	dbPaths: []string{"/db-1/chisel.db", "/db-2/chisel.db"},
+	dbPaths: []string{"/manifest-1/chisel.db", "/manifest-2/chisel.db"},
 	db: `
-{"jsonwall":"1.0","schema":"1.0","count":11}
-{"kind":"content","slice":"test-package_manifest","path":"/db-1/chisel.db"}
-{"kind":"content","slice":"test-package_manifest","path":"/db-2/chisel.db"}
-{"kind":"content","slice":"test-package_myslice","path":"/db-1/chisel.db"}
-{"kind":"content","slice":"test-package_myslice","path":"/dir/file"}
+{"jsonwall":"1.0","schema":"1.0","count":12}
+{"kind":"content","slice":"test-package_manifest-1","path":"/dir/file"}
+{"kind":"content","slice":"test-package_manifest-1","path":"/manifest-1/chisel.db"}
+{"kind":"content","slice":"test-package_manifest-2","path":"/dir/other-file"}
+{"kind":"content","slice":"test-package_manifest-2","path":"/manifest-2/chisel.db"}
 {"kind":"package","name":"test-package","version":"test-package_version","sha256":"test-package_hash","arch":"test-package_arch"}
-{"kind":"path","path":"/db-1/chisel.db","mode":"0644","slices":["test-package_manifest","test-package_myslice"]}
-{"kind":"path","path":"/db-2/chisel.db","mode":"0644","slices":["test-package_manifest"]}
-{"kind":"path","path":"/dir/file","mode":"0644","slices":["test-package_myslice"],"sha256":"cc55e2ecf36e40171ded57167c38e1025c99dc8f8bcdd6422368385a977ae1fe","size":14}
-{"kind":"slice","name":"test-package_manifest"}
-{"kind":"slice","name":"test-package_myslice"}
+{"kind":"path","path":"/dir/file","mode":"0644","slices":["test-package_manifest-1"],"sha256":"cc55e2ecf36e40171ded57167c38e1025c99dc8f8bcdd6422368385a977ae1fe","size":14}
+{"kind":"path","path":"/dir/other-file","mode":"0644","slices":["test-package_manifest-2"],"sha256":"63d5dd494bf949a0d10fed7a6a419cfd9609caff766e9af65170ff350ae0fa57","size":7}
+{"kind":"path","path":"/manifest-1/chisel.db","mode":"0644","slices":["test-package_manifest-1"]}
+{"kind":"path","path":"/manifest-2/chisel.db","mode":"0644","slices":["test-package_manifest-2"]}
+{"kind":"slice","name":"test-package_manifest-1"}
+{"kind":"slice","name":"test-package_manifest-2"}
 `,
 }, {
 	summary: "No DB if corresponding slice(s) are not selected",
@@ -239,27 +240,17 @@ var cutTests = []cutTest{{
 				myslice:
 					contents:
 						/dir/file:
-						/dir/file-copy:  {copy: /dir/file}
-						/other-dir/file: {symlink: ../dir/file}
-						/dir/text-file:  {text: data1}
-						/dir/foo/bar/:   {make: true, mode: 01777}
 				manifest:
 					contents:
-						/db/**: {generate: manifest}
+						/manifest/**: {generate: manifest}
 		`,
 	},
 	slices: []setup.SliceKey{
 		{"test-package", "myslice"},
 	},
 	filesystem: map[string]string{
-		"/dir/":           "dir 0755",
-		"/dir/file":       "file 0644 cc55e2ec",
-		"/dir/file-copy":  "file 0644 cc55e2ec",
-		"/dir/foo/":       "dir 0755",
-		"/dir/foo/bar/":   "dir 01777",
-		"/dir/text-file":  "file 0644 5b41362b",
-		"/other-dir/":     "dir 0755",
-		"/other-dir/file": "symlink ../dir/file",
+		"/dir/":     "dir 0755",
+		"/dir/file": "file 0644 cc55e2ec",
 	},
 }, {
 	summary: "Copyright is extracted implicitly but not recorded in the db",
@@ -272,7 +263,7 @@ var cutTests = []cutTest{{
 						/dir/file:
 				manifest:
 					contents:
-						/db/**: {generate: manifest}
+						/manifest/**: {generate: manifest}
 		`,
 	},
 	pkgs: map[string][]byte{
@@ -291,8 +282,8 @@ var cutTests = []cutTest{{
 		{"test-package", "manifest"},
 	},
 	filesystem: map[string]string{
-		"/db/":                                  "dir 0755",
-		"/db/chisel.db":                         "file 0644 d4807ac9",
+		"/manifest/":                            "dir 0755",
+		"/manifest/chisel.db":                   "file 0644 ac8e6a97",
 		"/dir/":                                 "dir 0755",
 		"/dir/file":                             "file 0644 cc55e2ec",
 		"/usr/":                                 "dir 0755",
@@ -303,15 +294,15 @@ var cutTests = []cutTest{{
 	},
 	db: `
 {"jsonwall":"1.0","schema":"1.0","count":8}
-{"kind":"content","slice":"test-package_manifest","path":"/db/chisel.db"}
+{"kind":"content","slice":"test-package_manifest","path":"/manifest/chisel.db"}
 {"kind":"content","slice":"test-package_myslice","path":"/dir/file"}
 {"kind":"package","name":"test-package","version":"test-package_version","sha256":"test-package_hash","arch":"test-package_arch"}
-{"kind":"path","path":"/db/chisel.db","mode":"0644","slices":["test-package_manifest"]}
 {"kind":"path","path":"/dir/file","mode":"0644","slices":["test-package_myslice"],"sha256":"cc55e2ecf36e40171ded57167c38e1025c99dc8f8bcdd6422368385a977ae1fe","size":14}
+{"kind":"path","path":"/manifest/chisel.db","mode":"0644","slices":["test-package_manifest"]}
 {"kind":"slice","name":"test-package_manifest"}
 {"kind":"slice","name":"test-package_myslice"}
 `,
-	dbPaths: []string{"/db/chisel.db"},
+	dbPaths: []string{"/manifest/chisel.db"},
 }, {
 	summary: "Implicit parent permissions for manifest directory",
 	release: map[string]string{
@@ -320,12 +311,12 @@ var cutTests = []cutTest{{
 			slices:
 				manifest:
 					contents:
-						/db/**: {generate: manifest}
+						/manifest/**: {generate: manifest}
 		`,
 	},
 	pkgs: map[string][]byte{
 		"test-package": testutil.MustMakeDeb(
-			append(testutil.TestPackageEntries, testutil.Dir(0764, "./db/")),
+			append(testutil.TestPackageEntries, testutil.Dir(0764, "./manifest/")),
 		),
 	},
 	slices: []setup.SliceKey{
@@ -333,17 +324,17 @@ var cutTests = []cutTest{{
 	},
 	filesystem: map[string]string{
 		// Parent directory permissions are preserved.
-		"/db/":          "dir 0764",
-		"/db/chisel.db": "file 0644 bb9dc358",
+		"/manifest/":          "dir 0764",
+		"/manifest/chisel.db": "file 0644 71961c3d",
 	},
+	dbPaths: []string{"/manifest/chisel.db"},
 	db: `
 {"jsonwall":"1.0","schema":"1.0","count":5}
-{"kind":"content","slice":"test-package_manifest","path":"/db/chisel.db"}
+{"kind":"content","slice":"test-package_manifest","path":"/manifest/chisel.db"}
 {"kind":"package","name":"test-package","version":"test-package_version","sha256":"test-package_hash","arch":"test-package_arch"}
-{"kind":"path","path":"/db/chisel.db","mode":"0644","slices":["test-package_manifest"]}
+{"kind":"path","path":"/manifest/chisel.db","mode":"0644","slices":["test-package_manifest"]}
 {"kind":"slice","name":"test-package_manifest"}
 `,
-	dbPaths: []string{"/db/chisel.db"},
 }}
 
 var defaultChiselYaml = `
