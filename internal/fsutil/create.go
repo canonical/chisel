@@ -39,13 +39,13 @@ func Create(options *CreateOptions) (*Entry, error) {
 	o := &optsCopy
 
 	var err error
+	var hash string
 	if o.MakeParents {
 		if err := os.MkdirAll(filepath.Dir(o.Path), 0755); err != nil {
 			return nil, err
 		}
 	}
 
-	var hash string
 	switch o.Mode & fs.ModeType {
 	case 0:
 		err = createFile(o)
