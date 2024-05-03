@@ -534,6 +534,27 @@ var slicerTests = []slicerTest{{
 		"/dir/nested/file-copy": "file 0644 cc55e2ec {test-package_myslice}",
 	},
 }, {
+	summary: "Script: writing same contents to existing file does not set the final hash in report",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/dir/text-file: {text: data1, mutable: true}
+					mutate: |
+						content.write("/dir/text-file", "data1")
+		`,
+	},
+	filesystem: map[string]string{
+		"/dir/":          "dir 0755",
+		"/dir/text-file": "file 0644 5b41362b",
+	},
+	report: map[string]string{
+		"/dir/text-file": "file 0644 5b41362b {test-package_myslice}",
+	},
+}, {
 	summary: "Script: cannot write non-mutable files",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
 	release: map[string]string{
