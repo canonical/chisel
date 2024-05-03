@@ -126,10 +126,10 @@ func (s *S) TestCreate(c *C) {
 		// created implicitly. We only check for the requested path.
 		entry.Path = strings.TrimPrefix(entry.Path, dir)
 		// Add the slashes that TreeDump adds to the path.
-		slashedPath := "/" + test.options.Path
+		slashPath := "/" + test.options.Path
 		if test.options.Mode.IsDir() {
-			slashedPath = slashedPath + "/"
+			slashPath = slashPath + "/"
 		}
-		c.Assert(testutil.TreeDumpEntry(entry), DeepEquals, test.result[slashedPath])
+		c.Assert(testutil.TreeDumpEntry(entry), DeepEquals, test.result[slashPath])
 	}
 }
