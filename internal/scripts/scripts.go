@@ -178,6 +178,7 @@ func (c *ContentValue) Write(thread *starlark.Thread, fn *starlark.Builtin, args
 	entry, err := fsutil.Create(&fsutil.CreateOptions{
 		Path: fpath,
 		Data: bytes.NewReader(fdata),
+		Mode: 0644,
 	})
 	if err != nil {
 		return nil, c.polishError(path, err)
