@@ -195,7 +195,7 @@ func Slice(options *SliceOptions) (*Report, error) {
 					if _, ok := s.Contents[extractInfo.Path]; !ok {
 						continue
 					}
-					err := report.Add(s, entry)
+					err := report.Add([]*setup.Slice{s}, entry)
 					if err != nil {
 						return err
 					}
@@ -210,26 +210,36 @@ func Slice(options *SliceOptions) (*Report, error) {
 		}
 	}
 
-	// Create new content not coming from packages.
-	done := make(map[string]bool)
+	type contentInfo struct {
+		entry    *fsutil.Entry
+		slices   []*setup.Slice
+		pathInfo setup.PathInfo
+	}
+	// Create new content not coming from packages. If the content appears in more
+	// than one slice it has to be the same because of the invariants we require
+	// when validating the [setup.Release].
+	// We create the content only once but use the contentInfo map to store the
+	// all slices that contain it to later add the entry to the report.
+	contentInfos := make(map[string]contentInfo)
 	for _, slice := range options.Selection.Slices {
 		arch := pkgArchives[slice.Package].Options().Arch
-		for targetPath, pathInfo := range slice.Contents {
+		for slicePath, pathInfo := range slice.Contents {
 			if len(pathInfo.Arch) > 0 && !contains(pathInfo.Arch, arch) {
 				continue
 			}
 			if pathInfo.Kind == setup.CopyPath || pathInfo.Kind == setup.GlobPath || pathInfo.Kind == setup.GeneratePath {
 				continue
 			}
-			if done[targetPath] && pathInfo.Until != setup.UntilMutate {
-				// The content not coming from packages is the same regardless
-				// of the slice. We create it once but attribute it to all of
-				// the slices.
-				report.Entries[targetPath].Slices[slice] = true
+			info, ok := contentInfos[slicePath]
+			if ok {
+				// Attribute the repeated content to all slices.
+				info.slices = append(info.slices, slice)
+				contentInfos[slicePath] = info
 				continue
 			}
-			done[targetPath] = true
-			targetPath = filepath.Join(targetDir, targetPath)
+
+			info.pathInfo = pathInfo
+			targetPath := filepath.Join(targetDir, slicePath)
 			targetMode := pathInfo.Mode
 			if targetMode == 0 {
 				if pathInfo.Kind == setup.DirPath {
@@ -266,13 +276,18 @@ func Slice(options *SliceOptions) (*Report, error) {
 			if err != nil {
 				return nil, err
 			}
-
-			// Do not add paths with "until: mutate".
-			if pathInfo.Until != setup.UntilMutate {
-				err = report.Add(slice, entry)
-				if err != nil {
-					return nil, err
-				}
+			info.slices = []*setup.Slice{slice}
+			info.entry = entry
+			contentInfos[slicePath] = info
+		}
+	}
+	// Add content not coming from packages to the report.
+	for _, info := range contentInfos {
+		// Do not add paths with "until: mutate" because it will be deleted later.
+		if info.pathInfo.Until != setup.UntilMutate {
+			err = report.Add(info.slices, info.entry)
+			if err != nil {
+				return nil, err
 			}
 		}
 	}

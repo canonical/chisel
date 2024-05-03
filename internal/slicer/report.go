@@ -43,13 +43,14 @@ func NewReport(root string) (*Report, error) {
 	return report, nil
 }
 
-func (r *Report) Add(slice *setup.Slice, fsEntry *fsutil.Entry) error {
+func (r *Report) Add(slices []*setup.Slice, fsEntry *fsutil.Entry) error {
 	relPath, err := r.sanitizeAbsPath(fsEntry.Path, fsEntry.Mode.IsDir())
 	if err != nil {
 		return fmt.Errorf("cannot add path: %s", err)
 	}
 
-	if entry, ok := r.Entries[relPath]; ok {
+	entry, ok := r.Entries[relPath]
+	if ok {
 		if fsEntry.Mode != entry.Mode {
 			return fmt.Errorf("path %q reported twice with diverging mode: %q != %q", relPath, fsEntry.Mode, entry.Mode)
 		} else if fsEntry.Link != entry.Link {
@@ -59,18 +60,21 @@ func (r *Report) Add(slice *setup.Slice, fsEntry *fsutil.Entry) error {
 		} else if fsEntry.Hash != entry.Hash {
 			return fmt.Errorf("path %q reported twice with diverging hash: %q != %q", relPath, fsEntry.Hash, entry.Hash)
 		}
-		entry.Slices[slice] = true
-		r.Entries[relPath] = entry
 	} else {
-		r.Entries[relPath] = ReportEntry{
+		entry = ReportEntry{
 			Path:   relPath,
 			Mode:   fsEntry.Mode,
 			Hash:   fsEntry.Hash,
 			Size:   fsEntry.Size,
-			Slices: map[*setup.Slice]bool{slice: true},
+			Slices: map[*setup.Slice]bool{},
 			Link:   fsEntry.Link,
 		}
 	}
+
+	for _, slice := range slices {
+		entry.Slices[slice] = true
+	}
+	r.Entries[relPath] = entry
 	return nil
 }
 

@@ -259,7 +259,8 @@ func (s *S) TestReport(c *C) {
 		report, err := slicer.NewReport("/base/")
 		c.Assert(err, IsNil)
 		for _, si := range test.add {
-			err = report.Add(si.slice, &si.entry)
+			// TODO change the tests to use the slice.
+			err = report.Add([]*setup.Slice{si.slice}, &si.entry)
 		}
 		for _, e := range test.mutate {
 			err = report.Mutate(e)
