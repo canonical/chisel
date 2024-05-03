@@ -426,7 +426,7 @@ var slicerTests = []slicerTest{{
 		// Note: This is the only case where two slices can declare the same
 		// file without conflicts.
 		// TODO which slice(s) should own the file.
-		"/textFile": "file 0644 c6c83d10 {other-package_myslice,test-package_myslice}",
+		"/textFile": "file 0644 c6c83d10 {other-package_myslice}",
 	},
 }, {
 	summary: "Script: write a file",
@@ -808,12 +808,10 @@ var slicerTests = []slicerTest{{
 						/dir/file:
 						/dir/file-copy:  {copy: /dir/file}
 						/other-dir/file: {symlink: ../dir/file}
-						/dir/text-file:  {text: data1}
 						/dir/foo/bar/:   {make: true, mode: 01777}
 				myslice2:
 					contents:
 						/dir/other-file:
-						/dir/text-file:  {text: data1}
 		`,
 	},
 	filesystem: map[string]string{
@@ -823,7 +821,6 @@ var slicerTests = []slicerTest{{
 		"/dir/foo/":       "dir 0755",
 		"/dir/foo/bar/":   "dir 01777",
 		"/dir/other-file": "file 0644 63d5dd49",
-		"/dir/text-file":  "file 0644 5b41362b",
 		"/other-dir/":     "dir 0755",
 		"/other-dir/file": "symlink ../dir/file",
 	},
@@ -832,7 +829,6 @@ var slicerTests = []slicerTest{{
 		"/dir/file-copy":  "file 0644 cc55e2ec {test-package_myslice1}",
 		"/dir/foo/bar/":   "dir 01777 {test-package_myslice1}",
 		"/dir/other-file": "file 0644 63d5dd49 {test-package_myslice2}",
-		"/dir/text-file":  "file 0644 5b41362b {test-package_myslice1,test-package_myslice2}",
 		"/other-dir/file": "symlink ../dir/file {test-package_myslice1}",
 	},
 }}

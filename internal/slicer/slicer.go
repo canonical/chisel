@@ -212,13 +212,8 @@ func Run(options *RunOptions) (*Report, error) {
 			if len(pathInfo.Arch) > 0 && !contains(pathInfo.Arch, arch) {
 				continue
 			}
-			if pathInfo.Kind == setup.CopyPath || pathInfo.Kind == setup.GlobPath {
+			if done[targetPath] || pathInfo.Kind == setup.CopyPath || pathInfo.Kind == setup.GlobPath {
 				continue
-			}
-			if done[targetPath] {
-				// The content created would have had the same properties. We
-				// are only adding the slice to the existing report entry.
-				report.Entries[targetPath].Slices[slice] = true
 			}
 			done[targetPath] = true
 			targetPath = filepath.Join(targetDir, targetPath)
