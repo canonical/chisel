@@ -93,20 +93,6 @@ var createTests = []createTest{{
 		// mode is not updated.
 		"/foo": "file 0666 d67e2e94",
 	},
-}, {
-	options: fsutil.CreateOptions{
-		Path: "foo",
-		// Mode should be ignored for existing entry.
-		Mode: 0644,
-		Data: bytes.NewBufferString("changed"),
-	},
-	hackdir: func(c *C, dir string) {
-		c.Assert(os.WriteFile(filepath.Join(dir, "foo"), []byte("data"), 0666), IsNil)
-	},
-	result: map[string]string{
-		// mode is not updated.
-		"/foo": "file 0666 d67e2e94",
-	},
 }}
 
 func (s *S) TestCreate(c *C) {
