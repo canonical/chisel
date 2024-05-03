@@ -48,8 +48,8 @@ var scriptsTests = []scriptsTest{{
 		"/foo/file2.txt": "file 0644 d98cf53e",
 	},
 	mutated: map[string]string{
-		"/foo/file1.txt": "file 0 5b41362b",
-		"/foo/file2.txt": "file 0 d98cf53e",
+		"/foo/file1.txt": "file 0644 5b41362b",
+		"/foo/file2.txt": "file 0644 d98cf53e",
 	},
 }, {
 	summary: "Read a file",
@@ -67,7 +67,7 @@ var scriptsTests = []scriptsTest{{
 		"/foo/file2.txt": "file 0644 5b41362b",
 	},
 	mutated: map[string]string{
-		"/foo/file2.txt": "file 0 5b41362b",
+		"/foo/file2.txt": "file 0644 5b41362b",
 	},
 }, {
 	summary: "List a directory",
@@ -112,8 +112,8 @@ var scriptsTests = []scriptsTest{{
 		"/foo/file3.txt": "file 0644 40978892",
 	},
 	mutated: map[string]string{
-		"/foo/file1.txt": "file 0 5b41362b",
-		"/foo/file2.txt": "file 0 d98cf53e",
+		"/foo/file1.txt": "file 0644 5b41362b",
+		"/foo/file2.txt": "file 0644 d98cf53e",
 	},
 }, {
 	summary: "Mode is not changed when writing to a file",
