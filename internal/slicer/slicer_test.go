@@ -357,44 +357,6 @@ var slicerTests = []slicerTest{{
 		"/dir/file": "file 0644 a441b15f {implicit-parent_myslice}",
 	},
 }, {
-	summary: "Install two packages, explicit path has preference over implicit parent (reverse order)",
-	slices: []setup.SliceKey{
-		{"explicit-dir", "myslice"},
-		{"implicit-parent", "myslice"}},
-	pkgs: map[string][]byte{
-		"implicit-parent": testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Dir(0755, "./dir/"),
-			testutil.Reg(0644, "./dir/file", "random"),
-		}),
-		"explicit-dir": testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Dir(01777, "./dir/"),
-		}),
-	},
-	release: map[string]string{
-		"slices/mydir/implicit-parent.yaml": `
-			package: implicit-parent
-			slices:
-				myslice:
-					contents:
-						/dir/file:
-		`,
-		"slices/mydir/explicit-dir.yaml": `
-			package: explicit-dir
-			slices:
-				myslice:
-					contents:
-						/dir/:
-		`,
-	},
-	filesystem: map[string]string{
-		"/dir/":     "dir 01777",
-		"/dir/file": "file 0644 a441b15f",
-	},
-	report: map[string]string{
-		"/dir/":     "dir 01777 {explicit-dir_myslice}",
-		"/dir/file": "file 0644 a441b15f {implicit-parent_myslice}",
-	},
-}, {
 	summary: "Valid same file in two slices in different packages",
 	slices: []setup.SliceKey{
 		{"test-package", "myslice"},
@@ -831,6 +793,191 @@ var slicerTests = []slicerTest{{
 		"/dir/other-file": "file 0644 63d5dd49 {test-package_myslice2}",
 		"/other-dir/file": "symlink ../dir/file {test-package_myslice1}",
 	},
+}, {
+	summary: "Same glob in several entries, with until:mutate",
+	slices: []setup.SliceKey{
+		{"test-package", "myslice1"},
+		{"test-package", "myslice2"},
+	},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice1:
+					contents:
+						/dir/**:
+					mutate: |
+						content.read("/dir/file")
+				myslice2:
+					contents:
+						/dir/**: {until: mutate}
+					mutate: |
+						content.read("/dir/file")
+		`,
+	},
+	filesystem: map[string]string{
+		"/dir/nested/other-file":        "file 0644 6b86b273",
+		"/dir/several/":                 "dir 0755",
+		"/dir/several/levels/":          "dir 0755",
+		"/dir/several/levels/deep/file": "file 0644 6bc26dff",
+		"/dir/":                         "dir 0755",
+		"/dir/file":                     "file 0644 cc55e2ec",
+		"/dir/nested/":                  "dir 0755",
+		"/dir/nested/file":              "file 0644 84237a05",
+		"/dir/other-file":               "file 0644 63d5dd49",
+		"/dir/several/levels/deep/":     "dir 0755",
+	},
+	report: map[string]string{
+		"/dir/":                         "dir 0755 {test-package_myslice1,test-package_myslice2}",
+		"/dir/file":                     "file 0644 cc55e2ec {test-package_myslice1,test-package_myslice2}",
+		"/dir/nested/":                  "dir 0755 {test-package_myslice1,test-package_myslice2}",
+		"/dir/nested/file":              "file 0644 84237a05 {test-package_myslice1,test-package_myslice2}",
+		"/dir/nested/other-file":        "file 0644 6b86b273 {test-package_myslice1,test-package_myslice2}",
+		"/dir/other-file":               "file 0644 63d5dd49 {test-package_myslice1,test-package_myslice2}",
+		"/dir/several/":                 "dir 0755 {test-package_myslice1,test-package_myslice2}",
+		"/dir/several/levels/":          "dir 0755 {test-package_myslice1,test-package_myslice2}",
+		"/dir/several/levels/deep/":     "dir 0755 {test-package_myslice1,test-package_myslice2}",
+		"/dir/several/levels/deep/file": "file 0644 6bc26dff {test-package_myslice1,test-package_myslice2}",
+	},
+}, {
+	summary: "Same glob in several entries with until:mutate and reading from script",
+	slices: []setup.SliceKey{
+		{"test-package", "myslice1"},
+		{"test-package", "myslice2"},
+	},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice1:
+					contents:
+						/dir/**: {until: mutate}
+					mutate: |
+						content.read("/dir/file")
+				myslice2:
+					contents:
+						/dir/**:
+					mutate: |
+						content.read("/dir/file")
+		`,
+	},
+	filesystem: map[string]string{
+		"/dir/nested/other-file":        "file 0644 6b86b273",
+		"/dir/several/":                 "dir 0755",
+		"/dir/several/levels/":          "dir 0755",
+		"/dir/several/levels/deep/file": "file 0644 6bc26dff",
+		"/dir/":                         "dir 0755",
+		"/dir/file":                     "file 0644 cc55e2ec",
+		"/dir/nested/":                  "dir 0755",
+		"/dir/nested/file":              "file 0644 84237a05",
+		"/dir/other-file":               "file 0644 63d5dd49",
+		"/dir/several/levels/deep/":     "dir 0755",
+	},
+	report: map[string]string{
+		"/dir/":                         "dir 0755 {test-package_myslice1,test-package_myslice2}",
+		"/dir/file":                     "file 0644 cc55e2ec {test-package_myslice1,test-package_myslice2}",
+		"/dir/nested/":                  "dir 0755 {test-package_myslice1,test-package_myslice2}",
+		"/dir/nested/file":              "file 0644 84237a05 {test-package_myslice1,test-package_myslice2}",
+		"/dir/nested/other-file":        "file 0644 6b86b273 {test-package_myslice1,test-package_myslice2}",
+		"/dir/other-file":               "file 0644 63d5dd49 {test-package_myslice1,test-package_myslice2}",
+		"/dir/several/":                 "dir 0755 {test-package_myslice1,test-package_myslice2}",
+		"/dir/several/levels/":          "dir 0755 {test-package_myslice1,test-package_myslice2}",
+		"/dir/several/levels/deep/":     "dir 0755 {test-package_myslice1,test-package_myslice2}",
+		"/dir/several/levels/deep/file": "file 0644 6bc26dff {test-package_myslice1,test-package_myslice2}",
+	},
+}, {
+	summary: "Overlapping globs, until:mutate and reading from script",
+	slices: []setup.SliceKey{
+		{"test-package", "myslice2"},
+		{"test-package", "myslice1"},
+	},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice1:
+					contents:
+						/dir/**:
+					mutate: |
+						content.read("/dir/file")
+				myslice2:
+					contents:
+						/dir/nested/**: {until: mutate}
+					mutate: |
+						content.read("/dir/file")
+		`,
+	},
+	filesystem: map[string]string{
+		"/dir/":                         "dir 0755",
+		"/dir/file":                     "file 0644 cc55e2ec",
+		"/dir/nested/":                  "dir 0755",
+		"/dir/nested/file":              "file 0644 84237a05",
+		"/dir/nested/other-file":        "file 0644 6b86b273",
+		"/dir/other-file":               "file 0644 63d5dd49",
+		"/dir/several/":                 "dir 0755",
+		"/dir/several/levels/":          "dir 0755",
+		"/dir/several/levels/deep/":     "dir 0755",
+		"/dir/several/levels/deep/file": "file 0644 6bc26dff",
+	},
+	report: map[string]string{
+		// TODO, myslice2 should not appear in the report, this is pending PR #131.
+		"/dir/":                         "dir 0755 {test-package_myslice1}",
+		"/dir/file":                     "file 0644 cc55e2ec {test-package_myslice1}",
+		"/dir/nested/":                  "dir 0755 {test-package_myslice1,test-package_myslice2}",
+		"/dir/nested/file":              "file 0644 84237a05 {test-package_myslice1,test-package_myslice2}",
+		"/dir/nested/other-file":        "file 0644 6b86b273 {test-package_myslice1,test-package_myslice2}",
+		"/dir/other-file":               "file 0644 63d5dd49 {test-package_myslice1}",
+		"/dir/several/":                 "dir 0755 {test-package_myslice1}",
+		"/dir/several/levels/":          "dir 0755 {test-package_myslice1}",
+		"/dir/several/levels/deep/":     "dir 0755 {test-package_myslice1}",
+		"/dir/several/levels/deep/file": "file 0644 6bc26dff {test-package_myslice1}",
+	},
+}, {
+	summary: "Overlapping glob and single entry, until:mutate and reading from script",
+	slices: []setup.SliceKey{
+		{"test-package", "myslice1"},
+		{"test-package", "myslice2"},
+	},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice1:
+					contents:
+						/dir/**:
+					mutate: |
+						content.read("/dir/file")
+				myslice2:
+					contents:
+						/dir/file: {until: mutate}
+					mutate: |
+						content.read("/dir/file")
+		`,
+	},
+	filesystem: map[string]string{
+		"/dir/":                         "dir 0755",
+		"/dir/file":                     "file 0644 cc55e2ec",
+		"/dir/nested/":                  "dir 0755",
+		"/dir/nested/file":              "file 0644 84237a05",
+		"/dir/nested/other-file":        "file 0644 6b86b273",
+		"/dir/other-file":               "file 0644 63d5dd49",
+		"/dir/several/":                 "dir 0755",
+		"/dir/several/levels/":          "dir 0755",
+		"/dir/several/levels/deep/":     "dir 0755",
+		"/dir/several/levels/deep/file": "file 0644 6bc26dff",
+	},
+	report: map[string]string{
+		"/dir/":                         "dir 0755 {test-package_myslice1}",
+		"/dir/file":                     "file 0644 cc55e2ec {test-package_myslice1,test-package_myslice2}",
+		"/dir/nested/":                  "dir 0755 {test-package_myslice1}",
+		"/dir/nested/file":              "file 0644 84237a05 {test-package_myslice1}",
+		"/dir/nested/other-file":        "file 0644 6b86b273 {test-package_myslice1}",
+		"/dir/other-file":               "file 0644 63d5dd49 {test-package_myslice1}",
+		"/dir/several/":                 "dir 0755 {test-package_myslice1}",
+		"/dir/several/levels/":          "dir 0755 {test-package_myslice1}",
+		"/dir/several/levels/deep/":     "dir 0755 {test-package_myslice1}",
+		"/dir/several/levels/deep/file": "file 0644 6bc26dff {test-package_myslice1}",
+	},
 }}
 
 var defaultChiselYaml = `
@@ -890,71 +1037,73 @@ func (s *S) TestRun(c *C) {
 
 func runSlicerTests(c *C, tests []slicerTest) {
 	for _, test := range tests {
-		c.Logf("Summary: %s", test.summary)
+		for _, slices := range permutations(test.slices) {
+			c.Logf("Summary: %s", test.summary)
 
-		if _, ok := test.release["chisel.yaml"]; !ok {
-			test.release["chisel.yaml"] = string(defaultChiselYaml)
-		}
-
-		if test.pkgs == nil {
-			test.pkgs = map[string][]byte{
-				"test-package": testutil.PackageData["test-package"],
+			if _, ok := test.release["chisel.yaml"]; !ok {
+				test.release["chisel.yaml"] = string(defaultChiselYaml)
 			}
-		}
 
-		releaseDir := c.MkDir()
-		for path, data := range test.release {
-			fpath := filepath.Join(releaseDir, path)
-			err := os.MkdirAll(filepath.Dir(fpath), 0755)
-			c.Assert(err, IsNil)
-			err = os.WriteFile(fpath, testutil.Reindent(data), 0644)
-			c.Assert(err, IsNil)
-		}
-
-		release, err := setup.ReadRelease(releaseDir)
-		c.Assert(err, IsNil)
-
-		selection, err := setup.Select(release, test.slices)
-		c.Assert(err, IsNil)
-
-		archives := map[string]archive.Archive{}
-		for name, setupArchive := range release.Archives {
-			archive := &testArchive{
-				options: archive.Options{
-					Label:      setupArchive.Name,
-					Version:    setupArchive.Version,
-					Suites:     setupArchive.Suites,
-					Components: setupArchive.Components,
-					Arch:       test.arch,
-				},
-				pkgs: test.pkgs,
+			if test.pkgs == nil {
+				test.pkgs = map[string][]byte{
+					"test-package": testutil.PackageData["test-package"],
+				}
 			}
-			archives[name] = archive
-		}
 
-		targetDir := c.MkDir()
-		options := slicer.RunOptions{
-			Selection: selection,
-			Archives:  archives,
-			TargetDir: targetDir,
-		}
-		if test.hackopt != nil {
-			test.hackopt(c, &options)
-		}
-		report, err := slicer.Run(&options)
-		if test.error == "" {
+			releaseDir := c.MkDir()
+			for path, data := range test.release {
+				fpath := filepath.Join(releaseDir, path)
+				err := os.MkdirAll(filepath.Dir(fpath), 0755)
+				c.Assert(err, IsNil)
+				err = os.WriteFile(fpath, testutil.Reindent(data), 0644)
+				c.Assert(err, IsNil)
+			}
+
+			release, err := setup.ReadRelease(releaseDir)
 			c.Assert(err, IsNil)
-		} else {
-			c.Assert(err, ErrorMatches, test.error)
-			continue
-		}
 
-		if test.filesystem != nil {
-			c.Assert(testutil.TreeDump(targetDir), DeepEquals, test.filesystem)
-		}
+			selection, err := setup.Select(release, slices)
+			c.Assert(err, IsNil)
 
-		if test.report != nil {
-			c.Assert(treeDumpReport(report), DeepEquals, test.report)
+			archives := map[string]archive.Archive{}
+			for name, setupArchive := range release.Archives {
+				archive := &testArchive{
+					options: archive.Options{
+						Label:      setupArchive.Name,
+						Version:    setupArchive.Version,
+						Suites:     setupArchive.Suites,
+						Components: setupArchive.Components,
+						Arch:       test.arch,
+					},
+					pkgs: test.pkgs,
+				}
+				archives[name] = archive
+			}
+
+			targetDir := c.MkDir()
+			options := slicer.RunOptions{
+				Selection: selection,
+				Archives:  archives,
+				TargetDir: targetDir,
+			}
+			if test.hackopt != nil {
+				test.hackopt(c, &options)
+			}
+			report, err := slicer.Run(&options)
+			if test.error == "" {
+				c.Assert(err, IsNil)
+			} else {
+				c.Assert(err, ErrorMatches, test.error)
+				continue
+			}
+
+			if test.filesystem != nil {
+				c.Assert(testutil.TreeDump(targetDir), DeepEquals, test.filesystem)
+			}
+
+			if test.report != nil {
+				c.Assert(treeDumpReport(report), DeepEquals, test.report)
+			}
 		}
 	}
 }
@@ -993,4 +1142,38 @@ func treeDumpReport(report *slicer.Report) map[string]string {
 		result[entry.Path] = fmt.Sprintf("%s {%s}", fsDump, strings.Join(slicesStr, ","))
 	}
 	return result
+}
+
+func permutations[S ~[]E, E any](s S) []S {
+	var output []S
+	// Heap's algorithm: https://en.wikipedia.org/wiki/Heap%27s_algorithm
+	var generate func(k int, s S)
+	generate = func(k int, s S) {
+		// Copy the array before swapping elements.
+		r := make([]E, len(s))
+		copy(r, s)
+		s = r
+
+		if k == 1 {
+			output = append(output, s)
+			return
+		}
+		// Generate permutations with k-th unaltered
+		// Initially k = length(A)
+		generate(k-1, s)
+
+		// Generate permutations for k-th swapped with each k-1 initial
+		for i := 0; i < k-1; i += 1 {
+			// Swap choice dependent on parity of k (even or odd)
+			if k%2 == 0 {
+				s[i], s[k-1] = s[k-1], s[i]
+			} else {
+				s[0], s[k-1] = s[k-1], s[0]
+			}
+			generate(k-1, s)
+		}
+	}
+
+	generate(len(s), s)
+	return output
 }

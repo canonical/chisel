@@ -104,6 +104,7 @@ func Run(options *RunOptions) (*Report, error) {
 				addKnownPath(targetPath)
 			}
 			pathInfos[targetPath] = pathInfo
+
 			if pathInfo.Kind == setup.CopyPath || pathInfo.Kind == setup.GlobPath {
 				sourcePath := pathInfo.Info
 				if sourcePath == "" {
@@ -148,7 +149,13 @@ func Run(options *RunOptions) (*Report, error) {
 		packages[slice.Package] = reader
 	}
 
-	globbedPaths := make(map[string][]string)
+	type UntilPathStatus int
+	const (
+		empty UntilPathStatus = iota
+		allYes
+		someNo
+	)
+	untilPaths := map[string]UntilPathStatus{}
 
 	// Extract all packages, also using the selection order.
 	for _, slice := range options.Selection.Slices {
@@ -156,46 +163,73 @@ func Run(options *RunOptions) (*Report, error) {
 		if reader == nil {
 			continue
 		}
-		err := deb.Extract(reader, &deb.ExtractOptions{
-			Package:   slice.Package,
-			Extract:   extract[slice.Package],
-			TargetDir: targetDir,
-			// Creates the filesystem entry and adds it to the report.
-			Create: func(extractInfo *deb.ExtractInfo, o *fsutil.CreateOptions) error {
-				entry, err := fsutil.Create(o)
+		// Creates the filesystem entry and adds it to the report.
+		create := func(extractInfos []*deb.ExtractInfo, o *fsutil.CreateOptions) error {
+			relPath := filepath.Clean("/" + strings.TrimLeft(o.Path, targetDir))
+			if o.Mode.IsDir() {
+				relPath = relPath + "/"
+			}
+
+			var entry *fsutil.Entry
+			if _, ok := report.Entries[relPath]; !ok {
+				// Optimization: we only create the content once. Because
+				// of the invariants it will actually be the same if has
+				// the same destination path.
+				e, err := fsutil.Create(o)
 				if err != nil {
 					return err
 				}
-
-				// We only want to keep the entries that were explicitly listed
-				// in the slice definition.
-				if extractInfo == nil {
-					return nil
-				}
-				if _, ok := pathInfos[extractInfo.Path]; !ok {
-					return nil
-				}
+				entry = e
+			}
+			// Content created was not listed in a slice because extractInfo
+			// is empty.
+			if extractInfos == nil {
+				return nil
+			}
+			listed := false
+			until := untilPaths[relPath]
+			for _, extractInfo := range extractInfos {
 				for _, s := range pkgSlices[slice.Package] {
-					if _, ok := s.Contents[extractInfo.Path]; !ok {
+					pathInfo, ok := s.Contents[extractInfo.Path]
+					if !ok {
 						continue
 					}
-					err := report.Add(s, entry)
+					if !listed {
+						// Check whether the file was created because it matched a glob.
+						if strings.ContainsAny(extractInfo.Path, "*?") {
+							addKnownPath(relPath)
+						}
+						listed = true
+					}
+
+					if pathInfo.Until == setup.UntilMutate && until == empty {
+						until = allYes
+					} else if pathInfo.Until == setup.UntilNone {
+						until = someNo
+					}
+
+					var err error
+					if entry != nil {
+						err = report.Add(s, entry)
+					} else {
+						err = report.Modify(relPath, AddSlice(s))
+					}
 					if err != nil {
 						return err
 					}
 				}
+			}
+			if listed {
+				untilPaths[relPath] = until
+			}
 
-				// Check whether the file was created because it matched a glob.
-				if strings.ContainsAny(extractInfo.Path, "*?") {
-					relPath := filepath.Clean("/" + strings.TrimLeft(o.Path, targetDir))
-					if o.Mode.IsDir() {
-						relPath = relPath + "/"
-					}
-					globbedPaths[extractInfo.Path] = append(globbedPaths[extractInfo.Path], relPath)
-					addKnownPath(relPath)
-				}
-				return nil
-			},
+			return nil
+		}
+		err := deb.Extract(reader, &deb.ExtractOptions{
+			Package:   slice.Package,
+			Extract:   extract[slice.Package],
+			TargetDir: targetDir,
+			Create:    create,
 		})
 		reader.Close()
 		packages[slice.Package] = nil
@@ -208,15 +242,15 @@ func Run(options *RunOptions) (*Report, error) {
 	done := make(map[string]bool)
 	for _, slice := range options.Selection.Slices {
 		arch := archives[slice.Package].Options().Arch
-		for targetPath, pathInfo := range slice.Contents {
+		for relPath, pathInfo := range slice.Contents {
 			if len(pathInfo.Arch) > 0 && !contains(pathInfo.Arch, arch) {
 				continue
 			}
-			if done[targetPath] || pathInfo.Kind == setup.CopyPath || pathInfo.Kind == setup.GlobPath {
+			if done[relPath] || pathInfo.Kind == setup.CopyPath || pathInfo.Kind == setup.GlobPath {
 				continue
 			}
-			done[targetPath] = true
-			targetPath = filepath.Join(targetDir, targetPath)
+			done[relPath] = true
+			targetPath := filepath.Join(targetDir, relPath)
 			targetMode := pathInfo.Mode
 			if targetMode == 0 {
 				if pathInfo.Kind == setup.DirPath {
@@ -256,6 +290,9 @@ func Run(options *RunOptions) (*Report, error) {
 			err = report.Add(slice, entry)
 			if err != nil {
 				return nil, err
+			}
+			if pathInfo.Until == setup.UntilMutate && untilPaths[relPath] == empty {
+				untilPaths[relPath] = allYes
 			}
 		}
 	}
@@ -311,27 +348,20 @@ func Run(options *RunOptions) (*Report, error) {
 	}
 
 	var untilDirs []string
-	for targetPath, pathInfo := range pathInfos {
-		if pathInfo.Until == setup.UntilMutate {
-			var targetPaths []string
-			if pathInfo.Kind == setup.GlobPath {
-				targetPaths = globbedPaths[targetPath]
+	for path, until := range untilPaths {
+		if until != allYes {
+			continue
+		}
+		realPath, err := content.RealPath(path, scripts.CheckRead)
+		if err == nil {
+			if strings.HasSuffix(path, "/") {
+				untilDirs = append(untilDirs, realPath)
 			} else {
-				targetPaths = []string{targetPath}
+				err = os.Remove(realPath)
 			}
-			for _, targetPath := range targetPaths {
-				realPath, err := content.RealPath(targetPath, scripts.CheckRead)
-				if err == nil {
-					if strings.HasSuffix(targetPath, "/") {
-						untilDirs = append(untilDirs, realPath)
-					} else {
-						err = os.Remove(realPath)
-					}
-				}
-				if err != nil {
-					return nil, fmt.Errorf("cannot perform 'until' removal: %w", err)
-				}
-			}
+		}
+		if err != nil {
+			return nil, fmt.Errorf("cannot perform 'until' removal: %w", err)
 		}
 	}
 	for _, realPath := range untilDirs {

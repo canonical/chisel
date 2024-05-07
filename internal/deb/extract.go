@@ -26,9 +26,9 @@ type ExtractOptions struct {
 	TargetDir string
 	Extract   map[string][]ExtractInfo
 	// Create can optionally be set to control the creation of extracted entries.
-	// extractInfo is set to the matching entry in Extract, and is nil in cases where
+	// extractInfo is set to the matching entries in Extract, and is nil in cases where
 	// the created entry is implicit and unlisted (for example, parent directories).
-	Create func(extractInfo *ExtractInfo, options *fsutil.CreateOptions) error
+	Create func(extractInfos []*ExtractInfo, options *fsutil.CreateOptions) error
 }
 
 type ExtractInfo struct {
@@ -41,15 +41,17 @@ func getValidOptions(options *ExtractOptions) (*ExtractOptions, error) {
 	for extractPath, extractInfos := range options.Extract {
 		isGlob := strings.ContainsAny(extractPath, "*?")
 		if isGlob {
-			if len(extractInfos) != 1 || extractInfos[0].Path != extractPath || extractInfos[0].Mode != 0 {
-				return nil, fmt.Errorf("when using wildcards source and target paths must match: %s", extractPath)
+			for _, info := range extractInfos {
+				if info.Path != extractPath || info.Mode != 0 {
+					return nil, fmt.Errorf("when using wildcards source and target paths must match: %s", extractPath)
+				}
 			}
 		}
 	}
 
 	if options.Create == nil {
 		validOpts := *options
-		validOpts.Create = func(_ *ExtractInfo, o *fsutil.CreateOptions) error {
+		validOpts.Create = func(_ []*ExtractInfo, o *fsutil.CreateOptions) error {
 			_, err := fsutil.Create(o)
 			return err
 		}
@@ -123,33 +125,6 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 		syscall.Umask(oldUmask)
 	}()
 
-	shouldExtract := func(pkgPath string) (globPath string, ok bool) {
-		if pkgPath == "" {
-			return "", false
-		}
-		pkgPathIsDir := pkgPath[len(pkgPath)-1] == '/'
-		for extractPath, extractInfos := range options.Extract {
-			if extractPath == "" {
-				continue
-			}
-			switch {
-			case strings.ContainsAny(extractPath, "*?"):
-				if strdist.GlobPath(extractPath, pkgPath) {
-					return extractPath, true
-				}
-			case extractPath == pkgPath:
-				return "", true
-			case pkgPathIsDir:
-				for _, extractInfo := range extractInfos {
-					if strings.HasPrefix(extractInfo.Path, pkgPath) {
-						return "", true
-					}
-				}
-			}
-		}
-		return "", false
-	}
-
 	pendingPaths := make(map[string]bool)
 	for extractPath, extractInfos := range options.Extract {
 		for _, extractInfo := range extractInfos {
@@ -182,32 +157,37 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 			continue
 		}
 		sourcePath = sourcePath[1:]
-		globPath, ok := shouldExtract(sourcePath)
-		if !ok {
-			continue
-		}
 
 		sourceIsDir := sourcePath[len(sourcePath)-1] == '/'
 		if sourceIsDir {
 			tarDirMode[sourcePath] = tarHeader.FileInfo().Mode()
 		}
 
-		//debugf("Extracting header: %#v", tarHeader)
+		extractPaths, extractPathsGlobs := shouldExtract(sourcePath, options.Extract)
+		if len(extractPaths) == 0 && len(extractPathsGlobs) == 0 {
+			// Nothing to do.
+			continue
+		}
 
-		var extractInfos []ExtractInfo
-		if globPath != "" {
-			extractInfos = options.Extract[globPath]
-			delete(pendingPaths, globPath)
-		} else {
-			extractInfos, ok = options.Extract[sourcePath]
-			if !ok {
-				continue
+		// We group the info in batches because we only want to extract to
+		// each destination once. For example, all globs extract to the same
+		// destination, so we can just group them together.
+		extractInfos := map[string][]*ExtractInfo{}
+		for _, path := range extractPaths {
+			for _, extractInfo := range options.Extract[path] {
+				extractInfos[extractInfo.Path] = append(extractInfos[extractInfo.Path], &extractInfo)
 			}
-			delete(pendingPaths, sourcePath)
+			delete(pendingPaths, path)
+		}
+		for _, glob := range extractPathsGlobs {
+			for _, extractInfo := range options.Extract[glob] {
+				extractInfos[sourcePath] = append(extractInfos[sourcePath], &extractInfo)
+			}
+			delete(pendingPaths, glob)
 		}
 
 		var contentCache []byte
-		var contentIsCached = len(extractInfos) > 1 && !sourceIsDir && globPath == ""
+		var contentIsCached = len(extractInfos) > 1 && !sourceIsDir
 		if contentIsCached {
 			// Read and cache the content so it may be reused.
 			// As an alternative, to avoid having an entire file in
@@ -222,15 +202,10 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 		}
 
 		var pathReader io.Reader = tarReader
-		for _, extractInfo := range extractInfos {
+		for relPath, extracts := range extractInfos {
+			extractInfo := extracts[0]
 			if contentIsCached {
 				pathReader = bytes.NewReader(contentCache)
-			}
-			var relPath string
-			if globPath == "" {
-				relPath = extractInfo.Path
-			} else {
-				relPath = sourcePath
 			}
 			if extractInfo.Mode != 0 {
 				tarHeader.Mode = int64(extractInfo.Mode)
@@ -265,12 +240,9 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 				Link:        tarHeader.Linkname,
 				MakeParents: true,
 			}
-			err := options.Create(&extractInfo, createOptions)
+			err := options.Create(extracts, createOptions)
 			if err != nil {
 				return err
-			}
-			if globPath != "" {
-				break
 			}
 		}
 	}
@@ -302,4 +274,27 @@ func parentDirs(path string) []string {
 		}
 	}
 	return parents
+}
+
+// shouldExtract takes a package's entry path and a list of ExtractInfo,
+// it then returns all paths and globs for ExtractInfo(s) that match the package
+// path.
+func shouldExtract(pkgPath string, extractInfos map[string][]ExtractInfo) (paths []string, globs []string) {
+	if pkgPath == "" {
+		return nil, nil
+	}
+	for extractPath := range extractInfos {
+		if extractPath == "" {
+			continue
+		}
+		switch {
+		case strings.ContainsAny(extractPath, "*?"):
+			if strdist.GlobPath(extractPath, pkgPath) {
+				globs = append(globs, extractPath)
+			}
+		case extractPath == pkgPath:
+			paths = append(paths, extractPath)
+		}
+	}
+	return paths, globs
 }

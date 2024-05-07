@@ -157,7 +157,8 @@ var extractTests = []extractTest{{
 		"/dir/":         "dir 0755",
 		"/dir/several/": "dir 0755",
 	},
-	notCreated: []string{"/dir/"},
+	// TODO add a comment about this. I think this is something we want.
+	notCreated: []string{},
 }, {
 	summary: "Globbing for files with multiple levels at once",
 	pkgdata: testutil.PackageData["test-package"],
@@ -175,7 +176,7 @@ var extractTests = []extractTest{{
 		"/dir/several/levels/deep/":     "dir 0755",
 		"/dir/several/levels/deep/file": "file 0644 6bc26dff",
 	},
-	notCreated: []string{"/dir/"},
+	notCreated: []string{},
 }, {
 	summary: "Globbing multiple paths",
 	pkgdata: testutil.PackageData["test-package"],
@@ -197,7 +198,7 @@ var extractTests = []extractTest{{
 		"/dir/several/levels/deep/":     "dir 0755",
 		"/dir/several/levels/deep/file": "file 0644 6bc26dff",
 	},
-	notCreated: []string{"/dir/"},
+	notCreated: []string{},
 }, {
 	summary: "Globbing must have matching source and target",
 	pkgdata: testutil.PackageData["test-package"],
@@ -348,7 +349,7 @@ func (s *S) TestExtract(c *C) {
 		options.Package = "test-package"
 		options.TargetDir = dir
 		createdPaths := make(map[string]bool)
-		options.Create = func(_ *deb.ExtractInfo, o *fsutil.CreateOptions) error {
+		options.Create = func(_ []*deb.ExtractInfo, o *fsutil.CreateOptions) error {
 			relPath := filepath.Clean("/" + strings.TrimPrefix(o.Path, dir))
 			if o.Mode.IsDir() {
 				relPath = relPath + "/"

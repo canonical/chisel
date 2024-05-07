@@ -70,3 +70,27 @@ func (r *Report) Add(slice *setup.Slice, fsEntry *fsutil.Entry) error {
 	}
 	return nil
 }
+
+type Modification func(*ReportEntry) error
+
+func AddSlice(slice *setup.Slice) Modification {
+	return func(entry *ReportEntry) error {
+		entry.Slices[slice] = true
+		return nil
+	}
+}
+
+func (r *Report) Modify(path string, f ...Modification) error {
+	entry, ok := r.Entries[path]
+	if !ok {
+		return fmt.Errorf("cannot modify path in report: %s not previously added", path)
+	}
+	for _, modify := range f {
+		err := modify(&entry)
+		if err != nil {
+			return err
+		}
+	}
+	r.Entries[path] = entry
+	return nil
+}
