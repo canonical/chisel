@@ -1295,6 +1295,21 @@ var setupTests = []setupTest{{
 		`,
 	},
 	relerror: `package "mypkg" has invalid essential slice reference: "mypkg-slice"`,
+}, {
+	summary: "Glob clashes with file with explicit mode set",
+	input: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice1:
+					contents:
+						/dir/**:
+				myslice2:
+					contents:
+						/dir/file: {text: "foo"}
+		`,
+	},
+	// TODO this should be an error because the content does not match.
 }}
 
 var defaultChiselYaml = `
