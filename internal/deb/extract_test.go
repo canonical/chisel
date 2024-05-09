@@ -157,7 +157,7 @@ var extractTests = []extractTest{{
 		"/dir/":         "dir 0755",
 		"/dir/several/": "dir 0755",
 	},
-	// TODO add a comment about this. I think this is something we want.
+	// TODO discuss in PR about this. I think this is something we want.
 	notCreated: []string{},
 }, {
 	summary: "Globbing for files with multiple levels at once",

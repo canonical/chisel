@@ -187,6 +187,7 @@ func Run(options *RunOptions) (*Report, error) {
 				return nil
 			}
 			listed := false
+			globListed := false
 			until := untilPaths[relPath]
 			for _, extractInfo := range extractInfos {
 				for _, s := range pkgSlices[slice.Package] {
@@ -194,12 +195,9 @@ func Run(options *RunOptions) (*Report, error) {
 					if !ok {
 						continue
 					}
-					if !listed {
-						// Check whether the file was created because it matched a glob.
-						if strings.ContainsAny(extractInfo.Path, "*?") {
-							addKnownPath(relPath)
-						}
-						listed = true
+					listed = true
+					if strings.ContainsAny(extractInfo.Path, "*?") {
+						globListed = true
 					}
 
 					if pathInfo.Until == setup.UntilMutate && until == empty {
@@ -221,6 +219,9 @@ func Run(options *RunOptions) (*Report, error) {
 			}
 			if listed {
 				untilPaths[relPath] = until
+			}
+			if globListed {
+				addKnownPath(relPath)
 			}
 
 			return nil

@@ -1146,7 +1146,7 @@ func treeDumpReport(report *slicer.Report) map[string]string {
 
 func permutations[S ~[]E, E any](s S) []S {
 	var output []S
-	// Heap's algorithm: https://en.wikipedia.org/wiki/Heap%27s_algorithm
+	// Heap's algorithm: https://en.wikipedia.org/wiki/Heap%27s_algorithm.
 	var generate func(k int, s S)
 	generate = func(k int, s S) {
 		// Copy the array before swapping elements.
@@ -1158,13 +1158,13 @@ func permutations[S ~[]E, E any](s S) []S {
 			output = append(output, s)
 			return
 		}
-		// Generate permutations with k-th unaltered
-		// Initially k = length(A)
+		// Generate permutations with k-th unaltered.
+		// Initially k = length(A).
 		generate(k-1, s)
 
-		// Generate permutations for k-th swapped with each k-1 initial
+		// Generate permutations for k-th swapped with each k-1 initial.
 		for i := 0; i < k-1; i += 1 {
-			// Swap choice dependent on parity of k (even or odd)
+			// Swap choice dependent on parity of k (even or odd).
 			if k%2 == 0 {
 				s[i], s[k-1] = s[k-1], s[i]
 			} else {

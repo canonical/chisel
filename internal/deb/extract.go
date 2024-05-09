@@ -187,7 +187,7 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 		}
 
 		var contentCache []byte
-		var contentIsCached = len(extractInfos) > 1 && !sourceIsDir
+		var contentIsCached = len(extractInfos) > 1 && !sourceIsDir && len(extractInfos) > 1
 		if contentIsCached {
 			// Read and cache the content so it may be reused.
 			// As an alternative, to avoid having an entire file in
@@ -203,12 +203,12 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 
 		var pathReader io.Reader = tarReader
 		for relPath, extracts := range extractInfos {
-			extractInfo := extracts[0]
 			if contentIsCached {
 				pathReader = bytes.NewReader(contentCache)
 			}
-			if extractInfo.Mode != 0 {
-				tarHeader.Mode = int64(extractInfo.Mode)
+			// The Mode is the same in all extractInfo for the same path.
+			if extracts[0].Mode != 0 {
+				tarHeader.Mode = int64(extracts[0].Mode)
 			}
 			// Create the parent directories using the permissions from the tarball.
 			parents := parentDirs(relPath)
@@ -277,8 +277,8 @@ func parentDirs(path string) []string {
 }
 
 // shouldExtract takes a package's entry path and a list of ExtractInfo,
-// it then returns all paths and globs for ExtractInfo(s) that match the package
-// path.
+// it then returns all paths including globs of ExtractInfo(s) that match
+// pkgPath.
 func shouldExtract(pkgPath string, extractInfos map[string][]ExtractInfo) (paths []string, globs []string) {
 	if pkgPath == "" {
 		return nil, nil
