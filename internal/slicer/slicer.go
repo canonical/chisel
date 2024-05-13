@@ -170,16 +170,9 @@ func Run(options *RunOptions) (*Report, error) {
 				relPath = relPath + "/"
 			}
 
-			var entry *fsutil.Entry
-			if _, ok := report.Entries[relPath]; !ok {
-				// Optimization: we only create the content once. Because
-				// of the invariants it will actually be the same if has
-				// the same destination path.
-				e, err := fsutil.Create(o)
-				if err != nil {
-					return err
-				}
-				entry = e
+			entry, err := fsutil.Create(o)
+			if err != nil {
+				return err
 			}
 			// Content created was not listed in a slice because extractInfo
 			// is empty.
@@ -206,12 +199,7 @@ func Run(options *RunOptions) (*Report, error) {
 						until = someNo
 					}
 
-					var err error
-					if entry != nil {
-						err = report.Add(s, entry)
-					} else {
-						err = report.Modify(relPath, AddSlice(s))
-					}
+					err := report.Add(s, entry)
 					if err != nil {
 						return err
 					}

@@ -209,7 +209,7 @@ var extractTests = []extractTest{{
 			}},
 		},
 	},
-	error: `cannot extract .*: when using wildcards source and target paths must match: /foo/b\*\*`,
+	error: `cannot extract from package "test-package": when using wildcards source and target paths must match: /foo/b\*\*`,
 }, {
 	summary: "Globbing must also have a single target",
 	pkgdata: testutil.PackageData["test-package"],
@@ -222,7 +222,7 @@ var extractTests = []extractTest{{
 			}},
 		},
 	},
-	error: `cannot extract .*: when using wildcards source and target paths must match: /foo/b\*\*`,
+	error: `cannot extract from package "test-package": when using wildcards source and target paths must match: /foo/b\*\*`,
 }, {
 	summary: "Globbing cannot change modes",
 	pkgdata: testutil.PackageData["test-package"],
@@ -234,7 +234,7 @@ var extractTests = []extractTest{{
 			}},
 		},
 	},
-	error: `cannot extract .*: when using wildcards source and target paths must match: /dir/n\*\*`,
+	error: `cannot extract from package "test-package": when using wildcards source and target paths must match: /dir/n\*\*`,
 }, {
 	summary: "Missing file",
 	pkgdata: testutil.PackageData["test-package"],
