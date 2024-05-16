@@ -169,9 +169,8 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 			continue
 		}
 
-		// We group the info in batches because we only want to extract to
-		// each destination once. For example, all globs extract to the same
-		// destination, so we can just group them together.
+		// We group the info in batches by the real path of the destination so
+		// each item is only extracted once.
 		extractInfos := map[string][]*ExtractInfo{}
 		for _, path := range extractPaths {
 			for _, extractInfo := range options.Extract[path] {
@@ -187,7 +186,7 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 		}
 
 		var contentCache []byte
-		var contentIsCached = len(extractInfos) > 1 && !sourceIsDir && len(extractInfos) > 1
+		var contentIsCached = len(extractInfos) > 1 && !sourceIsDir
 		if contentIsCached {
 			// Read and cache the content so it may be reused.
 			// As an alternative, to avoid having an entire file in
