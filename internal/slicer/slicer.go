@@ -28,7 +28,7 @@ func Run(options *RunOptions) (*Report, error) {
 	archives := make(map[string]archive.Archive)
 	extract := make(map[string]map[string][]deb.ExtractInfo)
 	pathInfos := make(map[string]setup.PathInfo)
-	pkgSlices := make(map[string][]*setup.Slice)
+	pathSlices := make(map[string][]*setup.Slice)
 	report := NewReport(options.TargetDir)
 
 	knownPaths := make(map[string]bool)
@@ -74,7 +74,6 @@ func Run(options *RunOptions) (*Report, error) {
 
 	// Build information to process the selection.
 	for _, slice := range options.Selection.Slices {
-		pkgSlices[slice.Package] = append(pkgSlices[slice.Package], slice)
 		extractPackage := extract[slice.Package]
 		if extractPackage == nil {
 			archiveName := release.Packages[slice.Package].Archive
@@ -104,6 +103,7 @@ func Run(options *RunOptions) (*Report, error) {
 				addKnownPath(targetPath)
 			}
 			pathInfos[targetPath] = pathInfo
+			pathSlices[targetPath] = append(pathSlices[targetPath], slice)
 
 			if pathInfo.Kind == setup.CopyPath || pathInfo.Kind == setup.GlobPath {
 				sourcePath := pathInfo.Info
@@ -157,62 +157,64 @@ func Run(options *RunOptions) (*Report, error) {
 	)
 	untilPaths := map[string]UntilPathStatus{}
 
+	// Creates the filesystem entry and adds it to the report.
+	create := func(extractInfos []*deb.ExtractInfo, o *fsutil.CreateOptions) error {
+		entry, err := fsutil.Create(o)
+		if err != nil {
+			return err
+		}
+		// Content created was not listed in a slice because extractInfo
+		// is empty.
+		if len(extractInfos) == 0 {
+			return nil
+		}
+
+		relPath := filepath.Clean("/" + strings.TrimLeft(o.Path, targetDir))
+		if o.Mode.IsDir() {
+			relPath = relPath + "/"
+		}
+		listed := false
+		globListed := false
+		until := untilPaths[relPath]
+		for _, extractInfo := range extractInfos {
+			for _, s := range pathSlices[extractInfo.Path] {
+				pathInfo, ok := s.Contents[extractInfo.Path]
+				if !ok {
+					// Code should never reach this point.
+					continue
+				}
+				listed = true
+				if strings.ContainsAny(extractInfo.Path, "*?") {
+					globListed = true
+				}
+
+				if pathInfo.Until == setup.UntilMutate && until == empty {
+					until = allYes
+				} else if pathInfo.Until == setup.UntilNone {
+					until = someNo
+				}
+
+				err := report.Add(s, entry)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		if listed {
+			untilPaths[relPath] = until
+		}
+		if globListed {
+			addKnownPath(relPath)
+		}
+
+		return nil
+	}
+
 	// Extract all packages, also using the selection order.
 	for _, slice := range options.Selection.Slices {
 		reader := packages[slice.Package]
 		if reader == nil {
 			continue
-		}
-		// Creates the filesystem entry and adds it to the report.
-		create := func(extractInfos []*deb.ExtractInfo, o *fsutil.CreateOptions) error {
-			relPath := filepath.Clean("/" + strings.TrimLeft(o.Path, targetDir))
-			if o.Mode.IsDir() {
-				relPath = relPath + "/"
-			}
-
-			entry, err := fsutil.Create(o)
-			if err != nil {
-				return err
-			}
-			// Content created was not listed in a slice because extractInfo
-			// is empty.
-			if extractInfos == nil {
-				return nil
-			}
-			listed := false
-			globListed := false
-			until := untilPaths[relPath]
-			for _, extractInfo := range extractInfos {
-				for _, s := range pkgSlices[slice.Package] {
-					pathInfo, ok := s.Contents[extractInfo.Path]
-					if !ok {
-						continue
-					}
-					listed = true
-					if strings.ContainsAny(extractInfo.Path, "*?") {
-						globListed = true
-					}
-
-					if pathInfo.Until == setup.UntilMutate && until == empty {
-						until = allYes
-					} else if pathInfo.Until == setup.UntilNone {
-						until = someNo
-					}
-
-					err := report.Add(s, entry)
-					if err != nil {
-						return err
-					}
-				}
-			}
-			if listed {
-				untilPaths[relPath] = until
-			}
-			if globListed {
-				addKnownPath(relPath)
-			}
-
-			return nil
 		}
 		err := deb.Extract(reader, &deb.ExtractOptions{
 			Package:   slice.Package,
