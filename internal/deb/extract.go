@@ -157,36 +157,44 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 			continue
 		}
 		sourcePath = sourcePath[1:]
+		if sourcePath == "" {
+			continue
+		}
 
 		sourceIsDir := sourcePath[len(sourcePath)-1] == '/'
 		if sourceIsDir {
 			tarDirMode[sourcePath] = tarHeader.FileInfo().Mode()
 		}
 
-		extractPaths, extractPathsGlobs := shouldExtract(sourcePath, options.Extract)
-		if len(extractPaths) == 0 && len(extractPathsGlobs) == 0 {
+		// We group the info in batches by the real path of the destination so
+		// each item is only extracted once.
+		extractsByPath := map[string][]*ExtractInfo{}
+		for extractPath, extractInfos := range options.Extract {
+			if extractPath == "" {
+				continue
+			}
+			switch {
+			case strings.ContainsAny(extractPath, "*?"):
+				if strdist.GlobPath(extractPath, sourcePath) {
+					for _, extractInfo := range extractInfos {
+						extractsByPath[sourcePath] = append(extractsByPath[sourcePath], &extractInfo)
+					}
+					delete(pendingPaths, extractPath)
+				}
+			case extractPath == sourcePath:
+				for _, extractInfo := range extractInfos {
+					extractsByPath[extractInfo.Path] = append(extractsByPath[extractInfo.Path], &extractInfo)
+				}
+				delete(pendingPaths, extractPath)
+			}
+		}
+		if len(extractsByPath) == 0 {
 			// Nothing to do.
 			continue
 		}
 
-		// We group the info in batches by the real path of the destination so
-		// each item is only extracted once.
-		extractInfos := map[string][]*ExtractInfo{}
-		for _, path := range extractPaths {
-			for _, extractInfo := range options.Extract[path] {
-				extractInfos[extractInfo.Path] = append(extractInfos[extractInfo.Path], &extractInfo)
-			}
-			delete(pendingPaths, path)
-		}
-		for _, glob := range extractPathsGlobs {
-			for _, extractInfo := range options.Extract[glob] {
-				extractInfos[sourcePath] = append(extractInfos[sourcePath], &extractInfo)
-			}
-			delete(pendingPaths, glob)
-		}
-
 		var contentCache []byte
-		var contentIsCached = len(extractInfos) > 1 && !sourceIsDir
+		var contentIsCached = len(extractsByPath) > 1 && !sourceIsDir
 		if contentIsCached {
 			// Read and cache the content so it may be reused.
 			// As an alternative, to avoid having an entire file in
@@ -201,7 +209,7 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 		}
 
 		var pathReader io.Reader = tarReader
-		for relPath, extracts := range extractInfos {
+		for relPath, extracts := range extractsByPath {
 			if contentIsCached {
 				pathReader = bytes.NewReader(contentCache)
 			}
@@ -273,26 +281,4 @@ func parentDirs(path string) []string {
 		}
 	}
 	return parents
-}
-
-// shouldExtract takes a path and a map of ExtractInfo(s), it then returns all
-// keys of the map for which the ExtractInfo matches the path.
-func shouldExtract(pkgPath string, extractInfos map[string][]ExtractInfo) (paths []string, globs []string) {
-	if pkgPath == "" {
-		return nil, nil
-	}
-	for extractPath := range extractInfos {
-		if extractPath == "" {
-			continue
-		}
-		switch {
-		case strings.ContainsAny(extractPath, "*?"):
-			if strdist.GlobPath(extractPath, pkgPath) {
-				globs = append(globs, extractPath)
-			}
-		case extractPath == pkgPath:
-			paths = append(paths, extractPath)
-		}
-	}
-	return paths, globs
 }
