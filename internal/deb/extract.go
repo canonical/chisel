@@ -275,9 +275,8 @@ func parentDirs(path string) []string {
 	return parents
 }
 
-// shouldExtract takes a package's entry path and a list of ExtractInfo,
-// it then returns all paths including globs of ExtractInfo(s) that match
-// pkgPath.
+// shouldExtract takes a path and a map of ExtractInfo(s), it then returns all
+// keys of the map for which the ExtractInfo matches the path.
 func shouldExtract(pkgPath string, extractInfos map[string][]ExtractInfo) (paths []string, globs []string) {
 	if pkgPath == "" {
 		return nil, nil
