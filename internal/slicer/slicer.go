@@ -149,13 +149,13 @@ func Run(options *RunOptions) (*Report, error) {
 		packages[slice.Package] = reader
 	}
 
-	type UntilPathStatus int
+	type untilPathStatus int
 	const (
-		empty UntilPathStatus = iota
+		empty untilPathStatus = iota
 		allYes
 		someNo
 	)
-	untilPaths := map[string]UntilPathStatus{}
+	untilPaths := map[string]untilPathStatus{}
 
 	// Creates the filesystem entry and adds it to the report.
 	create := func(extractInfos []*deb.ExtractInfo, o *fsutil.CreateOptions) error {

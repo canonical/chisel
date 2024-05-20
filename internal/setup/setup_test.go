@@ -1296,7 +1296,7 @@ var setupTests = []setupTest{{
 	},
 	relerror: `package "mypkg" has invalid essential slice reference: "mypkg-slice"`,
 }, {
-	summary: "Glob clashes with file with explicit mode set",
+	summary: "Glob clashes within same package",
 	input: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package

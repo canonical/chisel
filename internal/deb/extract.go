@@ -213,7 +213,7 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 			if contentIsCached {
 				pathReader = bytes.NewReader(contentCache)
 			}
-			// The Mode is the same in all extractInfo for the same path.
+			// The Mode is the same in all extractInfo for the same destination path.
 			if extracts[0].Mode != 0 {
 				tarHeader.Mode = int64(extracts[0].Mode)
 			}
