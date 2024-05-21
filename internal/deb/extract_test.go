@@ -402,3 +402,96 @@ func (s *S) TestExtract(c *C) {
 		c.Assert(result, DeepEquals, test.result)
 	}
 }
+
+var extractCreateCallbackTests = []struct {
+	summary string
+	pkgdata []byte
+	options deb.ExtractOptions
+	calls   map[string][]deb.ExtractInfo
+}{{
+	summary: "Create is called with the set of ExtractInfo(s) that match the file",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		testutil.Dir(0755, "./"),
+		testutil.Dir(0766, "./dir/"),
+		testutil.Reg(0644, "./dir/file", "whatever"),
+	}),
+	options: deb.ExtractOptions{
+		Extract: map[string][]deb.ExtractInfo{
+			"/dir/": []deb.ExtractInfo{{
+				Path: "/dir/",
+			}},
+			"/d**": []deb.ExtractInfo{{
+				Path: "/d**",
+			}},
+			"/d?r/": []deb.ExtractInfo{{
+				Path: "/d?r/",
+			}},
+			"/dir/file": []deb.ExtractInfo{{
+				Path: "/dir/file",
+			}, {
+				Path: "/dir/file-cpy",
+			}},
+			"/foo/": []deb.ExtractInfo{{
+				Path:     "/foo/",
+				Optional: true,
+			}},
+		},
+	},
+	calls: map[string][]deb.ExtractInfo{
+		"/dir/": []deb.ExtractInfo{
+			deb.ExtractInfo{
+				Path: "/d**",
+			},
+			deb.ExtractInfo{
+				Path: "/d?r/",
+			},
+			deb.ExtractInfo{
+				Path: "/dir/",
+			},
+		},
+		"/dir/file": []deb.ExtractInfo{
+			deb.ExtractInfo{
+				Path: "/d**",
+			},
+			deb.ExtractInfo{
+				Path: "/dir/file",
+			},
+		},
+		"/dir/file-cpy": []deb.ExtractInfo{
+			deb.ExtractInfo{
+				Path: "/dir/file-cpy",
+			},
+		},
+	},
+}}
+
+func (s *S) TestExtractCreateCallback(c *C) {
+	for _, test := range extractCreateCallbackTests {
+		c.Logf("Test: %s", test.summary)
+		dir := c.MkDir()
+		options := test.options
+		options.Package = "test-package"
+		options.TargetDir = dir
+		createExtractInfos := map[string][]deb.ExtractInfo{}
+		options.Create = func(extractInfos []deb.ExtractInfo, o *fsutil.CreateOptions) error {
+			if extractInfos == nil {
+				// Creating implicit parent directories, we don't care about those.
+				return nil
+			}
+			relPath := filepath.Clean("/" + strings.TrimPrefix(o.Path, dir))
+			if o.Mode.IsDir() {
+				relPath = relPath + "/"
+			}
+			sort.Slice(extractInfos, func(i, j int) bool {
+				return strings.Compare(extractInfos[i].Path, extractInfos[j].Path) < 0
+			})
+			createExtractInfos[relPath] = extractInfos
+			return nil
+		}
+
+		err := deb.Extract(bytes.NewBuffer(test.pkgdata), &options)
+		c.Assert(err, IsNil)
+
+		c.Assert(createExtractInfos, DeepEquals, test.calls)
+	}
+}
