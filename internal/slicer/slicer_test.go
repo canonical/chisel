@@ -1113,7 +1113,7 @@ func (s *S) TestRun(c *C) {
 
 func runSlicerTests(c *C, tests []slicerTest) {
 	for _, test := range tests {
-		for _, slices := range permutations(test.slices) {
+		for _, slices := range testutil.Permutations(test.slices) {
 			c.Logf("Summary: %s", test.summary)
 
 			if _, ok := test.release["chisel.yaml"]; !ok {
@@ -1218,38 +1218,4 @@ func treeDumpReport(report *slicer.Report) map[string]string {
 		result[entry.Path] = fmt.Sprintf("%s {%s}", fsDump, strings.Join(slicesStr, ","))
 	}
 	return result
-}
-
-func permutations[S ~[]E, E any](s S) []S {
-	var output []S
-	// Heap's algorithm: https://en.wikipedia.org/wiki/Heap%27s_algorithm.
-	var generate func(k int, s S)
-	generate = func(k int, s S) {
-		// Copy the array before swapping elements.
-		r := make([]E, len(s))
-		copy(r, s)
-		s = r
-
-		if k == 1 {
-			output = append(output, s)
-			return
-		}
-		// Generate permutations with k-th unaltered.
-		// Initially k = length(A).
-		generate(k-1, s)
-
-		// Generate permutations for k-th swapped with each k-1 initial.
-		for i := 0; i < k-1; i += 1 {
-			// Swap choice dependent on parity of k (even or odd).
-			if k%2 == 0 {
-				s[i], s[k-1] = s[k-1], s[i]
-			} else {
-				s[0], s[k-1] = s[k-1], s[0]
-			}
-			generate(k-1, s)
-		}
-	}
-
-	generate(len(s), s)
-	return output
 }
