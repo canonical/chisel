@@ -219,7 +219,7 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 					if mode < extractInfo.Mode {
 						mode, extractInfo.Mode = extractInfo.Mode, mode
 					}
-					return fmt.Errorf("path requested twice with diverging modes %s: %o != %o", relPath, mode, extractInfo.Mode)
+					return fmt.Errorf("path %s requested twice with diverging mode: %o != %o", relPath, mode, extractInfo.Mode)
 				}
 			}
 			if mode != 0 {

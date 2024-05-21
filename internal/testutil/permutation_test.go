@@ -58,9 +58,6 @@ func (*permutationSuite) TestFuzzPermutations(c *C) {
 			c.Assert(len(permutations), Equals, expectedLen)
 		}
 
-		sort.Slice(s, func(i, j int) bool {
-			return s[i] < s[j]
-		})
 		duplicatedPerm := map[string]bool{}
 		for _, perm := range permutations {
 			// []byte is not comparable.

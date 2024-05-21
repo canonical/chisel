@@ -352,7 +352,7 @@ var extractTests = []extractTest{{
 			}},
 		},
 	},
-	error: `cannot extract from package "test-package": path requested twice with diverging modes /dir/: 777 != 0`,
+	error: `cannot extract from package "test-package": path /dir/ requested twice with diverging mode: 777 != 0`,
 }}
 
 func (s *S) TestExtract(c *C) {

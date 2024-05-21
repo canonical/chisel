@@ -28,6 +28,8 @@ func Permutations[S ~[]E, E any](s S) []S {
 		}
 	}
 
-	generate(len(s), s)
+	sCpy := make([]E, len(s))
+	copy(sCpy, s)
+	generate(len(sCpy), sCpy)
 	return output
 }
