@@ -6,7 +6,7 @@ func Permutations[S ~[]E, E any](s S) []S {
 	var generate func(k int, s S)
 	generate = func(k int, s S) {
 		// Copy the array before swapping elements.
-		if k == 1 {
+		if k <= 1 {
 			r := make([]E, len(s))
 			copy(r, s)
 			output = append(output, r)
