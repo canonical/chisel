@@ -933,7 +933,7 @@ var slicerTests = []slicerTest{{
 		"/dir/several/levels/deep/file": "file 0644 6bc26dff {test-package_myslice1}",
 	},
 }, {
-	summary: "Overlapping glob and single entry, until:mutate and reading from script",
+	summary: "Overlapping glob and single entry, until:mutate on entry and reading from script",
 	slices: []setup.SliceKey{
 		{"test-package", "myslice1"},
 		{"test-package", "myslice2"},
@@ -967,6 +967,82 @@ var slicerTests = []slicerTest{{
 		"/dir/several/levels/deep/file": "file 0644 6bc26dff",
 	},
 	report: map[string]string{
+		// TODO, myslice2 should not appear in the report, this is pending PR #131.
+		"/dir/":                         "dir 0755 {test-package_myslice1}",
+		"/dir/file":                     "file 0644 cc55e2ec {test-package_myslice1,test-package_myslice2}",
+		"/dir/nested/":                  "dir 0755 {test-package_myslice1}",
+		"/dir/nested/file":              "file 0644 84237a05 {test-package_myslice1}",
+		"/dir/nested/other-file":        "file 0644 6b86b273 {test-package_myslice1}",
+		"/dir/other-file":               "file 0644 63d5dd49 {test-package_myslice1}",
+		"/dir/several/":                 "dir 0755 {test-package_myslice1}",
+		"/dir/several/levels/":          "dir 0755 {test-package_myslice1}",
+		"/dir/several/levels/deep/":     "dir 0755 {test-package_myslice1}",
+		"/dir/several/levels/deep/file": "file 0644 6bc26dff {test-package_myslice1}",
+	},
+}, {
+	summary: "Overlapping glob and single entry, until:mutate on glob and reading from script",
+	slices: []setup.SliceKey{
+		{"test-package", "myslice1"},
+		{"test-package", "myslice2"},
+	},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice1:
+					contents:
+						/dir/**: {until: mutate}
+					mutate: |
+						content.read("/dir/file")
+				myslice2:
+					contents:
+						/dir/file:
+					mutate: |
+						content.read("/dir/file")
+		`,
+	},
+	filesystem: map[string]string{
+		"/dir/":     "dir 0755",
+		"/dir/file": "file 0644 cc55e2ec",
+	},
+	report: map[string]string{
+		// TODO, myslice1 should not appear in the report, this is pending PR #131.
+		"/dir/":                         "dir 0755 {test-package_myslice1}",
+		"/dir/file":                     "file 0644 cc55e2ec {test-package_myslice1,test-package_myslice2}",
+		"/dir/nested/":                  "dir 0755 {test-package_myslice1}",
+		"/dir/nested/file":              "file 0644 84237a05 {test-package_myslice1}",
+		"/dir/nested/other-file":        "file 0644 6b86b273 {test-package_myslice1}",
+		"/dir/other-file":               "file 0644 63d5dd49 {test-package_myslice1}",
+		"/dir/several/":                 "dir 0755 {test-package_myslice1}",
+		"/dir/several/levels/":          "dir 0755 {test-package_myslice1}",
+		"/dir/several/levels/deep/":     "dir 0755 {test-package_myslice1}",
+		"/dir/several/levels/deep/file": "file 0644 6bc26dff {test-package_myslice1}",
+	},
+}, {
+	summary: "Overlapping glob and single entry, until:mutate on both and reading from script",
+	slices: []setup.SliceKey{
+		{"test-package", "myslice1"},
+		{"test-package", "myslice2"},
+	},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice1:
+					contents:
+						/dir/**: {until: mutate}
+					mutate: |
+						content.read("/dir/file")
+				myslice2:
+					contents:
+						/dir/file: {until: mutate}
+					mutate: |
+						content.read("/dir/file")
+		`,
+	},
+	filesystem: map[string]string{},
+	report: map[string]string{
+		// TODO, this should be empty, this is pending PR #131.
 		"/dir/":                         "dir 0755 {test-package_myslice1}",
 		"/dir/file":                     "file 0644 cc55e2ec {test-package_myslice1,test-package_myslice2}",
 		"/dir/nested/":                  "dir 0755 {test-package_myslice1}",

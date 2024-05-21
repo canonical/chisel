@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"syscall"
 
@@ -349,6 +350,11 @@ func Run(options *RunOptions) (*Report, error) {
 			return nil, fmt.Errorf("cannot perform 'until' removal: %w", err)
 		}
 	}
+	// Order the directories so the deepest ones appear first, this way we can
+	// check for empty directories properly.
+	sort.Slice(untilDirs, func(i, j int) bool {
+		return !(strings.Compare(untilDirs[i], untilDirs[j]) < 0)
+	})
 	for _, realPath := range untilDirs {
 		err := os.Remove(realPath)
 		// The non-empty directory error is caught by IsExist as well.
