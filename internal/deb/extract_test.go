@@ -338,6 +338,21 @@ var extractTests = []extractTest{{
 		"/日本/語": "file 0644 85738f8f",
 	},
 	notCreated: []string{},
+}, {
+	summary: "Entries for same destination must have the same mode",
+	pkgdata: testutil.PackageData["test-package"],
+	options: deb.ExtractOptions{
+		Extract: map[string][]deb.ExtractInfo{
+			"/dir/": []deb.ExtractInfo{{
+				Path: "/dir/",
+				Mode: 0777,
+			}},
+			"/d**": []deb.ExtractInfo{{
+				Path: "/d**",
+			}},
+		},
+	},
+	error: `cannot extract from package "test-package": path requested twice with diverging modes /dir/: 777 != 0`,
 }}
 
 func (s *S) TestExtract(c *C) {
@@ -349,7 +364,7 @@ func (s *S) TestExtract(c *C) {
 		options.Package = "test-package"
 		options.TargetDir = dir
 		createdPaths := make(map[string]bool)
-		options.Create = func(_ []*deb.ExtractInfo, o *fsutil.CreateOptions) error {
+		options.Create = func(_ []deb.ExtractInfo, o *fsutil.CreateOptions) error {
 			relPath := filepath.Clean("/" + strings.TrimPrefix(o.Path, dir))
 			if o.Mode.IsDir() {
 				relPath = relPath + "/"

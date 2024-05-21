@@ -28,7 +28,6 @@ func Run(options *RunOptions) (*Report, error) {
 	archives := make(map[string]archive.Archive)
 	extract := make(map[string]map[string][]deb.ExtractInfo)
 	pathInfos := make(map[string]setup.PathInfo)
-	pathSlices := make(map[string][]*setup.Slice)
 	report := NewReport(options.TargetDir)
 
 	knownPaths := make(map[string]bool)
@@ -90,7 +89,6 @@ func Run(options *RunOptions) (*Report, error) {
 		}
 		arch := archives[slice.Package].Options().Arch
 		copyrightPath := "/usr/share/doc/" + slice.Package + "/copyright"
-		addKnownPath(copyrightPath)
 		hasCopyright := false
 		for targetPath, pathInfo := range slice.Contents {
 			if targetPath == "" {
@@ -99,11 +97,7 @@ func Run(options *RunOptions) (*Report, error) {
 			if len(pathInfo.Arch) > 0 && !contains(pathInfo.Arch, arch) {
 				continue
 			}
-			if pathInfo.Kind != setup.GlobPath {
-				addKnownPath(targetPath)
-			}
 			pathInfos[targetPath] = pathInfo
-			pathSlices[targetPath] = append(pathSlices[targetPath], slice)
 
 			if pathInfo.Kind == setup.CopyPath || pathInfo.Kind == setup.GlobPath {
 				sourcePath := pathInfo.Info
@@ -111,7 +105,8 @@ func Run(options *RunOptions) (*Report, error) {
 					sourcePath = targetPath
 				}
 				extractPackage[sourcePath] = append(extractPackage[sourcePath], deb.ExtractInfo{
-					Path: targetPath,
+					Path:    targetPath,
+					Context: slice,
 				})
 				if sourcePath == copyrightPath && targetPath == copyrightPath {
 					hasCopyright = true
@@ -151,14 +146,14 @@ func Run(options *RunOptions) (*Report, error) {
 
 	type untilPathStatus int
 	const (
-		empty untilPathStatus = iota
-		allYes
-		someNo
+		unset untilPathStatus = iota
+		mutate
+		keep
 	)
 	untilPaths := map[string]untilPathStatus{}
 
 	// Creates the filesystem entry and adds it to the report.
-	create := func(extractInfos []*deb.ExtractInfo, o *fsutil.CreateOptions) error {
+	create := func(extractInfos []deb.ExtractInfo, o *fsutil.CreateOptions) error {
 		entry, err := fsutil.Create(o)
 		if err != nil {
 			return err
@@ -174,36 +169,34 @@ func Run(options *RunOptions) (*Report, error) {
 			relPath = relPath + "/"
 		}
 		listed := false
-		globListed := false
 		until := untilPaths[relPath]
 		for _, extractInfo := range extractInfos {
-			for _, s := range pathSlices[extractInfo.Path] {
-				pathInfo, ok := s.Contents[extractInfo.Path]
-				if !ok {
-					// Code should never reach this point.
-					continue
-				}
-				listed = true
-				if strings.ContainsAny(extractInfo.Path, "*?") {
-					globListed = true
-				}
+			if extractInfo.Context == nil {
+				continue
+			}
+			s, ok := extractInfo.Context.(*setup.Slice)
+			if !ok {
+				panic(fmt.Errorf("internal error: invalid Context of type %T in extractInfo", extractInfo.Context))
+			}
+			pathInfo, ok := s.Contents[extractInfo.Path]
+			if !ok {
+				panic(fmt.Errorf("internal error: path %q not listed in slice", extractInfo.Path))
+			}
+			listed = true
 
-				if pathInfo.Until == setup.UntilMutate && until == empty {
-					until = allYes
-				} else if pathInfo.Until == setup.UntilNone {
-					until = someNo
-				}
+			if pathInfo.Until == setup.UntilMutate && until == unset {
+				until = mutate
+			} else if pathInfo.Until == setup.UntilNone {
+				until = keep
+			}
 
-				err := report.Add(s, entry)
-				if err != nil {
-					return err
-				}
+			err := report.Add(s, entry)
+			if err != nil {
+				return err
 			}
 		}
 		if listed {
 			untilPaths[relPath] = until
-		}
-		if globListed {
 			addKnownPath(relPath)
 		}
 
@@ -241,6 +234,7 @@ func Run(options *RunOptions) (*Report, error) {
 				continue
 			}
 			done[relPath] = true
+			addKnownPath(relPath)
 			targetPath := filepath.Join(targetDir, relPath)
 			targetMode := pathInfo.Mode
 			if targetMode == 0 {
@@ -282,8 +276,8 @@ func Run(options *RunOptions) (*Report, error) {
 			if err != nil {
 				return nil, err
 			}
-			if pathInfo.Until == setup.UntilMutate && untilPaths[relPath] == empty {
-				untilPaths[relPath] = allYes
+			if pathInfo.Until == setup.UntilMutate && untilPaths[relPath] == unset {
+				untilPaths[relPath] = mutate
 			}
 		}
 	}
@@ -340,7 +334,7 @@ func Run(options *RunOptions) (*Report, error) {
 
 	var untilDirs []string
 	for path, until := range untilPaths {
-		if until != allYes {
+		if until != mutate {
 			continue
 		}
 		realPath, err := content.RealPath(path, scripts.CheckRead)

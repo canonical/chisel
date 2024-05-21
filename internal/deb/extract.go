@@ -28,13 +28,14 @@ type ExtractOptions struct {
 	// Create can optionally be set to control the creation of extracted entries.
 	// extractInfo is set to the matching entries in Extract, and is nil in cases where
 	// the created entry is implicit and unlisted (for example, parent directories).
-	Create func(extractInfos []*ExtractInfo, options *fsutil.CreateOptions) error
+	Create func(extractInfos []ExtractInfo, options *fsutil.CreateOptions) error
 }
 
 type ExtractInfo struct {
 	Path     string
 	Mode     uint
 	Optional bool
+	Context  any
 }
 
 func getValidOptions(options *ExtractOptions) (*ExtractOptions, error) {
@@ -51,7 +52,7 @@ func getValidOptions(options *ExtractOptions) (*ExtractOptions, error) {
 
 	if options.Create == nil {
 		validOpts := *options
-		validOpts.Create = func(_ []*ExtractInfo, o *fsutil.CreateOptions) error {
+		validOpts.Create = func(_ []ExtractInfo, o *fsutil.CreateOptions) error {
 			_, err := fsutil.Create(o)
 			return err
 		}
@@ -168,7 +169,7 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 
 		// We group the info in batches by the real path of the destination so
 		// each item is only extracted once.
-		extractsByPath := map[string][]*ExtractInfo{}
+		extractInfosByPath := map[string][]ExtractInfo{}
 		for extractPath, extractInfos := range options.Extract {
 			if extractPath == "" {
 				continue
@@ -177,24 +178,24 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 			case strings.ContainsAny(extractPath, "*?"):
 				if strdist.GlobPath(extractPath, sourcePath) {
 					for _, extractInfo := range extractInfos {
-						extractsByPath[sourcePath] = append(extractsByPath[sourcePath], &extractInfo)
+						extractInfosByPath[sourcePath] = append(extractInfosByPath[sourcePath], extractInfo)
 					}
 					delete(pendingPaths, extractPath)
 				}
 			case extractPath == sourcePath:
 				for _, extractInfo := range extractInfos {
-					extractsByPath[extractInfo.Path] = append(extractsByPath[extractInfo.Path], &extractInfo)
+					extractInfosByPath[extractInfo.Path] = append(extractInfosByPath[extractInfo.Path], extractInfo)
 				}
 				delete(pendingPaths, extractPath)
 			}
 		}
-		if len(extractsByPath) == 0 {
+		if len(extractInfosByPath) == 0 {
 			// Nothing to do.
 			continue
 		}
 
 		var contentCache []byte
-		var contentIsCached = len(extractsByPath) > 1 && !sourceIsDir
+		var contentIsCached = len(extractInfosByPath) > 1 && !sourceIsDir
 		if contentIsCached {
 			// Read and cache the content so it may be reused.
 			// As an alternative, to avoid having an entire file in
@@ -209,13 +210,21 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 		}
 
 		var pathReader io.Reader = tarReader
-		for relPath, extracts := range extractsByPath {
+		for relPath, extractInfos := range extractInfosByPath {
 			if contentIsCached {
 				pathReader = bytes.NewReader(contentCache)
 			}
-			// The Mode is the same in all extractInfo for the same destination path.
-			if extracts[0].Mode != 0 {
-				tarHeader.Mode = int64(extracts[0].Mode)
+			mode := extractInfos[0].Mode
+			for _, extractInfo := range extractInfos {
+				if extractInfo.Mode != mode {
+					if mode < extractInfo.Mode {
+						mode, extractInfo.Mode = extractInfo.Mode, mode
+					}
+					return fmt.Errorf("path requested twice with diverging modes %s: %o != %o", relPath, mode, extractInfo.Mode)
+				}
+			}
+			if mode != 0 {
+				tarHeader.Mode = int64(mode)
 			}
 			// Create the parent directories using the permissions from the tarball.
 			parents := parentDirs(relPath)
@@ -247,7 +256,7 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 				Link:        tarHeader.Linkname,
 				MakeParents: true,
 			}
-			err := options.Create(extracts, createOptions)
+			err := options.Create(extractInfos, createOptions)
 			if err != nil {
 				return err
 			}
