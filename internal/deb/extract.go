@@ -174,15 +174,14 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 			if extractPath == "" {
 				continue
 			}
-			switch {
-			case strings.ContainsAny(extractPath, "*?"):
+			if strings.ContainsAny(extractPath, "*?") {
 				if strdist.GlobPath(extractPath, sourcePath) {
 					for _, extractInfo := range extractInfos {
 						extractInfosByPath[sourcePath] = append(extractInfosByPath[sourcePath], extractInfo)
 					}
 					delete(pendingPaths, extractPath)
 				}
-			case extractPath == sourcePath:
+			} else if extractPath == sourcePath {
 				for _, extractInfo := range extractInfos {
 					extractInfosByPath[extractInfo.Path] = append(extractInfosByPath[extractInfo.Path], extractInfo)
 				}
