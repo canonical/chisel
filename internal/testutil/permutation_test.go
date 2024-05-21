@@ -54,24 +54,22 @@ func (*permutationSuite) TestFuzzPermutations(c *C) {
 		for i := 2; i <= len(s); i++ {
 			expectedLen *= i
 		}
-		if len(permutations) != expectedLen {
-			c.Assert(len(permutations), Equals, expectedLen)
-		}
+		c.Assert(len(permutations), Equals, expectedLen)
 
-		duplicatedPerm := map[string]bool{}
+		duplicated := map[string]bool{}
 		for _, perm := range permutations {
 			// []byte is not comparable.
 			permStr := string(perm)
-			if _, ok := duplicatedPerm[permStr]; ok {
+			if _, ok := duplicated[permStr]; ok {
 				c.Fatalf("duplicated permutation: %v", perm)
 			}
-			duplicatedPerm[permStr] = true
+			duplicated[permStr] = true
 			// Check that the elements are the same.
 			sort.Slice(perm, func(i, j int) bool {
 				return perm[i] < perm[j]
 			})
 			if !bytes.Equal(perm, s) {
-				c.Fatalf("invalid elements in permutation: %v, of base slice: %v", perm, s)
+				c.Fatalf("invalid elements in permutation %v of base slice %v", perm, s)
 			}
 		}
 	}
