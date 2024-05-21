@@ -353,7 +353,7 @@ func Run(options *RunOptions) (*Report, error) {
 	// Order the directories so the deepest ones appear first, this way we can
 	// check for empty directories properly.
 	sort.Slice(untilDirs, func(i, j int) bool {
-		return !(strings.Compare(untilDirs[i], untilDirs[j]) < 0)
+		return strings.Compare(untilDirs[i], untilDirs[j]) > 0
 	})
 	for _, realPath := range untilDirs {
 		err := os.Remove(realPath)
