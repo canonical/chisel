@@ -5,7 +5,6 @@ func Permutations[S ~[]E, E any](s S) []S {
 	// Heap's algorithm: https://en.wikipedia.org/wiki/Heap%27s_algorithm.
 	var generate func(k int, s S)
 	generate = func(k int, s S) {
-		// Copy the array before swapping elements.
 		if k <= 1 {
 			r := make([]E, len(s))
 			copy(r, s)
