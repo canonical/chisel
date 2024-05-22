@@ -794,52 +794,6 @@ var slicerTests = []slicerTest{{
 		"/other-dir/file": "symlink ../dir/file {test-package_myslice1}",
 	},
 }, {
-	summary: "Same glob in several entries, with until:mutate",
-	slices: []setup.SliceKey{
-		{"test-package", "myslice1"},
-		{"test-package", "myslice2"},
-	},
-	release: map[string]string{
-		"slices/mydir/test-package.yaml": `
-			package: test-package
-			slices:
-				myslice1:
-					contents:
-						/dir/**:
-					mutate: |
-						content.read("/dir/file")
-				myslice2:
-					contents:
-						/dir/**: {until: mutate}
-					mutate: |
-						content.read("/dir/file")
-		`,
-	},
-	filesystem: map[string]string{
-		"/dir/nested/other-file":        "file 0644 6b86b273",
-		"/dir/several/":                 "dir 0755",
-		"/dir/several/levels/":          "dir 0755",
-		"/dir/several/levels/deep/file": "file 0644 6bc26dff",
-		"/dir/":                         "dir 0755",
-		"/dir/file":                     "file 0644 cc55e2ec",
-		"/dir/nested/":                  "dir 0755",
-		"/dir/nested/file":              "file 0644 84237a05",
-		"/dir/other-file":               "file 0644 63d5dd49",
-		"/dir/several/levels/deep/":     "dir 0755",
-	},
-	report: map[string]string{
-		"/dir/":                         "dir 0755 {test-package_myslice1,test-package_myslice2}",
-		"/dir/file":                     "file 0644 cc55e2ec {test-package_myslice1,test-package_myslice2}",
-		"/dir/nested/":                  "dir 0755 {test-package_myslice1,test-package_myslice2}",
-		"/dir/nested/file":              "file 0644 84237a05 {test-package_myslice1,test-package_myslice2}",
-		"/dir/nested/other-file":        "file 0644 6b86b273 {test-package_myslice1,test-package_myslice2}",
-		"/dir/other-file":               "file 0644 63d5dd49 {test-package_myslice1,test-package_myslice2}",
-		"/dir/several/":                 "dir 0755 {test-package_myslice1,test-package_myslice2}",
-		"/dir/several/levels/":          "dir 0755 {test-package_myslice1,test-package_myslice2}",
-		"/dir/several/levels/deep/":     "dir 0755 {test-package_myslice1,test-package_myslice2}",
-		"/dir/several/levels/deep/file": "file 0644 6bc26dff {test-package_myslice1,test-package_myslice2}",
-	},
-}, {
 	summary: "Same glob in several entries with until:mutate and reading from script",
 	slices: []setup.SliceKey{
 		{"test-package", "myslice1"},
