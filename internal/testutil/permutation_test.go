@@ -1,7 +1,6 @@
 package testutil_test
 
 import (
-	"bytes"
 	"sort"
 
 	. "gopkg.in/check.v1"
@@ -68,9 +67,7 @@ func (*permutationSuite) TestFuzzPermutations(c *C) {
 			sort.Slice(perm, func(i, j int) bool {
 				return perm[i] < perm[j]
 			})
-			if !bytes.Equal(perm, s) {
-				c.Fatalf("invalid elements in permutation %v of base slice %v", perm, s)
-			}
+			c.Assert(perm, DeepEquals, s, Commentf("invalid elements in permutation %v of base slice %v", perm, s))
 		}
 	}
 }
