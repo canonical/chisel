@@ -157,7 +157,6 @@ var extractTests = []extractTest{{
 		"/dir/":         "dir 0755",
 		"/dir/several/": "dir 0755",
 	},
-	// TODO discuss in PR about this. I think this is something we want.
 	notCreated: []string{},
 }, {
 	summary: "Globbing for files with multiple levels at once",
@@ -352,7 +351,7 @@ var extractTests = []extractTest{{
 			}},
 		},
 	},
-	error: `cannot extract from package "test-package": path /dir/ requested twice with diverging mode: 777 != 0`,
+	error: `cannot extract from package "test-package": path /dir/ requested twice with diverging mode: 0777 != 0000`,
 }}
 
 func (s *S) TestExtract(c *C) {

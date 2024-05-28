@@ -26,7 +26,7 @@ type ExtractOptions struct {
 	TargetDir string
 	Extract   map[string][]ExtractInfo
 	// Create can optionally be set to control the creation of extracted entries.
-	// extractInfo is set to the matching entries in Extract, and is nil in cases where
+	// extractInfos is set to the matching entries in Extract, and is nil in cases where
 	// the created entry is implicit and unlisted (for example, parent directories).
 	Create func(extractInfos []ExtractInfo, options *fsutil.CreateOptions) error
 }
@@ -42,8 +42,8 @@ func getValidOptions(options *ExtractOptions) (*ExtractOptions, error) {
 	for extractPath, extractInfos := range options.Extract {
 		isGlob := strings.ContainsAny(extractPath, "*?")
 		if isGlob {
-			for _, info := range extractInfos {
-				if info.Path != extractPath || info.Mode != 0 {
+			for _, extractInfo := range extractInfos {
+				if extractInfo.Path != extractPath || extractInfo.Mode != 0 {
 					return nil, fmt.Errorf("when using wildcards source and target paths must match: %s", extractPath)
 				}
 			}
@@ -167,34 +167,32 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 			tarDirMode[sourcePath] = tarHeader.FileInfo().Mode()
 		}
 
-		// We group the info in batches by the real path of the destination so
-		// each item is only extracted once.
-		extractInfosByPath := map[string][]ExtractInfo{}
+		// Find all globs and copies that require this source, and map them by
+		// their target paths on disk.
+		targetPaths := map[string][]ExtractInfo{}
 		for extractPath, extractInfos := range options.Extract {
 			if extractPath == "" {
 				continue
 			}
 			if strings.ContainsAny(extractPath, "*?") {
 				if strdist.GlobPath(extractPath, sourcePath) {
-					for _, extractInfo := range extractInfos {
-						extractInfosByPath[sourcePath] = append(extractInfosByPath[sourcePath], extractInfo)
-					}
+					targetPaths[sourcePath] = append(targetPaths[sourcePath], extractInfos...)
 					delete(pendingPaths, extractPath)
 				}
 			} else if extractPath == sourcePath {
 				for _, extractInfo := range extractInfos {
-					extractInfosByPath[extractInfo.Path] = append(extractInfosByPath[extractInfo.Path], extractInfo)
+					targetPaths[extractInfo.Path] = append(targetPaths[extractInfo.Path], extractInfo)
 				}
 				delete(pendingPaths, extractPath)
 			}
 		}
-		if len(extractInfosByPath) == 0 {
+		if len(targetPaths) == 0 {
 			// Nothing to do.
 			continue
 		}
 
 		var contentCache []byte
-		var contentIsCached = len(extractInfosByPath) > 1 && !sourceIsDir
+		var contentIsCached = len(targetPaths) > 1 && !sourceIsDir
 		if contentIsCached {
 			// Read and cache the content so it may be reused.
 			// As an alternative, to avoid having an entire file in
@@ -209,7 +207,7 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 		}
 
 		var pathReader io.Reader = tarReader
-		for relPath, extractInfos := range extractInfosByPath {
+		for targetPath, extractInfos := range targetPaths {
 			if contentIsCached {
 				pathReader = bytes.NewReader(contentCache)
 			}
@@ -219,14 +217,14 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 					if mode < extractInfo.Mode {
 						mode, extractInfo.Mode = extractInfo.Mode, mode
 					}
-					return fmt.Errorf("path %s requested twice with diverging mode: %o != %o", relPath, mode, extractInfo.Mode)
+					return fmt.Errorf("path %s requested twice with diverging mode: 0%03o != 0%03o", targetPath, mode, extractInfo.Mode)
 				}
 			}
 			if mode != 0 {
 				tarHeader.Mode = int64(mode)
 			}
 			// Create the parent directories using the permissions from the tarball.
-			parents := parentDirs(relPath)
+			parents := parentDirs(targetPath)
 			for _, path := range parents {
 				if path == "/" {
 					continue
@@ -249,7 +247,7 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 			}
 			// Create the entry itself.
 			createOptions := &fsutil.CreateOptions{
-				Path:        filepath.Join(options.TargetDir, relPath),
+				Path:        filepath.Join(options.TargetDir, targetPath),
 				Mode:        tarHeader.FileInfo().Mode(),
 				Data:        pathReader,
 				Link:        tarHeader.Linkname,
