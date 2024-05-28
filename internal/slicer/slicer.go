@@ -145,13 +145,7 @@ func Run(options *RunOptions) (*Report, error) {
 		packages[slice.Package] = reader
 	}
 
-	type untilPathStatus int
-	const (
-		unset untilPathStatus = iota
-		mutate
-		keep
-	)
-	untilPaths := map[string]untilPathStatus{}
+	pathUntil := map[string]setup.PathUntil{}
 
 	// Creates the filesystem entry and adds it to the report.
 	create := func(extractInfos []deb.ExtractInfo, o *fsutil.CreateOptions) error {
@@ -159,7 +153,7 @@ func Run(options *RunOptions) (*Report, error) {
 		if err != nil {
 			return err
 		}
-		// Content created was not listed in a slice because extractInfo
+		// Content created was not listed in a slice contents because extractInfo
 		// is empty.
 		if len(extractInfos) == 0 {
 			return nil
@@ -169,35 +163,33 @@ func Run(options *RunOptions) (*Report, error) {
 		if o.Mode.IsDir() {
 			relPath = relPath + "/"
 		}
-		listed := false
-		until := untilPaths[relPath]
+		inSliceContents := false
+		until := setup.UntilMutate
 		for _, extractInfo := range extractInfos {
 			if extractInfo.Context == nil {
 				continue
 			}
-			s, ok := extractInfo.Context.(*setup.Slice)
+			slice, ok := extractInfo.Context.(*setup.Slice)
 			if !ok {
-				panic(fmt.Errorf("internal error: invalid Context of type %T in extractInfo", extractInfo.Context))
+				return fmt.Errorf("internal error: invalid Context of type %T in extractInfo", extractInfo.Context)
 			}
-			pathInfo, ok := s.Contents[extractInfo.Path]
+			pathInfo, ok := slice.Contents[extractInfo.Path]
 			if !ok {
-				panic(fmt.Errorf("internal error: path %q not listed in slice", extractInfo.Path))
+				return fmt.Errorf("internal error: path %q not listed in slice contents", extractInfo.Path)
 			}
-			listed = true
+			inSliceContents = true
 
-			if pathInfo.Until == setup.UntilMutate && until == unset {
-				until = mutate
-			} else if pathInfo.Until == setup.UntilNone {
-				until = keep
+			if pathInfo.Until == setup.UntilNone {
+				until = setup.UntilNone
 			}
 
-			err := report.Add(s, entry)
+			err := report.Add(slice, entry)
 			if err != nil {
 				return err
 			}
 		}
-		if listed {
-			untilPaths[relPath] = until
+		if inSliceContents {
+			pathUntil[relPath] = until
 			addKnownPath(relPath)
 		}
 
@@ -277,8 +269,8 @@ func Run(options *RunOptions) (*Report, error) {
 			if err != nil {
 				return nil, err
 			}
-			if pathInfo.Until == setup.UntilMutate && untilPaths[relPath] == unset {
-				untilPaths[relPath] = mutate
+			if pathInfo.Until == setup.UntilMutate {
+				pathUntil[relPath] = setup.UntilMutate
 			}
 		}
 	}
@@ -334,8 +326,8 @@ func Run(options *RunOptions) (*Report, error) {
 	}
 
 	var untilDirs []string
-	for path, until := range untilPaths {
-		if until != mutate {
+	for path, until := range pathUntil {
+		if until != setup.UntilMutate {
 			continue
 		}
 		realPath, err := content.RealPath(path, scripts.CheckRead)
