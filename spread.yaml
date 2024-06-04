@@ -40,7 +40,7 @@ backends:
     discard:
       docker rm -f $SPREAD_SYSTEM
     systems:
-      - ubuntu-23.04:
+      - ubuntu-24.04:
           username: ubuntu
           password: ubuntu
 
