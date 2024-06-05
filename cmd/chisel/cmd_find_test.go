@@ -4,16 +4,32 @@ import (
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/chisel/internal/setup"
+	"github.com/canonical/chisel/internal/testutil"
 
 	chisel "github.com/canonical/chisel/cmd/chisel"
 )
 
 type findTest struct {
-	summary   string
-	release   *setup.Release
-	query     string
-	expSlices []*setup.Slice
-	expError  string
+	summary string
+	release *setup.Release
+	query   []string
+	result  []*setup.Slice
+}
+
+func makeSamplePackage(pkg string, slices []string) *setup.Package {
+	slicesMap := map[string]*setup.Slice{}
+	for _, slice := range slices {
+		slicesMap[slice] = &setup.Slice{
+			Package: pkg,
+			Name:    slice,
+		}
+	}
+	return &setup.Package{
+		Name:    pkg,
+		Path:    "slices/" + pkg,
+		Archive: "ubuntu",
+		Slices:  slicesMap,
+	}
 }
 
 var sampleRelease = &setup.Release{
@@ -28,68 +44,16 @@ var sampleRelease = &setup.Release{
 		},
 	},
 	Packages: map[string]*setup.Package{
-		"openjdk-8-jdk": {
-			Archive: "ubuntu",
-			Name:    "openjdk-8-jdk",
-			Path:    "slices/openjdk-8-jdk.yaml",
-			Slices: map[string]*setup.Slice{
-				"bins": {
-					Package: "openjdk-8-jdk",
-					Name:    "bins",
-				},
-				"config": {
-					Package: "openjdk-8-jdk",
-					Name:    "config",
-				},
-				"core": {
-					Package: "openjdk-8-jdk",
-					Name:    "core",
-				},
-				"libs": {
-					Package: "openjdk-8-jdk",
-					Name:    "libs",
-				},
-				"utils": {
-					Package: "openjdk-8-jdk",
-					Name:    "utils",
-				},
-			},
-		},
-		"python3.10": {
-			Archive: "ubuntu",
-			Name:    "python3.10",
-			Path:    "slices/python3.10.yaml",
-			Slices: map[string]*setup.Slice{
-				"bins": {
-					Package: "python3.10",
-					Name:    "bins",
-				},
-				"config": {
-					Package: "python3.10",
-					Name:    "config",
-				},
-				"core": {
-					Package: "python3.10",
-					Name:    "core",
-				},
-				"libs": {
-					Package: "python3.10",
-					Name:    "libs",
-				},
-				"utils": {
-					Package: "python3.10",
-					Name:    "utils",
-				},
-			},
-		},
+		"openjdk-8-jdk": makeSamplePackage("openjdk-8-jdk", []string{"bins", "config", "core", "libs", "utils"}),
+		"python3.10":    makeSamplePackage("python3.10", []string{"bins", "config", "core", "libs", "utils"}),
 	},
 }
 
 var findTests = []findTest{{
-	summary: "Ensure search with package names",
+	summary: "Search by package name",
 	release: sampleRelease,
-	query:   "python3.10",
-	expSlices: []*setup.Slice{
+	query:   []string{"python3.10"},
+	result: []*setup.Slice{
 		sampleRelease.Packages["python3.10"].Slices["bins"],
 		sampleRelease.Packages["python3.10"].Slices["config"],
 		sampleRelease.Packages["python3.10"].Slices["core"],
@@ -97,18 +61,18 @@ var findTests = []findTest{{
 		sampleRelease.Packages["python3.10"].Slices["utils"],
 	},
 }, {
-	summary: "Ensure search with slice names",
+	summary: "Search by slice name",
 	release: sampleRelease,
-	query:   "config",
-	expSlices: []*setup.Slice{
+	query:   []string{"config"},
+	result: []*setup.Slice{
 		sampleRelease.Packages["openjdk-8-jdk"].Slices["config"],
 		sampleRelease.Packages["python3.10"].Slices["config"],
 	},
 }, {
 	summary: "Check substring matching",
 	release: sampleRelease,
-	query:   "ython",
-	expSlices: []*setup.Slice{
+	query:   []string{"ython"},
+	result: []*setup.Slice{
 		sampleRelease.Packages["python3.10"].Slices["bins"],
 		sampleRelease.Packages["python3.10"].Slices["config"],
 		sampleRelease.Packages["python3.10"].Slices["core"],
@@ -118,32 +82,39 @@ var findTests = []findTest{{
 }, {
 	summary: "Check partial matching",
 	release: sampleRelease,
-	query:   "python3.1x_bins",
-	expSlices: []*setup.Slice{
+	query:   []string{"python3.1x_bins"},
+	result: []*setup.Slice{
 		sampleRelease.Packages["python3.10"].Slices["bins"],
 	},
 }, {
-	summary:   "Check no matching slice",
-	release:   sampleRelease,
-	query:     "foo_bar",
-	expSlices: nil,
+	summary: "Check no matching slice",
+	release: sampleRelease,
+	query:   []string{"foo_bar"},
+	result:  nil,
+}, {
+	summary: "Several terms all match",
+	release: sampleRelease,
+	query:   []string{"python", "s"},
+	result: []*setup.Slice{
+		sampleRelease.Packages["python3.10"].Slices["bins"],
+		sampleRelease.Packages["python3.10"].Slices["libs"],
+		sampleRelease.Packages["python3.10"].Slices["utils"],
+	},
+}, {
+	summary: "Several terms one does not match",
+	release: sampleRelease,
+	query:   []string{"python", "slice"},
+	result:  nil,
 }}
 
 func (s *ChiselSuite) TestFindSlices(c *C) {
 	for _, test := range findTests {
-		c.Logf("Summary: %s", test.summary)
+		for _, query := range testutil.Permutations(test.query) {
+			c.Logf("Summary: %s", test.summary)
 
-		slices, err := chisel.FindSlices(test.release, test.query)
-		if test.expError == "" {
+			slices, err := chisel.FindSlices(test.release, query)
 			c.Assert(err, IsNil)
-		} else {
-			c.Assert(err, ErrorMatches, test.expError)
+			c.Assert(slices, DeepEquals, test.result)
 		}
-		c.Assert(slices, DeepEquals, test.expSlices)
 	}
-}
-
-func (s *ChiselSuite) TestFindCommandEmptyQuery(c *C) {
-	_, err := chisel.Parser().ParseArgs([]string{"find", ""})
-	c.Assert(err, ErrorMatches, ".*no search term specified")
 }

@@ -13,10 +13,13 @@ var shortCutHelp = "Cut a tree with selected slices"
 var longCutHelp = `
 The cut command uses the provided selection of package slices
 to create a new filesystem tree in the root location.
+
+By default it fetches the slices for the latest Ubuntu
+version, unless the --release flag is used.
 `
 
 var cutDescs = map[string]string{
-	"release": "Chisel release directory",
+	"release": "Chisel release directory or Ubuntu version",
 	"root":    "Root for generated content",
 	"arch":    "Package architecture",
 }

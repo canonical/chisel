@@ -14,17 +14,14 @@ import (
 
 var shortFindHelp = "Find existing slices"
 var longFindHelp = `
-The find command queries the chisel releases for available slices.
+The find command queries the slice definitions for matching slices.
 
-With the --release flag, it queries for slices in a particular branch
-of the chisel-releases repository[1] or a particular directory. If left
-unspecified, it queries with the release info found in /etc/lsb-release.
-
-[1] https://github.com/canonical/chisel-releases
+By default it fetches the slices for the latest Ubuntu
+version, unless the --release flag is used.
 `
 
 var findDescs = map[string]string{
-	"release": "Chisel release branch or directory",
+	"release": "Chisel release directory or Ubuntu version",
 }
 
 type cmdFind struct {
@@ -44,22 +41,17 @@ func (cmd *cmdFind) Execute(args []string) error {
 		return ErrExtraArgs
 	}
 
-	query := strings.TrimSpace(strings.Join(cmd.Positional.Query, " "))
-	if query == "" {
-		return fmt.Errorf("no search term specified")
-	}
-
 	release, releaseLabel, err := readOrFetchRelease(cmd.Release)
 	if err != nil {
 		return err
 	}
 
-	slices, err := findSlices(release, query)
+	slices, err := findSlices(release, cmd.Positional.Query)
 	if err != nil {
 		return err
 	}
-	if slices == nil {
-		fmt.Fprintf(Stdout, "No matching slices for \"%s\"\n", query)
+	if len(slices) == 0 {
+		fmt.Fprintf(Stdout, "No matching slices for \"%s\"\n", strings.Join(cmd.Positional.Query, " "))
 		return nil
 	}
 
@@ -73,26 +65,34 @@ func (cmd *cmdFind) Execute(args []string) error {
 	return nil
 }
 
-// fuzzyMatchSlice reports whether a slice (partially) matches the query.
-func fuzzyMatchSlice(slice *setup.Slice, query string) bool {
+// match reports whether a slice (partially) matches the query.
+func match(slice *setup.Slice, query string) bool {
 	const maxStrDist = 1
-
-	// Check if the query is a substring of the pkg_slice slice name.
-	if strings.Contains(slice.String(), query) {
-		return true
+	fuzzyMatch := func(str, query string) bool {
+		return strdist.Distance(str, query, strdist.StandardCost, maxStrDist+1) <= maxStrDist
 	}
-	// Check if the query string is at most ``maxStrDist`` Levenshtein distance
-	// away from the pkg_slice slice name.
-	dist := strdist.Distance(slice.String(), query, strdist.StandardCost, maxStrDist+1)
-	return dist <= maxStrDist
+	return strings.Contains(slice.String(), query) ||
+		fuzzyMatch(slice.Name, query) ||
+		fuzzyMatch(slice.Package, query) ||
+		fuzzyMatch(slice.String(), query)
 }
 
 // findSlices goes through the release searching for any slices that match
 // the query string. It returns a list of slices that match the query.
-func findSlices(release *setup.Release, query string) (slices []*setup.Slice, err error) {
+func findSlices(release *setup.Release, queries []string) (slices []*setup.Slice, err error) {
 	for _, pkg := range release.Packages {
 		for _, slice := range pkg.Slices {
-			if slice != nil && fuzzyMatchSlice(slice, query) {
+			if slice == nil {
+				continue
+			}
+			allMatch := true
+			for _, query := range queries {
+				if !match(slice, query) {
+					allMatch = false
+					break
+				}
+			}
+			if allMatch {
 				slices = append(slices, slice)
 			}
 		}
