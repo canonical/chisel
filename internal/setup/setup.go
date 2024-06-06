@@ -9,9 +9,11 @@ import (
 	"regexp"
 	"strings"
 
+	"golang.org/x/crypto/openpgp/packet"
 	"gopkg.in/yaml.v3"
 
 	"github.com/canonical/chisel/internal/deb"
+	"github.com/canonical/chisel/internal/pgputil"
 	"github.com/canonical/chisel/internal/strdist"
 )
 
@@ -30,6 +32,7 @@ type Archive struct {
 	Version    string
 	Suites     []string
 	Components []string
+	PubKeys    []*packet.PublicKey
 }
 
 // Package holds a collection of slices that represent parts of themselves.
@@ -239,9 +242,14 @@ func order(pkgs map[string]*Package, keys []SliceKey) ([]SliceKey, error) {
 	return order, nil
 }
 
-var fnameExp = regexp.MustCompile(`^([a-z0-9](?:-?[.a-z0-9+]){2,})\.yaml$`)
+// fnameExp matches the slice definition file basename.
+var fnameExp = regexp.MustCompile(`^([a-z0-9](?:-?[.a-z0-9+]){1,})\.yaml$`)
+
+// snameExp matches only the slice name, without the leading package name.
 var snameExp = regexp.MustCompile(`^([a-z](?:-?[a-z0-9]){2,})$`)
-var knameExp = regexp.MustCompile(`^([a-z0-9](?:-?[.a-z0-9+]){2,})_([a-z](?:-?[a-z0-9]){2,})$`)
+
+// knameExp matches the slice full name in pkg_slice format.
+var knameExp = regexp.MustCompile(`^([a-z0-9](?:-?[.a-z0-9+]){1,})_([a-z](?:-?[a-z0-9]){2,})$`)
 
 func ParseSliceKey(sliceKey string) (SliceKey, error) {
 	match := knameExp.FindStringSubmatch(sliceKey)
@@ -288,7 +296,7 @@ func readSlices(release *Release, baseDir, dirName string) error {
 		}
 		match := fnameExp.FindStringSubmatch(entry.Name())
 		if match == nil {
-			return fmt.Errorf("invalid slice definition filename: %q\")", entry.Name())
+			return fmt.Errorf("invalid slice definition filename: %q", entry.Name())
 		}
 
 		pkgName := match[1]
@@ -317,22 +325,27 @@ func readSlices(release *Release, baseDir, dirName string) error {
 
 type yamlRelease struct {
 	Format   string                 `yaml:"format"`
-	Archives map[string]yamlArchive `yaml:"archives`
+	Archives map[string]yamlArchive `yaml:"archives"`
+	PubKeys  map[string]yamlPubKey  `yaml:"public-keys"`
+	// V1PubKeys is used for compatibility with format "chisel-v1".
+	V1PubKeys map[string]yamlPubKey `yaml:"v1-public-keys"`
 }
-
-const yamlReleaseFormat = "chisel-v1"
 
 type yamlArchive struct {
 	Version    string   `yaml:"version"`
 	Suites     []string `yaml:"suites"`
 	Components []string `yaml:"components"`
 	Default    bool     `yaml:"default"`
+	PubKeys    []string `yaml:"public-keys"`
+	// V1PubKeys is used for compatibility with format "chisel-v1".
+	V1PubKeys []string `yaml:"v1-public-keys"`
 }
 
 type yamlPackage struct {
-	Name    string               `yaml:"package"`
-	Archive string               `yaml:"archive"`
-	Slices  map[string]yamlSlice `yaml:"slices"`
+	Name      string               `yaml:"package"`
+	Archive   string               `yaml:"archive"`
+	Essential []string             `yaml:"essential"`
+	Slices    map[string]yamlSlice `yaml:"slices"`
 }
 
 type yamlPath struct {
@@ -384,6 +397,11 @@ type yamlSlice struct {
 	Mutate    string               `yaml:"mutate"`
 }
 
+type yamlPubKey struct {
+	ID    string `yaml:"id"`
+	Armor string `yaml:"armor"`
+}
+
 var ubuntuAdjectives = map[string]string{
 	"18.04": "bionic",
 	"20.04": "focal",
@@ -402,16 +420,38 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 
 	yamlVar := yamlRelease{}
 	dec := yaml.NewDecoder(bytes.NewBuffer(data))
-	dec.KnownFields(true)
+	dec.KnownFields(false)
 	err := dec.Decode(&yamlVar)
 	if err != nil {
 		return nil, fmt.Errorf("%s: cannot parse release definition: %v", fileName, err)
 	}
-	if yamlVar.Format != yamlReleaseFormat {
-		return nil, fmt.Errorf("%s: expected format %q, got %q", fileName, yamlReleaseFormat, yamlVar.Format)
+	if yamlVar.Format != "chisel-v1" && yamlVar.Format != "v1" {
+		return nil, fmt.Errorf("%s: unknown format %q", fileName, yamlVar.Format)
+	}
+	// If format is "chisel-v1" we have to translate from the yaml key "v1-public-keys" to
+	// "public-keys".
+	if yamlVar.Format == "chisel-v1" {
+		yamlVar.PubKeys = yamlVar.V1PubKeys
+		for name, details := range yamlVar.Archives {
+			details.PubKeys = details.V1PubKeys
+			yamlVar.Archives[name] = details
+		}
 	}
 	if len(yamlVar.Archives) == 0 {
 		return nil, fmt.Errorf("%s: no archives defined", fileName)
+	}
+
+	// Decode the public keys and match against provided IDs.
+	pubKeys := make(map[string]*packet.PublicKey, len(yamlVar.PubKeys))
+	for keyName, yamlPubKey := range yamlVar.PubKeys {
+		key, err := pgputil.DecodePubKey([]byte(yamlPubKey.Armor))
+		if err != nil {
+			return nil, fmt.Errorf("%s: cannot decode public key %q: %w", fileName, keyName, err)
+		}
+		if yamlPubKey.ID != key.KeyIdString() {
+			return nil, fmt.Errorf("%s: public key %q armor has incorrect ID: expected %q, got %q", fileName, keyName, yamlPubKey.ID, key.KeyIdString())
+		}
+		pubKeys[keyName] = key
 	}
 
 	for archiveName, details := range yamlVar.Archives {
@@ -436,11 +476,27 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		if details.Default {
 			release.DefaultArchive = archiveName
 		}
+		if len(details.PubKeys) == 0 {
+			if yamlVar.Format == "chisel-v1" {
+				return nil, fmt.Errorf("%s: archive %q missing v1-public-keys field", fileName, archiveName)
+			} else {
+				return nil, fmt.Errorf("%s: archive %q missing public-keys field", fileName, archiveName)
+			}
+		}
+		var archiveKeys []*packet.PublicKey
+		for _, keyName := range details.PubKeys {
+			key, ok := pubKeys[keyName]
+			if !ok {
+				return nil, fmt.Errorf("%s: archive %q refers to undefined public key %q", fileName, archiveName, keyName)
+			}
+			archiveKeys = append(archiveKeys, key)
+		}
 		release.Archives[archiveName] = &Archive{
 			Name:       archiveName,
 			Version:    details.Version,
 			Suites:     details.Suites,
 			Components: details.Components,
+			PubKeys:    archiveKeys,
 		}
 	}
 
@@ -456,7 +512,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 
 	yamlPkg := yamlPackage{}
 	dec := yaml.NewDecoder(bytes.NewBuffer(data))
-	dec.KnownFields(true)
+	dec.KnownFields(false)
 	err := dec.Decode(&yamlPkg)
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse package %q slice definitions: %v", pkgName, err)
@@ -480,11 +536,36 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 				Mutate: yamlSlice.Mutate,
 			},
 		}
-
+		for _, refName := range yamlPkg.Essential {
+			sliceKey, err := ParseSliceKey(refName)
+			if err != nil {
+				return nil, fmt.Errorf("package %q has invalid essential slice reference: %q", pkgName, refName)
+			}
+			if sliceKey.Package == slice.Package && sliceKey.Slice == slice.Name {
+				// Do not add the slice to its own essentials list.
+				continue
+			}
+			// TODO replace with slices.Contains once it is stable.
+			for _, sk := range slice.Essential {
+				if sk == sliceKey {
+					return nil, fmt.Errorf("package %s defined with redundant essential slice: %s", pkgName, refName)
+				}
+			}
+			slice.Essential = append(slice.Essential, sliceKey)
+		}
 		for _, refName := range yamlSlice.Essential {
 			sliceKey, err := ParseSliceKey(refName)
 			if err != nil {
-				return nil, fmt.Errorf("invalid slice reference %q in %s", refName, pkgPath)
+				return nil, fmt.Errorf("package %q has invalid essential slice reference: %q", pkgName, refName)
+			}
+			if sliceKey.Package == slice.Package && sliceKey.Slice == slice.Name {
+				return nil, fmt.Errorf("cannot add slice to itself as essential %q in %s", refName, pkgPath)
+			}
+			// TODO replace with slices.Contains once it is stable.
+			for _, sk := range slice.Essential {
+				if sk == sliceKey {
+					return nil, fmt.Errorf("slice %s defined with redundant essential slice: %s", slice, refName)
+				}
 			}
 			slice.Essential = append(slice.Essential, sliceKey)
 		}

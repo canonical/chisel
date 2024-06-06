@@ -1,8 +1,5 @@
 summary: Use a custom Chisel release
 
-environment:
-    RELEASE/jammy: 22.04
-
 execute: |
   rootfs_folder=rootfs_${RELEASE}
   mkdir -p $rootfs_folder

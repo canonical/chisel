@@ -52,3 +52,8 @@ prepare: |
 suites:
   tests/:
     summary: Tests common scenarios
+    environment:
+        RELEASE/jammy: 22.04
+        RELEASE/focal: 20.04
+        RELEASE/mantic: 23.10
+        RELEASE/noble: 24.04

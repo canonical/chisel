@@ -71,6 +71,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 			Suites:     archiveInfo.Suites,
 			Components: archiveInfo.Components,
 			CacheDir:   cache.DefaultDir("chisel"),
+			PubKeys:    archiveInfo.PubKeys,
 		})
 		if err != nil {
 			return err
@@ -78,9 +79,10 @@ func (cmd *cmdCut) Execute(args []string) error {
 		archives[archiveName] = openArchive
 	}
 
-	return slicer.Run(&slicer.RunOptions{
+	_, err = slicer.Run(&slicer.RunOptions{
 		Selection: selection,
 		Archives:  archives,
 		TargetDir: cmd.RootDir,
 	})
+	return err
 }
