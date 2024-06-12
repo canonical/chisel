@@ -1,0 +1,89 @@
+name: TiCS
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  # Running on pull_request_target instead of pull_request because this workflow
+  # uses secrets, and thus we need to ensure it runs under this project's code base.
+  pull_request_target:
+    branches: [main]
+  schedule:
+    - cron: '0 10 * * *'
+
+jobs:
+  set-project:
+    # This is needed because pull_request_target events will run workflows in 
+    # the context of the base repository (the repository receiving the pull request).
+    # 
+    # This means that, for such events, we need to explicitly tell the job to
+    # "action/checkout" the forked repository/ref (aka source of the PR).
+    name: Set project environment
+    runs-on: ubuntu-latest
+    outputs:
+      ref: ${{ steps.get-ref.outputs.ref }}
+      repo: ${{ steps.get-repo.outputs.repo }}
+    steps:
+      - id: get-ref
+        run: echo "ref=${{ github.event_name == 'pull_request_target' && github.head_ref || '' }}" >> $GITHUB_OUTPUT
+
+      - id: get-repo
+        run: echo "repo=${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name || '' }}" >> $GITHUB_OUTPUT
+  
+  # This is safe because the reusable workflow does not require secrets and this
+  # call is not setting secret inheritance (i.e. "secrets: inherit")
+  call-unit-tests:
+    uses: ./.github/workflows/tests.yaml
+    needs: [set-project]
+    with:
+      ref: ${{ needs.set-project.outputs.ref }}
+      repository: ${{ needs.set-project.outputs.repo }}
+
+  tics-static-code-analysis:
+    runs-on: ubuntu-24.04
+    name: TiCS Static Code Analysis
+    needs: [set-project, call-unit-tests]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.set-project.outputs.ref }}
+          repository: ${{ needs.set-project.outputs.repo }}
+
+      - uses: actions/setup-go@v3
+        with:
+          go-version-file: 'go.mod'
+
+      - uses: actions/download-artifact@v4
+
+      # This is safe because actions do not have access to secrets unless these
+      # are passed via inputs or environment variables.
+      # Ref: https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions#accessing-your-secrets
+      - uses: ./.github/actions/build-chisel/
+        name: Build Chisel (TiCS analysis precondition)
+        env:
+          CGO_ENABLED: "0"
+      
+      - name: Prepare cobertura XML results
+        env:
+          TICS_COVERAGE_FOLDER: ".coverage"
+        run: |
+          set -x
+          mkdir -p ${TICS_COVERAGE_FOLDER}
+          go install github.com/boumenot/gocover-cobertura@latest
+          gocover-cobertura \
+            < ${{ needs.call-unit-tests.outputs.test-coverage-artifact }}/${{ needs.call-unit-tests.outputs.test-coverage-file }} \
+            > ${TICS_COVERAGE_FOLDER}/coverage.xml
+
+      - run: go install honnef.co/go/tools/cmd/staticcheck@latest
+
+      - name: Run TiCS analysis
+        uses: tiobe/tics-github-action@v3
+        with:
+          mode: ${{ github.event_name == 'pull_request_target' && 'client' || 'qserver' }}
+          codetype: ${{ github.event_name == 'pull_request_target' && 'TESTCODE' || 'PRODUCTION' }}
+          project: chisel
+          branchdir: .
+          viewerUrl: 'https://canonical.tiobe.com/tiobeweb/TICS/api/cfg?name=default'
+          displayUrl: 'https://canonical.tiobe.com/tiobeweb/TICS/TqiDashboard.html#axes=Project(chisel)'
+          ticsAuthToken: ${{ secrets.TICSAUTHTOKEN }}
+          installTics: true

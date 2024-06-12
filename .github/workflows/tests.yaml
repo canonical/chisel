@@ -1,27 +1,46 @@
 name: Tests
 
 on:
+  workflow_call:
+    inputs:
+      repository:
+        description: 'Repository name (with owner) to clone'
+        required: true
+        type: string
+      ref:
+        description: 'The branch, tag or SHA to checkout'
+        required: true
+        type: string
+    outputs:
+      test-coverage-file:
+        description: 'The name of the coverage report file'
+        value: ${{ jobs.unit-tests.outputs.test-coverage-file }}
+      test-coverage-artifact:
+        description: 'The name used to upload the coverage file as a GH artifact'
+        value: ${{ jobs.unit-tests.outputs.test-coverage-artifact }}
   workflow_dispatch:
   push:
     paths-ignore:
       - '**.md'
   pull_request:
     branches: [main]
-  schedule:
-    - cron: '0 10 * * *'
-
-env:
-  TEST_COVERAGE_FILE: test-coverage.out
-  TEST_COVERAGE_ARTIFACT: chisel-test-coverage
 
 jobs:
   unit-tests:
     runs-on: ubuntu-22.04
     name: Unit Tests
     env:
+      TEST_COVERAGE_FILE: test-coverage.out
+      TEST_COVERAGE_ARTIFACT: chisel-test-coverage
       TEST_COVERAGE_HTML_FILE: test-coverage.html
+    outputs:
+      test-coverage-file: ${{ env.TEST_COVERAGE_FILE }}
+      test-coverage-artifact: ${{ env.TEST_COVERAGE_ARTIFACT }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_call' && inputs.ref || '' }}
+          repository: ${{ github.event_name == 'workflow_call' && inputs.repository || '' }}
 
       - uses: actions/setup-go@v3
         with:
@@ -48,47 +67,3 @@ jobs:
         with:
           name: ${{ env.TEST_COVERAGE_ARTIFACT }}
           path: ./test-coverage*
-
-  tics-static-code-analysis:
-    runs-on: ubuntu-24.04
-    name: TiCS Static Code Analysis
-    needs: [unit-tests]
-    if: github.event_name != 'push'
-    steps:
-      - uses: actions/checkout@v3
-
-      - uses: actions/setup-go@v3
-        with:
-          go-version-file: 'go.mod'
-
-      - uses: actions/download-artifact@v4
-      
-      - uses: ./.github/actions/build-chisel/
-        name: Build Chisel (TiCS analysis precondition)
-        env:
-          CGO_ENABLED: "0"
-      
-      - name: Prepare cobertura XML results
-        env:
-          TICS_COVERAGE_FOLDER: ".coverage"
-        run: |
-          set -x
-          mkdir -p ${TICS_COVERAGE_FOLDER}
-          go install github.com/boumenot/gocover-cobertura@latest
-          gocover-cobertura \
-            < ${{ env.TEST_COVERAGE_ARTIFACT }}/${{ env.TEST_COVERAGE_FILE }} \
-            > ${TICS_COVERAGE_FOLDER}/coverage.xml
-
-      - run: go install honnef.co/go/tools/cmd/staticcheck@latest
-
-      - name: Run TiCS analysis
-        uses: tiobe/tics-github-action@v3
-        with:
-          mode: ${{ github.event_name == 'pull_request' && 'client' || 'qserver' }}
-          codetype: ${{ github.event_name == 'pull_request' && 'TESTCODE' || 'PRODUCTION' }}
-          project: chisel
-          branchdir: .
-          viewerUrl: 'https://canonical.tiobe.com/tiobeweb/TICS/api/cfg?name=default'
-          displayUrl: 'https://canonical.tiobe.com/tiobeweb/TICS/TqiDashboard.html#axes=Project(chisel)'
-          ticsAuthToken: ${{ secrets.TICSAUTHTOKEN }}
-          installTics: true
