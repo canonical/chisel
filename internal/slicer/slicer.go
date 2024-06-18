@@ -83,24 +83,25 @@ func Run(options *RunOptions) (*Report, error) {
 		targetDirAbs = filepath.Join(dir, targetDir)
 	}
 
-	packages, err := fetchPackages(options)
-	if err != nil {
-		return nil, err
-	}
-	for _, reader := range packages {
-		defer reader.Close()
-	}
-
 	// Build information to process the selection.
 	extract := make(map[string]map[string][]deb.ExtractInfo)
+	archives := make(map[string]archive.Archive)
 	for _, slice := range options.Selection.Slices {
 		extractPackage := extract[slice.Package]
 		if extractPackage == nil {
+			archiveName := options.Selection.Release.Packages[slice.Package].Archive
+			archive := options.Archives[archiveName]
+			if archive == nil {
+				return nil, fmt.Errorf("archive %q not defined", archiveName)
+			}
+			if !archive.Exists(slice.Package) {
+				return nil, fmt.Errorf("slice package %q missing from archive", slice.Package)
+			}
+			archives[slice.Package] = archive
 			extractPackage = make(map[string][]deb.ExtractInfo)
 			extract[slice.Package] = extractPackage
 		}
-		archiveName := options.Selection.Release.Packages[slice.Package].Archive
-		arch := options.Archives[archiveName].Options().Arch
+		arch := archives[slice.Package].Options().Arch
 		copyrightPath := "/usr/share/doc/" + slice.Package + "/copyright"
 		hasCopyright := false
 		for targetPath, pathInfo := range slice.Contents {
@@ -143,6 +144,20 @@ func Run(options *RunOptions) (*Report, error) {
 				Optional: true,
 			})
 		}
+	}
+
+	// Fetch all packages, using the selection order.
+	packages := make(map[string]io.ReadCloser)
+	for _, slice := range options.Selection.Slices {
+		if packages[slice.Package] != nil {
+			continue
+		}
+		reader, err := archives[slice.Package].Fetch(slice.Package)
+		if err != nil {
+			return nil, err
+		}
+		defer reader.Close()
+		packages[slice.Package] = reader
 	}
 
 	// When creating content, record if a path is known and whether they are
@@ -270,7 +285,7 @@ func Run(options *RunOptions) (*Report, error) {
 		}
 	}
 
-	err = removeUntilMutate(targetDirAbs, knownPaths)
+	err := removeUntilMutate(targetDirAbs, knownPaths)
 	if err != nil {
 		return nil, err
 	}
@@ -335,39 +350,6 @@ func addKnownPath(knownPaths map[string]pathData, path string, data pathData) {
 		}
 		slashPath = cleanPath + "/"
 	}
-}
-
-// fetchPackages fetches all packages using the selection order.
-func fetchPackages(options *RunOptions) (map[string]io.ReadCloser, error) {
-	packages := make(map[string]io.ReadCloser)
-	// When returning an error do not leak resources.
-	closeAll := func() {
-		for _, pkg := range packages {
-			pkg.Close()
-		}
-	}
-	for _, slice := range options.Selection.Slices {
-		if packages[slice.Package] != nil {
-			continue
-		}
-		archiveName := options.Selection.Release.Packages[slice.Package].Archive
-		archive := options.Archives[archiveName]
-		if archive == nil {
-			closeAll()
-			return nil, fmt.Errorf("archive %q not defined", archiveName)
-		}
-		if !archive.Exists(slice.Package) {
-			closeAll()
-			return nil, fmt.Errorf("slice package %q missing from archive", slice.Package)
-		}
-		reader, err := archive.Fetch(slice.Package)
-		if err != nil {
-			closeAll()
-			return nil, err
-		}
-		packages[slice.Package] = reader
-	}
-	return packages, nil
 }
 
 func createFile(targetPath string, pathInfo setup.PathInfo) (*fsutil.Entry, error) {
