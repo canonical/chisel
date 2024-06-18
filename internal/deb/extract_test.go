@@ -482,7 +482,7 @@ func (s *S) TestExtractCreateCallback(c *C) {
 				relPath = relPath + "/"
 			}
 			sort.Slice(extractInfos, func(i, j int) bool {
-				return strings.Compare(extractInfos[i].Path, extractInfos[j].Path) < 0
+				return extractInfos[i].Path < extractInfos[j].Path
 			})
 			createExtractInfos[relPath] = extractInfos
 			return nil
