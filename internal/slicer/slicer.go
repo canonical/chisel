@@ -148,7 +148,7 @@ func Run(options *RunOptions) (*Report, error) {
 	// When creating content, record if a path is known and whether they are
 	// listed as until: mutate in all the slices that reference them.
 	knownPaths := map[string]pathData{}
-	addParents(knownPaths, "/")
+	addKnownPath(knownPaths, "/", pathData{})
 
 	// Creates the filesystem entry and adds it to the report.
 	create := func(extractInfos []deb.ExtractInfo, o *fsutil.CreateOptions) error {
@@ -193,8 +193,8 @@ func Run(options *RunOptions) (*Report, error) {
 		}
 
 		if inSliceContents {
-			knownPaths[relPath] = pathData{mutable: mutable, until: until}
-			addParents(knownPaths, relPath)
+			data := pathData{mutable: mutable, until: until}
+			addKnownPath(knownPaths, relPath, data)
 		}
 		return nil
 	}
@@ -231,7 +231,11 @@ func Run(options *RunOptions) (*Report, error) {
 				continue
 			}
 			done[relPath] = true
-			addParents(knownPaths, relPath)
+			data := pathData{
+				until:   pathInfo.Until,
+				mutable: pathInfo.Mutable,
+			}
+			addKnownPath(knownPaths, relPath, data)
 			targetPath := filepath.Join(targetDir, relPath)
 			entry, err := createFile(targetPath, pathInfo)
 			if err != nil {
@@ -240,12 +244,6 @@ func Run(options *RunOptions) (*Report, error) {
 			err = report.Add(slice, entry)
 			if err != nil {
 				return nil, err
-			}
-			if pathInfo.Until == setup.UntilMutate || pathInfo.Mutable {
-				knownPaths[relPath] = pathData{
-					until:   pathInfo.Until,
-					mutable: pathInfo.Mutable,
-				}
 			}
 		}
 	}
@@ -313,9 +311,9 @@ func removeUntilMutate(rootDir string, knownPaths map[string]pathData) error {
 	return nil
 }
 
-// addParents adds all parent directories of path to the list of known paths.
-// The path has to be absolute.
-func addParents(knownPaths map[string]pathData, path string) {
+// addKnownPath adds a path with its data to the list of known paths. Then it
+// records that the parent directories of the path are also known.
+func addKnownPath(knownPaths map[string]pathData, path string, data pathData) {
 	if !strings.HasPrefix(path, "/") {
 		panic("bug: tried to add relative path to known paths")
 	}
@@ -325,9 +323,12 @@ func addParents(knownPaths map[string]pathData, path string) {
 		slashPath += "/"
 	}
 	for {
-		if _, ok := knownPaths[slashPath]; !ok {
-			knownPaths[slashPath] = pathData{}
+		if _, ok := knownPaths[slashPath]; ok {
+			break
 		}
+		knownPaths[slashPath] = data
+		// The parents have empty data.
+		data = pathData{}
 		cleanPath = filepath.Dir(cleanPath)
 		if cleanPath == "/" {
 			break
