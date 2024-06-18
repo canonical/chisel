@@ -284,7 +284,7 @@ func Run(options *RunOptions) (*Report, error) {
 		}
 	}
 
-	err := removeUntilMutate(targetDirAbs, knownPaths)
+	err := removeAfterMutate(targetDirAbs, knownPaths)
 	if err != nil {
 		return nil, err
 	}
@@ -292,9 +292,9 @@ func Run(options *RunOptions) (*Report, error) {
 	return report, nil
 }
 
-// removeUntilMutate removes entries marked with until: mutate. A path is marked
+// removeAfterMutate removes entries marked with until: mutate. A path is marked
 // only when all slices that refer to the path mark it with until: mutate.
-func removeUntilMutate(rootDir string, knownPaths map[string]pathData) error {
+func removeAfterMutate(rootDir string, knownPaths map[string]pathData) error {
 	var untilDirs []string
 	for path, data := range knownPaths {
 		if data.until != setup.UntilMutate {
