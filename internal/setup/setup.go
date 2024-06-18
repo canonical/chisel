@@ -7,6 +7,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"golang.org/x/crypto/openpgp/packet"
@@ -545,11 +546,8 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 				// Do not add the slice to its own essentials list.
 				continue
 			}
-			// TODO replace with slices.Contains once it is stable.
-			for _, sk := range slice.Essential {
-				if sk == sliceKey {
-					return nil, fmt.Errorf("package %s defined with redundant essential slice: %s", pkgName, refName)
-				}
+			if slices.Contains(slice.Essential, sliceKey) {
+				return nil, fmt.Errorf("package %s defined with redundant essential slice: %s", pkgName, refName)
 			}
 			slice.Essential = append(slice.Essential, sliceKey)
 		}
@@ -561,11 +559,8 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 			if sliceKey.Package == slice.Package && sliceKey.Slice == slice.Name {
 				return nil, fmt.Errorf("cannot add slice to itself as essential %q in %s", refName, pkgPath)
 			}
-			// TODO replace with slices.Contains once it is stable.
-			for _, sk := range slice.Essential {
-				if sk == sliceKey {
-					return nil, fmt.Errorf("slice %s defined with redundant essential slice: %s", slice, refName)
-				}
+			if slices.Contains(slice.Essential, sliceKey) {
+				return nil, fmt.Errorf("slice %s defined with redundant essential slice: %s", slice, refName)
 			}
 			slice.Essential = append(slice.Essential, sliceKey)
 		}
