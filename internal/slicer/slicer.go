@@ -80,11 +80,6 @@ func Run(options *RunOptions) (*Report, error) {
 		targetDir = filepath.Join(dir, targetDir)
 	}
 
-	report, err := NewReport(targetDir)
-	if err != nil {
-		return nil, fmt.Errorf("internal error: cannot create report: %w", err)
-	}
-
 	// Build information to process the selection.
 	extract := make(map[string]map[string][]deb.ExtractInfo)
 	archives := make(map[string]archive.Archive)
@@ -167,7 +162,13 @@ func Run(options *RunOptions) (*Report, error) {
 	knownPaths := map[string]pathData{}
 	addKnownPath(knownPaths, "/", pathData{})
 
-	// Creates the filesystem entry and adds it to the report.
+	report, err := NewReport(targetDir)
+	if err != nil {
+		return nil, fmt.Errorf("internal error: cannot create report: %w", err)
+	}
+
+	// Creates the filesystem entry and adds it to the report. It also updates
+	// knownPaths with the files created.
 	create := func(extractInfos []deb.ExtractInfo, o *fsutil.CreateOptions) error {
 		entry, err := fsutil.Create(o)
 		if err != nil {
