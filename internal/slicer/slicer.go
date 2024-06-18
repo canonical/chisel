@@ -236,8 +236,7 @@ func Run(options *RunOptions) (*Report, error) {
 	// Create new content not coming from packages.
 	done := make(map[string]bool)
 	for _, slice := range options.Selection.Slices {
-		archiveName := options.Selection.Release.Packages[slice.Package].Archive
-		arch := options.Archives[archiveName].Options().Arch
+		arch := archives[slice.Package].Options().Arch
 		for relPath, pathInfo := range slice.Contents {
 			if len(pathInfo.Arch) > 0 && !slices.Contains(pathInfo.Arch, arch) {
 				continue
