@@ -865,16 +865,16 @@ var slicerTests = []slicerTest{{
 		"/dir/several/levels/deep/":     "dir 0755",
 	},
 	report: map[string]string{
-		"/dir/":                         "dir 0755 {test-package_myslice1,test-package_myslice2}",
-		"/dir/file":                     "file 0644 cc55e2ec {test-package_myslice1,test-package_myslice2}",
-		"/dir/nested/":                  "dir 0755 {test-package_myslice1,test-package_myslice2}",
-		"/dir/nested/file":              "file 0644 84237a05 {test-package_myslice1,test-package_myslice2}",
-		"/dir/nested/other-file":        "file 0644 6b86b273 {test-package_myslice1,test-package_myslice2}",
-		"/dir/other-file":               "file 0644 63d5dd49 {test-package_myslice1,test-package_myslice2}",
-		"/dir/several/":                 "dir 0755 {test-package_myslice1,test-package_myslice2}",
-		"/dir/several/levels/":          "dir 0755 {test-package_myslice1,test-package_myslice2}",
-		"/dir/several/levels/deep/":     "dir 0755 {test-package_myslice1,test-package_myslice2}",
-		"/dir/several/levels/deep/file": "file 0644 6bc26dff {test-package_myslice1,test-package_myslice2}",
+		"/dir/":                         "dir 0755 {test-package_myslice2}",
+		"/dir/file":                     "file 0644 cc55e2ec {test-package_myslice2}",
+		"/dir/nested/":                  "dir 0755 {test-package_myslice2}",
+		"/dir/nested/file":              "file 0644 84237a05 {test-package_myslice2}",
+		"/dir/nested/other-file":        "file 0644 6b86b273 {test-package_myslice2}",
+		"/dir/other-file":               "file 0644 63d5dd49 {test-package_myslice2}",
+		"/dir/several/":                 "dir 0755 {test-package_myslice2}",
+		"/dir/several/levels/":          "dir 0755 {test-package_myslice2}",
+		"/dir/several/levels/deep/":     "dir 0755 {test-package_myslice2}",
+		"/dir/several/levels/deep/file": "file 0644 6bc26dff {test-package_myslice2}",
 	},
 }, {
 	summary: "Overlapping globs, until:mutate and reading from script",
@@ -911,12 +911,11 @@ var slicerTests = []slicerTest{{
 		"/dir/several/levels/deep/file": "file 0644 6bc26dff",
 	},
 	report: map[string]string{
-		// TODO, myslice2 should not appear in the report, this is pending PR #131.
 		"/dir/":                         "dir 0755 {test-package_myslice1}",
 		"/dir/file":                     "file 0644 cc55e2ec {test-package_myslice1}",
-		"/dir/nested/":                  "dir 0755 {test-package_myslice1,test-package_myslice2}",
-		"/dir/nested/file":              "file 0644 84237a05 {test-package_myslice1,test-package_myslice2}",
-		"/dir/nested/other-file":        "file 0644 6b86b273 {test-package_myslice1,test-package_myslice2}",
+		"/dir/nested/":                  "dir 0755 {test-package_myslice1}",
+		"/dir/nested/file":              "file 0644 84237a05 {test-package_myslice1}",
+		"/dir/nested/other-file":        "file 0644 6b86b273 {test-package_myslice1}",
 		"/dir/other-file":               "file 0644 63d5dd49 {test-package_myslice1}",
 		"/dir/several/":                 "dir 0755 {test-package_myslice1}",
 		"/dir/several/levels/":          "dir 0755 {test-package_myslice1}",
@@ -958,9 +957,8 @@ var slicerTests = []slicerTest{{
 		"/dir/several/levels/deep/file": "file 0644 6bc26dff",
 	},
 	report: map[string]string{
-		// TODO, myslice2 should not appear in the report, this is pending PR #131.
 		"/dir/":                         "dir 0755 {test-package_myslice1}",
-		"/dir/file":                     "file 0644 cc55e2ec {test-package_myslice1,test-package_myslice2}",
+		"/dir/file":                     "file 0644 cc55e2ec {test-package_myslice1}",
 		"/dir/nested/":                  "dir 0755 {test-package_myslice1}",
 		"/dir/nested/file":              "file 0644 84237a05 {test-package_myslice1}",
 		"/dir/nested/other-file":        "file 0644 6b86b273 {test-package_myslice1}",
@@ -997,17 +995,7 @@ var slicerTests = []slicerTest{{
 		"/dir/file": "file 0644 cc55e2ec",
 	},
 	report: map[string]string{
-		// TODO, myslice1 should not appear in the report, this is pending PR #131.
-		"/dir/":                         "dir 0755 {test-package_myslice1}",
-		"/dir/file":                     "file 0644 cc55e2ec {test-package_myslice1,test-package_myslice2}",
-		"/dir/nested/":                  "dir 0755 {test-package_myslice1}",
-		"/dir/nested/file":              "file 0644 84237a05 {test-package_myslice1}",
-		"/dir/nested/other-file":        "file 0644 6b86b273 {test-package_myslice1}",
-		"/dir/other-file":               "file 0644 63d5dd49 {test-package_myslice1}",
-		"/dir/several/":                 "dir 0755 {test-package_myslice1}",
-		"/dir/several/levels/":          "dir 0755 {test-package_myslice1}",
-		"/dir/several/levels/deep/":     "dir 0755 {test-package_myslice1}",
-		"/dir/several/levels/deep/file": "file 0644 6bc26dff {test-package_myslice1}",
+		"/dir/file": "file 0644 cc55e2ec {test-package_myslice2}",
 	},
 }, {
 	summary: "Overlapping glob and single entry, until:mutate on both and reading from script",
@@ -1032,19 +1020,7 @@ var slicerTests = []slicerTest{{
 		`,
 	},
 	filesystem: map[string]string{},
-	report: map[string]string{
-		// TODO, this should be empty, this is pending PR #131.
-		"/dir/":                         "dir 0755 {test-package_myslice1}",
-		"/dir/file":                     "file 0644 cc55e2ec {test-package_myslice1,test-package_myslice2}",
-		"/dir/nested/":                  "dir 0755 {test-package_myslice1}",
-		"/dir/nested/file":              "file 0644 84237a05 {test-package_myslice1}",
-		"/dir/nested/other-file":        "file 0644 6b86b273 {test-package_myslice1}",
-		"/dir/other-file":               "file 0644 63d5dd49 {test-package_myslice1}",
-		"/dir/several/":                 "dir 0755 {test-package_myslice1}",
-		"/dir/several/levels/":          "dir 0755 {test-package_myslice1}",
-		"/dir/several/levels/deep/":     "dir 0755 {test-package_myslice1}",
-		"/dir/several/levels/deep/file": "file 0644 6bc26dff {test-package_myslice1}",
-	},
+	report:     map[string]string{},
 }}
 
 var defaultChiselYaml = `
