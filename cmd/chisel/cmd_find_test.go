@@ -80,9 +80,16 @@ var findTests = []findTest{{
 		sampleRelease.Packages["python3.10"].Slices["utils"],
 	},
 }, {
-	summary: "Check partial matching",
+	summary: "Check glob matching (*)",
 	release: sampleRelease,
-	query:   []string{"python3.1x_bins"},
+	query:   []string{"python3.*_bins"},
+	result: []*setup.Slice{
+		sampleRelease.Packages["python3.10"].Slices["bins"],
+	},
+}, {
+	summary: "Check glob matching (?)",
+	release: sampleRelease,
+	query:   []string{"python3.1?_bins"},
 	result: []*setup.Slice{
 		sampleRelease.Packages["python3.10"].Slices["bins"],
 	},

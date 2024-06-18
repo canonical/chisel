@@ -15,6 +15,7 @@ import (
 var shortFindHelp = "Find existing slices"
 var longFindHelp = `
 The find command queries the slice definitions for matching slices.
+Globs are allowed in the query.
 
 By default it fetches the slices for the latest Ubuntu
 version, unless the --release flag is used.
@@ -67,27 +68,26 @@ func (cmd *cmdFind) Execute(args []string) error {
 
 // match reports whether a slice (partially) matches the query.
 func match(slice *setup.Slice, query string) bool {
-	const maxStrDist = 1
-	fuzzyMatch := func(str, query string) bool {
-		return strdist.Distance(str, query, strdist.StandardCost, maxStrDist+1) <= maxStrDist
+	if !strings.HasPrefix(query, "*") {
+		query = "*" + query
 	}
-	return strings.Contains(slice.String(), query) ||
-		fuzzyMatch(slice.Name, query) ||
-		fuzzyMatch(slice.Package, query) ||
-		fuzzyMatch(slice.String(), query)
+	if !strings.HasSuffix(query, "*") {
+		query += "*"
+	}
+	return strdist.GlobPath(slice.String(), query)
 }
 
-// findSlices goes through the release searching for any slices that match
-// the query string. It returns a list of slices that match the query.
-func findSlices(release *setup.Release, queries []string) (slices []*setup.Slice, err error) {
+// findSlices returns slices from the provided release that match all of the
+// query strings (AND).
+func findSlices(release *setup.Release, query []string) (slices []*setup.Slice, err error) {
 	for _, pkg := range release.Packages {
 		for _, slice := range pkg.Slices {
 			if slice == nil {
 				continue
 			}
 			allMatch := true
-			for _, query := range queries {
-				if !match(slice, query) {
+			for _, term := range query {
+				if !match(slice, term) {
 					allMatch = false
 					break
 				}
