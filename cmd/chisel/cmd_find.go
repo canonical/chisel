@@ -52,7 +52,7 @@ func (cmd *cmdFind) Execute(args []string) error {
 		return err
 	}
 	if len(slices) == 0 {
-		fmt.Fprintf(Stdout, "No matching slices for \"%s\"\n", strings.Join(cmd.Positional.Query, " "))
+		fmt.Fprintf(Stderr, "No matching slices for \"%s\"\n", strings.Join(cmd.Positional.Query, " "))
 		return nil
 	}
 
