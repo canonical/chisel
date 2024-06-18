@@ -41,15 +41,14 @@ func readReleaseInfo() (label, version string, err error) {
 	return "", "", fmt.Errorf("cannot infer release via /etc/lsb-release, see the --release option")
 }
 
-// readOrFetchRelease takes a release branch name or a release directory path.
-// It fetches or reads the chisel-release depending on the nature of input and
-// returns the release and release label.
-// If the input is empty, it tries to read the release label from the host
-// system and fetch the chisel-release accordingly.
-func readOrFetchRelease(releaseStr string) (release *setup.Release, releaseLabel string, err error) {
+// obtainRelease returns the Chisel release information matching the provided string,
+// fetching it if necessary. The provided string should be either:
+// * "<name>-<version>",
+// * the path to a directory containing a previously fetched release,
+// * "" and Chisel will attempt to read the release label from the host.
+func obtainRelease(releaseStr string) (release *setup.Release, err error) {
 	if strings.Contains(releaseStr, "/") {
 		release, err = setup.ReadRelease(releaseStr)
-		releaseLabel = releaseStr
 	} else {
 		var label, version string
 		if releaseStr == "" {
@@ -58,16 +57,15 @@ func readOrFetchRelease(releaseStr string) (release *setup.Release, releaseLabel
 			label, version, err = parseReleaseInfo(releaseStr)
 		}
 		if err != nil {
-			return nil, "", err
+			return nil, err
 		}
 		release, err = setup.FetchRelease(&setup.FetchOptions{
 			Label:   label,
 			Version: version,
 		})
-		releaseLabel = label + "-" + version
 	}
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
-	return release, releaseLabel, nil
+	return release, nil
 }

@@ -42,7 +42,7 @@ func (cmd *cmdFind) Execute(args []string) error {
 		return ErrExtraArgs
 	}
 
-	release, releaseLabel, err := readOrFetchRelease(cmd.Release)
+	release, err := obtainRelease(cmd.Release)
 	if err != nil {
 		return err
 	}
@@ -57,9 +57,9 @@ func (cmd *cmdFind) Execute(args []string) error {
 	}
 
 	w := tabWriter()
-	fmt.Fprintf(w, "Slice\tPackage\tRelease\n")
+	fmt.Fprintf(w, "Slice\tNotes\n")
 	for _, s := range slices {
-		fmt.Fprintf(w, "%s\t%s\t%s\n", s, s.Package, releaseLabel)
+		fmt.Fprintf(w, "%s\t%s\n", s, "-")
 	}
 	w.Flush()
 

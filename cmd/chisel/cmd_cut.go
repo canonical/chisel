@@ -52,7 +52,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 		sliceKeys[i] = sliceKey
 	}
 
-	release, _, err := readOrFetchRelease(cmd.Release)
+	release, err := obtainRelease(cmd.Release)
 	if err != nil {
 		return err
 	}
