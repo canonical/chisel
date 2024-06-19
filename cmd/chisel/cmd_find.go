@@ -15,7 +15,7 @@ import (
 var shortFindHelp = "Find existing slices"
 var longFindHelp = `
 The find command queries the slice definitions for matching slices.
-Globs are allowed in the query.
+Globs (* and ?) are allowed in the query.
 
 By default it fetches the slices for the latest Ubuntu
 version, unless the --release flag is used.
@@ -57,7 +57,7 @@ func (cmd *cmdFind) Execute(args []string) error {
 	}
 
 	w := tabWriter()
-	fmt.Fprintf(w, "Slice\tNotes\n")
+	fmt.Fprintf(w, "Slice\tSummary\n")
 	for _, s := range slices {
 		fmt.Fprintf(w, "%s\t%s\n", s, "-")
 	}
