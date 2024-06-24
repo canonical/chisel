@@ -162,7 +162,7 @@ var reportTests = []struct {
 			Link: sampleFile.Link,
 		}, slice: oneSlice},
 	},
-	err: `path /example-file reported twice with diverging mode: "----------" != "-rwxrwxrwx"`,
+	err: `path /example-file reported twice with diverging mode: 0000 != 0777`,
 }, {
 	summary: "Error for same path distinct hash",
 	add: []sliceAndEntry{

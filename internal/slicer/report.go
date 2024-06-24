@@ -50,7 +50,7 @@ func (r *Report) Add(slice *setup.Slice, fsEntry *fsutil.Entry) error {
 
 	if entry, ok := r.Entries[relPath]; ok {
 		if fsEntry.Mode != entry.Mode {
-			return fmt.Errorf("path %s reported twice with diverging mode: %q != %q", relPath, fsEntry.Mode, entry.Mode)
+			return fmt.Errorf("path %s reported twice with diverging mode: 0%03o != 0%03o", relPath, fsEntry.Mode, entry.Mode)
 		} else if fsEntry.Link != entry.Link {
 			return fmt.Errorf("path %s reported twice with diverging link: %q != %q", relPath, fsEntry.Link, entry.Link)
 		} else if fsEntry.Size != entry.Size {
