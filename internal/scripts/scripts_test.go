@@ -88,7 +88,7 @@ var scriptsTests = []scriptsTest{{
 		"/bar/file3.txt": "file 0644 5b41362b",
 	},
 }, {
-	summary: "Mutated is called for modified files only",
+	summary: "OnWrite is called for modified files only",
 	content: map[string]string{
 		"foo/file1.txt": `placeholder`,
 		"foo/file2.txt": `placeholder`,
@@ -279,7 +279,7 @@ func (s *S) TestScripts(c *C) {
 			RootDir:    rootDir,
 			CheckRead:  test.checkr,
 			CheckWrite: test.checkw,
-			Mutated: func(entry *fsutil.Entry) error {
+			OnWrite: func(entry *fsutil.Entry) error {
 				// Set relative path.
 				entry.Path = strings.TrimPrefix(entry.Path, rootDir)
 				mutatedFiles[entry.Path] = testutil.TreeDumpEntry(entry)

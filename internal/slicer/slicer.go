@@ -279,7 +279,7 @@ func Run(options *RunOptions) (*Report, error) {
 		RootDir:    targetDir,
 		CheckWrite: checker.checkMutable,
 		CheckRead:  checker.checkKnown,
-		Mutated:    report.Mutate,
+		OnWrite:    report.Mutate,
 	}
 	for _, slice := range options.Selection.Slices {
 		opts := scripts.RunOptions{

@@ -36,7 +36,9 @@ type ContentValue struct {
 	RootDir    string
 	CheckRead  func(path string) error
 	CheckWrite func(path string) error
-	Mutated    func(entry *fsutil.Entry) error
+	// OnWrite has to be called after a successful write with the entry resulting
+	// from the write.
+	OnWrite func(entry *fsutil.Entry) error
 }
 
 // Content starlark.Value interface
@@ -183,7 +185,7 @@ func (c *ContentValue) Write(thread *starlark.Thread, fn *starlark.Builtin, args
 	if err != nil {
 		return nil, c.polishError(path, err)
 	}
-	err = c.Mutated(entry)
+	err = c.OnWrite(entry)
 	if err != nil {
 		return nil, err
 	}
