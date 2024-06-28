@@ -58,6 +58,12 @@ var distanceTests = []distanceTest{
 	{f: strdist.GlobCost, r: 1, a: "a**f/hij", b: "abc/def/hik"},
 	{f: strdist.GlobCost, r: 2, a: "a**fg", b: "abc/def/hik"},
 	{f: strdist.GlobCost, r: 0, a: "a**f/hij/klm", b: "abc/d**m"},
+	{f: strdist.StandardGlobCost, r: 3, a: "abcdefg", b: "axcdfgh"},
+	{f: strdist.StandardGlobCost, r: 2, cut: 2, a: "abcdef", b: "abc"},
+	{f: strdist.StandardGlobCost, r: 2, cut: 3, a: "abcdef", b: "abcd"},
+	{f: strdist.StandardGlobCost, r: 1, a: "a*", b: "foo"},
+	{f: strdist.StandardGlobCost, r: 1, a: "af*", b: "foo"},
+	{f: strdist.StandardGlobCost, r: 1, a: "f?", b: "foo"},
 }
 
 func (s *S) TestDistance(c *C) {

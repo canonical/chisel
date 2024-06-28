@@ -63,22 +63,21 @@ var findTests = []findTest{{
 }, {
 	summary: "Search by slice name",
 	release: sampleRelease,
-	query:   []string{"config"},
+	query:   []string{"_config"},
 	result: []*setup.Slice{
 		sampleRelease.Packages["openjdk-8-jdk"].Slices["config"],
 		sampleRelease.Packages["python3.10"].Slices["config"],
 	},
 }, {
-	summary: "Check substring matching",
+	summary: "Slice search without leading underscore",
 	release: sampleRelease,
-	query:   []string{"ython"},
-	result: []*setup.Slice{
-		sampleRelease.Packages["python3.10"].Slices["bins"],
-		sampleRelease.Packages["python3.10"].Slices["config"],
-		sampleRelease.Packages["python3.10"].Slices["core"],
-		sampleRelease.Packages["python3.10"].Slices["libs"],
-		sampleRelease.Packages["python3.10"].Slices["utils"],
-	},
+	query:   []string{"config"},
+	result:  []*setup.Slice{},
+}, {
+	summary: "Check distance greater than one",
+	release: sampleRelease,
+	query:   []string{"python3."},
+	result:  []*setup.Slice{},
 }, {
 	summary: "Check glob matching (*)",
 	release: sampleRelease,
@@ -89,36 +88,50 @@ var findTests = []findTest{{
 }, {
 	summary: "Check glob matching (?)",
 	release: sampleRelease,
-	query:   []string{"python3.1?_bins"},
+	query:   []string{"python3.1?_co*"},
 	result: []*setup.Slice{
-		sampleRelease.Packages["python3.10"].Slices["bins"],
+		sampleRelease.Packages["python3.10"].Slices["config"],
+		sampleRelease.Packages["python3.10"].Slices["core"],
 	},
 }, {
 	summary: "Check no matching slice",
 	release: sampleRelease,
 	query:   []string{"foo_bar"},
-	result:  nil,
+	result:  []*setup.Slice{},
 }, {
 	summary: "Several terms all match",
 	release: sampleRelease,
-	query:   []string{"python", "s"},
+	query:   []string{"python*", "_co*"},
 	result: []*setup.Slice{
-		sampleRelease.Packages["python3.10"].Slices["bins"],
-		sampleRelease.Packages["python3.10"].Slices["libs"],
-		sampleRelease.Packages["python3.10"].Slices["utils"],
+		sampleRelease.Packages["python3.10"].Slices["config"],
+		sampleRelease.Packages["python3.10"].Slices["core"],
 	},
 }, {
-	summary: "Several terms one does not match",
+	summary: "Distance of one in each term",
+	release: sampleRelease,
+	query:   []string{"python3.1", "_lib"},
+	result: []*setup.Slice{
+		sampleRelease.Packages["python3.10"].Slices["libs"],
+	},
+}, {
+	summary: "Query with underscore is matched against full name",
+	release: sampleRelease,
+	query:   []string{"python3.1_libs"},
+	result: []*setup.Slice{
+		sampleRelease.Packages["python3.10"].Slices["libs"],
+	},
+}, {
+	summary: "Several terms, one does not match",
 	release: sampleRelease,
 	query:   []string{"python", "slice"},
-	result:  nil,
+	result:  []*setup.Slice{},
 }}
 
 func (s *ChiselSuite) TestFindSlices(c *C) {
 	for _, test := range findTests {
-		for _, query := range testutil.Permutations(test.query) {
-			c.Logf("Summary: %s", test.summary)
+		c.Logf("Summary: %s", test.summary)
 
+		for _, query := range testutil.Permutations(test.query) {
 			slices, err := chisel.FindSlices(test.release, query)
 			c.Assert(err, IsNil)
 			c.Assert(slices, DeepEquals, test.result)

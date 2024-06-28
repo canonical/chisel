@@ -68,18 +68,24 @@ func (cmd *cmdFind) Execute(args []string) error {
 
 // match reports whether a slice (partially) matches the query.
 func match(slice *setup.Slice, query string) bool {
-	if !strings.HasPrefix(query, "*") {
-		query = "*" + query
+	var term string
+	switch {
+	case strings.HasPrefix(query, "_"):
+		query = strings.TrimPrefix(query, "_")
+		term = slice.Name
+	case strings.Contains(query, "_"):
+		term = slice.String()
+	default:
+		term = slice.Package
 	}
-	if !strings.HasSuffix(query, "*") {
-		query += "*"
-	}
-	return strdist.GlobPath(slice.String(), query)
+	query = strings.ReplaceAll(query, "**", "⁑")
+	return strdist.Distance(term, query, strdist.StandardGlobCost, 0) <= 1
 }
 
 // findSlices returns slices from the provided release that match all of the
 // query strings (AND).
 func findSlices(release *setup.Release, query []string) (slices []*setup.Slice, err error) {
+	slices = []*setup.Slice{}
 	for _, pkg := range release.Packages {
 		for _, slice := range pkg.Slices {
 			if slice == nil {
