@@ -28,28 +28,6 @@ func StandardCost(ar, br rune) Cost {
 	return Cost{SwapAB: 1, DeleteA: 1, InsertB: 1}
 }
 
-// StandardGlobCost encodes the standard Levenshtein distance with support for
-// "*", "?" and "**". However, because it works on runes "**" has to be encoded
-// as "⁑" in the strings.
-//
-// Supported wildcards:
-//
-//	?  - Any one character
-//	*  - Any zero or more characters
-//	⁑  - Any zero or more characters
-func StandardGlobCost(ar, br rune) Cost {
-	if ar == '⁑' || br == '⁑' {
-		return Cost{SwapAB: 0, DeleteA: 0, InsertB: 0}
-	}
-	if ar == '*' || br == '*' {
-		return Cost{SwapAB: 0, DeleteA: 0, InsertB: 0}
-	}
-	if ar == '?' || br == '?' {
-		return Cost{SwapAB: 0, DeleteA: 1, InsertB: 1}
-	}
-	return StandardCost(ar, br)
-}
-
 func Distance(a, b string, f CostFunc, cut int64) int64 {
 	if a == b {
 		return 0

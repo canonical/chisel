@@ -79,7 +79,7 @@ func match(slice *setup.Slice, query string) bool {
 		term = slice.Package
 	}
 	query = strings.ReplaceAll(query, "**", "⁑")
-	return strdist.Distance(term, query, strdist.StandardGlobCost, 0) <= 1
+	return strdist.Distance(term, query, distWithGlobs, 0) <= 1
 }
 
 // findSlices returns slices from the provided release that match all of the
@@ -111,4 +111,26 @@ func findSlices(release *setup.Release, query []string) (slices []*setup.Slice, 
 
 func tabWriter() *tabwriter.Writer {
 	return tabwriter.NewWriter(Stdout, 5, 3, 2, ' ', 0)
+}
+
+// distWithGlobs encodes the standard Levenshtein distance with support for
+// "*", "?" and "**". However, because it works on runes "**" has to be encoded
+// as "⁑" in the strings.
+//
+// Supported wildcards:
+//
+//	?  - Any one character
+//	*  - Any zero or more characters
+//	⁑  - Any zero or more characters
+func distWithGlobs(ar, br rune) strdist.Cost {
+	if ar == '⁑' || br == '⁑' {
+		return strdist.Cost{SwapAB: 0, DeleteA: 0, InsertB: 0}
+	}
+	if ar == '*' || br == '*' {
+		return strdist.Cost{SwapAB: 0, DeleteA: 0, InsertB: 0}
+	}
+	if ar == '?' || br == '?' {
+		return strdist.Cost{SwapAB: 0, DeleteA: 1, InsertB: 1}
+	}
+	return strdist.StandardCost(ar, br)
 }
