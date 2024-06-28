@@ -9,6 +9,6 @@ execute: |
   }
 
   find "ca-certificates_data" "ca-certificates_data"
-  find "ca-certificates_data" "ca-certificates" "data"
-  find "ca-certificates_data" "data" "ca-certificates"
+  find "ca-certificates_data" "ca-certificates" "_data"
+  find "ca-certificates_data" "_data" "ca-certificates"
   ! find "ca-certificates_data" "ca-certificates" "foo"
