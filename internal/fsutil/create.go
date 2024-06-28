@@ -45,6 +45,7 @@ func Create(options *CreateOptions) (*Entry, error) {
 			return nil, err
 		}
 	}
+
 	switch o.Mode & fs.ModeType {
 	case 0:
 		err = createFile(o)
@@ -60,9 +61,13 @@ func Create(options *CreateOptions) (*Entry, error) {
 		return nil, err
 	}
 
+	s, err := os.Lstat(o.Path)
+	if err != nil {
+		return nil, err
+	}
 	entry := &Entry{
 		Path: o.Path,
-		Mode: o.Mode,
+		Mode: s.Mode(),
 		Hash: hash,
 		Size: rp.size,
 		Link: o.Link,

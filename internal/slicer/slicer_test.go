@@ -31,12 +31,8 @@ type slicerTest struct {
 	slices     []setup.SliceKey
 	hackopt    func(c *C, opts *slicer.RunOptions)
 	filesystem map[string]string
-	// TODO:
-	// The results of the report do not conform to the planned implementation
-	// yet. Namely:
-	// * We do not track removed directories or changes done in Starlark.
-	report map[string]string
-	error  string
+	report     map[string]string
+	error      string
 }
 
 var packageEntries = map[string][]testutil.TarEntry{
@@ -409,7 +405,7 @@ var slicerTests = []slicerTest{{
 		"/dir/text-file": "file 0644 d98cf53e",
 	},
 	report: map[string]string{
-		"/dir/text-file": "file 0644 5b41362b {test-package_myslice}",
+		"/dir/text-file": "file 0644 5b41362b d98cf53e {test-package_myslice}",
 	},
 }, {
 	summary: "Script: read a file",
@@ -435,7 +431,7 @@ var slicerTests = []slicerTest{{
 	},
 	report: map[string]string{
 		"/dir/text-file-1": "file 0644 5b41362b {test-package_myslice}",
-		"/foo/text-file-2": "file 0644 d98cf53e {test-package_myslice}",
+		"/foo/text-file-2": "file 0644 d98cf53e 5b41362b {test-package_myslice}",
 	},
 }, {
 	summary: "Script: use 'until' to remove file after mutate",
@@ -459,9 +455,7 @@ var slicerTests = []slicerTest{{
 		"/foo/text-file-2": "file 0644 5b41362b",
 	},
 	report: map[string]string{
-		// TODO this path needs to be removed from the report.
-		"/dir/text-file-1": "file 0644 5b41362b {test-package_myslice}",
-		"/foo/text-file-2": "file 0644 d98cf53e {test-package_myslice}",
+		"/foo/text-file-2": "file 0644 d98cf53e 5b41362b {test-package_myslice}",
 	},
 }, {
 	summary: "Script: use 'until' to remove wildcard after mutate",
@@ -480,14 +474,7 @@ var slicerTests = []slicerTest{{
 		"/dir/":       "dir 0755",
 		"/other-dir/": "dir 0755",
 	},
-	report: map[string]string{
-		// TODO These first three entries should be removed from the report.
-		"/dir/nested/":           "dir 0755 {test-package_myslice}",
-		"/dir/nested/file":       "file 0644 84237a05 {test-package_myslice}",
-		"/dir/nested/other-file": "file 0644 6b86b273 {test-package_myslice}",
-
-		"/other-dir/text-file": "file 0644 5b41362b {test-package_myslice}",
-	},
+	report: map[string]string{},
 }, {
 	summary: "Script: 'until' does not remove non-empty directories",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
@@ -507,8 +494,28 @@ var slicerTests = []slicerTest{{
 		"/dir/nested/file-copy": "file 0644 cc55e2ec",
 	},
 	report: map[string]string{
-		"/dir/nested/":          "dir 0755 {test-package_myslice}",
 		"/dir/nested/file-copy": "file 0644 cc55e2ec {test-package_myslice}",
+	},
+}, {
+	summary: "Script: writing same contents to existing file does not set the final hash in report",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/dir/text-file: {text: data1, mutable: true}
+					mutate: |
+						content.write("/dir/text-file", "data1")
+		`,
+	},
+	filesystem: map[string]string{
+		"/dir/":          "dir 0755",
+		"/dir/text-file": "file 0644 5b41362b",
+	},
+	report: map[string]string{
+		"/dir/text-file": "file 0644 5b41362b {test-package_myslice}",
 	},
 }, {
 	summary: "Script: cannot write non-mutable files",
@@ -525,6 +532,35 @@ var slicerTests = []slicerTest{{
 		`,
 	},
 	error: `slice test-package_myslice: cannot write file which is not mutable: /dir/text-file`,
+}, {
+	summary: "Script: cannot write to unlisted file",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+					mutate: |
+						content.write("/dir/text-file", "data")
+		`,
+	},
+	error: `slice test-package_myslice: cannot write file which is not mutable: /dir/text-file`,
+}, {
+	summary: "Script: cannot write to directory",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/dir/: {make: true}
+					mutate: |
+						content.write("/dir/", "data")
+		`,
+	},
+	error: `slice test-package_myslice: cannot write file which is not mutable: /dir/`,
 }, {
 	summary: "Script: cannot read unlisted content",
 	slices:  []setup.SliceKey{{"test-package", "myslice2"}},
@@ -565,9 +601,10 @@ var slicerTests = []slicerTest{{
 			slices:
 				myslice:
 					contents:
-						/dir/text-file: {text: data1}
+						/dir/text-file: {text: data1, mutable: true}
 					mutate: |
 						content.read("/dir/text-file")
+						content.write("/dir/text-file", "data2")
 		`,
 	},
 	hackopt: func(c *C, opts *slicer.RunOptions) {
@@ -828,16 +865,16 @@ var slicerTests = []slicerTest{{
 		"/dir/several/levels/deep/":     "dir 0755",
 	},
 	report: map[string]string{
-		"/dir/":                         "dir 0755 {test-package_myslice1,test-package_myslice2}",
-		"/dir/file":                     "file 0644 cc55e2ec {test-package_myslice1,test-package_myslice2}",
-		"/dir/nested/":                  "dir 0755 {test-package_myslice1,test-package_myslice2}",
-		"/dir/nested/file":              "file 0644 84237a05 {test-package_myslice1,test-package_myslice2}",
-		"/dir/nested/other-file":        "file 0644 6b86b273 {test-package_myslice1,test-package_myslice2}",
-		"/dir/other-file":               "file 0644 63d5dd49 {test-package_myslice1,test-package_myslice2}",
-		"/dir/several/":                 "dir 0755 {test-package_myslice1,test-package_myslice2}",
-		"/dir/several/levels/":          "dir 0755 {test-package_myslice1,test-package_myslice2}",
-		"/dir/several/levels/deep/":     "dir 0755 {test-package_myslice1,test-package_myslice2}",
-		"/dir/several/levels/deep/file": "file 0644 6bc26dff {test-package_myslice1,test-package_myslice2}",
+		"/dir/":                         "dir 0755 {test-package_myslice2}",
+		"/dir/file":                     "file 0644 cc55e2ec {test-package_myslice2}",
+		"/dir/nested/":                  "dir 0755 {test-package_myslice2}",
+		"/dir/nested/file":              "file 0644 84237a05 {test-package_myslice2}",
+		"/dir/nested/other-file":        "file 0644 6b86b273 {test-package_myslice2}",
+		"/dir/other-file":               "file 0644 63d5dd49 {test-package_myslice2}",
+		"/dir/several/":                 "dir 0755 {test-package_myslice2}",
+		"/dir/several/levels/":          "dir 0755 {test-package_myslice2}",
+		"/dir/several/levels/deep/":     "dir 0755 {test-package_myslice2}",
+		"/dir/several/levels/deep/file": "file 0644 6bc26dff {test-package_myslice2}",
 	},
 }, {
 	summary: "Overlapping globs, until:mutate and reading from script",
@@ -874,12 +911,11 @@ var slicerTests = []slicerTest{{
 		"/dir/several/levels/deep/file": "file 0644 6bc26dff",
 	},
 	report: map[string]string{
-		// TODO, myslice2 should not appear in the report, this is pending PR #131.
 		"/dir/":                         "dir 0755 {test-package_myslice1}",
 		"/dir/file":                     "file 0644 cc55e2ec {test-package_myslice1}",
-		"/dir/nested/":                  "dir 0755 {test-package_myslice1,test-package_myslice2}",
-		"/dir/nested/file":              "file 0644 84237a05 {test-package_myslice1,test-package_myslice2}",
-		"/dir/nested/other-file":        "file 0644 6b86b273 {test-package_myslice1,test-package_myslice2}",
+		"/dir/nested/":                  "dir 0755 {test-package_myslice1}",
+		"/dir/nested/file":              "file 0644 84237a05 {test-package_myslice1}",
+		"/dir/nested/other-file":        "file 0644 6b86b273 {test-package_myslice1}",
 		"/dir/other-file":               "file 0644 63d5dd49 {test-package_myslice1}",
 		"/dir/several/":                 "dir 0755 {test-package_myslice1}",
 		"/dir/several/levels/":          "dir 0755 {test-package_myslice1}",
@@ -921,9 +957,8 @@ var slicerTests = []slicerTest{{
 		"/dir/several/levels/deep/file": "file 0644 6bc26dff",
 	},
 	report: map[string]string{
-		// TODO, myslice2 should not appear in the report, this is pending PR #131.
 		"/dir/":                         "dir 0755 {test-package_myslice1}",
-		"/dir/file":                     "file 0644 cc55e2ec {test-package_myslice1,test-package_myslice2}",
+		"/dir/file":                     "file 0644 cc55e2ec {test-package_myslice1}",
 		"/dir/nested/":                  "dir 0755 {test-package_myslice1}",
 		"/dir/nested/file":              "file 0644 84237a05 {test-package_myslice1}",
 		"/dir/nested/other-file":        "file 0644 6b86b273 {test-package_myslice1}",
@@ -960,17 +995,7 @@ var slicerTests = []slicerTest{{
 		"/dir/file": "file 0644 cc55e2ec",
 	},
 	report: map[string]string{
-		// TODO, myslice1 should not appear in the report, this is pending PR #131.
-		"/dir/":                         "dir 0755 {test-package_myslice1}",
-		"/dir/file":                     "file 0644 cc55e2ec {test-package_myslice1,test-package_myslice2}",
-		"/dir/nested/":                  "dir 0755 {test-package_myslice1}",
-		"/dir/nested/file":              "file 0644 84237a05 {test-package_myslice1}",
-		"/dir/nested/other-file":        "file 0644 6b86b273 {test-package_myslice1}",
-		"/dir/other-file":               "file 0644 63d5dd49 {test-package_myslice1}",
-		"/dir/several/":                 "dir 0755 {test-package_myslice1}",
-		"/dir/several/levels/":          "dir 0755 {test-package_myslice1}",
-		"/dir/several/levels/deep/":     "dir 0755 {test-package_myslice1}",
-		"/dir/several/levels/deep/file": "file 0644 6bc26dff {test-package_myslice1}",
+		"/dir/file": "file 0644 cc55e2ec {test-package_myslice2}",
 	},
 }, {
 	summary: "Overlapping glob and single entry, until:mutate on both and reading from script",
@@ -995,19 +1020,7 @@ var slicerTests = []slicerTest{{
 		`,
 	},
 	filesystem: map[string]string{},
-	report: map[string]string{
-		// TODO, this should be empty, this is pending PR #131.
-		"/dir/":                         "dir 0755 {test-package_myslice1}",
-		"/dir/file":                     "file 0644 cc55e2ec {test-package_myslice1,test-package_myslice2}",
-		"/dir/nested/":                  "dir 0755 {test-package_myslice1}",
-		"/dir/nested/file":              "file 0644 84237a05 {test-package_myslice1}",
-		"/dir/nested/other-file":        "file 0644 6b86b273 {test-package_myslice1}",
-		"/dir/other-file":               "file 0644 63d5dd49 {test-package_myslice1}",
-		"/dir/several/":                 "dir 0755 {test-package_myslice1}",
-		"/dir/several/levels/":          "dir 0755 {test-package_myslice1}",
-		"/dir/several/levels/deep/":     "dir 0755 {test-package_myslice1}",
-		"/dir/several/levels/deep/file": "file 0644 6bc26dff {test-package_myslice1}",
-	},
+	report:     map[string]string{},
 }}
 
 var defaultChiselYaml = `
@@ -1156,6 +1169,8 @@ func treeDumpReport(report *slicer.Report) map[string]string {
 		case 0: // Regular
 			if entry.Size == 0 {
 				fsDump = fmt.Sprintf("file %#o empty", entry.Mode.Perm())
+			} else if entry.FinalHash != "" {
+				fsDump = fmt.Sprintf("file %#o %s %s", fperm, entry.Hash[:8], entry.FinalHash[:8])
 			} else {
 				fsDump = fmt.Sprintf("file %#o %s", fperm, entry.Hash[:8])
 			}

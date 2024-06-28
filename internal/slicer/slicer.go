@@ -66,21 +66,18 @@ func (cc *contentChecker) checkKnown(path string) error {
 }
 
 func Run(options *RunOptions) (*Report, error) {
-	report := NewReport(options.TargetDir)
-
 	oldUmask := syscall.Umask(0)
 	defer func() {
 		syscall.Umask(oldUmask)
 	}()
 
 	targetDir := filepath.Clean(options.TargetDir)
-	targetDirAbs := targetDir
-	if !filepath.IsAbs(targetDirAbs) {
+	if !filepath.IsAbs(targetDir) {
 		dir, err := os.Getwd()
 		if err != nil {
 			return nil, fmt.Errorf("cannot obtain current directory: %w", err)
 		}
-		targetDirAbs = filepath.Join(dir, targetDir)
+		targetDir = filepath.Join(dir, targetDir)
 	}
 
 	// Build information to process the selection.
@@ -165,7 +162,13 @@ func Run(options *RunOptions) (*Report, error) {
 	knownPaths := map[string]pathData{}
 	addKnownPath(knownPaths, "/", pathData{})
 
-	// Creates the filesystem entry and adds it to the report.
+	report, err := NewReport(targetDir)
+	if err != nil {
+		return nil, fmt.Errorf("internal error: cannot create report: %w", err)
+	}
+
+	// Creates the filesystem entry and adds it to the report. It also updates
+	// knownPaths with the files created.
 	create := func(extractInfos []deb.ExtractInfo, o *fsutil.CreateOptions) error {
 		entry, err := fsutil.Create(o)
 		if err != nil {
@@ -201,9 +204,12 @@ func Run(options *RunOptions) (*Report, error) {
 			if pathInfo.Until == setup.UntilNone {
 				until = setup.UntilNone
 			}
-			err := report.Add(slice, entry)
-			if err != nil {
-				return err
+			// Do not add paths with "until: mutate".
+			if pathInfo.Until != setup.UntilMutate {
+				err := report.Add(slice, entry)
+				if err != nil {
+					return err
+				}
 			}
 		}
 
@@ -255,9 +261,13 @@ func Run(options *RunOptions) (*Report, error) {
 			if err != nil {
 				return nil, err
 			}
-			err = report.Add(slice, entry)
-			if err != nil {
-				return nil, err
+
+			// Do not add paths with "until: mutate".
+			if pathInfo.Until != setup.UntilMutate {
+				err = report.Add(slice, entry)
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 	}
@@ -266,9 +276,10 @@ func Run(options *RunOptions) (*Report, error) {
 	// dependencies must run before dependents.
 	checker := contentChecker{knownPaths}
 	content := &scripts.ContentValue{
-		RootDir:    targetDirAbs,
+		RootDir:    targetDir,
 		CheckWrite: checker.checkMutable,
 		CheckRead:  checker.checkKnown,
+		OnWrite:    report.Mutate,
 	}
 	for _, slice := range options.Selection.Slices {
 		opts := scripts.RunOptions{
@@ -284,7 +295,7 @@ func Run(options *RunOptions) (*Report, error) {
 		}
 	}
 
-	err := removeAfterMutate(targetDirAbs, knownPaths)
+	err = removeAfterMutate(targetDir, knownPaths)
 	if err != nil {
 		return nil, err
 	}

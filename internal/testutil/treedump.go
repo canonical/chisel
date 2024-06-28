@@ -6,6 +6,8 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+
+	"github.com/canonical/chisel/internal/fsutil"
 )
 
 func TreeDump(dir string) map[string]string {
@@ -59,4 +61,26 @@ func TreeDump(dir string) map[string]string {
 		panic(err)
 	}
 	return result
+}
+
+// TreeDumpEntry the file information in the same format as [testutil.TreeDump].
+func TreeDumpEntry(entry *fsutil.Entry) string {
+	fperm := entry.Mode.Perm()
+	if entry.Mode&fs.ModeSticky != 0 {
+		fperm |= 01000
+	}
+	switch entry.Mode.Type() {
+	case fs.ModeDir:
+		return fmt.Sprintf("dir %#o", fperm)
+	case fs.ModeSymlink:
+		return fmt.Sprintf("symlink %s", entry.Link)
+	case 0: // Regular
+		if entry.Size == 0 {
+			return fmt.Sprintf("file %#o empty", entry.Mode.Perm())
+		} else {
+			return fmt.Sprintf("file %#o %s", fperm, entry.Hash[:8])
+		}
+	default:
+		panic(fmt.Errorf("unknown file type %d: %s", entry.Mode.Type(), entry.Path))
+	}
 }
