@@ -17,12 +17,12 @@ var longFindHelp = `
 The find command queries the slice definitions for matching slices.
 Globs (* and ?) are allowed in the query.
 
-By default it fetches the slices for the latest Ubuntu
-version, unless the --release flag is used.
+By default it fetches the slices for the same Ubuntu version as the
+current host, unless the --release flag is used.
 `
 
 var findDescs = map[string]string{
-	"release": "Chisel release directory or Ubuntu version",
+	"release": "Chisel release name or directory (e.g. ubuntu-22.04)",
 }
 
 type cmdFind struct {
