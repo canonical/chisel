@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -12,9 +13,13 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/klauspost/compress/zstd"
+
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/deb"
 	"github.com/canonical/chisel/internal/fsutil"
+	"github.com/canonical/chisel/internal/jsonwall"
+	"github.com/canonical/chisel/internal/manifest"
 	"github.com/canonical/chisel/internal/scripts"
 	"github.com/canonical/chisel/internal/setup"
 )
@@ -65,7 +70,7 @@ func (cc *contentChecker) checkKnown(path string) error {
 	return err
 }
 
-func Run(options *RunOptions) (*Report, error) {
+func Run(options *RunOptions) error {
 	oldUmask := syscall.Umask(0)
 	defer func() {
 		syscall.Umask(oldUmask)
@@ -75,7 +80,7 @@ func Run(options *RunOptions) (*Report, error) {
 	if !filepath.IsAbs(targetDir) {
 		dir, err := os.Getwd()
 		if err != nil {
-			return nil, fmt.Errorf("cannot obtain current directory: %w", err)
+			return fmt.Errorf("cannot obtain current directory: %w", err)
 		}
 		targetDir = filepath.Join(dir, targetDir)
 	}
@@ -89,10 +94,10 @@ func Run(options *RunOptions) (*Report, error) {
 			archiveName := options.Selection.Release.Packages[slice.Package].Archive
 			archive := options.Archives[archiveName]
 			if archive == nil {
-				return nil, fmt.Errorf("archive %q not defined", archiveName)
+				return fmt.Errorf("archive %q not defined", archiveName)
 			}
 			if !archive.Exists(slice.Package) {
-				return nil, fmt.Errorf("slice package %q missing from archive", slice.Package)
+				return fmt.Errorf("slice package %q missing from archive", slice.Package)
 			}
 			archives[slice.Package] = archive
 			extractPackage = make(map[string][]deb.ExtractInfo)
@@ -151,7 +156,7 @@ func Run(options *RunOptions) (*Report, error) {
 		}
 		reader, err := archives[slice.Package].Fetch(slice.Package)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		defer reader.Close()
 		packages[slice.Package] = reader
@@ -162,9 +167,11 @@ func Run(options *RunOptions) (*Report, error) {
 	knownPaths := map[string]pathData{}
 	addKnownPath(knownPaths, "/", pathData{})
 
+	// Creates the filesystem entry and adds it to the report. It also updates
+	// knownPaths with the files created.
 	report, err := NewReport(targetDir)
 	if err != nil {
-		return nil, fmt.Errorf("internal error: cannot create report: %w", err)
+		return fmt.Errorf("internal error: cannot create report: %w", err)
 	}
 
 	// Creates the filesystem entry and adds it to the report. It also updates
@@ -235,38 +242,60 @@ func Run(options *RunOptions) (*Report, error) {
 		reader.Close()
 		packages[slice.Package] = nil
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	// Create new content not coming from packages.
-	done := make(map[string]bool)
+	// Create new content not coming from packages. First group them by their
+	// relative path. Then create them and attribute them to the appropriate
+	// slices.
+	type contentNotInPkg struct {
+		// We have validated all the pathInfos to be the same so we can store
+		// one of them.
+		pathInfo setup.PathInfo
+		slices   []*setup.Slice
+	}
+	contentRelPaths := map[string]contentNotInPkg{}
 	for _, slice := range options.Selection.Slices {
 		arch := archives[slice.Package].Options().Arch
 		for relPath, pathInfo := range slice.Contents {
 			if len(pathInfo.Arch) > 0 && !slices.Contains(pathInfo.Arch, arch) {
 				continue
 			}
-			if done[relPath] || pathInfo.Kind == setup.CopyPath || pathInfo.Kind == setup.GlobPath {
+			if pathInfo.Kind == setup.CopyPath || pathInfo.Kind == setup.GlobPath ||
+				pathInfo.Kind == setup.GeneratePath {
 				continue
 			}
-			done[relPath] = true
-			data := pathData{
-				until:   pathInfo.Until,
-				mutable: pathInfo.Mutable,
+			if _, ok := contentRelPaths[relPath]; !ok {
+				contentRelPaths[relPath] = contentNotInPkg{
+					pathInfo: pathInfo,
+					slices:   []*setup.Slice{slice},
+				}
+			} else {
+				targetPath := contentRelPaths[relPath]
+				targetPath.slices = append(targetPath.slices, slice)
+				contentRelPaths[relPath] = targetPath
 			}
-			addKnownPath(knownPaths, relPath, data)
-			targetPath := filepath.Join(targetDir, relPath)
-			entry, err := createFile(targetPath, pathInfo)
-			if err != nil {
-				return nil, err
-			}
+		}
+	}
+	for relPath, content := range contentRelPaths {
+		data := pathData{
+			until:   content.pathInfo.Until,
+			mutable: content.pathInfo.Mutable,
+		}
+		addKnownPath(knownPaths, relPath, data)
+		targetPath := filepath.Join(targetDir, relPath)
+		entry, err := createFile(targetPath, content.pathInfo)
+		if err != nil {
+			return err
+		}
 
-			// Do not add paths with "until: mutate".
-			if pathInfo.Until != setup.UntilMutate {
+		// Do not add paths with "until: mutate".
+		if content.pathInfo.Until != setup.UntilMutate {
+			for _, slice := range content.slices {
 				err = report.Add(slice, entry)
 				if err != nil {
-					return nil, err
+					return err
 				}
 			}
 		}
@@ -291,16 +320,31 @@ func Run(options *RunOptions) (*Report, error) {
 		}
 		err := scripts.Run(&opts)
 		if err != nil {
-			return nil, fmt.Errorf("slice %s: %w", slice, err)
+			return fmt.Errorf("slice %s: %w", slice, err)
 		}
 	}
 
 	err = removeAfterMutate(targetDir, knownPaths)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return report, nil
+	// Generate manifests.
+	pkgInfos := []*archive.PackageInfo{}
+	for pkg, _ := range packages {
+		pkgInfo, err := archives[pkg].Info(pkg)
+		if err != nil {
+			return err
+		}
+		pkgInfos = append(pkgInfos, pkgInfo)
+	}
+	err = generateManifests(&generateManifestsOptions{
+		packageInfo: pkgInfos,
+		selection:   options.Selection.Slices,
+		report:      report,
+		targetDir:   targetDir,
+	})
+	return err
 }
 
 // removeAfterMutate removes entries marked with until: mutate. A path is marked
@@ -396,4 +440,135 @@ func createFile(targetPath string, pathInfo setup.PathInfo) (*fsutil.Entry, erro
 		Link:        linkTarget,
 		MakeParents: true,
 	})
+}
+
+type generateManifestsOptions struct {
+	packageInfo []*archive.PackageInfo
+	selection   []*setup.Slice
+	report      *Report
+	targetDir   string
+}
+
+// generateManifests generates the Chisel manifest(s) at the specified paths. It
+// returns the paths inside the rootfs where the manifest(s) are generated.
+func generateManifests(options *generateManifestsOptions) error {
+	manifestSlices, err := manifest.LocateManifestSlices(options.selection)
+	if err != nil {
+		return err
+	}
+	if len(manifestSlices) == 0 {
+		// Nothing to do.
+		return nil
+	}
+	jsonwallw := jsonwall.NewDBWriter(&jsonwall.DBWriterOptions{
+		Schema: manifest.Schema,
+	})
+
+	// Add packages to the manifest.
+	for _, info := range options.packageInfo {
+		err := jsonwallw.Add(&manifest.Package{
+			Kind:    "package",
+			Name:    info.Name,
+			Version: info.Version,
+			Digest:  info.Hash,
+			Arch:    info.Arch,
+		})
+		if err != nil {
+			return err
+		}
+	}
+	// Add slices to the manifest.
+	for _, s := range options.selection {
+		err := jsonwallw.Add(&manifest.Slice{
+			Kind: "slice",
+			Name: s.String(),
+		})
+		if err != nil {
+			return err
+		}
+	}
+	// Add paths and contents to the manifest.
+	for _, entry := range options.report.Entries {
+		sliceNames := []string{}
+		for s := range entry.Slices {
+			err := jsonwallw.Add(&manifest.Content{
+				Kind:  "content",
+				Slice: s.String(),
+				Path:  entry.Path,
+			})
+			if err != nil {
+				return err
+			}
+			sliceNames = append(sliceNames, s.String())
+		}
+		sort.Strings(sliceNames)
+		err := jsonwallw.Add(&manifest.Path{
+			Kind:      "path",
+			Path:      entry.Path,
+			Mode:      fmt.Sprintf("0%o", unixPerm(entry.Mode)),
+			Slices:    sliceNames,
+			Hash:      entry.Hash,
+			FinalHash: entry.FinalHash,
+			Size:      uint64(entry.Size),
+			Link:      entry.Link,
+		})
+		if err != nil {
+			return err
+		}
+	}
+	// Add the manifest path and content entries to the manifest.
+	for path, slices := range manifestSlices {
+		sliceNames := []string{}
+		for _, s := range slices {
+			err := jsonwallw.Add(&manifest.Content{
+				Kind:  "content",
+				Slice: s.String(),
+				Path:  path,
+			})
+			if err != nil {
+				return err
+			}
+			sliceNames = append(sliceNames, s.String())
+		}
+		sort.Strings(sliceNames)
+		err := jsonwallw.Add(&manifest.Path{
+			Kind:   "path",
+			Path:   path,
+			Mode:   fmt.Sprintf("0%o", unixPerm(manifest.Mode)),
+			Slices: sliceNames,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	files := []io.Writer{}
+	for relPath := range manifestSlices {
+		logf("Generating manifest at %s...", relPath)
+		absPath := filepath.Join(options.targetDir, relPath)
+		if err := os.MkdirAll(filepath.Dir(absPath), 0755); err != nil {
+			return err
+		}
+		file, err := os.OpenFile(absPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, manifest.Mode)
+		if err != nil {
+			return err
+		}
+		files = append(files, file)
+		defer file.Close()
+	}
+	w, err := zstd.NewWriter(io.MultiWriter(files...))
+	if err != nil {
+		return err
+	}
+	defer w.Close()
+	_, err = jsonwallw.WriteTo(w)
+	return err
+}
+
+func unixPerm(mode fs.FileMode) (perm uint32) {
+	perm = uint32(mode.Perm())
+	if mode&fs.ModeSticky != 0 {
+		perm |= 01000
+	}
+	return perm
 }

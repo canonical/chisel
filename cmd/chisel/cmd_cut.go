@@ -79,7 +79,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 		archives[archiveName] = openArchive
 	}
 
-	_, err = slicer.Run(&slicer.RunOptions{
+	err = slicer.Run(&slicer.RunOptions{
 		Selection: selection,
 		Archives:  archives,
 		TargetDir: cmd.RootDir,

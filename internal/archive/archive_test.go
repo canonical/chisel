@@ -399,6 +399,53 @@ func (s *httpSuite) TestVerifyArchiveRelease(c *C) {
 	}
 }
 
+var packageInfoTests = []struct {
+	summary string
+	pkg     string
+	info    *archive.PackageInfo
+	error   string
+}{{
+	summary: "Basic",
+	pkg:     "mypkg1",
+	info: &archive.PackageInfo{
+		Name:    "mypkg1",
+		Version: "1.1",
+		Arch:    "amd64",
+		Hash:    "1f08ef04cfe7a8087ee38a1ea35fa1810246648136c3c42d5a61ad6503d85e05",
+	},
+}, {
+	summary: "Package not found in archive",
+	pkg:     "mypkg99",
+	error:   `cannot find package "mypkg99" in archive`,
+}}
+
+func (s *httpSuite) TestPackageInfo(c *C) {
+	s.prepareArchive("jammy", "22.04", "amd64", []string{"main", "universe"})
+
+	options := archive.Options{
+		Label:      "ubuntu",
+		Version:    "22.04",
+		Arch:       "amd64",
+		Suites:     []string{"jammy"},
+		Components: []string{"main", "universe"},
+		CacheDir:   c.MkDir(),
+		PubKeys:    []*packet.PublicKey{s.pubKey},
+	}
+
+	testArchive, err := archive.Open(&options)
+	c.Assert(err, IsNil)
+
+	for _, test := range packageInfoTests {
+		info, err := testArchive.Info(test.pkg)
+		if test.error != "" {
+			c.Assert(err, ErrorMatches, test.error)
+			continue
+		}
+		c.Assert(err, IsNil)
+		c.Assert(info, DeepEquals, test.info)
+	}
+}
+
 func read(r io.Reader) string {
 	data, err := io.ReadAll(r)
 	if err != nil {
