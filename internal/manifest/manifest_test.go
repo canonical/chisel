@@ -12,10 +12,16 @@ import (
 	"github.com/canonical/chisel/internal/manifest"
 )
 
+type manifestContents struct {
+	Paths    []manifest.Path
+	Packages []manifest.Package
+	Slices   []manifest.Slice
+}
+
 var manifestTests = []struct {
 	summary string
 	input   string
-	mfest   *manifest.Manifest
+	mfest   manifestContents
 	error   string
 }{
 	{
@@ -37,19 +43,12 @@ var manifestTests = []struct {
 {"kind":"slice","name":"pkg1_myslice"}
 {"kind":"slice","name":"pkg2_myotherslice"}
 `,
-		mfest: &manifest.Manifest{
+		mfest: manifestContents{
 			Paths: []manifest.Path{
 				{Kind: "path", Path: "/dir/file", Mode: "0644", Slices: []string{"pkg1_myslice"}, Hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", FinalHash: "8067926c032c090867013d14fb0eb21ae858344f62ad07086fd32375845c91a6", Size: 0x15, Link: ""},
 				{Kind: "path", Path: "/dir/foo/bar/", Mode: "01777", Slices: []string{"pkg1_myslice", "pkg2_myotherslice"}, Hash: "", FinalHash: "", Size: 0x0, Link: ""},
 				{Kind: "path", Path: "/dir/link/file", Mode: "0644", Slices: []string{"pkg1_myslice"}, Hash: "", FinalHash: "", Size: 0x0, Link: "/dir/file"},
 				{Kind: "path", Path: "/manifest/manifest.wall", Mode: "0644", Slices: []string{"pkg1_manifest"}, Hash: "", FinalHash: "", Size: 0x0, Link: ""},
-			},
-			Contents: []manifest.Content{
-				{Kind: "content", Slice: "pkg1_manifest", Path: "/manifest/manifest.wall"},
-				{Kind: "content", Slice: "pkg1_myslice", Path: "/dir/file"},
-				{Kind: "content", Slice: "pkg1_myslice", Path: "/dir/foo/bar/"},
-				{Kind: "content", Slice: "pkg1_myslice", Path: "/dir/link/file"},
-				{Kind: "content", Slice: "pkg2_myotherslice", Path: "/dir/foo/bar/"},
 			},
 			Packages: []manifest.Package{
 				{Kind: "package", Name: "pkg1", Version: "v1", Digest: "hash1", Arch: "arch1"},
@@ -131,6 +130,36 @@ func (s *S) TestRun(c *C) {
 			continue
 		}
 		c.Assert(err, IsNil)
-		c.Assert(mfest, DeepEquals, test.mfest)
+		c.Assert(dumpManifest(c, mfest), DeepEquals, test.mfest)
 	}
+}
+
+func dumpManifest(c *C, mfest *manifest.Manifest) manifestContents {
+	var slices []manifest.Slice
+	err := mfest.IterateSlices("", func(slice manifest.Slice) error {
+		slices = append(slices, slice)
+		return nil
+	})
+	c.Assert(err, IsNil)
+
+	var pkgs []manifest.Package
+	err = mfest.IteratePkgs(func(pkg manifest.Package) error {
+		pkgs = append(pkgs, pkg)
+		return nil
+	})
+	c.Assert(err, IsNil)
+
+	var paths []manifest.Path
+	err = mfest.IteratePath("", func(path manifest.Path) error {
+		paths = append(paths, path)
+		return nil
+	})
+	c.Assert(err, IsNil)
+
+	mc := manifestContents{
+		Paths:    paths,
+		Packages: pkgs,
+		Slices:   slices,
+	}
+	return mc
 }

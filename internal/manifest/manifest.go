@@ -67,10 +67,7 @@ func LocateManifestSlices(slices []*setup.Slice) (map[string][]*setup.Slice, err
 }
 
 type Manifest struct {
-	Paths    []Path
-	Contents []Content
-	Packages []Package
-	Slices   []Slice
+	db *jsonwall.DB
 }
 
 func Read(rootDir string, relPath string) (manifest *Manifest, err error) {
@@ -96,61 +93,87 @@ func Read(rootDir string, relPath string) (manifest *Manifest, err error) {
 		return nil, err
 	}
 
-	manifest = &Manifest{}
-	iter, err := jsonwallDB.Iterate(map[string]string{"kind": "path"})
-	if err != nil {
-		return nil, err
-	}
-	for iter.Next() {
-		var path Path
-		err := iter.Get(&path)
-		if err != nil {
-			return nil, err
-		}
-		manifest.Paths = append(manifest.Paths, path)
-	}
-	iter, err = jsonwallDB.Iterate(map[string]string{"kind": "content"})
-	if err != nil {
-		return nil, err
-	}
-	for iter.Next() {
-		var content Content
-		err := iter.Get(&content)
-		if err != nil {
-			return nil, err
-		}
-		manifest.Contents = append(manifest.Contents, content)
-	}
-	iter, err = jsonwallDB.Iterate(map[string]string{"kind": "package"})
-	if err != nil {
-		return nil, err
-	}
-	for iter.Next() {
-		var pkg Package
-		err := iter.Get(&pkg)
-		if err != nil {
-			return nil, err
-		}
-		manifest.Packages = append(manifest.Packages, pkg)
-	}
-	iter, err = jsonwallDB.Iterate(map[string]string{"kind": "slice"})
-	if err != nil {
-		return nil, err
-	}
-	for iter.Next() {
-		var slice Slice
-		err := iter.Get(&slice)
-		if err != nil {
-			return nil, err
-		}
-		manifest.Slices = append(manifest.Slices, slice)
-	}
-
+	manifest = &Manifest{db: jsonwallDB}
 	err = validate(manifest)
 	if err != nil {
 		return nil, err
 	}
 	return manifest, nil
+}
+
+func (manifest *Manifest) IteratePath(prefix string, f func(Path) error) (err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("cannot read manifest: %s", err)
+		}
+	}()
+
+	iter, err := manifest.db.IteratePrefix(map[string]string{"kind": "path", "path": prefix})
+	if err != nil {
+		return err
+	}
+	for iter.Next() {
+		var path Path
+		err := iter.Get(&path)
+		if err != nil {
+			return err
+		}
+		err = f(path)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (manifest *Manifest) IteratePkgs(f func(Package) error) (err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("cannot read manifest: %s", err)
+		}
+	}()
+
+	iter, err := manifest.db.Iterate(map[string]string{"kind": "package"})
+	if err != nil {
+		return err
+	}
+	for iter.Next() {
+		var pkg Package
+		err := iter.Get(&pkg)
+		if err != nil {
+			return err
+		}
+		err = f(pkg)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (manifest *Manifest) IterateSlices(pkgName string, f func(Slice) error) (err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("cannot read manifest: %s", err)
+		}
+	}()
+
+	iter, err := manifest.db.IteratePrefix(map[string]string{"kind": "slice", "name": pkgName})
+	if err != nil {
+		return err
+	}
+	for iter.Next() {
+		var slice Slice
+		err := iter.Get(&slice)
+		if err != nil {
+			return err
+		}
+		err = f(slice)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func validate(manifest *Manifest) (err error) {
@@ -161,16 +184,32 @@ func validate(manifest *Manifest) (err error) {
 	}()
 
 	pkgExist := map[string]bool{}
-	for _, pkg := range manifest.Packages {
+	iter, err := manifest.db.Iterate(map[string]string{"kind": "package"})
+	if err != nil {
+		return err
+	}
+	for iter.Next() {
+		var pkg Package
+		err := iter.Get(&pkg)
+		if err != nil {
+			return err
+		}
 		if pkg.Kind != "package" {
 			return fmt.Errorf(`in packages expected kind "package", got %q`, pkg.Kind)
 		}
 		pkgExist[pkg.Name] = true
 	}
+
 	sliceExist := map[string]bool{}
-	for _, slice := range manifest.Slices {
-		if slice.Kind != "slice" {
-			return fmt.Errorf(`in slices expected kind "slice", got %q`, slice.Kind)
+	iter, err = manifest.db.Iterate(map[string]string{"kind": "slice"})
+	if err != nil {
+		return err
+	}
+	for iter.Next() {
+		var slice Slice
+		err := iter.Get(&slice)
+		if err != nil {
+			return err
 		}
 		sk, err := setup.ParseSliceKey(slice.Name)
 		if err != nil {
@@ -181,8 +220,18 @@ func validate(manifest *Manifest) (err error) {
 		}
 		sliceExist[slice.Name] = true
 	}
+
 	pathToSlices := map[string][]string{}
-	for _, content := range manifest.Contents {
+	iter, err = manifest.db.Iterate(map[string]string{"kind": "content"})
+	if err != nil {
+		return err
+	}
+	for iter.Next() {
+		var content Content
+		err := iter.Get(&content)
+		if err != nil {
+			return err
+		}
 		if content.Kind != "content" {
 			return fmt.Errorf(`in contents expected kind "content", got "%s"`, content.Kind)
 		}
@@ -191,7 +240,17 @@ func validate(manifest *Manifest) (err error) {
 		}
 		pathToSlices[content.Path] = append(pathToSlices[content.Path], content.Slice)
 	}
-	for _, path := range manifest.Paths {
+
+	iter, err = manifest.db.Iterate(map[string]string{"kind": "path"})
+	if err != nil {
+		return err
+	}
+	for iter.Next() {
+		var path Path
+		err := iter.Get(&path)
+		if err != nil {
+			return err
+		}
 		if path.Kind != "path" {
 			return fmt.Errorf(`in paths expected kind "path", got "%s"`, path.Kind)
 		}
