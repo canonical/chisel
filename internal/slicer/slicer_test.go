@@ -1261,7 +1261,12 @@ func runSlicerTests(c *C, tests []slicerTest) {
 
 			// Assert state of the files recorded in the manifest.
 			if test.manifestPaths != nil {
-				manifestDump := treeDumpManifest(mfest.Paths)
+				var manifestPaths []manifest.Path
+				mfest.IteratePath("", func(path manifest.Path) error {
+					manifestPaths = append(manifestPaths, path)
+					return nil
+				})
+				manifestDump := treeDumpManifestPaths(manifestPaths)
 				c.Assert(manifestDump[manifestPath], Not(HasLen), 0)
 				delete(manifestDump, manifestPath)
 				c.Assert(manifestDump, DeepEquals, test.manifestPaths)
@@ -1269,13 +1274,18 @@ func runSlicerTests(c *C, tests []slicerTest) {
 
 			// Assert state of the packages recorded in the manifest.
 			if test.manifestPkgs != nil {
-				c.Assert(dumpPackages(mfest.Packages), DeepEquals, test.manifestPkgs)
+				var manifestPkgs []manifest.Package
+				mfest.IteratePkgs(func(pkg manifest.Package) error {
+					manifestPkgs = append(manifestPkgs, pkg)
+					return nil
+				})
+				c.Assert(dumpManifestPkgs(manifestPkgs), DeepEquals, test.manifestPkgs)
 			}
 		}
 	}
 }
 
-func treeDumpManifest(entries []manifest.Path) map[string]string {
+func treeDumpManifestPaths(entries []manifest.Path) map[string]string {
 	result := make(map[string]string)
 	for _, entry := range entries {
 		var fsDump string
@@ -1305,7 +1315,7 @@ func treeDumpManifest(entries []manifest.Path) map[string]string {
 	return result
 }
 
-func dumpPackages(pkgs []manifest.Package) map[string]string {
+func dumpManifestPkgs(pkgs []manifest.Package) map[string]string {
 	result := map[string]string{}
 	for _, pkg := range pkgs {
 		result[pkg.Name] = fmt.Sprintf("%s %s %s %s", pkg.Name, pkg.Version, pkg.Arch, pkg.Digest)
