@@ -1262,10 +1262,11 @@ func runSlicerTests(c *C, tests []slicerTest) {
 			// Assert state of the files recorded in the manifest.
 			if test.manifestPaths != nil {
 				var manifestPaths []manifest.Path
-				mfest.IteratePath("", func(path manifest.Path) error {
+				err := mfest.IteratePath("", func(path manifest.Path) error {
 					manifestPaths = append(manifestPaths, path)
 					return nil
 				})
+				c.Assert(err, IsNil)
 				manifestDump := treeDumpManifestPaths(manifestPaths)
 				c.Assert(manifestDump[manifestPath], Not(HasLen), 0)
 				delete(manifestDump, manifestPath)
@@ -1275,10 +1276,11 @@ func runSlicerTests(c *C, tests []slicerTest) {
 			// Assert state of the packages recorded in the manifest.
 			if test.manifestPkgs != nil {
 				var manifestPkgs []manifest.Package
-				mfest.IteratePkgs(func(pkg manifest.Package) error {
+				err := mfest.IteratePkgs(func(pkg manifest.Package) error {
 					manifestPkgs = append(manifestPkgs, pkg)
 					return nil
 				})
+				c.Assert(err, IsNil)
 				c.Assert(dumpManifestPkgs(manifestPkgs), DeepEquals, test.manifestPkgs)
 			}
 		}
