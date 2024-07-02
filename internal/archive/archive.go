@@ -20,6 +20,14 @@ type Archive interface {
 	Options() *Options
 	Fetch(pkg string) (io.ReadCloser, error)
 	Exists(pkg string) bool
+	Info(pkg string) (*PackageInfo, error)
+}
+
+type PackageInfo struct {
+	Name    string
+	Version string
+	Arch    string
+	Hash    string
 }
 
 type Options struct {
@@ -124,6 +132,20 @@ func (a *ubuntuArchive) Fetch(pkg string) (io.ReadCloser, error) {
 		return nil, err
 	}
 	return reader, nil
+}
+
+func (a *ubuntuArchive) Info(pkg string) (*PackageInfo, error) {
+	section, _, err := a.selectPackage(pkg)
+	if err != nil {
+		return nil, err
+	}
+	info := &PackageInfo{
+		Name:    section.Get("Package"),
+		Version: section.Get("Version"),
+		Arch:    section.Get("Architecture"),
+		Hash:    section.Get("SHA256"),
+	}
+	return info, nil
 }
 
 const ubuntuURL = "http://archive.ubuntu.com/ubuntu/"

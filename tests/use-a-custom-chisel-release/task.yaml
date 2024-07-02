@@ -20,12 +20,23 @@ execute: |
       myslice:
         contents:
           /etc/:
+      manifest:
+        contents:
+          /chisel/**: {generate: manifest}
   EOF
 
-  chisel cut --release $chisel_release --root $rootfs_folder base-files_myslice
+  chisel cut --release $chisel_release --root $rootfs_folder base-files_myslice base-files_manifest
   
   # make sure $rootfs_folder is not empty
   ls ${rootfs_folder}/*
 
   # make sure the custom slice has been installed
   test -d ${rootfs_folder}/etc
+  test -d ${rootfs_folder}/chisel
+  test -f ${rootfs_folder}/chisel/manifest.wall
+  
+  # make sure the manifest can be decompressed and each line is valid json
+  zstd -d ${rootfs_folder}/chisel/manifest.wall -o ${rootfs_folder}/chisel/manifest.jsonwall
+  while read line; do
+    echo $line | jq
+  done < ${rootfs_folder}/chisel/manifest.jsonwall
