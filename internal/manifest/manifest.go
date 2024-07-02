@@ -2,7 +2,6 @@ package manifest
 
 import (
 	"fmt"
-	"io/fs"
 	"os"
 	"slices"
 
@@ -11,10 +10,6 @@ import (
 	"github.com/canonical/chisel/internal/jsonwall"
 	"github.com/canonical/chisel/internal/setup"
 )
-
-const Filename = "manifest.wall"
-const Schema = "1.0"
-const Mode fs.FileMode = 0644
 
 type Package struct {
 	Kind    string `json:"kind"`
@@ -57,7 +52,7 @@ func Read(absPath string) (manifest *Manifest, err error) {
 		}
 	}()
 
-	file, err := os.OpenFile(absPath, os.O_RDONLY, Mode)
+	file, err := os.OpenFile(absPath, os.O_RDONLY, 0644)
 	if err != nil {
 		return nil, err
 	}
