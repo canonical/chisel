@@ -65,6 +65,11 @@ const (
 	GlobPath    PathKind = "glob"
 	TextPath    PathKind = "text"
 	SymlinkPath PathKind = "symlink"
+	// GeneratePath is a special kind of glob path with the following format:
+	//   /slashed/path/to/dir/**
+	// Wildcard characters can only appear at the end as **, and the path before
+	// those wildcards must be a directory.
+	GeneratePath PathKind = "generate"
 
 	// TODO Maybe in the future, for binary support.
 	//Base64Path PathKind = "base64"
@@ -77,14 +82,29 @@ const (
 	UntilMutate PathUntil = "mutate"
 )
 
+type GenerateKind string
+
+const (
+	// There are only two possible values of "generate" as of now:
+	//   "" (empty)
+	//   "manifest"
+	// Empty value signifies that the path is not a GeneratePath.
+	GenerateNone     GenerateKind = ""
+	GenerateManifest GenerateKind = "manifest"
+)
+
 type PathInfo struct {
+	// Disable ==.
+	_ [0]func()
+
 	Kind PathKind
 	Info string
 	Mode uint
 
-	Mutable bool
-	Until   PathUntil
-	Arch    []string
+	Mutable  bool
+	Until    PathUntil
+	Arch     []string
+	Generate GenerateKind
 }
 
 // SameContent returns whether the path has the same content properties as some
@@ -95,7 +115,8 @@ func (pi *PathInfo) SameContent(other *PathInfo) bool {
 	return (pi.Kind == other.Kind &&
 		pi.Info == other.Info &&
 		pi.Mode == other.Mode &&
-		pi.Mutable == other.Mutable)
+		pi.Mutable == other.Mutable &&
+		pi.Generate == other.Generate)
 }
 
 type SliceKey struct {
@@ -142,6 +163,7 @@ func ReadRelease(dir string) (*Release, error) {
 func (r *Release) validate() error {
 	keys := []SliceKey(nil)
 	paths := make(map[string]*Slice)
+	// globs contains all glob paths including GeneratePath(s).
 	globs := make(map[string]*Slice)
 
 	// Check for info conflicts and prepare for following checks.
@@ -151,6 +173,8 @@ func (r *Release) validate() error {
 			for newPath, newInfo := range new.Contents {
 				if old, ok := paths[newPath]; ok {
 					oldInfo := old.Contents[newPath]
+					// Note that if extracting content (CopyPath or GlobPath)
+					// from the same package the content can never be in conflict.
 					if !newInfo.SameContent(&oldInfo) || (newInfo.Kind == CopyPath || newInfo.Kind == GlobPath) && new.Package != old.Package {
 						if old.Package > new.Package || old.Package == new.Package && old.Name > new.Name {
 							old, new = new, old
@@ -158,7 +182,7 @@ func (r *Release) validate() error {
 						return fmt.Errorf("slices %s and %s conflict on %s", old, new, newPath)
 					}
 				} else {
-					if newInfo.Kind == GlobPath {
+					if newInfo.Kind == GlobPath || newInfo.Kind == GeneratePath {
 						globs[newPath] = new
 					}
 					paths[newPath] = new
@@ -176,7 +200,13 @@ func (r *Release) validate() error {
 	// Check for glob conflicts.
 	for newPath, new := range globs {
 		for oldPath, old := range paths {
-			if new.Package == old.Package {
+			// Same entry, no conflict.
+			if new == old && newPath == oldPath {
+				continue
+			}
+			// Content extracted (not generated) from the same package can never
+			// be in conflict.
+			if new.Package == old.Package && new.Contents[newPath].Kind == GlobPath && old.Contents[oldPath].Kind != GeneratePath {
 				continue
 			}
 			if strdist.GlobPath(newPath, oldPath) {
@@ -357,8 +387,9 @@ type yamlPath struct {
 	Symlink string  `yaml:"symlink"`
 	Mutable bool    `yaml:"mutable"`
 
-	Until PathUntil `yaml:"until"`
-	Arch  yamlArch  `yaml:"arch"`
+	Until    PathUntil    `yaml:"until"`
+	Arch     yamlArch     `yaml:"arch"`
+	Generate GenerateKind `yaml:"generate"`
 }
 
 // SameContent returns whether the path has the same content properties as some
@@ -583,7 +614,19 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 			var mutable bool
 			var until PathUntil
 			var arch []string
-			if strings.ContainsAny(contPath, "*?") {
+			var generate GenerateKind
+			if yamlPath != nil && yamlPath.Generate != "" {
+				zeroPathGenerate := zeroPath
+				zeroPathGenerate.Generate = yamlPath.Generate
+				if !yamlPath.SameContent(&zeroPathGenerate) || yamlPath.Until != UntilNone {
+					return nil, fmt.Errorf("slice %s_%s path %s has invalid generate options",
+						pkgName, sliceName, contPath)
+				}
+				if _, err := GetGeneratePath(contPath); err != nil {
+					return nil, fmt.Errorf("slice %s_%s has %s", pkgName, sliceName, err)
+				}
+				kinds = append(kinds, GeneratePath)
+			} else if strings.ContainsAny(contPath, "*?") {
 				if yamlPath != nil {
 					if !yamlPath.SameContent(&zeroPath) {
 						return nil, fmt.Errorf("slice %s_%s path %s has invalid wildcard options",
@@ -595,6 +638,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 			if yamlPath != nil {
 				mode = yamlPath.Mode
 				mutable = yamlPath.Mutable
+				generate = yamlPath.Generate
 				if yamlPath.Dir {
 					if !strings.HasSuffix(contPath, "/") {
 						return nil, fmt.Errorf("slice %s_%s path %s must end in / for 'make' to be valid",
@@ -644,12 +688,13 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 				return nil, fmt.Errorf("slice %s_%s mutable is not a regular file: %s", pkgName, sliceName, contPath)
 			}
 			slice.Contents[contPath] = PathInfo{
-				Kind:    kinds[0],
-				Info:    info,
-				Mode:    mode,
-				Mutable: mutable,
-				Until:   until,
-				Arch:    arch,
+				Kind:     kinds[0],
+				Info:     info,
+				Mode:     mode,
+				Mutable:  mutable,
+				Until:    until,
+				Arch:     arch,
+				Generate: generate,
 			}
 		}
 
@@ -657,6 +702,23 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 	}
 
 	return &pkg, err
+}
+
+func GetGeneratePath(path string) (dir string, err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("invalid generate path: %s", err)
+		}
+	}()
+
+	if !strings.HasSuffix(path, "/**") {
+		return "", fmt.Errorf("%s does not end with /**", path)
+	}
+	dirPath := strings.TrimSuffix(path, "**")
+	if strings.ContainsAny(dirPath, "*?") {
+		return "", fmt.Errorf("%s contains wildcard characters in addition to trailing **", path)
+	}
+	return dirPath, nil
 }
 
 func stripBase(baseDir, path string) string {
@@ -691,9 +753,17 @@ func Select(release *Release, slices []SliceKey) (*Selection, error) {
 					}
 					return nil, fmt.Errorf("slices %s and %s conflict on %s", old, new, newPath)
 				}
-				continue
+			} else {
+				paths[newPath] = new
 			}
-			paths[newPath] = new
+			// An invalid "generate" value should only throw an error if that
+			// particular slice is selected. Hence, the check is here.
+			switch newInfo.Generate {
+			case GenerateNone, GenerateManifest:
+			default:
+				return nil, fmt.Errorf("slice %s has invalid 'generate' for path %s: %q, consider an update if available",
+					new, newPath, newInfo.Generate)
+			}
 		}
 	}
 
