@@ -1036,19 +1036,8 @@ var slicerTests = []slicerTest{{
 	},
 	filesystem:    map[string]string{},
 	manifestPaths: map[string]string{},
-}}
-
-var slicerPkgTests = []struct {
-	summary      string
-	arch         string
-	release      map[string]string
-	pkgs         map[string]testutil.TestPackage
-	slices       []setup.SliceKey
-	hackopt      func(c *C, opts *slicer.RunOptions)
-	manifestPkgs map[string]string
-	error        string
-}{{
-	summary: "Install two packages",
+}, {
+	summary: "Install two packages, both are recorded",
 	slices: []setup.SliceKey{
 		{"test-package", "myslice"},
 		{"other-package", "myslice"},
@@ -1071,16 +1060,16 @@ var slicerPkgTests = []struct {
 	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
-		package: test-package
-		slices:
-			myslice:
-				contents:
+			package: test-package
+			slices:
+				myslice:
+					contents:
 	`,
 		"slices/mydir/other-package.yaml": `
-		package: other-package
-		slices:
-			myslice:
-				contents:
+			package: other-package
+			slices:
+				myslice:
+					contents:
 	`,
 	},
 	manifestPkgs: map[string]string{
@@ -1088,7 +1077,7 @@ var slicerPkgTests = []struct {
 		"other-package": "other-package v2 a2 h2",
 	},
 }, {
-	summary: "Two packages, only one is selected",
+	summary: "Two packages, only one is selected and recorded",
 	slices: []setup.SliceKey{
 		{"test-package", "myslice"},
 	},
@@ -1110,20 +1099,20 @@ var slicerPkgTests = []struct {
 	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
-		package: test-package
-		slices:
-			myslice:
-				contents:
+			package: test-package
+			slices:
+				myslice:
+					contents:
 	`,
 		"slices/mydir/other-package.yaml": `
-		package: other-package
-		slices:
-			myslice:
-				contents:
+			package: other-package
+			slices:
+				myslice:
+					contents:
 	`,
 	},
 	manifestPkgs: map[string]string{
-		"other-package": "other-package v2 a2 h2",
+		"test-package": "test-package v1 a1 h1",
 	},
 }}
 
@@ -1284,24 +1273,6 @@ func runSlicerTests(c *C, tests []slicerTest) {
 			}
 		}
 	}
-}
-
-func (s *S) SlicerPkgTest(c *C) {
-	var translatedTests []slicerTest
-	for _, test := range slicerPkgTests {
-		// Translate the tests.
-		translatedTests = append(translatedTests, slicerTest{
-			summary:      test.summary,
-			arch:         test.arch,
-			release:      test.release,
-			pkgs:         test.pkgs,
-			slices:       test.slices,
-			hackopt:      test.hackopt,
-			manifestPkgs: test.manifestPkgs,
-			error:        test.error,
-		})
-	}
-	runSlicerTests(c, translatedTests)
 }
 
 func treeDumpManifest(entries []manifest.Path) map[string]string {

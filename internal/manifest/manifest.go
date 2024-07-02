@@ -73,7 +73,7 @@ type Manifest struct {
 	Slices   []Slice
 }
 
-func Read(rootDir string, relPath string) (mfest *Manifest, err error) {
+func Read(rootDir string, relPath string) (manifest *Manifest, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("cannot read manifest: %s", err)
@@ -96,7 +96,7 @@ func Read(rootDir string, relPath string) (mfest *Manifest, err error) {
 		return nil, err
 	}
 
-	manifest := &Manifest{}
+	manifest = &Manifest{}
 	iter, err := jsonwallDB.Iterate(map[string]string{"kind": "path"})
 	if err != nil {
 		return nil, err
