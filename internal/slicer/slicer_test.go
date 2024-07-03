@@ -616,19 +616,6 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Can list parent directories of normal paths",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
-	pkgs: map[string][]byte{
-		"test-package": testutil.MustMakeDeb(append(
-			testutil.TestPackageEntries,
-			// This particular path starting with "/check" is chosen to test for
-			// a particular bug; which appeared due to the usage of
-			// strings.TrimLeft() instead strings.TrimPrefix() to determine a
-			// relative path. Since TrimLeft takes in a cutset instead of a
-			// prefix, the desired relative path was not produced. The check.v1
-			// module creates temporary path with the word "check" within. Thus,
-			// this particular path reproduced the bug.
-			testutil.Dir(0755, "./check-foo/"),
-		)),
-	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -637,14 +624,12 @@ var slicerTests = []slicerTest{{
 					contents:
 						/a/b/c: {text: foo}
 						/x/y/: {make: true}
-						/check-foo/:
 					mutate: |
 						content.list("/")
 						content.list("/a")
 						content.list("/a/b")
 						content.list("/x")
 						content.list("/x/y")
-						content.list("/check-foo/")
 		`,
 	},
 }, {
@@ -1036,6 +1021,36 @@ var slicerTests = []slicerTest{{
 	},
 	filesystem: map[string]string{},
 	report:     map[string]string{},
+}, {
+	summary: "Relative paths are properly determined during extraction",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	pkgs: map[string][]byte{
+		"test-package": testutil.MustMakeDeb(append(
+			testutil.TestPackageEntries,
+			// This particular path starting with "/foo" is chosen to test for
+			// a particular bug; which appeared due to the usage of
+			// strings.TrimLeft() instead strings.TrimPrefix() to determine a
+			// relative path. Since TrimLeft takes in a cutset instead of a
+			// prefix, the desired relative path was not produced.
+			// See https://github.com/canonical/chisel/pull/145.
+			testutil.Dir(0755, "./foo-bar/"),
+		)),
+	},
+	hackopt: func(c *C, opts *slicer.RunOptions) {
+		opts.TargetDir = filepath.Join(filepath.Clean(opts.TargetDir), "foo")
+		os.Mkdir(opts.TargetDir, 0755)
+	},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/foo-bar/:
+					mutate: |
+						content.list("/foo-bar/")
+		`,
+	},
 }}
 
 var defaultChiselYaml = `
