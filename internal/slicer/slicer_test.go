@@ -1261,66 +1261,65 @@ func runSlicerTests(c *C, tests []slicerTest) {
 
 			// Assert state of the files recorded in the manifest.
 			if test.manifestPaths != nil {
-				var manifestPaths []manifest.Path
-				err := mfest.IteratePath("", func(path manifest.Path) error {
-					manifestPaths = append(manifestPaths, path)
-					return nil
-				})
+				pathsDump, err := treeDumpManifestPaths(mfest)
 				c.Assert(err, IsNil)
-				manifestDump := treeDumpManifestPaths(manifestPaths)
-				c.Assert(manifestDump[manifestPath], Not(HasLen), 0)
-				delete(manifestDump, manifestPath)
-				c.Assert(manifestDump, DeepEquals, test.manifestPaths)
+				c.Assert(pathsDump[manifestPath], Not(HasLen), 0)
+				delete(pathsDump, manifestPath)
+				c.Assert(pathsDump, DeepEquals, test.manifestPaths)
 			}
 
 			// Assert state of the packages recorded in the manifest.
 			if test.manifestPkgs != nil {
-				var manifestPkgs []manifest.Package
-				err := mfest.IteratePkgs(func(pkg manifest.Package) error {
-					manifestPkgs = append(manifestPkgs, pkg)
-					return nil
-				})
+				pkgsDump, err := dumpManifestPkgs(mfest)
 				c.Assert(err, IsNil)
-				c.Assert(dumpManifestPkgs(manifestPkgs), DeepEquals, test.manifestPkgs)
+				c.Assert(pkgsDump, DeepEquals, test.manifestPkgs)
 			}
 		}
 	}
 }
 
-func treeDumpManifestPaths(entries []manifest.Path) map[string]string {
+func treeDumpManifestPaths(mfest *manifest.Manifest) (map[string]string, error) {
 	result := make(map[string]string)
-	for _, entry := range entries {
+	err := mfest.IteratePath("", func(path manifest.Path) error {
 		var fsDump string
 		switch {
-		case strings.HasSuffix(entry.Path, "/"):
-			fsDump = fmt.Sprintf("dir %s", entry.Mode)
-		case entry.Link != "":
-			fsDump = fmt.Sprintf("symlink %s", entry.Link)
+		case strings.HasSuffix(path.Path, "/"):
+			fsDump = fmt.Sprintf("dir %s", path.Mode)
+		case path.Link != "":
+			fsDump = fmt.Sprintf("symlink %s", path.Link)
 		default: // Regular
-			if entry.Size == 0 {
-				fsDump = fmt.Sprintf("file %s empty", entry.Mode)
-			} else if entry.FinalHash != "" {
-				fsDump = fmt.Sprintf("file %s %s %s", entry.Mode, entry.Hash[:8], entry.FinalHash[:8])
+			if path.Size == 0 {
+				fsDump = fmt.Sprintf("file %s empty", path.Mode)
+			} else if path.FinalHash != "" {
+				fsDump = fmt.Sprintf("file %s %s %s", path.Mode, path.Hash[:8], path.FinalHash[:8])
 			} else {
-				fsDump = fmt.Sprintf("file %s %s", entry.Mode, entry.Hash[:8])
+				fsDump = fmt.Sprintf("file %s %s", path.Mode, path.Hash[:8])
 			}
 		}
 
-		// append {slice1, ..., sliceN} to the end of the entry dump.
-		slicesStr := make([]string, 0, len(entry.Slices))
-		for _, slice := range entry.Slices {
+		// append {slice1, ..., sliceN} to the end of the path dump.
+		slicesStr := make([]string, 0, len(path.Slices))
+		for _, slice := range path.Slices {
 			slicesStr = append(slicesStr, slice)
 		}
 		sort.Strings(slicesStr)
-		result[entry.Path] = fmt.Sprintf("%s {%s}", fsDump, strings.Join(slicesStr, ","))
+		result[path.Path] = fmt.Sprintf("%s {%s}", fsDump, strings.Join(slicesStr, ","))
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
-	return result
+	return result, nil
 }
 
-func dumpManifestPkgs(pkgs []manifest.Package) map[string]string {
+func dumpManifestPkgs(mfest *manifest.Manifest) (map[string]string, error) {
 	result := map[string]string{}
-	for _, pkg := range pkgs {
+	err := mfest.IteratePkgs(func(pkg manifest.Package) error {
 		result[pkg.Name] = fmt.Sprintf("%s %s %s %s", pkg.Name, pkg.Version, pkg.Arch, pkg.Digest)
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
-	return result
+	return result, nil
 }
