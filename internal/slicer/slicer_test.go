@@ -1022,7 +1022,7 @@ var slicerTests = []slicerTest{{
 	filesystem: map[string]string{},
 	report:     map[string]string{},
 }, {
-	summary: "Relative paths are properly determined during extraction",
+	summary: "Relative paths are properly trimmed during extraction",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
 	pkgs: map[string][]byte{
 		"test-package": testutil.MustMakeDeb([]testutil.TarEntry{
