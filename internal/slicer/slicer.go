@@ -180,7 +180,7 @@ func Run(options *RunOptions) (*Report, error) {
 			return nil
 		}
 
-		relPath := filepath.Clean("/" + strings.TrimLeft(o.Path, targetDir))
+		relPath := filepath.Clean("/" + strings.TrimPrefix(o.Path, targetDir))
 		if o.Mode.IsDir() {
 			relPath = relPath + "/"
 		}
