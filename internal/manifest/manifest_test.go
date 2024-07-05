@@ -131,11 +131,11 @@ func (s *S) TestRun(c *C) {
 			continue
 		}
 		c.Assert(err, IsNil)
-		c.Assert(dumpManifest(c, mfest), DeepEquals, test.mfest)
+		c.Assert(dumpManifestContents(c, mfest), DeepEquals, test.mfest)
 	}
 }
 
-func dumpManifest(c *C, mfest *manifest.Manifest) manifestContents {
+func dumpManifestContents(c *C, mfest *manifest.Manifest) manifestContents {
 	var slices []manifest.Slice
 	err := mfest.IterateSlices("", func(slice manifest.Slice) error {
 		slices = append(slices, slice)
