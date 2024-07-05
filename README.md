@@ -269,11 +269,16 @@ have additional information for identifying the kind of content to expect:
  which are only available for certain architectures. Example:
  `/usr/bin/hello: {arch: amd64}` will instruct Chisel to extract and install
  the "/usr/bin/hello" file only when chiselling an amd64 filesystem.
+ - **generate**: accepts a `manifest` value to instruct Chisel to generate the
+ manifest files in the directory. Example: `/var/lib/chisel/**:{generate:
+ manifest}`. NOTE: the provided path has to be of the form
+ `/slashed/path/to/dir/**` and no wildcards can appear apart from the trailing
+ `**`.
 
 ## TODO
 
 - [ ] Preserve ownerships when possible
-- [ ] GPG signature checking for archives
+- [x] GPG signature checking for archives
 - [ ] Use a fake server for the archive tests
 - [ ] Functional tests
 
