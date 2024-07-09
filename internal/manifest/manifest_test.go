@@ -27,22 +27,22 @@ var manifestTests = []struct {
 	{
 		summary: "All types",
 		input: `
-{"jsonwall":"1.0","schema":"1.0","count":13}
-{"kind":"content","slice":"pkg1_manifest","path":"/manifest/manifest.wall"}
-{"kind":"content","slice":"pkg1_myslice","path":"/dir/file"}
-{"kind":"content","slice":"pkg1_myslice","path":"/dir/foo/bar/"}
-{"kind":"content","slice":"pkg1_myslice","path":"/dir/link/file"}
-{"kind":"content","slice":"pkg2_myotherslice","path":"/dir/foo/bar/"}
-{"kind":"package","name":"pkg1","version":"v1","sha256":"hash1","arch":"arch1"}
-{"kind":"package","name":"pkg2","version":"v2","sha256":"hash2","arch":"arch2"}
-{"kind":"path","path":"/dir/file","mode":"0644","slices":["pkg1_myslice"],"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","final_sha256":"8067926c032c090867013d14fb0eb21ae858344f62ad07086fd32375845c91a6","size":21}
-{"kind":"path","path":"/dir/foo/bar/","mode":"01777","slices":["pkg1_myslice","pkg2_myotherslice"]}
-{"kind":"path","path":"/dir/link/file","mode":"0644","slices":["pkg1_myslice"],"link":"/dir/file"}
-{"kind":"path","path":"/manifest/manifest.wall","mode":"0644","slices":["pkg1_manifest"]}
-{"kind":"slice","name":"pkg1_manifest"}
-{"kind":"slice","name":"pkg1_myslice"}
-{"kind":"slice","name":"pkg2_myotherslice"}
-`,
+			{"jsonwall":"1.0","schema":"1.0","count":13}
+			{"kind":"content","slice":"pkg1_manifest","path":"/manifest/manifest.wall"}
+			{"kind":"content","slice":"pkg1_myslice","path":"/dir/file"}
+			{"kind":"content","slice":"pkg1_myslice","path":"/dir/foo/bar/"}
+			{"kind":"content","slice":"pkg1_myslice","path":"/dir/link/file"}
+			{"kind":"content","slice":"pkg2_myotherslice","path":"/dir/foo/bar/"}
+			{"kind":"package","name":"pkg1","version":"v1","sha256":"hash1","arch":"arch1"}
+			{"kind":"package","name":"pkg2","version":"v2","sha256":"hash2","arch":"arch2"}
+			{"kind":"path","path":"/dir/file","mode":"0644","slices":["pkg1_myslice"],"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","final_sha256":"8067926c032c090867013d14fb0eb21ae858344f62ad07086fd32375845c91a6","size":21}
+			{"kind":"path","path":"/dir/foo/bar/","mode":"01777","slices":["pkg1_myslice","pkg2_myotherslice"]}
+			{"kind":"path","path":"/dir/link/file","mode":"0644","slices":["pkg1_myslice"],"link":"/dir/file"}
+			{"kind":"path","path":"/manifest/manifest.wall","mode":"0644","slices":["pkg1_manifest"]}
+			{"kind":"slice","name":"pkg1_manifest"}
+			{"kind":"slice","name":"pkg1_myslice"}
+			{"kind":"slice","name":"pkg2_myotherslice"}
+		`,
 		mfest: manifestContents{
 			Paths: []manifest.Path{
 				{Kind: "path", Path: "/dir/file", Mode: "0644", Slices: []string{"pkg1_myslice"}, Hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", FinalHash: "8067926c032c090867013d14fb0eb21ae858344f62ad07086fd32375845c91a6", Size: 0x15, Link: ""},
@@ -63,42 +63,42 @@ var manifestTests = []struct {
 	}, {
 		summary: "Slice not found",
 		input: `
-{"jsonwall":"1.0","schema":"1.0","count":1}
-{"kind":"content","slice":"pkg1_manifest","path":"/manifest/manifest.wall"}
-`,
+			{"jsonwall":"1.0","schema":"1.0","count":1}
+			{"kind":"content","slice":"pkg1_manifest","path":"/manifest/manifest.wall"}
+		`,
 		error: `invalid manifest: slice pkg1_manifest not found in slices`,
 	}, {
 		summary: "Package not found",
 		input: `
-{"jsonwall":"1.0","schema":"1.0","count":1}
-{"kind":"slice","name":"pkg1_manifest"}
-`,
+			{"jsonwall":"1.0","schema":"1.0","count":1}
+			{"kind":"slice","name":"pkg1_manifest"}
+		`,
 		error: `invalid manifest: package "pkg1" not found in packages`,
 	}, {
 		summary: "Path not found in contents",
 		input: `
-{"jsonwall":"1.0","schema":"1.0","count":1}
-{"kind":"path","path":"/dir/","mode":"01777","slices":["pkg1_myslice"]}
-`,
+			{"jsonwall":"1.0","schema":"1.0","count":1}
+			{"kind":"path","path":"/dir/","mode":"01777","slices":["pkg1_myslice"]}
+		`,
 		error: `invalid manifest: path /dir/ has no matching entry in contents`,
 	}, {
 		summary: "Content and path have different slices",
 		input: `
-{"jsonwall":"1.0","schema":"1.0","count":3}
-{"kind":"content","slice":"pkg1_myotherslice","path":"/dir/"}
-{"kind":"package","name":"pkg1","version":"v1","sha256":"hash1","arch":"arch1"}
-{"kind":"path","path":"/dir/","mode":"01777","slices":["pkg1_myslice"]}
-{"kind":"slice","name":"pkg1_myotherslice"}
-`,
+			{"jsonwall":"1.0","schema":"1.0","count":3}
+			{"kind":"content","slice":"pkg1_myotherslice","path":"/dir/"}
+			{"kind":"package","name":"pkg1","version":"v1","sha256":"hash1","arch":"arch1"}
+			{"kind":"path","path":"/dir/","mode":"01777","slices":["pkg1_myslice"]}
+			{"kind":"slice","name":"pkg1_myotherslice"}
+		`,
 		error: `invalid manifest: path /dir/ and content have diverging slices: \["pkg1_myslice"\] != \["pkg1_myotherslice"\]`,
 	}, {
 		summary: "Content not found in paths",
 		input: `
-{"jsonwall":"1.0","schema":"1.0","count":3}
-{"kind":"content","slice":"pkg1_myslice","path":"/dir/"}
-{"kind":"package","name":"pkg1","version":"v1","sha256":"hash1","arch":"arch1"}
-{"kind":"slice","name":"pkg1_myslice"}
-`,
+			{"jsonwall":"1.0","schema":"1.0","count":3}
+			{"kind":"content","slice":"pkg1_myslice","path":"/dir/"}
+			{"kind":"package","name":"pkg1","version":"v1","sha256":"hash1","arch":"arch1"}
+			{"kind":"slice","name":"pkg1_myslice"}
+		`,
 		error: `invalid manifest: content path /dir/ has no matching entry in paths`,
 	}}
 
@@ -106,7 +106,17 @@ func (s *S) TestRun(c *C) {
 	for _, test := range manifestTests {
 		c.Logf("Summary: %s", test.summary)
 
-		test.input = strings.TrimSpace(test.input)
+		// Reindent the jsonwall to remove leading tabs in each line.
+		lines := strings.Split(strings.TrimSpace(test.input), "\n")
+		trimmedLines := make([]string, 0, len(lines))
+		for _, line := range lines {
+			trimmedLines = append(trimmedLines, strings.TrimLeft(line, "\t"))
+		}
+		test.input = strings.Join(trimmedLines, "\n")
+		// Assert that the jsonwall is valid, for the test to be meaningful.
+		slices.Sort(trimmedLines)
+		orderedInput := strings.Join(trimmedLines, "\n")
+		c.Assert(test.input, DeepEquals, orderedInput, Commentf("input jsonwall lines should be ordered"))
 
 		tmpDir := c.MkDir()
 		manifestPath := path.Join(tmpDir, "manifest.wall")
@@ -118,12 +128,6 @@ func (s *S) TestRun(c *C) {
 		c.Assert(err, IsNil)
 		w.Close()
 		f.Close()
-
-		// Assert that the jsonwall is valid, for the test to be meaninful.
-		lines := strings.Split(strings.TrimSpace(test.input), "\n")
-		slices.Sort(lines)
-		orderedInput := strings.Join(lines, "\n")
-		c.Assert(test.input, DeepEquals, orderedInput, Commentf("input jsonwall lines should be ordered"))
 
 		mfest, err := manifest.Read(manifestPath)
 		c.Assert(err, IsNil)
