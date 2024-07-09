@@ -45,6 +45,8 @@ type Manifest struct {
 	db *jsonwall.DB
 }
 
+// Read loads a Manifest from a file without performing any validation. The file
+// is assumed to be both valid jsonwall and a valid Manifest (see [Validate]).
 func Read(absPath string) (manifest *Manifest, err error) {
 	defer func() {
 		if err != nil {
@@ -68,21 +70,24 @@ func Read(absPath string) (manifest *Manifest, err error) {
 	}
 
 	manifest = &Manifest{db: jsonwallDB}
-	err = validate(manifest)
-	if err != nil {
-		return nil, err
-	}
 	return manifest, nil
 }
 
-func (manifest *Manifest) IteratePath(prefix string, f func(Path) error) (err error) {
+func (manifest *Manifest) IteratePath(pathPrefix string, f func(Path) error) (err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("cannot read manifest: %s", err)
 		}
 	}()
 
-	iter, err := manifest.db.IteratePrefix(map[string]string{"kind": "path", "path": prefix})
+	prefix := struct {
+		Kind string `json:"kind"`
+		Path string `json:"path"`
+	}{
+		Kind: "path",
+		Path: pathPrefix,
+	}
+	iter, err := manifest.db.IteratePrefix(prefix)
 	if err != nil {
 		return err
 	}
@@ -132,7 +137,14 @@ func (manifest *Manifest) IterateSlices(pkgName string, f func(Slice) error) (er
 		}
 	}()
 
-	iter, err := manifest.db.IteratePrefix(map[string]string{"kind": "slice", "name": pkgName})
+	prefix := struct {
+		Kind string `json:"kind"`
+		Name string `json:"name"`
+	}{
+		Kind: "slice",
+		Name: pkgName,
+	}
+	iter, err := manifest.db.IteratePrefix(&prefix)
 	if err != nil {
 		return err
 	}
@@ -150,7 +162,10 @@ func (manifest *Manifest) IterateSlices(pkgName string, f func(Slice) error) (er
 	return nil
 }
 
-func validate(manifest *Manifest) (err error) {
+// Validate checks that the Manifest is valid. Note that to do that it has to
+// load practically the whole manifest into memory and unmarshall all the
+// entries.
+func Validate(manifest *Manifest) (err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf(`invalid manifest: %s`, err)

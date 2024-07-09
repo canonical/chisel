@@ -66,21 +66,21 @@ var manifestTests = []struct {
 {"jsonwall":"1.0","schema":"1.0","count":1}
 {"kind":"content","slice":"pkg1_manifest","path":"/manifest/manifest.wall"}
 `,
-		error: `cannot read manifest: invalid manifest: slice pkg1_manifest not found in slices`,
+		error: `invalid manifest: slice pkg1_manifest not found in slices`,
 	}, {
 		summary: "Package not found",
 		input: `
 {"jsonwall":"1.0","schema":"1.0","count":1}
 {"kind":"slice","name":"pkg1_manifest"}
 `,
-		error: `cannot read manifest: invalid manifest: package "pkg1" not found in packages`,
+		error: `invalid manifest: package "pkg1" not found in packages`,
 	}, {
 		summary: "Path not found in contents",
 		input: `
 {"jsonwall":"1.0","schema":"1.0","count":1}
 {"kind":"path","path":"/dir/","mode":"01777","slices":["pkg1_myslice"]}
 `,
-		error: `cannot read manifest: invalid manifest: path /dir/ has no matching entry in contents`,
+		error: `invalid manifest: path /dir/ has no matching entry in contents`,
 	}, {
 		summary: "Content and path have different slices",
 		input: `
@@ -90,7 +90,7 @@ var manifestTests = []struct {
 {"kind":"path","path":"/dir/","mode":"01777","slices":["pkg1_myslice"]}
 {"kind":"slice","name":"pkg1_myotherslice"}
 `,
-		error: `cannot read manifest: invalid manifest: path /dir/ and content have diverging slices: \["pkg1_myslice"\] != \["pkg1_myotherslice"\]`,
+		error: `invalid manifest: path /dir/ and content have diverging slices: \["pkg1_myslice"\] != \["pkg1_myotherslice"\]`,
 	}, {
 		summary: "Content not found in paths",
 		input: `
@@ -99,7 +99,7 @@ var manifestTests = []struct {
 {"kind":"package","name":"pkg1","version":"v1","sha256":"hash1","arch":"arch1"}
 {"kind":"slice","name":"pkg1_myslice"}
 `,
-		error: `cannot read manifest: invalid manifest: content path /dir/ has no matching entry in paths`,
+		error: `invalid manifest: content path /dir/ has no matching entry in paths`,
 	}}
 
 func (s *S) TestRun(c *C) {
@@ -126,6 +126,8 @@ func (s *S) TestRun(c *C) {
 		c.Assert(test.input, DeepEquals, orderedInput, Commentf("input jsonwall lines should be ordered"))
 
 		mfest, err := manifest.Read(manifestPath)
+		c.Assert(err, IsNil)
+		err = manifest.Validate(mfest)
 		if test.error != "" {
 			c.Assert(err, ErrorMatches, test.error)
 			continue
