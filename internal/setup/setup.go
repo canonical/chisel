@@ -60,15 +60,11 @@ type SliceScripts struct {
 type PathKind string
 
 const (
-	DirPath     PathKind = "dir"
-	CopyPath    PathKind = "copy"
-	GlobPath    PathKind = "glob"
-	TextPath    PathKind = "text"
-	SymlinkPath PathKind = "symlink"
-	// GeneratePath is a special kind of glob path with the following format:
-	//   /slashed/path/to/dir/**
-	// Wildcard characters can only appear at the end as **, and the path before
-	// those wildcards must be a directory.
+	DirPath      PathKind = "dir"
+	CopyPath     PathKind = "copy"
+	GlobPath     PathKind = "glob"
+	TextPath     PathKind = "text"
+	SymlinkPath  PathKind = "symlink"
 	GeneratePath PathKind = "generate"
 
 	// TODO Maybe in the future, for binary support.
@@ -704,6 +700,11 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 	return &pkg, err
 }
 
+// GetGeneratePath validates that the path follows the following format:
+//   - /slashed/path/to/dir/**
+//
+// Wildcard characters can only appear at the end as **, and the path before
+// those wildcards must be a directory.
 func GetGeneratePath(path string) (dir string, err error) {
 	defer func() {
 		if err != nil {
