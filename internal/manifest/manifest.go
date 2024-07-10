@@ -13,22 +13,22 @@ import (
 
 type Package struct {
 	Kind    string `json:"kind"`
-	Name    string `json:"name"`
-	Version string `json:"version"`
-	Digest  string `json:"sha256"`
-	Arch    string `json:"arch"`
+	Name    string `json:"name,omitempty"`
+	Version string `json:"version,omitempty"`
+	Digest  string `json:"sha256,omitempty"`
+	Arch    string `json:"arch,omitempty"`
 }
 
 type Slice struct {
 	Kind string `json:"kind"`
-	Name string `json:"name"`
+	Name string `json:"name,omitempty"`
 }
 
 type Path struct {
 	Kind      string   `json:"kind"`
-	Path      string   `json:"path"`
-	Mode      string   `json:"mode"`
-	Slices    []string `json:"slices"`
+	Path      string   `json:"path,omitempty"`
+	Mode      string   `json:"mode,omitempty"`
+	Slices    []string `json:"slices,omitempty"`
 	Hash      string   `json:"sha256,omitempty"`
 	FinalHash string   `json:"final_sha256,omitempty"`
 	Size      uint64   `json:"size,omitempty"`
@@ -37,8 +37,8 @@ type Path struct {
 
 type Content struct {
 	Kind  string `json:"kind"`
-	Slice string `json:"slice"`
-	Path  string `json:"path"`
+	Slice string `json:"slice,omitempty"`
+	Path  string `json:"path,omitempty"`
 }
 
 type Manifest struct {
@@ -79,14 +79,7 @@ func (manifest *Manifest) IteratePath(pathPrefix string, f func(Path) error) (er
 		}
 	}()
 
-	prefix := struct {
-		Kind string `json:"kind"`
-		Path string `json:"path"`
-	}{
-		Kind: "path",
-		Path: pathPrefix,
-	}
-	iter, err := manifest.db.IteratePrefix(prefix)
+	iter, err := manifest.db.IteratePrefix(Path{Kind: "path", Path: pathPrefix})
 	if err != nil {
 		return err
 	}
@@ -111,7 +104,7 @@ func (manifest *Manifest) IteratePackages(f func(Package) error) (err error) {
 		}
 	}()
 
-	iter, err := manifest.db.Iterate(map[string]string{"kind": "package"})
+	iter, err := manifest.db.Iterate(Package{Kind: "package"})
 	if err != nil {
 		return err
 	}
@@ -136,14 +129,7 @@ func (manifest *Manifest) IterateSlices(pkgName string, f func(Slice) error) (er
 		}
 	}()
 
-	prefix := struct {
-		Kind string `json:"kind"`
-		Name string `json:"name"`
-	}{
-		Kind: "slice",
-		Name: pkgName,
-	}
-	iter, err := manifest.db.IteratePrefix(&prefix)
+	iter, err := manifest.db.IteratePrefix(Slice{Kind: "slice", Name: pkgName})
 	if err != nil {
 		return err
 	}
@@ -172,7 +158,7 @@ func Validate(manifest *Manifest) (err error) {
 	}()
 
 	pkgExist := map[string]bool{}
-	iter, err := manifest.db.Iterate(map[string]string{"kind": "package"})
+	iter, err := manifest.db.Iterate(Package{Kind: "package"})
 	if err != nil {
 		return err
 	}
@@ -186,7 +172,7 @@ func Validate(manifest *Manifest) (err error) {
 	}
 
 	sliceExist := map[string]bool{}
-	iter, err = manifest.db.Iterate(map[string]string{"kind": "slice"})
+	iter, err = manifest.db.Iterate(Slice{Kind: "slice"})
 	if err != nil {
 		return err
 	}
@@ -207,7 +193,7 @@ func Validate(manifest *Manifest) (err error) {
 	}
 
 	pathToSlices := map[string][]string{}
-	iter, err = manifest.db.Iterate(map[string]string{"kind": "content"})
+	iter, err = manifest.db.Iterate(Content{Kind: "content"})
 	if err != nil {
 		return err
 	}
@@ -223,7 +209,7 @@ func Validate(manifest *Manifest) (err error) {
 		pathToSlices[content.Path] = append(pathToSlices[content.Path], content.Slice)
 	}
 
-	iter, err = manifest.db.Iterate(map[string]string{"kind": "path"})
+	iter, err = manifest.db.Iterate(Path{Kind: "path"})
 	if err != nil {
 		return err
 	}
