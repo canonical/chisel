@@ -640,7 +640,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 						pkgName, sliceName, contPath)
 				}
 				if _, err := validateGeneratePath(contPath); err != nil {
-					return nil, fmt.Errorf("slice %s_%s has %s", pkgName, sliceName, err)
+					return nil, fmt.Errorf("slice %s_%s has invalid generate path: %s", pkgName, sliceName, err)
 				}
 				kinds = append(kinds, GeneratePath)
 			} else if strings.ContainsAny(contPath, "*?") {
@@ -726,13 +726,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 //
 // Wildcard characters can only appear at the end as **, and the path before
 // those wildcards must be a directory.
-func validateGeneratePath(path string) (dir string, err error) {
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("invalid generate path: %s", err)
-		}
-	}()
-
+func validateGeneratePath(path string) (string, error) {
 	if !strings.HasSuffix(path, "/**") {
 		return "", fmt.Errorf("%s does not end with /**", path)
 	}
