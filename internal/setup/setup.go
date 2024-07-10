@@ -160,11 +160,15 @@ func (r *Release) validate() error {
 		slice *Slice
 	}
 	allPaths := make(map[string]*Slice)
-	// extracted contains all the paths that are to be extracted from the package.
-	var extracted []pathSlice
-	// generated contains all the paths of kind GeneratePath.
-	var generated []pathSlice
-	// rest contains the paths which are not in extracted or generated.
+	// globs contains all the paths that are to be extract from the package
+	// using globs.
+	var globs []pathSlice
+	// copies contains all the paths that are to be copies from the package
+	// using copies.
+	var copies []pathSlice
+	// generates contains all the paths of kind GeneratePath.
+	var generates []pathSlice
+	// rest contains the paths which are not in globs, copies or generates.
 	var rest []pathSlice
 
 	// Check for info conflicts and prepare for following checks.
@@ -182,10 +186,12 @@ func (r *Release) validate() error {
 					}
 				} else {
 					switch newInfo.Kind {
-					case CopyPath, GlobPath:
-						extracted = append(extracted, pathSlice{path: newPath, slice: new})
+					case GlobPath:
+						globs = append(globs, pathSlice{path: newPath, slice: new})
+					case CopyPath:
+						copies = append(copies, pathSlice{path: newPath, slice: new})
 					case GeneratePath:
-						generated = append(generated, pathSlice{path: newPath, slice: new})
+						generates = append(generates, pathSlice{path: newPath, slice: new})
 					default:
 						rest = append(rest, pathSlice{path: newPath, slice: new})
 					}
@@ -202,7 +208,8 @@ func (r *Release) validate() error {
 	}
 
 	checkConflict := func(old, new pathSlice) error {
-		if strdist.GlobPath(new.path, old.path) {
+		// fast path for when the paths match.
+		if old.path == new.path || strdist.GlobPath(new.path, old.path) {
 			if (old.slice.Package > new.slice.Package) || (old.slice.Package == new.slice.Package && old.slice.Name > new.slice.Name) {
 				old, new = new, old
 			}
@@ -210,8 +217,8 @@ func (r *Release) validate() error {
 		}
 		return nil
 	}
-	for _, new := range extracted {
-		for _, old := range extracted {
+	for _, new := range globs {
+		for _, old := range slices.Concat(globs, copies) {
 			if new.slice.Package == old.slice.Package {
 				continue
 			}
@@ -227,8 +234,8 @@ func (r *Release) validate() error {
 			}
 		}
 	}
-	for _, new := range generated {
-		for _, old := range append(extracted, rest...) {
+	for _, new := range generates {
+		for _, old := range slices.Concat(copies, globs, rest) {
 			err := checkConflict(old, new)
 			if err != nil {
 				return err
