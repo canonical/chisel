@@ -639,7 +639,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 					return nil, fmt.Errorf("slice %s_%s path %s has invalid generate options",
 						pkgName, sliceName, contPath)
 				}
-				if _, err := GetGeneratePath(contPath); err != nil {
+				if _, err := validateGeneratePath(contPath); err != nil {
 					return nil, fmt.Errorf("slice %s_%s has %s", pkgName, sliceName, err)
 				}
 				kinds = append(kinds, GeneratePath)
@@ -721,12 +721,12 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 	return &pkg, err
 }
 
-// GetGeneratePath validates that the path follows the following format:
+// validateGeneratePath validates that the path follows the following format:
 //   - /slashed/path/to/dir/**
 //
 // Wildcard characters can only appear at the end as **, and the path before
 // those wildcards must be a directory.
-func GetGeneratePath(path string) (dir string, err error) {
+func validateGeneratePath(path string) (dir string, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("invalid generate path: %s", err)
