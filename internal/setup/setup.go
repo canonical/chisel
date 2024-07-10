@@ -208,8 +208,7 @@ func (r *Release) validate() error {
 	}
 
 	checkConflict := func(old, new pathSlice) error {
-		// fast path for when the paths match.
-		if old.path == new.path || strdist.GlobPath(new.path, old.path) {
+		if strdist.GlobPath(new.path, old.path) {
 			if (old.slice.Package > new.slice.Package) || (old.slice.Package == new.slice.Package && old.slice.Name > new.slice.Name) {
 				old, new = new, old
 			}
