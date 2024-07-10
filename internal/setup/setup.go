@@ -217,7 +217,8 @@ func (r *Release) validate() error {
 		return nil
 	}
 	for _, new := range globs {
-		for _, old := range slices.Concat(globs, copies) {
+		// TODO replace with slices.Concat once we upgrade to go 1.22.
+		for _, old := range append(globs, copies...) {
 			if new.slice.Package == old.slice.Package {
 				continue
 			}
@@ -234,7 +235,8 @@ func (r *Release) validate() error {
 		}
 	}
 	for _, new := range generates {
-		for _, old := range slices.Concat(copies, globs, rest) {
+		// TODO replace with slices.Concat once we upgrade to go 1.22.
+		for _, old := range append(copies, append(globs, rest...)...) {
 			err := checkConflict(old, new)
 			if err != nil {
 				return err
