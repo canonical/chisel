@@ -154,19 +154,26 @@ func ReadRelease(dir string) (*Release, error) {
 
 func (r *Release) validate() error {
 	keys := []SliceKey(nil)
-	paths := make(map[string]*Slice)
-	// globs contains all glob paths including GeneratePath(s).
-	globs := make(map[string]*Slice)
+
+	type pathSlice struct {
+		path  string
+		slice *Slice
+	}
+	allPaths := make(map[string]*Slice)
+	// extracted contains all the paths that are to be extracted from the package.
+	var extracted []pathSlice
+	// generated contains all the paths of kind GeneratePath.
+	var generated []pathSlice
+	// rest contains the paths which are not in extracted or generated.
+	var rest []pathSlice
 
 	// Check for info conflicts and prepare for following checks.
 	for _, pkg := range r.Packages {
 		for _, new := range pkg.Slices {
 			keys = append(keys, SliceKey{pkg.Name, new.Name})
 			for newPath, newInfo := range new.Contents {
-				if old, ok := paths[newPath]; ok {
+				if old, ok := allPaths[newPath]; ok {
 					oldInfo := old.Contents[newPath]
-					// Note that if extracting content (CopyPath or GlobPath)
-					// from the same package the content can never be in conflict.
 					if !newInfo.SameContent(&oldInfo) || (newInfo.Kind == CopyPath || newInfo.Kind == GlobPath) && new.Package != old.Package {
 						if old.Package > new.Package || old.Package == new.Package && old.Name > new.Name {
 							old, new = new, old
@@ -174,10 +181,15 @@ func (r *Release) validate() error {
 						return fmt.Errorf("slices %s and %s conflict on %s", old, new, newPath)
 					}
 				} else {
-					if newInfo.Kind == GlobPath || newInfo.Kind == GeneratePath {
-						globs[newPath] = new
+					switch newInfo.Kind {
+					case CopyPath, GlobPath:
+						extracted = append(extracted, pathSlice{path: newPath, slice: new})
+					case GeneratePath:
+						generated = append(generated, pathSlice{path: newPath, slice: new})
+					default:
+						rest = append(rest, pathSlice{path: newPath, slice: new})
 					}
-					paths[newPath] = new
+					allPaths[newPath] = new
 				}
 			}
 		}
@@ -189,26 +201,39 @@ func (r *Release) validate() error {
 		return err
 	}
 
-	// Check for glob conflicts.
-	for newPath, new := range globs {
-		for oldPath, old := range paths {
-			// Same entry, no conflict.
-			if new == old && newPath == oldPath {
+	checkConflict := func(old, new pathSlice) error {
+		if strdist.GlobPath(new.path, old.path) {
+			if (old.slice.Package > new.slice.Package) || (old.slice.Package == new.slice.Package && old.slice.Name > new.slice.Name) {
+				old, new = new, old
+			}
+			return fmt.Errorf("slices %s and %s conflict on %s and %s", old.slice, new.slice, old.path, new.path)
+		}
+		return nil
+	}
+	for _, new := range extracted {
+		for _, old := range extracted {
+			if new.slice.Package == old.slice.Package {
 				continue
 			}
-			// Content extracted (not generated) from the same package can never
-			// be in conflict.
-			if new.Package == old.Package && new.Contents[newPath].Kind == GlobPath && old.Contents[oldPath].Kind != GeneratePath {
-				continue
-			}
-			if strdist.GlobPath(newPath, oldPath) {
-				if old.Package > new.Package || old.Package == new.Package && old.Name > new.Name {
-					old, oldPath, new, newPath = new, newPath, old, oldPath
-				}
-				return fmt.Errorf("slices %s and %s conflict on %s and %s", old, new, oldPath, newPath)
+			err := checkConflict(old, new)
+			if err != nil {
+				return err
 			}
 		}
-		paths[newPath] = new
+		for _, old := range rest {
+			err := checkConflict(old, new)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	for _, new := range generated {
+		for _, old := range append(extracted, rest...) {
+			err := checkConflict(old, new)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil

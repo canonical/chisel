@@ -1309,7 +1309,7 @@ var setupTests = []setupTest{{
 						/dir/file: {text: "foo"}
 		`,
 	},
-	// TODO this should be an error because the content does not match.
+	relerror: `slices test-package_myslice1 and test-package_myslice2 conflict on /dir/\*\* and /dir/file`,
 }, {
 	summary: "Specify generate: manifest",
 	input: map[string]string{
