@@ -64,12 +64,11 @@ func Read(absPath string) (manifest *Manifest, err error) {
 		return nil, err
 	}
 	defer r.Close()
-	jsonwallDB, err := jsonwall.ReadDB(r)
+	db, err := jsonwall.ReadDB(r)
 	if err != nil {
 		return nil, err
 	}
-
-	manifest = &Manifest{db: jsonwallDB}
+	manifest = &Manifest{db: db}
 	return manifest, nil
 }
 
@@ -105,7 +104,7 @@ func (manifest *Manifest) IteratePath(pathPrefix string, f func(Path) error) (er
 	return nil
 }
 
-func (manifest *Manifest) IteratePkgs(f func(Package) error) (err error) {
+func (manifest *Manifest) IteratePackages(f func(Package) error) (err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("cannot read manifest: %s", err)
@@ -168,7 +167,7 @@ func (manifest *Manifest) IterateSlices(pkgName string, f func(Slice) error) (er
 func Validate(manifest *Manifest) (err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf(`invalid manifest: %s`, err)
+			err = fmt.Errorf("invalid manifest: %s", err)
 		}
 	}()
 
@@ -182,9 +181,6 @@ func Validate(manifest *Manifest) (err error) {
 		err := iter.Get(&pkg)
 		if err != nil {
 			return err
-		}
-		if pkg.Kind != "package" {
-			return fmt.Errorf(`in packages expected kind "package", got %q`, pkg.Kind)
 		}
 		pkgExist[pkg.Name] = true
 	}
@@ -221,9 +217,6 @@ func Validate(manifest *Manifest) (err error) {
 		if err != nil {
 			return err
 		}
-		if content.Kind != "content" {
-			return fmt.Errorf(`in contents expected kind "content", got "%s"`, content.Kind)
-		}
 		if !sliceExist[content.Slice] {
 			return fmt.Errorf(`slice %s not found in slices`, content.Slice)
 		}
@@ -239,9 +232,6 @@ func Validate(manifest *Manifest) (err error) {
 		err := iter.Get(&path)
 		if err != nil {
 			return err
-		}
-		if path.Kind != "path" {
-			return fmt.Errorf(`in paths expected kind "path", got "%s"`, path.Kind)
 		}
 		if pathSlices, ok := pathToSlices[path.Path]; !ok {
 			return fmt.Errorf(`path %s has no matching entry in contents`, path.Path)

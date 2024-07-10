@@ -150,7 +150,7 @@ func dumpManifestContents(c *C, mfest *manifest.Manifest) manifestContents {
 	c.Assert(err, IsNil)
 
 	var pkgs []manifest.Package
-	err = mfest.IteratePkgs(func(pkg manifest.Package) error {
+	err = mfest.IteratePackages(func(pkg manifest.Package) error {
 		pkgs = append(pkgs, pkg)
 		return nil
 	})
