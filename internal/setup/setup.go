@@ -81,10 +81,6 @@ const (
 type GenerateKind string
 
 const (
-	// There are only two possible values of "generate" as of now:
-	//   "" (empty)
-	//   "manifest"
-	// Empty value signifies that the path is not a GeneratePath.
 	GenerateNone     GenerateKind = ""
 	GenerateManifest GenerateKind = "manifest"
 )
