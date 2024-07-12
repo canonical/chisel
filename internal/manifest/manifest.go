@@ -170,7 +170,11 @@ func Validate(manifest *Manifest) (err error) {
 	return nil
 }
 
-func iteratePrefix[T any](manifest *Manifest, prefix T, f func(T) error) error {
+type prefixable interface {
+	Path | Content | Package | Slice
+}
+
+func iteratePrefix[T prefixable](manifest *Manifest, prefix T, f func(T) error) error {
 	iter, err := manifest.db.IteratePrefix(prefix)
 	if err != nil {
 		return err
