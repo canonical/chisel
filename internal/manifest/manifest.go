@@ -79,22 +79,7 @@ func (manifest *Manifest) IteratePath(pathPrefix string, f func(Path) error) (er
 		}
 	}()
 
-	iter, err := manifest.db.IteratePrefix(Path{Kind: "path", Path: pathPrefix})
-	if err != nil {
-		return err
-	}
-	for iter.Next() {
-		var path Path
-		err := iter.Get(&path)
-		if err != nil {
-			return err
-		}
-		err = f(path)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return iteratePrefix(manifest, Path{Kind: "path", Path: pathPrefix}, f)
 }
 
 func (manifest *Manifest) IteratePackages(f func(Package) error) (err error) {
@@ -104,22 +89,7 @@ func (manifest *Manifest) IteratePackages(f func(Package) error) (err error) {
 		}
 	}()
 
-	iter, err := manifest.db.Iterate(Package{Kind: "package"})
-	if err != nil {
-		return err
-	}
-	for iter.Next() {
-		var pkg Package
-		err := iter.Get(&pkg)
-		if err != nil {
-			return err
-		}
-		err = f(pkg)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return iteratePrefix(manifest, Package{Kind: "package"}, f)
 }
 
 func (manifest *Manifest) IterateSlices(pkgName string, f func(Slice) error) (err error) {
@@ -129,22 +99,7 @@ func (manifest *Manifest) IterateSlices(pkgName string, f func(Slice) error) (er
 		}
 	}()
 
-	iter, err := manifest.db.IteratePrefix(Slice{Kind: "slice", Name: pkgName})
-	if err != nil {
-		return err
-	}
-	for iter.Next() {
-		var slice Slice
-		err := iter.Get(&slice)
-		if err != nil {
-			return err
-		}
-		err = f(slice)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return iteratePrefix(manifest, Slice{Kind: "slice", Name: pkgName}, f)
 }
 
 // Validate checks that the Manifest is valid. Note that to do that it has to
@@ -158,30 +113,16 @@ func Validate(manifest *Manifest) (err error) {
 	}()
 
 	pkgExist := map[string]bool{}
-	iter, err := manifest.db.Iterate(Package{Kind: "package"})
+	err = iteratePrefix(manifest, Package{Kind: "package"}, func(pkg Package) error {
+		pkgExist[pkg.Name] = true
+		return nil
+	})
 	if err != nil {
 		return err
-	}
-	for iter.Next() {
-		var pkg Package
-		err := iter.Get(&pkg)
-		if err != nil {
-			return err
-		}
-		pkgExist[pkg.Name] = true
 	}
 
 	sliceExist := map[string]bool{}
-	iter, err = manifest.db.Iterate(Slice{Kind: "slice"})
-	if err != nil {
-		return err
-	}
-	for iter.Next() {
-		var slice Slice
-		err := iter.Get(&slice)
-		if err != nil {
-			return err
-		}
+	err = iteratePrefix(manifest, Slice{Kind: "slice"}, func(slice Slice) error {
 		sk, err := setup.ParseSliceKey(slice.Name)
 		if err != nil {
 			return err
@@ -190,46 +131,59 @@ func Validate(manifest *Manifest) (err error) {
 			return fmt.Errorf(`package %q not found in packages`, sk.Package)
 		}
 		sliceExist[slice.Name] = true
-	}
-
-	pathToSlices := map[string][]string{}
-	iter, err = manifest.db.Iterate(Content{Kind: "content"})
+		return nil
+	})
 	if err != nil {
 		return err
 	}
-	for iter.Next() {
-		var content Content
-		err := iter.Get(&content)
-		if err != nil {
-			return err
-		}
+
+	pathToSlices := map[string][]string{}
+	err = iteratePrefix(manifest, Content{Kind: "content"}, func(content Content) error {
 		if !sliceExist[content.Slice] {
 			return fmt.Errorf(`slice %s not found in slices`, content.Slice)
 		}
 		pathToSlices[content.Path] = append(pathToSlices[content.Path], content.Slice)
-	}
-
-	iter, err = manifest.db.Iterate(Path{Kind: "path"})
+		return nil
+	})
 	if err != nil {
 		return err
 	}
-	for iter.Next() {
-		var path Path
-		err := iter.Get(&path)
-		if err != nil {
-			return err
-		}
+
+	err = iteratePrefix(manifest, Path{Kind: "path"}, func(path Path) error {
 		if pathSlices, ok := pathToSlices[path.Path]; !ok {
 			return fmt.Errorf(`path %s has no matching entry in contents`, path.Path)
 		} else if !slices.Equal(pathSlices, path.Slices) {
 			return fmt.Errorf(`path %s and content have diverging slices: %q != %q`, path.Path, path.Slices, pathSlices)
 		}
 		delete(pathToSlices, path.Path)
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
 	if len(pathToSlices) > 0 {
 		for path := range pathToSlices {
 			return fmt.Errorf(`content path %s has no matching entry in paths`, path)
+		}
+	}
+	return nil
+}
+
+func iteratePrefix[T any](manifest *Manifest, prefix T, f func(T) error) error {
+	iter, err := manifest.db.IteratePrefix(prefix)
+	if err != nil {
+		return err
+	}
+	for iter.Next() {
+		var val T
+		err := iter.Get(&val)
+		if err != nil {
+			return err
+		}
+		err = f(val)
+		if err != nil {
+			return err
 		}
 	}
 	return nil
