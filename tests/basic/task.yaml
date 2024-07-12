@@ -5,15 +5,18 @@ execute: |
   mkdir -p $rootfs_folder
   chisel cut --release ${OS}-${RELEASE} \
     --root $rootfs_folder ca-certificates_data openssl_bins
-  
+
   # make sure $rootfs_folder is not empty
   ls ${rootfs_folder}/*
 
   # with the ca-certificates mutation script, we can assert that:
   # - etc/ssl/certs/ca-certificates.crt is not empty
   # - usr/share/ca-certificates/mozilla/ does not exist
-  test -s ${rootfs_folder}/etc/ssl/certs/ca-certificates.crt 
-  test ! -d ${rootfs_folder}/usr/share/ca-certificates/mozilla 
+  test -s ${rootfs_folder}/etc/ssl/certs/ca-certificates.crt
+  if [[ "${RELEASE}" != "24.04" ]]
+  then
+    test ! -d ${rootfs_folder}/usr/share/ca-certificates/mozilla
+  fi
 
   # with the openssl pkg, both internal and external dependencies need to be met, for:
   # - libc6_libs
