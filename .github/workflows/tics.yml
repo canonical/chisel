@@ -6,7 +6,7 @@ on:
     branches: [main]
   # Running on pull_request_target instead of pull_request because this workflow
   # uses secrets, and thus we need to ensure it runs under this project's code base.
-  pull_request_target:
+  pull_request:
     branches: [main]
   schedule:
     - cron: '0 10 * * *'
@@ -43,11 +43,34 @@ jobs:
     runs-on: ubuntu-24.04
     name: TiCS Static Code Analysis
     needs: [set-project, call-unit-tests]
+    permissions:
+      pull-requests: write
+    env:
+      TICS_FILELIST: tics-filelist
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.set-project.outputs.ref }}
           repository: ${{ needs.set-project.outputs.repo }}
+
+      - name: Check changed paths in PR
+        id: changed-paths
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            any:
+              - "**/*"
+          list-files: csv
+
+      - id: get-pr-filelist
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]
+          then
+              echo "${{ steps.changed-paths.outputs.any_files }}" | tr "," "\n" > ${TICS_FILELIST}
+          else
+              echo "." > ${TICS_FILELIST}
+          fi
 
       - uses: actions/setup-go@v3
         with:
@@ -79,11 +102,12 @@ jobs:
       - name: Run TiCS analysis
         uses: tiobe/tics-github-action@v3
         with:
-          mode: ${{ github.event_name == 'pull_request_target' && 'client' || 'qserver' }}
-          codetype: ${{ github.event_name == 'pull_request_target' && 'TESTCODE' || 'PRODUCTION' }}
+          mode: ${{ github.event_name == 'pull_request' && 'client' || 'qserver' }}
+          codetype: ${{ github.event_name == 'pull_request' && 'TESTCODE' || 'PRODUCTION' }}
           project: chisel
           branchdir: .
+          filelist: ${{ env.TICS_FILELIST }}
           viewerUrl: 'https://canonical.tiobe.com/tiobeweb/TICS/api/cfg?name=default'
-          displayUrl: 'https://canonical.tiobe.com/tiobeweb/TICS/TqiDashboard.html#axes=Project(chisel)'
+          displayUrl: 'https://canonical.tiobe.com/tiobeweb/TICS'
           ticsAuthToken: ${{ secrets.TICSAUTHTOKEN }}
           installTics: true
