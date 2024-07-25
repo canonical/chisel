@@ -39,14 +39,17 @@ func Create(options *CreateOptions) (*Entry, error) {
 	o := &optsCopy
 
 	var err error
+	var hash string
 	if o.MakeParents {
 		if err := os.MkdirAll(filepath.Dir(o.Path), 0755); err != nil {
 			return nil, err
 		}
 	}
+
 	switch o.Mode & fs.ModeType {
 	case 0:
 		err = createFile(o)
+		hash = hex.EncodeToString(rp.h.Sum(nil))
 	case fs.ModeDir:
 		err = createDir(o)
 	case fs.ModeSymlink:
@@ -58,10 +61,14 @@ func Create(options *CreateOptions) (*Entry, error) {
 		return nil, err
 	}
 
+	s, err := os.Lstat(o.Path)
+	if err != nil {
+		return nil, err
+	}
 	entry := &Entry{
 		Path: o.Path,
-		Mode: o.Mode,
-		Hash: hex.EncodeToString(rp.h.Sum(nil)),
+		Mode: s.Mode(),
+		Hash: hash,
 		Size: rp.size,
 		Link: o.Link,
 	}
@@ -72,7 +79,7 @@ func createDir(o *CreateOptions) error {
 	debugf("Creating directory: %s (mode %#o)", o.Path, o.Mode)
 	err := os.Mkdir(o.Path, o.Mode)
 	if os.IsExist(err) {
-		err = os.Chmod(o.Path, o.Mode)
+		return nil
 	}
 	return err
 }

@@ -2,8 +2,8 @@ package fsutil_test
 
 import (
 	"bytes"
-	"fmt"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -16,6 +16,7 @@ import (
 
 type createTest struct {
 	options fsutil.CreateOptions
+	hackdir func(c *C, dir string)
 	result  map[string]string
 	error   string
 }
@@ -66,6 +67,32 @@ var createTests = []createTest{{
 		Mode: fs.ModeDir | 0775,
 	},
 	error: `.*: no such file or directory`,
+}, {
+	options: fsutil.CreateOptions{
+		Path: "foo",
+		Mode: fs.ModeDir | 0775,
+	},
+	hackdir: func(c *C, dir string) {
+		c.Assert(os.Mkdir(filepath.Join(dir, "foo/"), fs.ModeDir|0765), IsNil)
+	},
+	result: map[string]string{
+		// mode is not updated.
+		"/foo/": "dir 0765",
+	},
+}, {
+	options: fsutil.CreateOptions{
+		Path: "foo",
+		// Mode should be ignored for existing entry.
+		Mode: 0644,
+		Data: bytes.NewBufferString("changed"),
+	},
+	hackdir: func(c *C, dir string) {
+		c.Assert(os.WriteFile(filepath.Join(dir, "foo"), []byte("data"), 0666), IsNil)
+	},
+	result: map[string]string{
+		// mode is not updated.
+		"/foo": "file 0666 d67e2e94",
+	},
 }}
 
 func (s *S) TestCreate(c *C) {
@@ -81,6 +108,9 @@ func (s *S) TestCreate(c *C) {
 		}
 		c.Logf("Options: %v", test.options)
 		dir := c.MkDir()
+		if test.hackdir != nil {
+			test.hackdir(c, dir)
+		}
 		options := test.options
 		options.Path = filepath.Join(dir, options.Path)
 		entry, err := fsutil.Create(&options)
@@ -94,33 +124,12 @@ func (s *S) TestCreate(c *C) {
 		c.Assert(testutil.TreeDump(dir), DeepEquals, test.result)
 		// [fsutil.Create] does not return information about parent directories
 		// created implicitly. We only check for the requested path.
-		c.Assert(dumpFSEntry(entry, dir)[test.options.Path], DeepEquals, test.result[test.options.Path])
-	}
-}
-
-// dumpFSEntry returns the file entry in the same format as [testutil.TreeDump].
-func dumpFSEntry(fsEntry *fsutil.Entry, root string) map[string]string {
-	result := make(map[string]string)
-	path := strings.TrimPrefix(fsEntry.Path, root)
-	fperm := fsEntry.Mode.Perm()
-	if fsEntry.Mode&fs.ModeSticky != 0 {
-		fperm |= 01000
-	}
-	switch fsEntry.Mode.Type() {
-	case fs.ModeDir:
-		result[path+"/"] = fmt.Sprintf("dir %#o", fperm)
-	case fs.ModeSymlink:
-		result[path] = fmt.Sprintf("symlink %s", fsEntry.Link)
-	case 0: // Regular
-		var entry string
-		if fsEntry.Size == 0 {
-			entry = fmt.Sprintf("file %#o empty", fsEntry.Mode.Perm())
-		} else {
-			entry = fmt.Sprintf("file %#o %s", fperm, fsEntry.Hash[:8])
+		entry.Path = strings.TrimPrefix(entry.Path, dir)
+		// Add the slashes that TreeDump adds to the path.
+		slashPath := "/" + test.options.Path
+		if test.options.Mode.IsDir() {
+			slashPath = slashPath + "/"
 		}
-		result[path] = entry
-	default:
-		panic(fmt.Errorf("unknown file type %d: %s", fsEntry.Mode.Type(), path))
+		c.Assert(testutil.TreeDumpEntry(entry), DeepEquals, test.result[slashPath])
 	}
-	return result
 }

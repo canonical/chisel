@@ -7,6 +7,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"golang.org/x/crypto/openpgp/packet"
@@ -350,9 +351,10 @@ type yamlArchive struct {
 }
 
 type yamlPackage struct {
-	Name    string               `yaml:"package"`
-	Archive string               `yaml:"archive,omitempty"`
-	Slices  map[string]yamlSlice `yaml:"slices,omitempty"`
+	Name      string               `yaml:"package"`
+	Archive   string               `yaml:"archive,omitempty"`
+	Essential []string             `yaml:"essential,omitempty"`
+	Slices    map[string]yamlSlice `yaml:"slices,omitempty"`
 }
 
 type yamlPath struct {
@@ -562,11 +564,30 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 				Mutate: yamlSlice.Mutate,
 			},
 		}
-
+		for _, refName := range yamlPkg.Essential {
+			sliceKey, err := ParseSliceKey(refName)
+			if err != nil {
+				return nil, fmt.Errorf("package %q has invalid essential slice reference: %q", pkgName, refName)
+			}
+			if sliceKey.Package == slice.Package && sliceKey.Slice == slice.Name {
+				// Do not add the slice to its own essentials list.
+				continue
+			}
+			if slices.Contains(slice.Essential, sliceKey) {
+				return nil, fmt.Errorf("package %s defined with redundant essential slice: %s", pkgName, refName)
+			}
+			slice.Essential = append(slice.Essential, sliceKey)
+		}
 		for _, refName := range yamlSlice.Essential {
 			sliceKey, err := ParseSliceKey(refName)
 			if err != nil {
-				return nil, fmt.Errorf("invalid slice reference %q in %s", refName, pkgPath)
+				return nil, fmt.Errorf("package %q has invalid essential slice reference: %q", pkgName, refName)
+			}
+			if sliceKey.Package == slice.Package && sliceKey.Slice == slice.Name {
+				return nil, fmt.Errorf("cannot add slice to itself as essential %q in %s", refName, pkgPath)
+			}
+			if slices.Contains(slice.Essential, sliceKey) {
+				return nil, fmt.Errorf("slice %s defined with redundant essential slice: %s", slice, refName)
 			}
 			slice.Essential = append(slice.Essential, sliceKey)
 		}

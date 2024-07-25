@@ -40,7 +40,7 @@ backends:
     discard:
       docker rm -f $SPREAD_SYSTEM
     systems:
-      - ubuntu-23.04:
+      - ubuntu-24.04:
           username: ubuntu
           password: ubuntu
 
@@ -52,3 +52,8 @@ prepare: |
 suites:
   tests/:
     summary: Tests common scenarios
+    environment:
+        RELEASE/jammy: 22.04
+        RELEASE/focal: 20.04
+        RELEASE/mantic: 23.10
+        RELEASE/noble: 24.04

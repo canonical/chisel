@@ -1064,6 +1064,253 @@ var setupTests = []setupTest{{
 		`,
 	},
 	relerror: `invalid slice definition filename: "a.yaml"`,
+}, {
+	summary: "Package essentials with same package slice",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			essential:
+				- mypkg_slice2
+			slices:
+				slice1:
+				slice2:
+				slice3:
+					essential:
+						- mypkg_slice1
+						- mypkg_slice4
+				slice4:
+		`,
+	},
+	release: &setup.Release{
+		DefaultArchive: "ubuntu",
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Archive: "ubuntu",
+				Name:    "mypkg",
+				Path:    "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{
+					"slice1": {
+						Package: "mypkg",
+						Name:    "slice1",
+						Essential: []setup.SliceKey{
+							{"mypkg", "slice2"},
+						},
+					},
+					"slice2": {
+						Package: "mypkg",
+						Name:    "slice2",
+					},
+					"slice3": {
+						Package: "mypkg",
+						Name:    "slice3",
+						Essential: []setup.SliceKey{
+							{"mypkg", "slice2"},
+							{"mypkg", "slice1"},
+							{"mypkg", "slice4"},
+						},
+					},
+					"slice4": {
+						Package: "mypkg",
+						Name:    "slice4",
+						Essential: []setup.SliceKey{
+							{"mypkg", "slice2"},
+						},
+					},
+				},
+			},
+		},
+	},
+}, {
+	summary: "Package essentials with slices from other packages",
+	input: map[string]string{
+		"slices/mydir/myotherpkg.yaml": `
+			package: myotherpkg
+			slices:
+				slice1:
+				slice2:
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			essential:
+				- myotherpkg_slice2
+				- mypkg_slice2
+			slices:
+				slice1:
+					essential:
+						- myotherpkg_slice1
+				slice2:
+		`,
+	},
+	release: &setup.Release{
+		DefaultArchive: "ubuntu",
+
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Archive: "ubuntu",
+				Name:    "mypkg",
+				Path:    "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{
+					"slice1": {
+						Package: "mypkg",
+						Name:    "slice1",
+						Essential: []setup.SliceKey{
+							{"myotherpkg", "slice2"},
+							{"mypkg", "slice2"},
+							{"myotherpkg", "slice1"},
+						},
+					},
+					"slice2": {
+						Package: "mypkg",
+						Name:    "slice2",
+						Essential: []setup.SliceKey{
+							{"myotherpkg", "slice2"},
+						},
+					},
+				},
+			},
+			"myotherpkg": {
+				Archive: "ubuntu",
+				Name:    "myotherpkg",
+				Path:    "slices/mydir/myotherpkg.yaml",
+				Slices: map[string]*setup.Slice{
+					"slice1": {
+						Package: "myotherpkg",
+						Name:    "slice1",
+					},
+					"slice2": {
+						Package: "myotherpkg",
+						Name:    "slice2",
+					},
+				},
+			},
+		},
+	},
+}, {
+	summary: "Package essentials loop",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			essential:
+				- mypkg_slice1
+				- mypkg_slice2
+			slices:
+				slice1:
+				slice2:
+		`,
+	},
+	relerror: "essential loop detected: mypkg_slice1, mypkg_slice2",
+}, {
+	summary: "Cannot add slice to itself as essential",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				slice1:
+					essential:
+						- mypkg_slice1
+		`,
+	},
+	relerror: `cannot add slice to itself as essential "mypkg_slice1" in slices/mydir/mypkg.yaml`,
+}, {
+	summary: "Package essentials clashes with slice essentials",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			essential:
+				- mypkg_slice2
+			slices:
+				slice1:
+					essential:
+						- mypkg_slice2
+				slice2:
+		`,
+	},
+	relerror: `slice mypkg_slice1 defined with redundant essential slice: mypkg_slice2`,
+}, {
+	summary: "Duplicated slice essentials",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				slice1:
+					essential:
+						- mypkg_slice2
+						- mypkg_slice2
+				slice2:
+		`,
+	},
+	relerror: `slice mypkg_slice1 defined with redundant essential slice: mypkg_slice2`,
+}, {
+	summary: "Duplicated package essentials",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			essential:
+				- mypkg_slice1
+				- mypkg_slice1
+			slices:
+				slice1:
+				slice2:
+		`,
+	},
+	relerror: `package mypkg defined with redundant essential slice: mypkg_slice1`,
+}, {
+	summary: "Bad slice reference in slice essential",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				slice1:
+					essential:
+						- mypkg-slice
+		`,
+	},
+	relerror: `package "mypkg" has invalid essential slice reference: "mypkg-slice"`,
+}, {
+	summary: "Bad slice reference in package essential",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			essential:
+				- mypkg-slice
+			slices:
+				slice1:
+		`,
+	},
+	relerror: `package "mypkg" has invalid essential slice reference: "mypkg-slice"`,
+}, {
+	summary: "Glob clashes within same package",
+	input: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice1:
+					contents:
+						/dir/**:
+				myslice2:
+					contents:
+						/dir/file: {text: "foo"}
+		`,
+	},
+	// TODO this should be an error because the content does not match.
 }}
 
 var defaultChiselYaml = `

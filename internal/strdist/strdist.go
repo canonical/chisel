@@ -102,8 +102,8 @@ func Distance(a, b string, f CostFunc, cut int64) int64 {
 // Supported wildcards:
 //
 //	?  - Any one character, except for /
-//	*  - Any zero or more characters, execept for /
-//	** - Any zero or more characrers, including /
+//	*  - Any zero or more characters, except for /
+//	** - Any zero or more characters, including /
 func GlobPath(a, b string) bool {
 	a = strings.ReplaceAll(a, "**", "⁑")
 	b = strings.ReplaceAll(b, "**", "⁑")

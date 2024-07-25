@@ -21,7 +21,7 @@ type infoTest struct {
 
 var infoTests = []infoTest{{
 	summary: "A single slice inspection",
-	input:   sampleRelease,
+	input:   infoRelease,
 	query:   []string{"mypkg_foo"},
 	stdout: `
 package: mypkg
@@ -36,7 +36,7 @@ slices:
 `,
 }, {
 	summary: "A single package inspection",
-	input:   sampleRelease,
+	input:   infoRelease,
 	query:   []string{"libpkg"},
 	stdout: `
 package: libpkg
@@ -48,7 +48,7 @@ slices:
 `,
 }, {
 	summary: "Multiple slices within the same package",
-	input:   sampleRelease,
+	input:   infoRelease,
 	query:   []string{"mypkg_foo", "mypkg_baz"},
 	stdout: `
 package: mypkg
@@ -68,7 +68,7 @@ slices:
 `,
 }, {
 	summary: "Different packages, multiple slices of same packages",
-	input:   sampleRelease,
+	input:   infoRelease,
 	query:   []string{"mypkg_foo", "libpkg", "mypkg_baz"},
 	stdout: `
 package: mypkg
@@ -95,7 +95,7 @@ slices:
 `,
 }, {
 	summary: "Same package, multiple slices",
-	input:   sampleRelease,
+	input:   infoRelease,
 	query:   []string{"mypkg_foo", "mypkg", "mypkg_baz"},
 	stdout: `
 package: mypkg
@@ -140,7 +140,7 @@ slices:
 `,
 }, {
 	summary: "Same slice, appearing multiple times",
-	input:   sampleRelease,
+	input:   infoRelease,
 	query:   []string{"mypkg_foo", "mypkg_foo", "mypkg_foo"},
 	stdout: `
 package: mypkg
@@ -155,12 +155,12 @@ slices:
 `,
 }, {
 	summary: "No slices found",
-	input:   sampleRelease,
+	input:   infoRelease,
 	query:   []string{"foo", "bar_foo"},
 	err:     `no slice definitions found for: "foo", "bar_foo"`,
 }, {
 	summary: "Some slices found, others not found",
-	input:   sampleRelease,
+	input:   infoRelease,
 	query:   []string{"foo", "mypkg_foo", "bar_foo"},
 	stdout: `
 package: mypkg
@@ -176,16 +176,16 @@ slices:
 	err: `no slice definitions found for: "foo", "bar_foo"`,
 }, {
 	summary: "No args",
-	input:   sampleRelease,
+	input:   infoRelease,
 	err:     "the required argument `<pkg|slice> (at least 1 argument)` was not provided",
 }, {
 	summary: "Empty, whitespace args",
-	input:   sampleRelease,
+	input:   infoRelease,
 	query:   []string{"", "    "},
 	err:     `no slice definitions found for: "", "    "`,
 }, {
 	summary: "Bad format slices",
-	input:   sampleRelease,
+	input:   infoRelease,
 	query:   []string{"foo_bar_foo", "a_b", "7_c", "a_b c", "a_b x_y"},
 	err:     `no slice definitions found for: "foo_bar_foo", "a_b", "7_c", "a_b c", "a_b x_y"`,
 }}
@@ -204,7 +204,7 @@ var defaultChiselYaml = `
 			armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
 `
 
-var sampleRelease = map[string]string{
+var infoRelease = map[string]string{
 	"chisel.yaml": string(defaultChiselYaml),
 	"slices/mypkg.yaml": `
 		package: mypkg

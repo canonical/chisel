@@ -2,7 +2,6 @@ package deb_test
 
 import (
 	"bytes"
-	"io/fs"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -19,7 +18,6 @@ type extractTest struct {
 	pkgdata []byte
 	options deb.ExtractOptions
 	hackopt func(o *deb.ExtractOptions)
-	globbed map[string][]string
 	result  map[string]string
 	// paths which the extractor did not create explicitly.
 	notCreated []string
@@ -159,7 +157,7 @@ var extractTests = []extractTest{{
 		"/dir/":         "dir 0755",
 		"/dir/several/": "dir 0755",
 	},
-	notCreated: []string{"/dir/"},
+	notCreated: []string{},
 }, {
 	summary: "Globbing for files with multiple levels at once",
 	pkgdata: testutil.PackageData["test-package"],
@@ -177,9 +175,9 @@ var extractTests = []extractTest{{
 		"/dir/several/levels/deep/":     "dir 0755",
 		"/dir/several/levels/deep/file": "file 0644 6bc26dff",
 	},
-	notCreated: []string{"/dir/"},
+	notCreated: []string{},
 }, {
-	summary: "Globbing with reporting of globbed paths",
+	summary: "Globbing multiple paths",
 	pkgdata: testutil.PackageData["test-package"],
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
@@ -199,11 +197,7 @@ var extractTests = []extractTest{{
 		"/dir/several/levels/deep/":     "dir 0755",
 		"/dir/several/levels/deep/file": "file 0644 6bc26dff",
 	},
-	globbed: map[string][]string{
-		"/dir/n*/": []string{"/dir/nested/"},
-		"/dir/s**": []string{"/dir/several/", "/dir/several/levels/", "/dir/several/levels/deep/", "/dir/several/levels/deep/file"},
-	},
-	notCreated: []string{"/dir/"},
+	notCreated: []string{},
 }, {
 	summary: "Globbing must have matching source and target",
 	pkgdata: testutil.PackageData["test-package"],
@@ -214,7 +208,7 @@ var extractTests = []extractTest{{
 			}},
 		},
 	},
-	error: `cannot extract .*: when using wildcards source and target paths must match: /foo/b\*\*`,
+	error: `cannot extract from package "test-package": when using wildcards source and target paths must match: /foo/b\*\*`,
 }, {
 	summary: "Globbing must also have a single target",
 	pkgdata: testutil.PackageData["test-package"],
@@ -227,7 +221,7 @@ var extractTests = []extractTest{{
 			}},
 		},
 	},
-	error: `cannot extract .*: when using wildcards source and target paths must match: /foo/b\*\*`,
+	error: `cannot extract from package "test-package": when using wildcards source and target paths must match: /foo/b\*\*`,
 }, {
 	summary: "Globbing cannot change modes",
 	pkgdata: testutil.PackageData["test-package"],
@@ -239,7 +233,7 @@ var extractTests = []extractTest{{
 			}},
 		},
 	},
-	error: `cannot extract .*: when using wildcards source and target paths must match: /dir/n\*\*`,
+	error: `cannot extract from package "test-package": when using wildcards source and target paths must match: /dir/n\*\*`,
 }, {
 	summary: "Missing file",
 	pkgdata: testutil.PackageData["test-package"],
@@ -306,8 +300,7 @@ var extractTests = []extractTest{{
 		},
 	},
 	result: map[string]string{
-		"/dir/":       "dir 0755",
-		"/other-dir/": "dir 0755",
+		"/dir/": "dir 0755",
 	},
 	notCreated: []string{},
 }, {
@@ -325,6 +318,40 @@ var extractTests = []extractTest{{
 		},
 	},
 	error: `cannot extract from package "test-package": no content at /dir/missing-file`,
+}, {
+	summary: "Extract non-ASCII path and preserve parent directories permissions",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		testutil.Dir(0755, "./"),
+		testutil.Dir(0766, "./日本/"),
+		testutil.Reg(0644, "./日本/語", "whatever"),
+	}),
+	options: deb.ExtractOptions{
+		Extract: map[string][]deb.ExtractInfo{
+			"/日本/語": []deb.ExtractInfo{{
+				Path: "/日本/語",
+			}},
+		},
+	},
+	result: map[string]string{
+		"/日本/":  "dir 0766",
+		"/日本/語": "file 0644 85738f8f",
+	},
+	notCreated: []string{},
+}, {
+	summary: "Entries for same destination must have the same mode",
+	pkgdata: testutil.PackageData["test-package"],
+	options: deb.ExtractOptions{
+		Extract: map[string][]deb.ExtractInfo{
+			"/dir/": []deb.ExtractInfo{{
+				Path: "/dir/",
+				Mode: 0777,
+			}},
+			"/d**": []deb.ExtractInfo{{
+				Path: "/d**",
+			}},
+		},
+	},
+	error: `cannot extract from package "test-package": path /dir/ requested twice with diverging mode: 0777 != 0000`,
 }}
 
 func (s *S) TestExtract(c *C) {
@@ -336,9 +363,9 @@ func (s *S) TestExtract(c *C) {
 		options.Package = "test-package"
 		options.TargetDir = dir
 		createdPaths := make(map[string]bool)
-		options.Create = func(o *fsutil.CreateOptions) error {
+		options.Create = func(_ []deb.ExtractInfo, o *fsutil.CreateOptions) error {
 			relPath := filepath.Clean("/" + strings.TrimPrefix(o.Path, dir))
-			if o.Mode&fs.ModeDir != 0 {
+			if o.Mode.IsDir() {
 				relPath = relPath + "/"
 			}
 			createdPaths[relPath] = true
@@ -350,20 +377,12 @@ func (s *S) TestExtract(c *C) {
 			test.hackopt(&options)
 		}
 
-		if test.globbed != nil {
-			options.Globbed = make(map[string][]string)
-		}
-
 		err := deb.Extract(bytes.NewBuffer(test.pkgdata), &options)
 		if test.error != "" {
 			c.Assert(err, ErrorMatches, test.error)
 			continue
 		} else {
 			c.Assert(err, IsNil)
-		}
-
-		if test.globbed != nil {
-			c.Assert(options.Globbed, DeepEquals, test.globbed)
 		}
 
 		if test.notCreated != nil {
@@ -380,5 +399,98 @@ func (s *S) TestExtract(c *C) {
 
 		result := testutil.TreeDump(dir)
 		c.Assert(result, DeepEquals, test.result)
+	}
+}
+
+var extractCreateCallbackTests = []struct {
+	summary string
+	pkgdata []byte
+	options deb.ExtractOptions
+	calls   map[string][]deb.ExtractInfo
+}{{
+	summary: "Create is called with the set of ExtractInfo(s) that match the file",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		testutil.Dir(0755, "./"),
+		testutil.Dir(0766, "./dir/"),
+		testutil.Reg(0644, "./dir/file", "whatever"),
+	}),
+	options: deb.ExtractOptions{
+		Extract: map[string][]deb.ExtractInfo{
+			"/dir/": []deb.ExtractInfo{{
+				Path: "/dir/",
+			}},
+			"/d**": []deb.ExtractInfo{{
+				Path: "/d**",
+			}},
+			"/d?r/": []deb.ExtractInfo{{
+				Path: "/d?r/",
+			}},
+			"/dir/file": []deb.ExtractInfo{{
+				Path: "/dir/file",
+			}, {
+				Path: "/dir/file-cpy",
+			}},
+			"/foo/": []deb.ExtractInfo{{
+				Path:     "/foo/",
+				Optional: true,
+			}},
+		},
+	},
+	calls: map[string][]deb.ExtractInfo{
+		"/dir/": []deb.ExtractInfo{
+			deb.ExtractInfo{
+				Path: "/d**",
+			},
+			deb.ExtractInfo{
+				Path: "/d?r/",
+			},
+			deb.ExtractInfo{
+				Path: "/dir/",
+			},
+		},
+		"/dir/file": []deb.ExtractInfo{
+			deb.ExtractInfo{
+				Path: "/d**",
+			},
+			deb.ExtractInfo{
+				Path: "/dir/file",
+			},
+		},
+		"/dir/file-cpy": []deb.ExtractInfo{
+			deb.ExtractInfo{
+				Path: "/dir/file-cpy",
+			},
+		},
+	},
+}}
+
+func (s *S) TestExtractCreateCallback(c *C) {
+	for _, test := range extractCreateCallbackTests {
+		c.Logf("Test: %s", test.summary)
+		dir := c.MkDir()
+		options := test.options
+		options.Package = "test-package"
+		options.TargetDir = dir
+		createExtractInfos := map[string][]deb.ExtractInfo{}
+		options.Create = func(extractInfos []deb.ExtractInfo, o *fsutil.CreateOptions) error {
+			if extractInfos == nil {
+				// Creating implicit parent directories, we don't care about those.
+				return nil
+			}
+			relPath := filepath.Clean("/" + strings.TrimPrefix(o.Path, dir))
+			if o.Mode.IsDir() {
+				relPath = relPath + "/"
+			}
+			sort.Slice(extractInfos, func(i, j int) bool {
+				return extractInfos[i].Path < extractInfos[j].Path
+			})
+			createExtractInfos[relPath] = extractInfos
+			return nil
+		}
+
+		err := deb.Extract(bytes.NewBuffer(test.pkgdata), &options)
+		c.Assert(err, IsNil)
+
+		c.Assert(createExtractInfos, DeepEquals, test.calls)
 	}
 }

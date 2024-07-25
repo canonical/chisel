@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	. "gopkg.in/check.v1"
 
+	"github.com/canonical/chisel/internal/fsutil"
 	"github.com/canonical/chisel/internal/scripts"
 	"github.com/canonical/chisel/internal/testutil"
 )
@@ -17,6 +19,7 @@ type scriptsTest struct {
 	hackdir func(c *C, dir string)
 	script  string
 	result  map[string]string
+	mutated map[string]string
 	checkr  func(path string) error
 	checkw  func(path string) error
 	error   string
@@ -44,6 +47,10 @@ var scriptsTests = []scriptsTest{{
 		"/foo/file1.txt": "file 0644 5b41362b",
 		"/foo/file2.txt": "file 0644 d98cf53e",
 	},
+	mutated: map[string]string{
+		"/foo/file1.txt": "file 0644 5b41362b",
+		"/foo/file2.txt": "file 0644 d98cf53e",
+	},
 }, {
 	summary: "Read a file",
 	content: map[string]string{
@@ -57,6 +64,9 @@ var scriptsTests = []scriptsTest{{
 	result: map[string]string{
 		"/foo/":          "dir 0755",
 		"/foo/file1.txt": "file 0644 5b41362b",
+		"/foo/file2.txt": "file 0644 5b41362b",
+	},
+	mutated: map[string]string{
 		"/foo/file2.txt": "file 0644 5b41362b",
 	},
 }, {
@@ -76,6 +86,53 @@ var scriptsTests = []scriptsTest{{
 		"/foo/file2.txt": "file 0644 47c22b01", // "bar/,foo/"
 		"/bar/":          "dir 0755",
 		"/bar/file3.txt": "file 0644 5b41362b",
+	},
+}, {
+	summary: "OnWrite is called for modified files only",
+	content: map[string]string{
+		"foo/file1.txt": `placeholder`,
+		"foo/file2.txt": `placeholder`,
+		// This file is not mutable, it cannot be written to.
+		"foo/file3.txt": `placeholder`,
+	},
+	script: `
+		content.write("/foo/file1.txt", "data1")
+		content.write("/foo/file2.txt", "data2")
+	`,
+	checkw: func(p string) error {
+		if p == "foo/file3.txt" {
+			return fmt.Errorf("no write: %s", p)
+		}
+		return nil
+	},
+	result: map[string]string{
+		"/foo/":          "dir 0755",
+		"/foo/file1.txt": "file 0644 5b41362b",
+		"/foo/file2.txt": "file 0644 d98cf53e",
+		"/foo/file3.txt": "file 0644 40978892",
+	},
+	mutated: map[string]string{
+		"/foo/file1.txt": "file 0644 5b41362b",
+		"/foo/file2.txt": "file 0644 d98cf53e",
+	},
+}, {
+	summary: "Mode is not changed when writing to a file",
+	content: map[string]string{
+		"foo/file1.txt": ``,
+		"foo/file2.txt": ``,
+	},
+	hackdir: func(c *C, dir string) {
+		fpath1 := filepath.Join(dir, "foo/file1.txt")
+		_ = os.Chmod(fpath1, 0744)
+	},
+	script: `
+		content.write("/foo/file1.txt", "data1")
+		content.write("/foo/file2.txt", "data2")
+	`,
+	result: map[string]string{
+		"/foo/":          "dir 0755",
+		"/foo/file1.txt": "file 0744 5b41362b",
+		"/foo/file2.txt": "file 0644 d98cf53e",
 	},
 }, {
 	summary: "Forbid relative paths",
@@ -217,10 +274,17 @@ func (s *S) TestScripts(c *C) {
 			test.hackdir(c, rootDir)
 		}
 
+		mutatedFiles := map[string]string{}
 		content := &scripts.ContentValue{
 			RootDir:    rootDir,
 			CheckRead:  test.checkr,
 			CheckWrite: test.checkw,
+			OnWrite: func(entry *fsutil.Entry) error {
+				// Set relative path.
+				entry.Path = strings.TrimPrefix(entry.Path, rootDir)
+				mutatedFiles[entry.Path] = testutil.TreeDumpEntry(entry)
+				return nil
+			},
 		}
 		namespace := map[string]scripts.Value{
 			"content": content,
@@ -237,6 +301,10 @@ func (s *S) TestScripts(c *C) {
 		}
 
 		c.Assert(testutil.TreeDump(rootDir), DeepEquals, test.result)
+
+		if test.mutated != nil {
+			c.Assert(mutatedFiles, DeepEquals, test.mutated)
+		}
 	}
 }
 

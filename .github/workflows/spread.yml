@@ -14,7 +14,6 @@ jobs:
   spread-tests:
     name: Spread tests
     runs-on: ubuntu-22.04
-
     steps:
       - uses: actions/checkout@v3
 
@@ -30,4 +29,4 @@ jobs:
       - name: Build and run spread
         run: |
           (cd _spread/cmd/spread && go build)
-          _spread/cmd/spread/spread -vv
+          _spread/cmd/spread/spread -v focal jammy mantic noble
