@@ -16,6 +16,7 @@ type manifestContents struct {
 	Paths    []manifest.Path
 	Packages []manifest.Package
 	Slices   []manifest.Slice
+	Contents []manifest.Content
 }
 
 var manifestTests = []struct {
@@ -58,6 +59,13 @@ var manifestTests = []struct {
 				{Kind: "slice", Name: "pkg1_manifest"},
 				{Kind: "slice", Name: "pkg1_myslice"},
 				{Kind: "slice", Name: "pkg2_myotherslice"},
+			},
+			Contents: []manifest.Content{
+				{Kind: "content", Slice: "pkg1_manifest", Path: "/manifest/manifest.wall"},
+				{Kind: "content", Slice: "pkg1_myslice", Path: "/dir/file"},
+				{Kind: "content", Slice: "pkg1_myslice", Path: "/dir/foo/bar/"},
+				{Kind: "content", Slice: "pkg1_myslice", Path: "/dir/link/file"},
+				{Kind: "content", Slice: "pkg2_myotherslice", Path: "/dir/foo/bar/"},
 			},
 		},
 	}, {
@@ -157,8 +165,15 @@ func dumpManifestContents(c *C, mfest *manifest.Manifest) manifestContents {
 	c.Assert(err, IsNil)
 
 	var paths []manifest.Path
-	err = mfest.IteratePath("", func(path manifest.Path) error {
+	err = mfest.IteratePaths("", func(path manifest.Path) error {
 		paths = append(paths, path)
+		return nil
+	})
+	c.Assert(err, IsNil)
+
+	var contents []manifest.Content
+	err = mfest.IterateContents("", func(content manifest.Content) error {
+		contents = append(contents, content)
 		return nil
 	})
 	c.Assert(err, IsNil)
@@ -167,6 +182,7 @@ func dumpManifestContents(c *C, mfest *manifest.Manifest) manifestContents {
 		Paths:    paths,
 		Packages: pkgs,
 		Slices:   slices,
+		Contents: contents,
 	}
 	return mc
 }

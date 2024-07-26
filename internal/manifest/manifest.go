@@ -72,34 +72,44 @@ func Read(absPath string) (manifest *Manifest, err error) {
 	return manifest, nil
 }
 
-func (manifest *Manifest) IteratePath(pathPrefix string, f func(Path) error) (err error) {
+func (manifest *Manifest) IteratePaths(pathPrefix string, onMatch func(Path) error) (err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("cannot read manifest: %s", err)
 		}
 	}()
 
-	return iteratePrefix(manifest, Path{Kind: "path", Path: pathPrefix}, f)
+	return iteratePrefix(manifest, Path{Kind: "path", Path: pathPrefix}, onMatch)
 }
 
-func (manifest *Manifest) IteratePackages(f func(Package) error) (err error) {
+func (manifest *Manifest) IteratePackages(onMatch func(Package) error) (err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("cannot read manifest: %s", err)
 		}
 	}()
 
-	return iteratePrefix(manifest, Package{Kind: "package"}, f)
+	return iteratePrefix(manifest, Package{Kind: "package"}, onMatch)
 }
 
-func (manifest *Manifest) IterateSlices(pkgName string, f func(Slice) error) (err error) {
+func (manifest *Manifest) IterateSlices(pkgName string, onMatch func(Slice) error) (err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("cannot read manifest: %s", err)
 		}
 	}()
 
-	return iteratePrefix(manifest, Slice{Kind: "slice", Name: pkgName}, f)
+	return iteratePrefix(manifest, Slice{Kind: "slice", Name: pkgName}, onMatch)
+}
+
+func (manifest *Manifest) IterateContents(slice string, onMatch func(Content) error) (err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("cannot read manifest: %s", err)
+		}
+	}()
+
+	return iteratePrefix(manifest, Content{Kind: "content", Slice: slice}, onMatch)
 }
 
 // Validate checks that the Manifest is valid. Note that to do that it has to
@@ -174,7 +184,7 @@ type prefixable interface {
 	Path | Content | Package | Slice
 }
 
-func iteratePrefix[T prefixable](manifest *Manifest, prefix T, f func(T) error) error {
+func iteratePrefix[T prefixable](manifest *Manifest, prefix T, onMatch func(T) error) error {
 	iter, err := manifest.db.IteratePrefix(prefix)
 	if err != nil {
 		return err
@@ -185,7 +195,7 @@ func iteratePrefix[T prefixable](manifest *Manifest, prefix T, f func(T) error) 
 		if err != nil {
 			return err
 		}
-		err = f(val)
+		err = onMatch(val)
 		if err != nil {
 			return err
 		}
