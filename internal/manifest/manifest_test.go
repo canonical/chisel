@@ -108,6 +108,13 @@ var manifestTests = []struct {
 			{"kind":"slice","name":"pkg1_myslice"}
 		`,
 		error: `invalid manifest: content path /dir/ has no matching entry in paths`,
+	}, {
+		summary: "Malformed jsonwall",
+		input: `
+			{"jsonwall":"1.0","schema":"1.0","count":1}
+			{"kind":"content", "not valid json"
+		`,
+		error: `invalid manifest: cannot read manifest: unexpected end of JSON input`,
 	}}
 
 func (s *S) TestRun(c *C) {

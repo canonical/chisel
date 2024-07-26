@@ -73,42 +73,18 @@ func Read(absPath string) (manifest *Manifest, err error) {
 }
 
 func (manifest *Manifest) IteratePaths(pathPrefix string, onMatch func(Path) error) (err error) {
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("cannot read manifest: %s", err)
-		}
-	}()
-
 	return iteratePrefix(manifest, Path{Kind: "path", Path: pathPrefix}, onMatch)
 }
 
 func (manifest *Manifest) IteratePackages(onMatch func(Package) error) (err error) {
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("cannot read manifest: %s", err)
-		}
-	}()
-
 	return iteratePrefix(manifest, Package{Kind: "package"}, onMatch)
 }
 
 func (manifest *Manifest) IterateSlices(pkgName string, onMatch func(Slice) error) (err error) {
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("cannot read manifest: %s", err)
-		}
-	}()
-
 	return iteratePrefix(manifest, Slice{Kind: "slice", Name: pkgName}, onMatch)
 }
 
 func (manifest *Manifest) IterateContents(slice string, onMatch func(Content) error) (err error) {
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("cannot read manifest: %s", err)
-		}
-	}()
-
 	return iteratePrefix(manifest, Content{Kind: "content", Slice: slice}, onMatch)
 }
 
@@ -123,7 +99,7 @@ func Validate(manifest *Manifest) (err error) {
 	}()
 
 	pkgExist := map[string]bool{}
-	err = iteratePrefix(manifest, Package{Kind: "package"}, func(pkg Package) error {
+	err = manifest.IteratePackages(func(pkg Package) error {
 		pkgExist[pkg.Name] = true
 		return nil
 	})
@@ -132,7 +108,7 @@ func Validate(manifest *Manifest) (err error) {
 	}
 
 	sliceExist := map[string]bool{}
-	err = iteratePrefix(manifest, Slice{Kind: "slice"}, func(slice Slice) error {
+	err = manifest.IterateSlices("", func(slice Slice) error {
 		sk, err := setup.ParseSliceKey(slice.Name)
 		if err != nil {
 			return err
@@ -148,7 +124,7 @@ func Validate(manifest *Manifest) (err error) {
 	}
 
 	pathToSlices := map[string][]string{}
-	err = iteratePrefix(manifest, Content{Kind: "content"}, func(content Content) error {
+	err = manifest.IterateContents("", func(content Content) error {
 		if !sliceExist[content.Slice] {
 			return fmt.Errorf(`slice %s not found in slices`, content.Slice)
 		}
@@ -159,7 +135,7 @@ func Validate(manifest *Manifest) (err error) {
 		return err
 	}
 
-	err = iteratePrefix(manifest, Path{Kind: "path"}, func(path Path) error {
+	err = manifest.IteratePaths("", func(path Path) error {
 		if pathSlices, ok := pathToSlices[path.Path]; !ok {
 			return fmt.Errorf(`path %s has no matching entry in contents`, path.Path)
 		} else if !slices.Equal(pathSlices, path.Slices) {
@@ -193,7 +169,7 @@ func iteratePrefix[T prefixable](manifest *Manifest, prefix T, onMatch func(T) e
 		var val T
 		err := iter.Get(&val)
 		if err != nil {
-			return err
+			return fmt.Errorf("cannot read manifest: %s", err)
 		}
 		err = onMatch(val)
 		if err != nil {
