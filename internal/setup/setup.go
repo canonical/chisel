@@ -160,11 +160,9 @@ func (r *Release) validate() error {
 		slice *Slice
 	}
 	allPaths := make(map[string]*Slice)
-	// globs contains all the paths that are to be extract from the package
-	// using globs.
+	// globs contains all the paths of kind GlobPath.
 	var globs []pathSlice
-	// copies contains all the paths that are to be copies from the package
-	// using copies.
+	// copies contains all the paths of kind CopyPath.
 	var copies []pathSlice
 	// generates contains all the paths of kind GeneratePath.
 	var generates []pathSlice
