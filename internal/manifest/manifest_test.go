@@ -20,10 +20,11 @@ type manifestContents struct {
 }
 
 var manifestTests = []struct {
-	summary string
-	input   string
-	mfest   manifestContents
-	error   string
+	summary   string
+	input     string
+	mfest     manifestContents
+	valError  string
+	readError string
 }{
 	{
 		summary: "All types",
@@ -74,21 +75,21 @@ var manifestTests = []struct {
 			{"jsonwall":"1.0","schema":"1.0","count":1}
 			{"kind":"content","slice":"pkg1_manifest","path":"/manifest/manifest.wall"}
 		`,
-		error: `invalid manifest: slice pkg1_manifest not found in slices`,
+		valError: `invalid manifest: slice pkg1_manifest not found in slices`,
 	}, {
 		summary: "Package not found",
 		input: `
 			{"jsonwall":"1.0","schema":"1.0","count":1}
 			{"kind":"slice","name":"pkg1_manifest"}
 		`,
-		error: `invalid manifest: package "pkg1" not found in packages`,
+		valError: `invalid manifest: package "pkg1" not found in packages`,
 	}, {
 		summary: "Path not found in contents",
 		input: `
 			{"jsonwall":"1.0","schema":"1.0","count":1}
 			{"kind":"path","path":"/dir/","mode":"01777","slices":["pkg1_myslice"]}
 		`,
-		error: `invalid manifest: path /dir/ has no matching entry in contents`,
+		valError: `invalid manifest: path /dir/ has no matching entry in contents`,
 	}, {
 		summary: "Content and path have different slices",
 		input: `
@@ -98,7 +99,7 @@ var manifestTests = []struct {
 			{"kind":"path","path":"/dir/","mode":"01777","slices":["pkg1_myslice"]}
 			{"kind":"slice","name":"pkg1_myotherslice"}
 		`,
-		error: `invalid manifest: path /dir/ and content have diverging slices: \["pkg1_myslice"\] != \["pkg1_myotherslice"\]`,
+		valError: `invalid manifest: path /dir/ and content have diverging slices: \["pkg1_myslice"\] != \["pkg1_myotherslice"\]`,
 	}, {
 		summary: "Content not found in paths",
 		input: `
@@ -107,14 +108,21 @@ var manifestTests = []struct {
 			{"kind":"package","name":"pkg1","version":"v1","sha256":"hash1","arch":"arch1"}
 			{"kind":"slice","name":"pkg1_myslice"}
 		`,
-		error: `invalid manifest: content path /dir/ has no matching entry in paths`,
+		valError: `invalid manifest: content path /dir/ has no matching entry in paths`,
 	}, {
 		summary: "Malformed jsonwall",
 		input: `
 			{"jsonwall":"1.0","schema":"1.0","count":1}
 			{"kind":"content", "not valid json"
 		`,
-		error: `invalid manifest: cannot read manifest: unexpected end of JSON input`,
+		valError: `invalid manifest: cannot read manifest: unexpected end of JSON input`,
+	}, {
+		summary: "Unknown schema",
+		input: `
+			{"jsonwall":"1.0","schema":"2.0","count":1}
+			{"kind":"package","name":"pkg1","version":"v1","sha256":"hash1","arch":"arch1"}
+		`,
+		readError: `cannot read manifest: unknown schema version "2.0"`,
 	}}
 
 func (s *S) TestRun(c *C) {
@@ -145,10 +153,14 @@ func (s *S) TestRun(c *C) {
 		f.Close()
 
 		mfest, err := manifest.Read(manifestPath)
+		if test.readError != "" {
+			c.Assert(err, ErrorMatches, test.readError)
+			continue
+		}
 		c.Assert(err, IsNil)
 		err = manifest.Validate(mfest)
-		if test.error != "" {
-			c.Assert(err, ErrorMatches, test.error)
+		if test.valError != "" {
+			c.Assert(err, ErrorMatches, test.valError)
 			continue
 		}
 		c.Assert(err, IsNil)

@@ -11,6 +11,8 @@ import (
 	"github.com/canonical/chisel/internal/setup"
 )
 
+const schema = "1.0"
+
 type Package struct {
 	Kind    string `json:"kind"`
 	Name    string `json:"name,omitempty"`
@@ -68,6 +70,11 @@ func Read(absPath string) (manifest *Manifest, err error) {
 	if err != nil {
 		return nil, err
 	}
+	mfestSchema := db.Schema()
+	if mfestSchema != schema {
+		return nil, fmt.Errorf("unknown schema version %q", mfestSchema)
+	}
+
 	manifest = &Manifest{db: db}
 	return manifest, nil
 }
