@@ -30,9 +30,7 @@ slices:
     foo:
         contents:
             /etc/foo: {}
-            /etc/foo-dir/:
-                make: true
-                mode: 0644
+            /etc/foo-dir/: {make: true, mode: 0644}
 `,
 }, {
 	summary: "A single package inspection",
@@ -57,14 +55,12 @@ slices:
     baz:
         essential:
             - libpkg_libs
-            - mypkg_foo
             - mypkg_bar
+            - mypkg_foo
     foo:
         contents:
             /etc/foo: {}
-            /etc/foo-dir/:
-                make: true
-                mode: 0644
+            /etc/foo-dir/: {make: true, mode: 0644}
 `,
 }, {
 	summary: "Different packages, multiple slices of same packages",
@@ -77,14 +73,12 @@ slices:
     baz:
         essential:
             - libpkg_libs
-            - mypkg_foo
             - mypkg_bar
+            - mypkg_foo
     foo:
         contents:
             /etc/foo: {}
-            /etc/foo-dir/:
-                make: true
-                mode: 0644
+            /etc/foo-dir/: {make: true, mode: 0644}
 ---
 package: libpkg
 archive: ubuntu
@@ -106,22 +100,12 @@ slices:
             - mypkg_foo
         contents:
             /bin/bar: {}
-            /etc/bar.conf:
-                text: TODO
-                mutable: true
-                arch: riscv64
-            /lib/*-linux-*/bar.so:
-                arch:
-                    - amd64
-                    - arm64
-                    - i386
-            /usr/bin/bar:
-                symlink: /bin/bar
-            /usr/bin/baz:
-                copy: /bin/bar
+            /etc/bar.conf: {text: TODO, mutable: true, arch: riscv64}
+            /lib/*-linux-*/bar.so: {arch: [amd64, arm64, i386]}
+            /usr/bin/bar: {symlink: /bin/bar}
+            /usr/bin/baz: {copy: /bin/bar}
             /usr/lib/bar*.so: {}
-            /usr/share/bar/*.conf:
-                until: mutate
+            /usr/share/bar/*.conf: {until: mutate}
         mutate: |
             dir = "/usr/share/bar/"
             conf = [content.read(dir + path) for path in content.list(dir)]
@@ -129,14 +113,12 @@ slices:
     baz:
         essential:
             - libpkg_libs
-            - mypkg_foo
             - mypkg_bar
+            - mypkg_foo
     foo:
         contents:
             /etc/foo: {}
-            /etc/foo-dir/:
-                make: true
-                mode: 0644
+            /etc/foo-dir/: {make: true, mode: 0644}
 `,
 }, {
 	summary: "Same slice, appearing multiple times",
@@ -149,9 +131,7 @@ slices:
     foo:
         contents:
             /etc/foo: {}
-            /etc/foo-dir/:
-                make: true
-                mode: 0644
+            /etc/foo-dir/: {make: true, mode: 0644}
 `,
 }, {
 	summary: "No slices found",
@@ -169,9 +149,7 @@ slices:
     foo:
         contents:
             /etc/foo: {}
-            /etc/foo-dir/:
-                make: true
-                mode: 0644
+            /etc/foo-dir/: {make: true, mode: 0644}
 `,
 	err: `no slice definitions found for: "foo", "bar_foo"`,
 }, {
@@ -209,14 +187,15 @@ var infoRelease = map[string]string{
 	"slices/mypkg.yaml": `
 		package: mypkg
 
+		essential:
+			- mypkg_foo
+
 		slices:
 			foo:
 				contents:
 					/etc/foo:
 					/etc/foo-dir/: {make: true, mode: 0644}
 			bar:
-				essential:
-					- mypkg_foo
 				contents:
 					/etc/bar.conf: {text: TODO, mutable: true, arch: riscv64}
 					/lib/*-linux-*/bar.so: {arch: [amd64,arm64,i386]}
@@ -232,7 +211,6 @@ var infoRelease = map[string]string{
 			baz:
 				essential:
 					- libpkg_libs
-					- mypkg_foo
 					- mypkg_bar
 	`,
 	"slices/libpkg.yaml": `

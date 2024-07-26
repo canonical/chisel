@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"sort"
 	"strings"
 
 	"golang.org/x/crypto/openpgp/packet"
@@ -367,6 +368,17 @@ type yamlPath struct {
 	Until PathUntil `yaml:"until,omitempty"`
 	Arch  yamlArch  `yaml:"arch,omitempty"`
 	Mode  yamlMode  `yaml:"mode,omitempty"`
+}
+
+func (yp *yamlPath) MarshalYAML() (interface{}, error) {
+	type flowPath yamlPath
+	node := &yaml.Node{}
+	err := node.Encode(flowPath(*yp))
+	if err != nil {
+		return nil, err
+	}
+	node.Style |= yaml.FlowStyle
+	return node, nil
 }
 
 // SameContent returns whether the path has the same content properties as some
@@ -767,6 +779,7 @@ func sliceToYAML(s *Slice) (*yamlSlice, error) {
 	for i, key := range s.Essential {
 		slice.Essential[i] = key.String()
 	}
+	sort.Strings(slice.Essential)
 	for path, info := range s.Contents {
 		pi := info
 		yamlPath, err := pathInfoToYAML(&pi)
