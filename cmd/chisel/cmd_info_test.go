@@ -24,115 +24,115 @@ var infoTests = []infoTest{{
 	input:   infoRelease,
 	query:   []string{"mypkg_foo"},
 	stdout: `
-package: mypkg
-archive: ubuntu
-slices:
-    foo:
-        contents:
-            /etc/foo: {}
-            /etc/foo-dir/: {make: true, mode: 0644}
-`,
+		package: mypkg
+		archive: ubuntu
+		slices:
+			foo:
+				contents:
+					/etc/foo: {}
+					/etc/foo-dir/: {make: true, mode: 0644}
+	`,
 }, {
 	summary: "A single package inspection",
 	input:   infoRelease,
 	query:   []string{"libpkg"},
 	stdout: `
-package: libpkg
-archive: ubuntu
-slices:
-    libs:
-        contents:
-            /usr/lib/libpkg.so*: {}
-`,
+		package: libpkg
+		archive: ubuntu
+		slices:
+			libs:
+				contents:
+					/usr/lib/libpkg.so*: {}
+	`,
 }, {
 	summary: "Multiple slices within the same package",
 	input:   infoRelease,
 	query:   []string{"mypkg_foo", "mypkg_baz"},
 	stdout: `
-package: mypkg
-archive: ubuntu
-slices:
-    baz:
-        essential:
-            - libpkg_libs
-            - mypkg_bar
-            - mypkg_foo
-    foo:
-        contents:
-            /etc/foo: {}
-            /etc/foo-dir/: {make: true, mode: 0644}
-`,
+		package: mypkg
+		archive: ubuntu
+		slices:
+			baz:
+				essential:
+					- libpkg_libs
+					- mypkg_bar
+					- mypkg_foo
+			foo:
+				contents:
+					/etc/foo: {}
+					/etc/foo-dir/: {make: true, mode: 0644}
+	`,
 }, {
 	summary: "Different packages, multiple slices of same packages",
 	input:   infoRelease,
 	query:   []string{"mypkg_foo", "libpkg", "mypkg_baz"},
 	stdout: `
-package: mypkg
-archive: ubuntu
-slices:
-    baz:
-        essential:
-            - libpkg_libs
-            - mypkg_bar
-            - mypkg_foo
-    foo:
-        contents:
-            /etc/foo: {}
-            /etc/foo-dir/: {make: true, mode: 0644}
----
-package: libpkg
-archive: ubuntu
-slices:
-    libs:
-        contents:
-            /usr/lib/libpkg.so*: {}
-`,
+		package: mypkg
+		archive: ubuntu
+		slices:
+			baz:
+				essential:
+					- libpkg_libs
+					- mypkg_bar
+					- mypkg_foo
+			foo:
+				contents:
+					/etc/foo: {}
+					/etc/foo-dir/: {make: true, mode: 0644}
+		---
+		package: libpkg
+		archive: ubuntu
+		slices:
+			libs:
+				contents:
+					/usr/lib/libpkg.so*: {}
+	`,
 }, {
 	summary: "Same package, multiple slices",
 	input:   infoRelease,
 	query:   []string{"mypkg_foo", "mypkg", "mypkg_baz"},
 	stdout: `
-package: mypkg
-archive: ubuntu
-slices:
-    bar:
-        essential:
-            - mypkg_foo
-        contents:
-            /bin/bar: {}
-            /etc/bar.conf: {text: TODO, mutable: true, arch: riscv64}
-            /lib/*-linux-*/bar.so: {arch: [amd64, arm64, i386]}
-            /usr/bin/bar: {symlink: /bin/bar}
-            /usr/bin/baz: {copy: /bin/bar}
-            /usr/lib/bar*.so: {}
-            /usr/share/bar/*.conf: {until: mutate}
-        mutate: |
-            dir = "/usr/share/bar/"
-            conf = [content.read(dir + path) for path in content.list(dir)]
-            content.write("/etc/bar.conf", "".join(conf))
-    baz:
-        essential:
-            - libpkg_libs
-            - mypkg_bar
-            - mypkg_foo
-    foo:
-        contents:
-            /etc/foo: {}
-            /etc/foo-dir/: {make: true, mode: 0644}
-`,
+		package: mypkg
+		archive: ubuntu
+		slices:
+			bar:
+				essential:
+					- mypkg_foo
+				contents:
+					/bin/bar: {}
+					/etc/bar.conf: {text: TODO, mutable: true, arch: riscv64}
+					/lib/*-linux-*/bar.so: {arch: [amd64, arm64, i386]}
+					/usr/bin/bar: {symlink: /bin/bar}
+					/usr/bin/baz: {copy: /bin/bar}
+					/usr/lib/bar*.so: {}
+					/usr/share/bar/*.conf: {until: mutate}
+				mutate: |
+					dir = "/usr/share/bar/"
+					conf = [content.read(dir + path) for path in content.list(dir)]
+					content.write("/etc/bar.conf", "".join(conf))
+			baz:
+				essential:
+					- libpkg_libs
+					- mypkg_bar
+					- mypkg_foo
+			foo:
+				contents:
+					/etc/foo: {}
+					/etc/foo-dir/: {make: true, mode: 0644}
+	`,
 }, {
 	summary: "Same slice, appearing multiple times",
 	input:   infoRelease,
 	query:   []string{"mypkg_foo", "mypkg_foo", "mypkg_foo"},
 	stdout: `
-package: mypkg
-archive: ubuntu
-slices:
-    foo:
-        contents:
-            /etc/foo: {}
-            /etc/foo-dir/: {make: true, mode: 0644}
-`,
+		package: mypkg
+		archive: ubuntu
+		slices:
+			foo:
+				contents:
+					/etc/foo: {}
+					/etc/foo-dir/: {make: true, mode: 0644}
+	`,
 }, {
 	summary: "No slices found",
 	input:   infoRelease,
@@ -143,14 +143,14 @@ slices:
 	input:   infoRelease,
 	query:   []string{"foo", "mypkg_foo", "bar_foo"},
 	stdout: `
-package: mypkg
-archive: ubuntu
-slices:
-    foo:
-        contents:
-            /etc/foo: {}
-            /etc/foo-dir/: {make: true, mode: 0644}
-`,
+		package: mypkg
+		archive: ubuntu
+		slices:
+			foo:
+				contents:
+					/etc/foo: {}
+					/etc/foo-dir/: {make: true, mode: 0644}
+	`,
 	err: `no slice definitions found for: "foo", "bar_foo"`,
 }, {
 	summary: "No args",
@@ -245,6 +245,7 @@ func (s *ChiselSuite) TestInfoCommand(c *C) {
 			continue
 		}
 		c.Assert(err, IsNil)
+		test.stdout = string(testutil.Reindent(test.stdout))
 		c.Assert(strings.TrimSpace(s.Stdout()), Equals, strings.TrimSpace(test.stdout))
 	}
 }
