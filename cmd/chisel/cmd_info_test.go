@@ -63,7 +63,7 @@ var infoTests = []infoTest{{
 					/etc/foo-dir/: {make: true, mode: 0644}
 	`,
 }, {
-	summary: "Different packages, multiple slices of same packages",
+	summary: "Packages and slices",
 	input:   infoRelease,
 	query:   []string{"mypkg_foo", "libpkg", "mypkg_baz"},
 	stdout: `
@@ -88,7 +88,7 @@ var infoTests = []infoTest{{
 					/usr/lib/libpkg.so*: {}
 	`,
 }, {
-	summary: "Same package, multiple slices",
+	summary: "Package and its slices",
 	input:   infoRelease,
 	query:   []string{"mypkg_foo", "mypkg", "mypkg_baz"},
 	stdout: `
@@ -121,7 +121,7 @@ var infoTests = []infoTest{{
 					/etc/foo-dir/: {make: true, mode: 0644}
 	`,
 }, {
-	summary: "Same slice, appearing multiple times",
+	summary: "Same slice appearing multiple times",
 	input:   infoRelease,
 	query:   []string{"mypkg_foo", "mypkg_foo", "mypkg_foo"},
 	stdout: `
@@ -162,7 +162,7 @@ var infoTests = []infoTest{{
 	query:   []string{"", "    "},
 	err:     `no slice definitions found for: "", "    "`,
 }, {
-	summary: "Bad format slices",
+	summary: "Ignore invalid slice names",
 	input:   infoRelease,
 	query:   []string{"foo_bar_foo", "a_b", "7_c", "a_b c", "a_b x_y"},
 	err:     `no slice definitions found for: "foo_bar_foo", "a_b", "7_c", "a_b c", "a_b x_y"`,
