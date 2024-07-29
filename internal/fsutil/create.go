@@ -15,6 +15,9 @@ type CreateOptions struct {
 	Path string
 	Mode fs.FileMode
 	Data io.Reader
+	// If Link is set and the symlink flag is set in Mode, a symlink is
+	// created. If the Mode is not set to symlink, a hard link is created
+	// instead.
 	Link string
 	// If MakeParents is true, missing parent directories of Path are
 	// created with permissions 0755.
@@ -48,8 +51,14 @@ func Create(options *CreateOptions) (*Entry, error) {
 
 	switch o.Mode & fs.ModeType {
 	case 0:
-		err = createFile(o)
-		hash = hex.EncodeToString(rp.h.Sum(nil))
+		if o.Link != "" {
+			// Creating the hard link does not involve reading the file.
+			// Therefore, its size and hash is not calculated here.
+			err = createHardLink(o)
+		} else {
+			err = createFile(o)
+			hash = hex.EncodeToString(rp.h.Sum(nil))
+		}
 	case fs.ModeDir:
 		err = createDir(o)
 	case fs.ModeSymlink:
@@ -119,6 +128,28 @@ func createSymlink(o *CreateOptions) error {
 		return err
 	}
 	return os.Symlink(o.Link, o.Path)
+}
+
+func createHardLink(o *CreateOptions) error {
+	debugf("Creating hard link: %s => %s", o.Path, o.Link)
+	linkInfo, err := os.Lstat(o.Link)
+	if err != nil && os.IsNotExist(err) {
+		return fmt.Errorf("link target does not exist: %s", o.Link)
+	} else if err != nil {
+		return err
+	}
+
+	pathInfo, err := os.Lstat(o.Path)
+	if err == nil || os.IsExist(err) {
+		if os.SameFile(linkInfo, pathInfo) {
+			return nil
+		}
+		return fmt.Errorf("path %s already exists", o.Path)
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+
+	return os.Link(o.Link, o.Path)
 }
 
 // readerProxy implements the io.Reader interface proxying the calls to its

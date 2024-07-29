@@ -1051,6 +1051,42 @@ var slicerTests = []slicerTest{{
 						content.list("/foo-bar/")
 		`,
 	},
+}, {
+	summary: "Valid hard link in two slices in the same package",
+	slices: []setup.SliceKey{
+		{"test-package", "slice1"},
+		{"test-package", "slice2"}},
+	pkgs: map[string][]byte{
+		"test-package": testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			testutil.Dir(0755, "./dir/"),
+			testutil.Reg(0644, "./dir/file", "text for file"),
+			testutil.Hln(0644, "./hardlink", "./dir/file"),
+		}),
+	},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				slice1:
+					contents:
+						/dir/file:
+						/hardlink:
+				slice2:
+					contents:
+						/dir/file:
+						/hardlink:
+		`,
+	},
+	filesystem: map[string]string{
+		"/dir/":     "dir 0755",
+		"/dir/file": "file 0644 28121945",
+		"/hardlink": "file 0644 28121945",
+	},
+	report: map[string]string{
+		"/dir/file": "file 0644 28121945 {test-package_slice1,test-package_slice2}",
+		"/hardlink": "hardlink /dir/file {test-package_slice1,test-package_slice2}",
+	},
 }}
 
 var defaultChiselYaml = `
@@ -1196,13 +1232,20 @@ func treeDumpReport(report *slicer.Report) map[string]string {
 			fsDump = fmt.Sprintf("dir %#o", fperm)
 		case fs.ModeSymlink:
 			fsDump = fmt.Sprintf("symlink %s", entry.Link)
-		case 0: // Regular
-			if entry.Size == 0 {
-				fsDump = fmt.Sprintf("file %#o empty", entry.Mode.Perm())
-			} else if entry.FinalHash != "" {
-				fsDump = fmt.Sprintf("file %#o %s %s", fperm, entry.Hash[:8], entry.FinalHash[:8])
+		case 0:
+			if entry.Link != "" {
+				// Hard link.
+				relLink := filepath.Clean("/" + strings.TrimPrefix(entry.Link, report.Root))
+				fsDump = fmt.Sprintf("hardlink %s", relLink)
 			} else {
-				fsDump = fmt.Sprintf("file %#o %s", fperm, entry.Hash[:8])
+				// Regular file.
+				if entry.Size == 0 {
+					fsDump = fmt.Sprintf("file %#o empty", entry.Mode.Perm())
+				} else if entry.FinalHash != "" {
+					fsDump = fmt.Sprintf("file %#o %s %s", fperm, entry.Hash[:8], entry.FinalHash[:8])
+				} else {
+					fsDump = fmt.Sprintf("file %#o %s", fperm, entry.Hash[:8])
+				}
 			}
 		default:
 			panic(fmt.Errorf("unknown file type %d: %s", entry.Mode.Type(), entry.Path))

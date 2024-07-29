@@ -246,11 +246,17 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 				}
 			}
 			// Create the entry itself.
+			link := tarHeader.Linkname
+			if tarHeader.Typeflag == tar.TypeLink {
+				// A hard link requires the real path of the target file.
+				link = filepath.Join(options.TargetDir, link)
+			}
+
 			createOptions := &fsutil.CreateOptions{
 				Path:        filepath.Join(options.TargetDir, targetPath),
 				Mode:        tarHeader.FileInfo().Mode(),
 				Data:        pathReader,
-				Link:        tarHeader.Linkname,
+				Link:        link,
 				MakeParents: true,
 			}
 			err := options.Create(extractInfos, createOptions)
