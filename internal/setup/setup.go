@@ -49,6 +49,8 @@ func (p *Package) MarshalYAML() (interface{}, error) {
 	return packageToYAML(p)
 }
 
+var _ yaml.Marshaler = (*Package)(nil)
+
 // Slice holds the details about a package slice.
 type Slice struct {
 	Package   string
@@ -60,10 +62,6 @@ type Slice struct {
 
 type SliceScripts struct {
 	Mutate string
-}
-
-func (s *Slice) MarshalYAML() (interface{}, error) {
-	return sliceToYAML(s)
 }
 
 type PathKind string
@@ -371,15 +369,17 @@ type yamlPath struct {
 }
 
 func (yp *yamlPath) MarshalYAML() (interface{}, error) {
-	type flowPath yamlPath
+	type flowPath *yamlPath
 	node := &yaml.Node{}
-	err := node.Encode(flowPath(*yp))
+	err := node.Encode(flowPath(yp))
 	if err != nil {
 		return nil, err
 	}
 	node.Style |= yaml.FlowStyle
 	return node, nil
 }
+
+var _ yaml.Marshaler = (*yamlPath)(nil)
 
 // SameContent returns whether the path has the same content properties as some
 // other path. In other words, the resulting file/dir entry is the same. The
@@ -424,11 +424,13 @@ type yamlMode uint
 func (ym yamlMode) MarshalYAML() (interface{}, error) {
 	// Workaround for marshalling integers in octal format.
 	// Ref: https://github.com/go-yaml/yaml/issues/420.
-	return &yaml.Node{
-		Kind:  yaml.ScalarNode,
-		Tag:   "!!int",
-		Value: fmt.Sprintf("0%o", ym),
-	}, nil
+	node := &yaml.Node{}
+	err := node.Encode(uint(ym))
+	if err != nil {
+		return nil, err
+	}
+	node.Value = fmt.Sprintf("0%o", ym)
+	return node, nil
 }
 
 type yamlSlice struct {
@@ -772,12 +774,12 @@ func sliceToYAML(s *Slice) (*yamlSlice, error) {
 		return nil, nil
 	}
 	slice := &yamlSlice{
-		Essential: make([]string, len(s.Essential)),
+		Essential: make([]string, 0, len(s.Essential)),
 		Contents:  make(map[string]*yamlPath, len(s.Contents)),
 		Mutate:    s.Scripts.Mutate,
 	}
-	for i, key := range s.Essential {
-		slice.Essential[i] = key.String()
+	for _, key := range s.Essential {
+		slice.Essential = append(slice.Essential, key.String())
 	}
 	sort.Strings(slice.Essential)
 	for path, info := range s.Contents {
