@@ -22,116 +22,116 @@ type infoTest struct {
 var infoTests = []infoTest{{
 	summary: "A single slice inspection",
 	input:   infoRelease,
-	query:   []string{"mypkg_foo"},
+	query:   []string{"mypkg1_myslice1"},
 	stdout: `
-		package: mypkg
+		package: mypkg1
 		archive: ubuntu
 		slices:
-			foo:
+			myslice1:
 				contents:
-					/etc/foo: {}
-					/etc/foo-dir/: {make: true, mode: 0644}
+					/dir/file: {}
+					/dir/sub-dir/: {make: true, mode: 0644}
 	`,
 }, {
 	summary: "A single package inspection",
 	input:   infoRelease,
-	query:   []string{"libpkg"},
+	query:   []string{"mypkg2"},
 	stdout: `
-		package: libpkg
+		package: mypkg2
 		archive: ubuntu
 		slices:
 			libs:
 				contents:
-					/usr/lib/libpkg.so*: {}
+					/dir/libraries/libmypkg2.so*: {}
 	`,
 }, {
 	summary: "Multiple slices within the same package",
 	input:   infoRelease,
-	query:   []string{"mypkg_foo", "mypkg_baz"},
+	query:   []string{"mypkg1_myslice3", "mypkg1_myslice1"},
 	stdout: `
-		package: mypkg
+		package: mypkg1
 		archive: ubuntu
 		slices:
-			baz:
-				essential:
-					- libpkg_libs
-					- mypkg_bar
-					- mypkg_foo
-			foo:
+			myslice1:
 				contents:
-					/etc/foo: {}
-					/etc/foo-dir/: {make: true, mode: 0644}
+					/dir/file: {}
+					/dir/sub-dir/: {make: true, mode: 0644}
+			myslice3:
+				essential:
+					- mypkg1_myslice1
+					- mypkg1_myslice2
+					- mypkg2_libs
 	`,
 }, {
 	summary: "Packages and slices",
 	input:   infoRelease,
-	query:   []string{"mypkg_foo", "libpkg", "mypkg_baz"},
+	query:   []string{"mypkg1_myslice1", "mypkg2", "mypkg1_myslice3"},
 	stdout: `
-		package: mypkg
+		package: mypkg1
 		archive: ubuntu
 		slices:
-			baz:
-				essential:
-					- libpkg_libs
-					- mypkg_bar
-					- mypkg_foo
-			foo:
+			myslice1:
 				contents:
-					/etc/foo: {}
-					/etc/foo-dir/: {make: true, mode: 0644}
+					/dir/file: {}
+					/dir/sub-dir/: {make: true, mode: 0644}
+			myslice3:
+				essential:
+					- mypkg1_myslice1
+					- mypkg1_myslice2
+					- mypkg2_libs
 		---
-		package: libpkg
+		package: mypkg2
 		archive: ubuntu
 		slices:
 			libs:
 				contents:
-					/usr/lib/libpkg.so*: {}
+					/dir/libraries/libmypkg2.so*: {}
 	`,
 }, {
 	summary: "Package and its slices",
 	input:   infoRelease,
-	query:   []string{"mypkg_foo", "mypkg", "mypkg_baz"},
+	query:   []string{"mypkg1_myslice1", "mypkg1", "mypkg1_myslice3"},
 	stdout: `
-		package: mypkg
+		package: mypkg1
 		archive: ubuntu
 		slices:
-			bar:
-				essential:
-					- mypkg_foo
+			myslice1:
 				contents:
-					/bin/bar: {}
-					/etc/bar.conf: {text: TODO, mutable: true, arch: riscv64}
-					/lib/*-linux-*/bar.so: {arch: [amd64, arm64, i386]}
-					/usr/bin/bar: {symlink: /bin/bar}
-					/usr/bin/baz: {copy: /bin/bar}
-					/usr/lib/bar*.so: {}
-					/usr/share/bar/*.conf: {until: mutate}
+					/dir/file: {}
+					/dir/sub-dir/: {make: true, mode: 0644}
+			myslice2:
+				essential:
+					- mypkg1_myslice1
+				contents:
+					/dir/binary-copy: {copy: /dir/binary-file}
+					/dir/binary-file: {}
+					/dir/binary-symlink: {symlink: /dir/binary-file}
+					/dir/conf-file: {text: TODO, mutable: true, arch: riscv64}
+					/dir/libraries/libmypkg1*.so: {}
+					/other-dir/*-linux-*/library.so: {arch: [amd64, arm64, i386]}
+					/other-dir/*.conf: {until: mutate}
 				mutate: |
-					dir = "/usr/share/bar/"
+					dir = "/other-dir/"
 					conf = [content.read(dir + path) for path in content.list(dir)]
-					content.write("/etc/bar.conf", "".join(conf))
-			baz:
+					content.write("/dir/conf-file", "".join(conf))
+			myslice3:
 				essential:
-					- libpkg_libs
-					- mypkg_bar
-					- mypkg_foo
-			foo:
-				contents:
-					/etc/foo: {}
-					/etc/foo-dir/: {make: true, mode: 0644}
+					- mypkg1_myslice1
+					- mypkg1_myslice2
+					- mypkg2_libs
 	`,
 }, {
 	summary: "Same slice appearing multiple times",
 	input:   infoRelease,
-	query:   []string{"mypkg_foo", "mypkg_foo", "mypkg_foo"},
+	query:   []string{"mypkg1_myslice1", "mypkg1_myslice1", "mypkg1_myslice1"},
 	stdout: `
-		package: mypkg
+		package: mypkg1
 		archive: ubuntu
 		slices:
-			foo:
+			myslice1:
 				contents:
-					/etc/foo: {}
-					/etc/foo-dir/: {make: true, mode: 0644}
+					/dir/file: {}
+					/dir/sub-dir/: {make: true, mode: 0644}
 	`,
 }, {
 	summary: "No slices found",
@@ -141,15 +141,15 @@ var infoTests = []infoTest{{
 }, {
 	summary: "Some slices found, others not found",
 	input:   infoRelease,
-	query:   []string{"foo", "mypkg_foo", "bar_foo"},
+	query:   []string{"foo", "mypkg1_myslice1", "bar_foo"},
 	stdout: `
-		package: mypkg
+		package: mypkg1
 		archive: ubuntu
 		slices:
-			foo:
+			myslice1:
 				contents:
-					/etc/foo: {}
-					/etc/foo-dir/: {make: true, mode: 0644}
+					/dir/file: {}
+					/dir/sub-dir/: {make: true, mode: 0644}
 	`,
 	err: `no slice definitions found for: "foo", "bar_foo"`,
 }, {
@@ -184,42 +184,42 @@ var defaultChiselYaml = `
 
 var infoRelease = map[string]string{
 	"chisel.yaml": string(defaultChiselYaml),
-	"slices/mypkg.yaml": `
-		package: mypkg
+	"slices/mypkg1.yaml": `
+		package: mypkg1
 
 		essential:
-			- mypkg_foo
+			- mypkg1_myslice1
 
 		slices:
-			foo:
+			myslice1:
 				contents:
-					/etc/foo:
-					/etc/foo-dir/: {make: true, mode: 0644}
-			bar:
+					/dir/file:
+					/dir/sub-dir/: {make: true, mode: 0644}
+			myslice2:
 				contents:
-					/etc/bar.conf: {text: TODO, mutable: true, arch: riscv64}
-					/lib/*-linux-*/bar.so: {arch: [amd64,arm64,i386]}
-					/usr/bin/bar: {symlink: /bin/bar}
-					/usr/bin/baz: {copy: /bin/bar}
-					/usr/lib/bar*.so:
-					/usr/share/bar/*.conf: {until: mutate}
-					/bin/bar:
+					/dir/binary-copy: {copy: /dir/binary-file}
+					/dir/binary-file:
+					/dir/binary-symlink: {symlink: /dir/binary-file}
+					/dir/conf-file: {text: TODO, mutable: true, arch: riscv64}
+					/dir/libraries/libmypkg1*.so:
+					/other-dir/*-linux-*/library.so: {arch: [amd64,arm64,i386]}
+					/other-dir/*.conf: {until: mutate}
 				mutate: |
-					dir = "/usr/share/bar/"
+					dir = "/other-dir/"
 					conf = [content.read(dir + path) for path in content.list(dir)]
-					content.write("/etc/bar.conf", "".join(conf))
-			baz:
+					content.write("/dir/conf-file", "".join(conf))
+			myslice3:
 				essential:
-					- libpkg_libs
-					- mypkg_bar
+					- mypkg1_myslice2
+					- mypkg2_libs
 	`,
-	"slices/libpkg.yaml": `
-		package: libpkg
+	"slices/mypkg2.yaml": `
+		package: mypkg2
 
 		slices:
 			libs:
 				contents:
-					/usr/lib/libpkg.so*:
+					/dir/libraries/libmypkg2.so*:
 	`,
 }
 
