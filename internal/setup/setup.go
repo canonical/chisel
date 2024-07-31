@@ -743,9 +743,6 @@ func Select(release *Release, slices []SliceKey) (*Selection, error) {
 
 // pathInfoToYAML converts a PathInfo object to a yamlPath object.
 func pathInfoToYAML(pi *PathInfo) (*yamlPath, error) {
-	if pi == nil {
-		return nil, nil
-	}
 	path := &yamlPath{
 		Mode:    yamlMode(pi.Mode),
 		Mutable: pi.Mutable,
@@ -770,9 +767,6 @@ func pathInfoToYAML(pi *PathInfo) (*yamlPath, error) {
 
 // sliceToYAML converts a Slice object to a yamlSlice object.
 func sliceToYAML(s *Slice) (*yamlSlice, error) {
-	if s == nil {
-		return nil, nil
-	}
 	slice := &yamlSlice{
 		Essential: make([]string, 0, len(s.Essential)),
 		Contents:  make(map[string]*yamlPath, len(s.Contents)),
@@ -795,9 +789,6 @@ func sliceToYAML(s *Slice) (*yamlSlice, error) {
 
 // packageToYAML converts a Package object to a yamlPackage object.
 func packageToYAML(p *Package) (*yamlPackage, error) {
-	if p == nil {
-		return nil, nil
-	}
 	pkg := &yamlPackage{
 		Name:    p.Name,
 		Archive: p.Archive,
