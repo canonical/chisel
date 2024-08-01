@@ -30,7 +30,6 @@ var infoTests = []infoTest{{
 			myslice1:
 				contents:
 					/dir/file: {}
-					/dir/sub-dir/: {make: true, mode: 0644}
 	`,
 }, {
 	summary: "A single package inspection",
@@ -40,14 +39,14 @@ var infoTests = []infoTest{{
 		package: mypkg2
 		archive: ubuntu
 		slices:
-			libs:
+			myslice:
 				contents:
-					/dir/libraries/libmypkg2.so*: {}
+					/dir/another-file: {}
 	`,
 }, {
 	summary: "Multiple slices within the same package",
 	input:   infoRelease,
-	query:   []string{"mypkg1_myslice3", "mypkg1_myslice1"},
+	query:   []string{"mypkg1_myslice2", "mypkg1_myslice1"},
 	stdout: `
 		package: mypkg1
 		archive: ubuntu
@@ -55,17 +54,15 @@ var infoTests = []infoTest{{
 			myslice1:
 				contents:
 					/dir/file: {}
-					/dir/sub-dir/: {make: true, mode: 0644}
-			myslice3:
+			myslice2:
 				essential:
 					- mypkg1_myslice1
-					- mypkg1_myslice2
-					- mypkg2_libs
+					- mypkg2_myslice
 	`,
 }, {
 	summary: "Packages and slices",
 	input:   infoRelease,
-	query:   []string{"mypkg1_myslice1", "mypkg2", "mypkg1_myslice3"},
+	query:   []string{"mypkg1_myslice1", "mypkg2", "mypkg1_myslice2"},
 	stdout: `
 		package: mypkg1
 		archive: ubuntu
@@ -73,24 +70,22 @@ var infoTests = []infoTest{{
 			myslice1:
 				contents:
 					/dir/file: {}
-					/dir/sub-dir/: {make: true, mode: 0644}
-			myslice3:
+			myslice2:
 				essential:
 					- mypkg1_myslice1
-					- mypkg1_myslice2
-					- mypkg2_libs
+					- mypkg2_myslice
 		---
 		package: mypkg2
 		archive: ubuntu
 		slices:
-			libs:
+			myslice:
 				contents:
-					/dir/libraries/libmypkg2.so*: {}
+					/dir/another-file: {}
 	`,
 }, {
 	summary: "Package and its slices",
 	input:   infoRelease,
-	query:   []string{"mypkg1_myslice1", "mypkg1", "mypkg1_myslice3"},
+	query:   []string{"mypkg1_myslice1", "mypkg1"},
 	stdout: `
 		package: mypkg1
 		archive: ubuntu
@@ -98,27 +93,36 @@ var infoTests = []infoTest{{
 			myslice1:
 				contents:
 					/dir/file: {}
-					/dir/sub-dir/: {make: true, mode: 0644}
 			myslice2:
 				essential:
 					- mypkg1_myslice1
-				contents:
-					/dir/binary-copy: {copy: /dir/binary-file}
-					/dir/binary-file: {}
-					/dir/binary-symlink: {symlink: /dir/binary-file}
-					/dir/conf-file: {text: TODO, mutable: true, arch: riscv64}
-					/dir/libraries/libmypkg1*.so: {}
-					/other-dir/*-linux-*/library.so: {arch: [amd64, arm64, i386]}
-					/other-dir/*.conf: {until: mutate}
-				mutate: |
-					dir = "/other-dir/"
-					conf = [content.read(dir + path) for path in content.list(dir)]
-					content.write("/dir/conf-file", "".join(conf))
-			myslice3:
+					- mypkg2_myslice
+	`,
+}, {
+	summary: "All kinds of path",
+	input:   infoRelease,
+	query:   []string{"mypkg3"},
+	stdout: `
+		package: mypkg3
+		archive: ubuntu
+		slices:
+			myslice:
 				essential:
 					- mypkg1_myslice1
-					- mypkg1_myslice2
-					- mypkg2_libs
+					- mypkg2_myslice
+				contents:
+					/dir/arch-specific*: {arch: [amd64, arm64, i386]}
+					/dir/copy: {copy: /dir/file}
+					/dir/glob*: {}
+					/dir/mutable: {text: TODO, mutable: true, arch: riscv64}
+					/dir/other-file: {}
+					/dir/sub-dir/: {make: true, mode: 0644}
+					/dir/symlink: {symlink: /dir/file}
+					/dir/unfolded: {copy: /dir/file, mode: 0644}
+					/dir/until: {until: mutate}
+				mutate: |
+					# Test multi-line string.
+					content.write("/dir/mutable", foo)
 	`,
 }, {
 	summary: "Same slice appearing multiple times",
@@ -131,7 +135,6 @@ var infoTests = []infoTest{{
 			myslice1:
 				contents:
 					/dir/file: {}
-					/dir/sub-dir/: {make: true, mode: 0644}
 	`,
 }, {
 	summary: "No slices found",
@@ -186,40 +189,46 @@ var infoRelease = map[string]string{
 	"chisel.yaml": string(defaultChiselYaml),
 	"slices/mypkg1.yaml": `
 		package: mypkg1
-
 		essential:
 			- mypkg1_myslice1
-
 		slices:
 			myslice1:
 				contents:
 					/dir/file:
-					/dir/sub-dir/: {make: true, mode: 0644}
 			myslice2:
-				contents:
-					/dir/binary-copy: {copy: /dir/binary-file}
-					/dir/binary-file:
-					/dir/binary-symlink: {symlink: /dir/binary-file}
-					/dir/conf-file: {text: TODO, mutable: true, arch: riscv64}
-					/dir/libraries/libmypkg1*.so:
-					/other-dir/*-linux-*/library.so: {arch: [amd64,arm64,i386]}
-					/other-dir/*.conf: {until: mutate}
-				mutate: |
-					dir = "/other-dir/"
-					conf = [content.read(dir + path) for path in content.list(dir)]
-					content.write("/dir/conf-file", "".join(conf))
-			myslice3:
 				essential:
-					- mypkg1_myslice2
-					- mypkg2_libs
+					- mypkg2_myslice
 	`,
 	"slices/mypkg2.yaml": `
 		package: mypkg2
-
 		slices:
-			libs:
+			myslice:
 				contents:
-					/dir/libraries/libmypkg2.so*:
+					/dir/another-file:
+	`,
+	"slices/mypkg3.yaml": `
+		package: mypkg3
+		essential:
+			- mypkg1_myslice1
+		slices:
+			myslice:
+				essential:
+					- mypkg2_myslice
+				contents:
+					/dir/other-file:
+					/dir/glob*:
+					/dir/sub-dir/:       {make: true, mode: 0644}
+					/dir/copy:           {copy: /dir/file}
+					/dir/symlink:        {symlink: /dir/file}
+					/dir/mutable:        {text: TODO, mutable: true, arch: riscv64}
+					/dir/arch-specific*: {arch: [amd64,arm64,i386]}
+					/dir/until:          {until: mutate}
+					/dir/unfolded:
+						copy: /dir/file
+						mode: 0644
+				mutate: |
+					# Test multi-line string.
+					content.write("/dir/mutable", foo)
 	`,
 }
 
