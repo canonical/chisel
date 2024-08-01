@@ -2,7 +2,9 @@ summary: Chisel can show detailed info about slices
 
 execute: |
   # Install dependencies.
-  go install github.com/mikefarah/yq/v4@latest
+  apt update && apt install -y wget
+  wget -q https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq &&\
+    chmod +x /usr/bin/yq
 
   # Single slice.
   chisel info --release ${OS}-${RELEASE} base-passwd_data > file.yaml
