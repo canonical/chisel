@@ -130,12 +130,15 @@ func Validate(manifest *Manifest) (err error) {
 		return err
 	}
 
+	// TODO duplicated should not be a problem, here an in delete below.
 	pathToSlices := map[string][]string{}
 	err = manifest.IterateContents("", func(content Content) error {
 		if !sliceExist[content.Slice] {
 			return fmt.Errorf(`slice %s not found in slices`, content.Slice)
 		}
-		pathToSlices[content.Path] = append(pathToSlices[content.Path], content.Slice)
+		if !slices.Contains(pathToSlices[content.Path], content.Slice) {
+			pathToSlices[content.Path] = append(pathToSlices[content.Path], content.Slice)
+		}
 		return nil
 	})
 	if err != nil {
@@ -143,11 +146,16 @@ func Validate(manifest *Manifest) (err error) {
 	}
 
 	err = manifest.IteratePaths("", func(path Path) error {
-		if pathSlices, ok := pathToSlices[path.Path]; !ok {
+		pathSlices, ok := pathToSlices[path.Path]
+		if !ok {
 			return fmt.Errorf(`path %s has no matching entry in contents`, path.Path)
-		} else if !slices.Equal(pathSlices, path.Slices) {
+		}
+		slices.Sort(pathSlices)
+		slices.Sort(path.Slices)
+		if !slices.Equal(pathSlices, path.Slices) {
 			return fmt.Errorf(`path %s and content have diverging slices: %q != %q`, path.Path, path.Slices, pathSlices)
 		}
+		// TODO This disallows duplicates.
 		delete(pathToSlices, path.Path)
 		return nil
 	})
