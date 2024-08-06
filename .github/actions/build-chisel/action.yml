@@ -1,0 +1,30 @@
+name: "Build chisel"
+description: >
+  Generates the version file and builds chisel from the current project directory.
+
+  The build can be configured via Go environment variables.
+outputs:
+  CHISEL_VERSION:
+    description: "The chisel version"
+    value: ${{ steps.build.outputs.chisel-version }}
+runs:
+  using: "composite"
+  steps:
+    - id: build
+      shell: bash
+      run: |
+        echo "Generating version file"
+        go generate ./cmd/
+
+        echo "Building for $GOOS $GOARCH"
+        go build -trimpath -ldflags='-s -w' ./cmd/chisel
+
+        # Get version via "chisel version" to ensure it matches that exactly
+        CHISEL_VERSION=$(GOOS=linux GOARCH=amd64 go run ./cmd/chisel version)
+        echo "Version: $CHISEL_VERSION"
+
+        # Version should not be "unknown"
+        [ "$CHISEL_VERSION" != "unknown" ] || exit 1
+
+        # Share variables with subsequent steps
+        echo "chisel-version=${CHISEL_VERSION}" >>$GITHUB_OUTPUT
