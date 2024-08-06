@@ -29,4 +29,4 @@ jobs:
       - name: Build and run spread
         run: |
           (cd _spread/cmd/spread && go build)
-          _spread/cmd/spread/spread -v focal jammy mantic
+          _spread/cmd/spread/spread -v focal jammy mantic noble
