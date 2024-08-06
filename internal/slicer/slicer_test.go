@@ -1021,6 +1021,36 @@ var slicerTests = []slicerTest{{
 	},
 	filesystem: map[string]string{},
 	report:     map[string]string{},
+}, {
+	summary: "Relative paths are properly trimmed during extraction",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	pkgs: map[string][]byte{
+		"test-package": testutil.MustMakeDeb([]testutil.TarEntry{
+			// This particular path starting with "/foo" is chosen to test for
+			// a particular bug; which appeared due to the usage of
+			// strings.TrimLeft() instead strings.TrimPrefix() to determine a
+			// relative path. Since TrimLeft takes in a cutset instead of a
+			// prefix, the desired relative path was not produced.
+			// See https://github.com/canonical/chisel/pull/145.
+			testutil.Dir(0755, "./foo-bar/"),
+		}),
+	},
+	hackopt: func(c *C, opts *slicer.RunOptions) {
+		opts.TargetDir = filepath.Join(filepath.Clean(opts.TargetDir), "foo")
+		err := os.Mkdir(opts.TargetDir, 0755)
+		c.Assert(err, IsNil)
+	},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/foo-bar/:
+					mutate: |
+						content.list("/foo-bar/")
+		`,
+	},
 }}
 
 var defaultChiselYaml = `
