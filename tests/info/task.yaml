@@ -1,4 +1,4 @@
-summary: Chisel can show detailed info about slices
+summary: Chisel can show detailed information about slices
 
 execute: |
   # Install dependencies.

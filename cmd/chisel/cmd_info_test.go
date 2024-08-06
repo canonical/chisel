@@ -99,7 +99,7 @@ var infoTests = []infoTest{{
 					- mypkg2_myslice
 	`,
 }, {
-	summary: "All kinds of path",
+	summary: "All kinds of paths",
 	input:   infoRelease,
 	query:   []string{"mypkg3"},
 	stdout: `
@@ -172,6 +172,7 @@ var infoTests = []infoTest{{
 }}
 
 var testKey = testutil.PGPKeys["key1"]
+
 var defaultChiselYaml = `
 	format: chisel-v1
 	archives:
@@ -182,8 +183,7 @@ var defaultChiselYaml = `
 	v1-public-keys:
 		test-key:
 			id: ` + testKey.ID + `
-			armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
-`
+			armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t")
 
 var infoRelease = map[string]string{
 	"chisel.yaml": string(defaultChiselYaml),
@@ -255,6 +255,6 @@ func (s *ChiselSuite) TestInfoCommand(c *C) {
 		}
 		c.Assert(err, IsNil)
 		test.stdout = string(testutil.Reindent(test.stdout))
-		c.Assert(strings.TrimSpace(s.Stdout()), Equals, strings.TrimSpace(test.stdout))
+		c.Assert(s.Stdout(), Equals, strings.TrimSpace(test.stdout)+"\n")
 	}
 }

@@ -134,5 +134,5 @@ func selectPackageSlices(release *setup.Release, queries []string) (packages []*
 		}
 		packages = append(packages, pkg)
 	}
-	return
+	return packages, notFound
 }

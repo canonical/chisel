@@ -357,15 +357,14 @@ type yamlPackage struct {
 }
 
 type yamlPath struct {
-	Dir     bool    `yaml:"make,omitempty"`
-	Copy    string  `yaml:"copy,omitempty"`
-	Text    *string `yaml:"text,omitempty"`
-	Symlink string  `yaml:"symlink,omitempty"`
-	Mutable bool    `yaml:"mutable,omitempty"`
-
-	Until PathUntil `yaml:"until,omitempty"`
-	Arch  yamlArch  `yaml:"arch,omitempty"`
-	Mode  yamlMode  `yaml:"mode,omitempty"`
+	Dir     bool      `yaml:"make,omitempty"`
+	Copy    string    `yaml:"copy,omitempty"`
+	Text    *string   `yaml:"text,omitempty"`
+	Symlink string    `yaml:"symlink,omitempty"`
+	Mutable bool      `yaml:"mutable,omitempty"`
+	Until   PathUntil `yaml:"until,omitempty"`
+	Arch    yamlArch  `yaml:"arch,omitempty"`
+	Mode    yamlMode  `yaml:"mode,omitempty"`
 }
 
 func (yp *yamlPath) MarshalYAML() (interface{}, error) {
@@ -419,6 +418,8 @@ func (ya yamlArch) MarshalYAML() (interface{}, error) {
 	return ya.List, nil
 }
 
+var _ yaml.Marshaler = yamlArch{}
+
 type yamlMode uint
 
 func (ym yamlMode) MarshalYAML() (interface{}, error) {
@@ -432,6 +433,8 @@ func (ym yamlMode) MarshalYAML() (interface{}, error) {
 	node.Value = fmt.Sprintf("0%o", ym)
 	return node, nil
 }
+
+var _ yaml.Marshaler = yamlMode(0)
 
 type yamlSlice struct {
 	Essential []string             `yaml:"essential,omitempty"`
