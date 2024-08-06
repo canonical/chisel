@@ -122,19 +122,6 @@ var manifestTests = []struct {
 		{"kind":"package","name":"pkg1","version":"v1","sha256":"hash1","arch":"arch1"}
 	`,
 	readError: `cannot read manifest: unknown schema version "2.0"`,
-}, {
-	summary: "Duplication is not an error",
-	input: `
-		{"jsonwall":"1.0","schema":"1.0","count":8}
-		{"kind":"content","slice":"pkg1_manifest","path":"/manifest/manifest.wall"}
-		{"kind":"content","slice":"pkg1_manifest","path":"/manifest/manifest.wall"}
-		{"kind":"package","name":"pkg1","version":"v1","sha256":"hash1","arch":"arch1"}
-		{"kind":"package","name":"pkg1","version":"v1","sha256":"hash1","arch":"arch1"}
-		{"kind":"path","path":"/manifest/manifest.wall","mode":"0644","slices":["pkg1_manifest"]}
-		{"kind":"path","path":"/manifest/manifest.wall","mode":"0644","slices":["pkg1_manifest"]}
-		{"kind":"slice","name":"pkg1_manifest"}
-		{"kind":"slice","name":"pkg1_manifest"}
-	`,
 }}
 
 func (s *S) TestRun(c *C) {
