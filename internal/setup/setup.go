@@ -169,7 +169,17 @@ func (r *Release) validate() error {
 	// rest contains the paths which are not in globs, copies or generates.
 	var rest []pathSlice
 
-	// Check for info conflicts and prepare for following checks.
+	// Check for info conflicts and prepare for following checks. A conflict
+	// means that two slices attempt to extract different files or directories
+	// to the same location.
+	// Conflict validation is done without downloading packages which means that
+	// if we are extracting content from different packages to the same location
+	// we cannot be sure that it will be the same. On the contrary, content
+	// extracted from the same package will never conflict because it is
+	// guaranteed to be the same.
+	// The above also means that generated content (e.g. text files, directories
+	// with make:true) will always conflict with extracted content, because we
+	// cannot validate that they are the same without downloading the package.
 	for _, pkg := range r.Packages {
 		for _, new := range pkg.Slices {
 			keys = append(keys, SliceKey{pkg.Name, new.Name})
@@ -197,12 +207,6 @@ func (r *Release) validate() error {
 				}
 			}
 		}
-	}
-
-	// Check for cycles.
-	_, err := order(r.Packages, keys)
-	if err != nil {
-		return err
 	}
 
 	checkConflict := func(old, new pathSlice) error {
@@ -240,6 +244,12 @@ func (r *Release) validate() error {
 				return err
 			}
 		}
+	}
+
+	// Check for cycles.
+	_, err := order(r.Packages, keys)
+	if err != nil {
+		return err
 	}
 
 	return nil
