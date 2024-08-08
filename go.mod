@@ -12,7 +12,7 @@ require (
 	golang.org/x/crypto v0.21.0
 	golang.org/x/term v0.18.0
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
-	gopkg.in/yaml.v3 v3.0.0-20220512140231-539c8e751b99
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
