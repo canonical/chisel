@@ -187,7 +187,7 @@ func Run(options *RunOptions) error {
 			return nil
 		}
 
-		relPath := filepath.Clean("/" + strings.TrimLeft(o.Path, targetDir))
+		relPath := filepath.Clean("/" + strings.TrimPrefix(o.Path, targetDir))
 		if o.Mode.IsDir() {
 			relPath = relPath + "/"
 		}
@@ -452,7 +452,7 @@ type generateManifestsOptions struct {
 // generateManifests generates the Chisel manifest(s) at the specified paths. It
 // returns the paths inside the rootfs where the manifest(s) are generated.
 func generateManifests(options *generateManifestsOptions) error {
-	manifestSlices, err := manifest.LocateManifestSlices(options.selection)
+	manifestSlices, err := locateManifestSlices(options.selection)
 	if err != nil {
 		return err
 	}
@@ -534,7 +534,7 @@ func generateManifests(options *generateManifestsOptions) error {
 		err := jsonwallw.Add(&manifest.Path{
 			Kind:   "path",
 			Path:   path,
-			Mode:   fmt.Sprintf("0%o", unixPerm(manifest.Mode)),
+			Mode:   fmt.Sprintf("0%o", unixPerm(ManifestMode)),
 			Slices: sliceNames,
 		})
 		if err != nil {
@@ -549,7 +549,7 @@ func generateManifests(options *generateManifestsOptions) error {
 		if err := os.MkdirAll(filepath.Dir(absPath), 0755); err != nil {
 			return err
 		}
-		file, err := os.OpenFile(absPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, manifest.Mode)
+		file, err := os.OpenFile(absPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, ManifestMode)
 		if err != nil {
 			return err
 		}
@@ -571,4 +571,28 @@ func unixPerm(mode fs.FileMode) (perm uint32) {
 		perm |= 01000
 	}
 	return perm
+}
+
+const ManifestFileName = "manifest.wall"
+
+// TODO change mode in one usage and see test failing.
+const ManifestMode fs.FileMode = 0644
+
+// locateManifestSlices finds the paths marked with "generate:manifest" and
+// returns a map from the manifest path to all the slices that declare it.
+func locateManifestSlices(slices []*setup.Slice) (map[string][]*setup.Slice, error) {
+	manifestSlices := make(map[string][]*setup.Slice)
+	for _, s := range slices {
+		for path, info := range s.Contents {
+			if info.Generate == setup.GenerateManifest {
+				dir, err := setup.GetGeneratePath(path)
+				if err != nil {
+					return nil, fmt.Errorf("internal error: %s", err)
+				}
+				path = filepath.Join(dir, ManifestFileName)
+				manifestSlices[path] = append(manifestSlices[path], s)
+			}
+		}
+	}
+	return manifestSlices, nil
 }

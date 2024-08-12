@@ -1114,6 +1114,38 @@ var slicerTests = []slicerTest{{
 	manifestPkgs: map[string]string{
 		"test-package": "test-package v1 a1 h1",
 	},
+}, {
+	summary: "Relative paths are properly trimmed during extraction",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	pkgs: map[string]testutil.TestPackage{
+		"test-package": {
+			Data: testutil.MustMakeDeb([]testutil.TarEntry{
+				// This particular path starting with "/foo" is chosen to test for
+				// a particular bug; which appeared due to the usage of
+				// strings.TrimLeft() instead strings.TrimPrefix() to determine a
+				// relative path. Since TrimLeft takes in a cutset instead of a
+				// prefix, the desired relative path was not produced.
+				// See https://github.com/canonical/chisel/pull/145.
+				testutil.Dir(0755, "./foo-bar/"),
+			}),
+		},
+	},
+	hackopt: func(c *C, opts *slicer.RunOptions) {
+		opts.TargetDir = filepath.Join(filepath.Clean(opts.TargetDir), "foo")
+		err := os.Mkdir(opts.TargetDir, 0755)
+		c.Assert(err, IsNil)
+	},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/foo-bar/:
+					mutate: |
+						content.list("/foo-bar/")
+		`,
+	},
 }}
 
 var defaultChiselYaml = `
@@ -1170,8 +1202,8 @@ func runSlicerTests(c *C, tests []slicerTest) {
 				if pkg.Name == "" {
 					// We need to add the name for the manifest validation.
 					pkg.Name = pkgName
+					test.pkgs[pkgName] = pkg
 				}
-				test.pkgs[pkgName] = pkg
 			}
 
 			// Create the files on disk.
@@ -1190,13 +1222,13 @@ func runSlicerTests(c *C, tests []slicerTest) {
 
 			// Create a manifest slice and add it to the selection.
 			manifestPackage := test.slices[0].Package
-			manifestPath := path.Join("/chisel-data/", manifest.Filename)
+			manifestPath := "/chisel-data/manifest.wall"
 			release.Packages[manifestPackage].Slices["manifest"] = &setup.Slice{
 				Package:   manifestPackage,
 				Name:      "manifest",
 				Essential: nil,
 				Contents: map[string]setup.PathInfo{
-					"/chisel-data/**": setup.PathInfo{
+					"/chisel-data/**": {
 						Kind:     "generate",
 						Generate: "manifest",
 					},
@@ -1229,11 +1261,10 @@ func runSlicerTests(c *C, tests []slicerTest) {
 			}
 
 			// Create the root directory and cut the slice selection.
-			targetDir := c.MkDir()
 			options := slicer.RunOptions{
 				Selection: selection,
 				Archives:  archives,
-				TargetDir: targetDir,
+				TargetDir: c.MkDir(),
 			}
 			if test.hackopt != nil {
 				test.hackopt(c, &options)
@@ -1246,12 +1277,12 @@ func runSlicerTests(c *C, tests []slicerTest) {
 			c.Assert(err, IsNil)
 
 			// Get the manifest from disk and read it.
-			mfest, err := manifest.Read(targetDir, manifestPath)
+			mfest, err := manifest.Read(path.Join(options.TargetDir, manifestPath))
 			c.Assert(err, IsNil)
 
 			// Assert state of final filesystem.
 			if test.filesystem != nil {
-				filesystem := testutil.TreeDump(targetDir)
+				filesystem := testutil.TreeDump(options.TargetDir)
 				c.Assert(filesystem["/chisel-data/"], Not(HasLen), 0)
 				c.Assert(filesystem[manifestPath], Not(HasLen), 0)
 				delete(filesystem, "/chisel-data/")
@@ -1280,7 +1311,7 @@ func runSlicerTests(c *C, tests []slicerTest) {
 
 func treeDumpManifestPaths(mfest *manifest.Manifest) (map[string]string, error) {
 	result := make(map[string]string)
-	err := mfest.IteratePath("", func(path manifest.Path) error {
+	err := mfest.IteratePaths("", func(path manifest.Path) error {
 		var fsDump string
 		switch {
 		case strings.HasSuffix(path.Path, "/"):
@@ -1314,7 +1345,7 @@ func treeDumpManifestPaths(mfest *manifest.Manifest) (map[string]string, error) 
 
 func dumpManifestPkgs(mfest *manifest.Manifest) (map[string]string, error) {
 	result := map[string]string{}
-	err := mfest.IteratePkgs(func(pkg manifest.Package) error {
+	err := mfest.IteratePackages(func(pkg manifest.Package) error {
 		result[pkg.Name] = fmt.Sprintf("%s %s %s %s", pkg.Name, pkg.Version, pkg.Arch, pkg.Digest)
 		return nil
 	})
