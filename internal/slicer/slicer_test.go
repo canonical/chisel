@@ -1279,6 +1279,8 @@ func runSlicerTests(c *C, tests []slicerTest) {
 			// Get the manifest from disk and read it.
 			mfest, err := manifest.Read(path.Join(options.TargetDir, manifestPath))
 			c.Assert(err, IsNil)
+			err = manifest.Validate(mfest)
+			c.Assert(err, IsNil)
 
 			// Assert state of final filesystem.
 			if test.filesystem != nil {
