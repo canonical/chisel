@@ -86,9 +86,6 @@ const (
 )
 
 type PathInfo struct {
-	// Disable ==.
-	_ [0]func()
-
 	Kind PathKind
 	Info string
 	Mode uint
