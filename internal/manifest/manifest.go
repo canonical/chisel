@@ -2,10 +2,8 @@ package manifest
 
 import (
 	"fmt"
-	"os"
+	"io"
 	"slices"
-
-	"github.com/klauspost/compress/zstd"
 
 	"github.com/canonical/chisel/internal/jsonwall"
 	"github.com/canonical/chisel/internal/setup"
@@ -47,26 +45,16 @@ type Manifest struct {
 	db *jsonwall.DB
 }
 
-// Read loads a Manifest from a file without performing any validation. The file
-// is assumed to be both valid jsonwall and a valid Manifest (see [Validate]).
-func Read(absPath string) (manifest *Manifest, err error) {
+// Read loads a Manifest without performing any validation. The data is assumed
+// to be both valid jsonwall and a valid Manifest (see Validate).
+func Read(reader io.Reader) (manifest *Manifest, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("cannot read manifest: %s", err)
 		}
 	}()
 
-	file, err := os.OpenFile(absPath, os.O_RDONLY, 0644)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-	r, err := zstd.NewReader(file)
-	if err != nil {
-		return nil, err
-	}
-	defer r.Close()
-	db, err := jsonwall.ReadDB(r)
+	db, err := jsonwall.ReadDB(reader)
 	if err != nil {
 		return nil, err
 	}

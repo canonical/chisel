@@ -151,7 +151,14 @@ func (s *S) TestRun(c *C) {
 		w.Close()
 		f.Close()
 
-		mfest, err := manifest.Read(manifestPath)
+		file, err := os.OpenFile(manifestPath, os.O_RDONLY, 0644)
+		c.Assert(err, IsNil)
+		defer file.Close()
+		r, err := zstd.NewReader(file)
+		c.Assert(err, IsNil)
+		defer r.Close()
+
+		mfest, err := manifest.Read(r)
 		if test.readError != "" {
 			c.Assert(err, ErrorMatches, test.readError)
 			continue
