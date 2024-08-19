@@ -121,7 +121,7 @@ func Validate(manifest *Manifest) (err error) {
 			return err
 		}
 		if !pkgExist[sk.Package] {
-			return fmt.Errorf(`package %q not found in packages`, sk.Package)
+			return fmt.Errorf("package %q not found in packages", sk.Package)
 		}
 		sliceExist[slice.Name] = true
 		return nil
@@ -133,7 +133,7 @@ func Validate(manifest *Manifest) (err error) {
 	pathToSlices := map[string][]string{}
 	err = manifest.IterateContents("", func(content *Content) error {
 		if !sliceExist[content.Slice] {
-			return fmt.Errorf(`slice %s not found in slices`, content.Slice)
+			return fmt.Errorf("slice %s not found in slices", content.Slice)
 		}
 		if !slices.Contains(pathToSlices[content.Path], content.Slice) {
 			pathToSlices[content.Path] = append(pathToSlices[content.Path], content.Slice)
@@ -148,12 +148,12 @@ func Validate(manifest *Manifest) (err error) {
 	err = manifest.IteratePaths("", func(path *Path) error {
 		pathSlices, ok := pathToSlices[path.Path]
 		if !ok {
-			return fmt.Errorf(`path %s has no matching entry in contents`, path.Path)
+			return fmt.Errorf("path %s has no matching entry in contents", path.Path)
 		}
 		slices.Sort(pathSlices)
 		slices.Sort(path.Slices)
 		if !slices.Equal(pathSlices, path.Slices) {
-			return fmt.Errorf(`path %s and content have diverging slices: %q != %q`, path.Path, path.Slices, pathSlices)
+			return fmt.Errorf("path %s and content have diverging slices: %q != %q", path.Path, path.Slices, pathSlices)
 		}
 		done[path.Path] = true
 		return nil
@@ -164,7 +164,7 @@ func Validate(manifest *Manifest) (err error) {
 
 	if len(done) != len(pathToSlices) {
 		for path := range pathToSlices {
-			return fmt.Errorf(`content path %s has no matching entry in paths`, path)
+			return fmt.Errorf("content path %s has no matching entry in paths", path)
 		}
 	}
 	return nil
