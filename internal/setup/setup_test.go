@@ -1535,6 +1535,21 @@ var setupTests = []setupTest{{
 	},
 	relerror: `slices mypkg_myslice1 and mypkg_myslice2 conflict on /path/file and /path/\*\*`,
 }, {
+	summary: "Generate paths conflict with other generate paths",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice1:
+					contents:
+						/path/subdir/**: {generate: manifest}
+				myslice2:
+					contents:
+						/path/**: {generate: manifest}
+		`,
+	},
+	relerror: `slices mypkg_myslice1 and mypkg_myslice2 conflict on /path/subdir/\*\* and /path/\*\*`,
+}, {
 	summary: `No other options in "generate" paths`,
 	input: map[string]string{
 		"slices/mydir/mypkg.yaml": `

@@ -152,20 +152,6 @@ func ReadRelease(dir string) (*Release, error) {
 func (r *Release) validate() error {
 	keys := []SliceKey(nil)
 
-	type pathSlice struct {
-		path  string
-		slice *Slice
-	}
-	allPaths := make(map[string]*Slice)
-	// globs contains all the paths of kind GlobPath.
-	var globs []pathSlice
-	// copies contains all the paths of kind CopyPath.
-	var copies []pathSlice
-	// generates contains all the paths of kind GeneratePath.
-	var generates []pathSlice
-	// rest contains the paths which are not in globs, copies or generates.
-	var rest []pathSlice
-
 	// Check for info conflicts and prepare for following checks. A conflict
 	// means that two slices attempt to extract different files or directories
 	// to the same location.
@@ -177,11 +163,17 @@ func (r *Release) validate() error {
 	// The above also means that generated content (e.g. text files, directories
 	// with make:true) will always conflict with extracted content, because we
 	// cannot validate that they are the same without downloading the package.
+	type sliceAndInfo struct {
+		slice *Slice
+		info  PathInfo
+	}
+	allPaths := make(map[string]sliceAndInfo)
 	for _, pkg := range r.Packages {
 		for _, new := range pkg.Slices {
 			keys = append(keys, SliceKey{pkg.Name, new.Name})
 			for newPath, newInfo := range new.Contents {
-				if old, ok := allPaths[newPath]; ok {
+				if p, ok := allPaths[newPath]; ok {
+					old := p.slice
 					oldInfo := old.Contents[newPath]
 					if !newInfo.SameContent(&oldInfo) || (newInfo.Kind == CopyPath || newInfo.Kind == GlobPath) && new.Package != old.Package {
 						if old.Package > new.Package || old.Package == new.Package && old.Name > new.Name {
@@ -190,55 +182,36 @@ func (r *Release) validate() error {
 						return fmt.Errorf("slices %s and %s conflict on %s", old, new, newPath)
 					}
 				} else {
-					switch newInfo.Kind {
-					case GlobPath:
-						globs = append(globs, pathSlice{path: newPath, slice: new})
-					case CopyPath:
-						copies = append(copies, pathSlice{path: newPath, slice: new})
-					case GeneratePath:
-						generates = append(generates, pathSlice{path: newPath, slice: new})
-					default:
-						rest = append(rest, pathSlice{path: newPath, slice: new})
+					allPaths[newPath] = sliceAndInfo{
+						slice: new,
+						info:  newInfo,
 					}
-					allPaths[newPath] = new
 				}
 			}
 		}
 	}
-
-	checkConflict := func(old, new pathSlice) error {
-		if strdist.GlobPath(new.path, old.path) {
-			if (old.slice.Package > new.slice.Package) || (old.slice.Package == new.slice.Package && old.slice.Name > new.slice.Name) {
-				old, new = new, old
-			}
-			return fmt.Errorf("slices %s and %s conflict on %s and %s", old.slice, new.slice, old.path, new.path)
-		}
-		return nil
-	}
-	for _, new := range globs {
-		// TODO replace with slices.Concat once we upgrade to go 1.22.
-		for _, old := range append(globs, copies...) {
-			if new.slice.Package == old.slice.Package {
+	for newPath, new := range allPaths {
+		for oldPath, old := range allPaths {
+			if oldPath == newPath {
+				// Same path means same entry by construction.
 				continue
 			}
-			err := checkConflict(old, new)
-			if err != nil {
-				return err
+			// We are only using the outer loop values so that we do not check
+			// for conflicts twice.
+			if new.info.Kind != GlobPath && new.info.Kind != GeneratePath {
+				continue
 			}
-		}
-		for _, old := range rest {
-			err := checkConflict(old, new)
-			if err != nil {
-				return err
+			if new.info.Kind == GlobPath && (old.info.Kind == GlobPath || old.info.Kind == CopyPath) {
+				if new.slice.Package == old.slice.Package {
+					continue
+				}
 			}
-		}
-	}
-	for _, new := range generates {
-		// TODO replace with slices.Concat once we upgrade to go 1.22.
-		for _, old := range append(copies, append(globs, rest...)...) {
-			err := checkConflict(old, new)
-			if err != nil {
-				return err
+			if strdist.GlobPath(newPath, oldPath) {
+				if (old.slice.Package > new.slice.Package) || (old.slice.Package == new.slice.Package && old.slice.Name > new.slice.Name) {
+					old, new = new, old
+					oldPath, newPath = newPath, oldPath
+				}
+				return fmt.Errorf("slices %s and %s conflict on %s and %s", old.slice, new.slice, oldPath, newPath)
 			}
 		}
 	}
