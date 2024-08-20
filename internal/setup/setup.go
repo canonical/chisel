@@ -163,17 +163,13 @@ func (r *Release) validate() error {
 	// The above also means that generated content (e.g. text files, directories
 	// with make:true) will always conflict with extracted content, because we
 	// cannot validate that they are the same without downloading the package.
-	type sliceAndInfo struct {
-		slice *Slice
-		info  PathInfo
-	}
-	allPaths := make(map[string]sliceAndInfo)
+	paths := make(map[string]*Slice)
 	for _, pkg := range r.Packages {
 		for _, new := range pkg.Slices {
 			keys = append(keys, SliceKey{pkg.Name, new.Name})
 			for newPath, newInfo := range new.Contents {
-				if p, ok := allPaths[newPath]; ok {
-					old := p.slice
+				// Check if the same path is listed twice.
+				if old, ok := paths[newPath]; ok {
 					oldInfo := old.Contents[newPath]
 					if !newInfo.SameContent(&oldInfo) || (newInfo.Kind == CopyPath || newInfo.Kind == GlobPath) && new.Package != old.Package {
 						if old.Package > new.Package || old.Package == new.Package && old.Name > new.Name {
@@ -181,37 +177,30 @@ func (r *Release) validate() error {
 						}
 						return fmt.Errorf("slices %s and %s conflict on %s", old, new, newPath)
 					}
-				} else {
-					allPaths[newPath] = sliceAndInfo{
-						slice: new,
-						info:  newInfo,
-					}
-				}
-			}
-		}
-	}
-	for newPath, new := range allPaths {
-		for oldPath, old := range allPaths {
-			if oldPath == newPath {
-				// Same path means same entry by construction.
-				continue
-			}
-			// We are only using the outer loop values so that we do not check
-			// for conflicts twice.
-			if new.info.Kind != GlobPath && new.info.Kind != GeneratePath {
-				continue
-			}
-			if new.info.Kind == GlobPath && (old.info.Kind == GlobPath || old.info.Kind == CopyPath) {
-				if new.slice.Package == old.slice.Package {
 					continue
 				}
-			}
-			if strdist.GlobPath(newPath, oldPath) {
-				if (old.slice.Package > new.slice.Package) || (old.slice.Package == new.slice.Package && old.slice.Name > new.slice.Name) {
-					old, new = new, old
-					oldPath, newPath = newPath, oldPath
+				// Check for glob and generate conflicts.
+				for oldPath, old := range paths {
+					oldInfo := old.Contents[oldPath]
+					if !(newInfo.Kind == GlobPath || newInfo.Kind == GeneratePath ||
+						oldInfo.Kind == GlobPath || oldInfo.Kind == GeneratePath) {
+						continue
+					}
+					if (newInfo.Kind == GlobPath || newInfo.Kind == CopyPath) &&
+						(oldInfo.Kind == GlobPath || oldInfo.Kind == CopyPath) {
+						if new.Package == old.Package {
+							continue
+						}
+					}
+					if strdist.GlobPath(newPath, oldPath) {
+						if (old.Package > new.Package) || (old.Package == new.Package && old.Name > new.Name) {
+							old, new = new, old
+							oldPath, newPath = newPath, oldPath
+						}
+						return fmt.Errorf("slices %s and %s conflict on %s and %s", old, new, oldPath, newPath)
+					}
 				}
-				return fmt.Errorf("slices %s and %s conflict on %s and %s", old.slice, new.slice, oldPath, newPath)
+				paths[newPath] = new
 			}
 		}
 	}

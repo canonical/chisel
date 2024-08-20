@@ -1518,7 +1518,7 @@ var setupTests = []setupTest{{
 						/path/file:
 		`,
 	},
-	relerror: `slices mypkg_myslice and mypkg_myslice conflict on /path/file and /path/\*\*`,
+	relerror: `slices mypkg_myslice and mypkg_myslice conflict on /path/\*\* and /path/file`,
 }, {
 	summary: "Generate paths cannot conflict with any other path across slices",
 	input: map[string]string{
