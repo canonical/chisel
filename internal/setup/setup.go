@@ -193,7 +193,8 @@ func (r *Release) validate() error {
 						}
 					}
 					if strdist.GlobPath(newPath, oldPath) {
-						if (old.Package > new.Package) || (old.Package == new.Package && old.Name > new.Name) {
+						if (old.Package > new.Package) || (old.Package == new.Package && old.Name > new.Name) ||
+							(old.Package == new.Package && old.Name == new.Name && oldPath > newPath) {
 							old, new = new, old
 							oldPath, newPath = newPath, oldPath
 						}
