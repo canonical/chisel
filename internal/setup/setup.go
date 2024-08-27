@@ -168,7 +168,6 @@ func (r *Release) validate() error {
 		for _, new := range pkg.Slices {
 			keys = append(keys, SliceKey{pkg.Name, new.Name})
 			for newPath, newInfo := range new.Contents {
-				// Check if the same path is listed twice.
 				if old, ok := paths[newPath]; ok {
 					oldInfo := old.Contents[newPath]
 					if !newInfo.SameContent(&oldInfo) || (newInfo.Kind == CopyPath || newInfo.Kind == GlobPath) && new.Package != old.Package {
@@ -177,8 +176,11 @@ func (r *Release) validate() error {
 						}
 						return fmt.Errorf("slices %s and %s conflict on %s", old, new, newPath)
 					}
+					// Note: We do not have to record newPath because conflict
+					// is a transitive relation.
 					continue
 				}
+
 				// Check for glob and generate conflicts.
 				for oldPath, old := range paths {
 					oldInfo := old.Contents[oldPath]
@@ -201,6 +203,7 @@ func (r *Release) validate() error {
 						return fmt.Errorf("slices %s and %s conflict on %s and %s", old, new, oldPath, newPath)
 					}
 				}
+
 				paths[newPath] = new
 			}
 		}
