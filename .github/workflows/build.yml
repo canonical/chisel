@@ -95,7 +95,7 @@ jobs:
           mkdir -p dist/build
           cp chisel LICENSE README.md dist/build
           find dist/build -printf "%P\n" | tar -czf dist/$ARCHIVE_FILE --no-recursion -C dist/build -T -
-          sha384sum "dist/${ARCHIVE_FILE}" > "dist/${ARCHIVE_FILE_CKSUM}"
+          cd dist/ && sha384sum "${ARCHIVE_FILE}" > "${ARCHIVE_FILE_CKSUM}" && cd -
 
           # Share variables with subsequent steps
           echo "ARCHIVE_FILE=${ARCHIVE_FILE}" >>$GITHUB_OUTPUT
