@@ -105,7 +105,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: ${{ steps.archive.outputs.ARCHIVE_FILE }}
-          path:
+          path: |
             dist/${{ steps.archive.outputs.ARCHIVE_FILE }}
             dist/${{ steps.archive.outputs.ARCHIVE_FILE_CKSUM }}
 
