@@ -164,6 +164,7 @@ func (r *Release) validate() error {
 	// with make:true) will always conflict with extracted content, because we
 	// cannot validate that they are the same without downloading the package.
 	paths := make(map[string]*Slice)
+	conflictable := make(map[string]*Slice)
 	for _, pkg := range r.Packages {
 		for _, new := range pkg.Slices {
 			keys = append(keys, SliceKey{pkg.Name, new.Name})
@@ -176,35 +177,40 @@ func (r *Release) validate() error {
 						}
 						return fmt.Errorf("slices %s and %s conflict on %s", old, new, newPath)
 					}
-					// Note: We do not have to record newPath because conflict
-					// is a transitive relation.
+					// Note: Because for conflict resolution we only check that
+					// the created file would be the same and we know newInfo and
+					// oldInfo produce the same one, we do not have to record
+					// newInfo.
+				} else {
+					paths[newPath] = new
+					if newInfo.Kind == GeneratePath || newInfo.Kind == GlobPath {
+						conflictable[newPath] = new
+					}
+				}
+			}
+		}
+	}
+
+	// Check for glob and generate conflicts.
+	for oldPath, old := range conflictable {
+		oldInfo := old.Contents[oldPath]
+		for newPath, new := range paths {
+			newInfo := new.Contents[newPath]
+			if oldPath == newPath {
+				continue
+			}
+			if oldInfo.Kind == GlobPath && (newInfo.Kind == GlobPath || newInfo.Kind == CopyPath) {
+				if new.Package == old.Package {
 					continue
 				}
-
-				// Check for glob and generate conflicts.
-				for oldPath, old := range paths {
-					oldInfo := old.Contents[oldPath]
-					if !(newInfo.Kind == GlobPath || newInfo.Kind == GeneratePath ||
-						oldInfo.Kind == GlobPath || oldInfo.Kind == GeneratePath) {
-						continue
-					}
-					if (newInfo.Kind == GlobPath || newInfo.Kind == CopyPath) &&
-						(oldInfo.Kind == GlobPath || oldInfo.Kind == CopyPath) {
-						if new.Package == old.Package {
-							continue
-						}
-					}
-					if strdist.GlobPath(newPath, oldPath) {
-						if (old.Package > new.Package) || (old.Package == new.Package && old.Name > new.Name) ||
-							(old.Package == new.Package && old.Name == new.Name && oldPath > newPath) {
-							old, new = new, old
-							oldPath, newPath = newPath, oldPath
-						}
-						return fmt.Errorf("slices %s and %s conflict on %s and %s", old, new, oldPath, newPath)
-					}
+			}
+			if strdist.GlobPath(newPath, oldPath) {
+				if (old.Package > new.Package) || (old.Package == new.Package && old.Name > new.Name) ||
+					(old.Package == new.Package && old.Name == new.Name && oldPath > newPath) {
+					old, new = new, old
+					oldPath, newPath = newPath, oldPath
 				}
-
-				paths[newPath] = new
+				return fmt.Errorf("slices %s and %s conflict on %s and %s", old, new, oldPath, newPath)
 			}
 		}
 	}
