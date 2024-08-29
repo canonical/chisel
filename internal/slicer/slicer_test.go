@@ -1278,6 +1278,9 @@ func runSlicerTests(c *C, tests []slicerTest) {
 			c.Assert(err, IsNil)
 
 			// Get the manifest from disk and read it.
+			s, err := os.Stat(path.Join(options.TargetDir, manifestPath))
+			c.Assert(err, IsNil)
+			c.Assert(s.Mode(), Equals, slicer.ManifestMode)
 			f, err := os.Open(path.Join(options.TargetDir, manifestPath))
 			defer f.Close()
 			c.Assert(err, IsNil)
@@ -1287,6 +1290,11 @@ func runSlicerTests(c *C, tests []slicerTest) {
 			mfest, err := manifest.Read(r)
 			c.Assert(err, IsNil)
 			err = manifest.Validate(mfest)
+			c.Assert(err, IsNil)
+			err = mfest.IteratePaths(manifestPath, func(p *manifest.Path) error {
+				c.Assert(p.Mode, Equals, fmt.Sprintf("%#o", slicer.ManifestMode))
+				return nil
+			})
 			c.Assert(err, IsNil)
 
 			// Assert state of final filesystem.

@@ -87,7 +87,6 @@ func (manifest *Manifest) IterateContents(slice string, onMatch func(*Content) e
 // load practically the whole manifest into memory and unmarshall all the
 // entries.
 func Validate(manifest *Manifest) (err error) {
-	// TODO validate entry of manifest path is correct.
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("invalid manifest: %s", err)

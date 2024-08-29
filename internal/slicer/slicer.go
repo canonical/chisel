@@ -24,6 +24,9 @@ import (
 	"github.com/canonical/chisel/internal/setup"
 )
 
+const ManifestFileName = "manifest.wall"
+const ManifestMode fs.FileMode = 0644
+
 type RunOptions struct {
 	Selection *setup.Selection
 	Archives  map[string]archive.Archive
@@ -572,11 +575,6 @@ func unixPerm(mode fs.FileMode) (perm uint32) {
 	}
 	return perm
 }
-
-const ManifestFileName = "manifest.wall"
-
-// TODO change mode in one usage and see test failing.
-const ManifestMode fs.FileMode = 0644
 
 // locateManifestSlices finds the paths marked with "generate:manifest" and
 // returns a map from the manifest path to all the slices that declare it.
