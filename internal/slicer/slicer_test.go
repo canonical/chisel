@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/klauspost/compress/zstd"
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/chisel/internal/archive"
@@ -1277,7 +1278,13 @@ func runSlicerTests(c *C, tests []slicerTest) {
 			c.Assert(err, IsNil)
 
 			// Get the manifest from disk and read it.
-			mfest, err := manifest.Read(path.Join(options.TargetDir, manifestPath))
+			f, err := os.Open(path.Join(options.TargetDir, manifestPath))
+			defer f.Close()
+			c.Assert(err, IsNil)
+			r, err := zstd.NewReader(f)
+			defer r.Close()
+			c.Assert(err, IsNil)
+			mfest, err := manifest.Read(r)
 			c.Assert(err, IsNil)
 			err = manifest.Validate(mfest)
 			c.Assert(err, IsNil)
@@ -1313,7 +1320,7 @@ func runSlicerTests(c *C, tests []slicerTest) {
 
 func treeDumpManifestPaths(mfest *manifest.Manifest) (map[string]string, error) {
 	result := make(map[string]string)
-	err := mfest.IteratePaths("", func(path manifest.Path) error {
+	err := mfest.IteratePaths("", func(path *manifest.Path) error {
 		var fsDump string
 		switch {
 		case strings.HasSuffix(path.Path, "/"):
@@ -1347,7 +1354,7 @@ func treeDumpManifestPaths(mfest *manifest.Manifest) (map[string]string, error) 
 
 func dumpManifestPkgs(mfest *manifest.Manifest) (map[string]string, error) {
 	result := map[string]string{}
-	err := mfest.IteratePackages(func(pkg manifest.Package) error {
+	err := mfest.IteratePackages(func(pkg *manifest.Package) error {
 		result[pkg.Name] = fmt.Sprintf("%s %s %s %s", pkg.Name, pkg.Version, pkg.Arch, pkg.Digest)
 		return nil
 	})

@@ -585,10 +585,7 @@ func locateManifestSlices(slices []*setup.Slice) (map[string][]*setup.Slice, err
 	for _, s := range slices {
 		for path, info := range s.Contents {
 			if info.Generate == setup.GenerateManifest {
-				dir, err := setup.GetGeneratePath(path)
-				if err != nil {
-					return nil, fmt.Errorf("internal error: %s", err)
-				}
+				dir := strings.TrimSuffix(path, "**")
 				path = filepath.Join(dir, ManifestFileName)
 				manifestSlices[path] = append(manifestSlices[path], s)
 			}
