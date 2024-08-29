@@ -6,17 +6,16 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/klauspost/compress/zstd"
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/chisel/internal/manifest"
 )
 
 type manifestContents struct {
-	Paths    []manifest.Path
-	Packages []manifest.Package
-	Slices   []manifest.Slice
-	Contents []manifest.Content
+	Paths    []*manifest.Path
+	Packages []*manifest.Package
+	Slices   []*manifest.Slice
+	Contents []*manifest.Content
 }
 
 var manifestTests = []struct {
@@ -45,22 +44,22 @@ var manifestTests = []struct {
 		{"kind":"slice","name":"pkg2_myotherslice"}
 	`,
 	mfest: &manifestContents{
-		Paths: []manifest.Path{
+		Paths: []*manifest.Path{
 			{Kind: "path", Path: "/dir/file", Mode: "0644", Slices: []string{"pkg1_myslice"}, Hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", FinalHash: "8067926c032c090867013d14fb0eb21ae858344f62ad07086fd32375845c91a6", Size: 0x15, Link: ""},
 			{Kind: "path", Path: "/dir/foo/bar/", Mode: "01777", Slices: []string{"pkg2_myotherslice", "pkg1_myslice"}, Hash: "", FinalHash: "", Size: 0x0, Link: ""},
 			{Kind: "path", Path: "/dir/link/file", Mode: "0644", Slices: []string{"pkg1_myslice"}, Hash: "", FinalHash: "", Size: 0x0, Link: "/dir/file"},
 			{Kind: "path", Path: "/manifest/manifest.wall", Mode: "0644", Slices: []string{"pkg1_manifest"}, Hash: "", FinalHash: "", Size: 0x0, Link: ""},
 		},
-		Packages: []manifest.Package{
+		Packages: []*manifest.Package{
 			{Kind: "package", Name: "pkg1", Version: "v1", Digest: "hash1", Arch: "arch1"},
 			{Kind: "package", Name: "pkg2", Version: "v2", Digest: "hash2", Arch: "arch2"},
 		},
-		Slices: []manifest.Slice{
+		Slices: []*manifest.Slice{
 			{Kind: "slice", Name: "pkg1_manifest"},
 			{Kind: "slice", Name: "pkg1_myslice"},
 			{Kind: "slice", Name: "pkg2_myotherslice"},
 		},
-		Contents: []manifest.Content{
+		Contents: []*manifest.Content{
 			{Kind: "content", Slice: "pkg1_manifest", Path: "/manifest/manifest.wall"},
 			{Kind: "content", Slice: "pkg1_myslice", Path: "/dir/file"},
 			{Kind: "content", Slice: "pkg1_myslice", Path: "/dir/foo/bar/"},
@@ -142,16 +141,17 @@ func (s *S) TestRun(c *C) {
 
 		tmpDir := c.MkDir()
 		manifestPath := path.Join(tmpDir, "manifest.wall")
-		f, err := os.OpenFile(manifestPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
-		c.Assert(err, IsNil)
-		w, err := zstd.NewWriter(f)
+		w, err := os.OpenFile(manifestPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 		c.Assert(err, IsNil)
 		_, err = w.Write([]byte(test.input))
 		c.Assert(err, IsNil)
 		w.Close()
-		f.Close()
 
-		mfest, err := manifest.Read(manifestPath)
+		r, err := os.OpenFile(manifestPath, os.O_RDONLY, 0644)
+		c.Assert(err, IsNil)
+		defer r.Close()
+
+		mfest, err := manifest.Read(r)
 		if test.readError != "" {
 			c.Assert(err, ErrorMatches, test.readError)
 			continue
@@ -170,29 +170,29 @@ func (s *S) TestRun(c *C) {
 }
 
 func dumpManifestContents(c *C, mfest *manifest.Manifest) *manifestContents {
-	var slices []manifest.Slice
-	err := mfest.IterateSlices("", func(slice manifest.Slice) error {
+	var slices []*manifest.Slice
+	err := mfest.IterateSlices("", func(slice *manifest.Slice) error {
 		slices = append(slices, slice)
 		return nil
 	})
 	c.Assert(err, IsNil)
 
-	var pkgs []manifest.Package
-	err = mfest.IteratePackages(func(pkg manifest.Package) error {
+	var pkgs []*manifest.Package
+	err = mfest.IteratePackages(func(pkg *manifest.Package) error {
 		pkgs = append(pkgs, pkg)
 		return nil
 	})
 	c.Assert(err, IsNil)
 
-	var paths []manifest.Path
-	err = mfest.IteratePaths("", func(path manifest.Path) error {
+	var paths []*manifest.Path
+	err = mfest.IteratePaths("", func(path *manifest.Path) error {
 		paths = append(paths, path)
 		return nil
 	})
 	c.Assert(err, IsNil)
 
-	var contents []manifest.Content
-	err = mfest.IterateContents("", func(content manifest.Content) error {
+	var contents []*manifest.Content
+	err = mfest.IterateContents("", func(content *manifest.Content) error {
 		contents = append(contents, content)
 		return nil
 	})
