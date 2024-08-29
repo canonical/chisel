@@ -60,15 +60,11 @@ type SliceScripts struct {
 type PathKind string
 
 const (
-	DirPath     PathKind = "dir"
-	CopyPath    PathKind = "copy"
-	GlobPath    PathKind = "glob"
-	TextPath    PathKind = "text"
-	SymlinkPath PathKind = "symlink"
-	// GeneratePath is a special kind of glob path with the following format:
-	//   /slashed/path/to/dir/**
-	// Wildcard characters can only appear at the end as **, and the path before
-	// those wildcards must be a directory.
+	DirPath      PathKind = "dir"
+	CopyPath     PathKind = "copy"
+	GlobPath     PathKind = "glob"
+	TextPath     PathKind = "text"
+	SymlinkPath  PathKind = "symlink"
 	GeneratePath PathKind = "generate"
 
 	// TODO Maybe in the future, for binary support.
@@ -85,18 +81,11 @@ const (
 type GenerateKind string
 
 const (
-	// There are only two possible values of "generate" as of now:
-	//   "" (empty)
-	//   "manifest"
-	// Empty value signifies that the path is not a GeneratePath.
 	GenerateNone     GenerateKind = ""
 	GenerateManifest GenerateKind = "manifest"
 )
 
 type PathInfo struct {
-	// Disable ==.
-	_ [0]func()
-
 	Kind PathKind
 	Info string
 	Mode uint
@@ -162,31 +151,66 @@ func ReadRelease(dir string) (*Release, error) {
 
 func (r *Release) validate() error {
 	keys := []SliceKey(nil)
-	paths := make(map[string]*Slice)
-	// globs contains all glob paths including GeneratePath(s).
-	globs := make(map[string]*Slice)
 
-	// Check for info conflicts and prepare for following checks.
+	// Check for info conflicts and prepare for following checks. A conflict
+	// means that two slices attempt to extract different files or directories
+	// to the same location.
+	// Conflict validation is done without downloading packages which means that
+	// if we are extracting content from different packages to the same location
+	// we cannot be sure that it will be the same. On the contrary, content
+	// extracted from the same package will never conflict because it is
+	// guaranteed to be the same.
+	// The above also means that generated content (e.g. text files, directories
+	// with make:true) will always conflict with extracted content, because we
+	// cannot validate that they are the same without downloading the package.
+	paths := make(map[string]*Slice)
+	conflictable := make(map[string]*Slice)
 	for _, pkg := range r.Packages {
 		for _, new := range pkg.Slices {
 			keys = append(keys, SliceKey{pkg.Name, new.Name})
 			for newPath, newInfo := range new.Contents {
 				if old, ok := paths[newPath]; ok {
 					oldInfo := old.Contents[newPath]
-					// Note that if extracting content (CopyPath or GlobPath)
-					// from the same package the content can never be in conflict.
 					if !newInfo.SameContent(&oldInfo) || (newInfo.Kind == CopyPath || newInfo.Kind == GlobPath) && new.Package != old.Package {
 						if old.Package > new.Package || old.Package == new.Package && old.Name > new.Name {
 							old, new = new, old
 						}
 						return fmt.Errorf("slices %s and %s conflict on %s", old, new, newPath)
 					}
+					// Note: Because for conflict resolution we only check that
+					// the created file would be the same and we know newInfo and
+					// oldInfo produce the same one, we do not have to record
+					// newInfo.
 				} else {
-					if newInfo.Kind == GlobPath || newInfo.Kind == GeneratePath {
-						globs[newPath] = new
-					}
 					paths[newPath] = new
+					if newInfo.Kind == GeneratePath || newInfo.Kind == GlobPath {
+						conflictable[newPath] = new
+					}
 				}
+			}
+		}
+	}
+
+	// Check for glob and generate conflicts.
+	for oldPath, old := range conflictable {
+		oldInfo := old.Contents[oldPath]
+		for newPath, new := range paths {
+			newInfo := new.Contents[newPath]
+			if oldPath == newPath {
+				continue
+			}
+			if oldInfo.Kind == GlobPath && (newInfo.Kind == GlobPath || newInfo.Kind == CopyPath) {
+				if new.Package == old.Package {
+					continue
+				}
+			}
+			if strdist.GlobPath(newPath, oldPath) {
+				if (old.Package > new.Package) || (old.Package == new.Package && old.Name > new.Name) ||
+					(old.Package == new.Package && old.Name == new.Name && oldPath > newPath) {
+					old, new = new, old
+					oldPath, newPath = newPath, oldPath
+				}
+				return fmt.Errorf("slices %s and %s conflict on %s and %s", old, new, oldPath, newPath)
 			}
 		}
 	}
@@ -195,28 +219,6 @@ func (r *Release) validate() error {
 	_, err := order(r.Packages, keys)
 	if err != nil {
 		return err
-	}
-
-	// Check for glob conflicts.
-	for newPath, new := range globs {
-		for oldPath, old := range paths {
-			// Same entry, no conflict.
-			if new == old && newPath == oldPath {
-				continue
-			}
-			// Content extracted (not generated) from the same package can never
-			// be in conflict.
-			if new.Package == old.Package && new.Contents[newPath].Kind == GlobPath && old.Contents[oldPath].Kind != GeneratePath {
-				continue
-			}
-			if strdist.GlobPath(newPath, oldPath) {
-				if old.Package > new.Package || old.Package == new.Package && old.Name > new.Name {
-					old, oldPath, new, newPath = new, newPath, old, oldPath
-				}
-				return fmt.Errorf("slices %s and %s conflict on %s and %s", old, new, oldPath, newPath)
-			}
-		}
-		paths[newPath] = new
 	}
 
 	return nil
@@ -622,8 +624,8 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 					return nil, fmt.Errorf("slice %s_%s path %s has invalid generate options",
 						pkgName, sliceName, contPath)
 				}
-				if _, err := GetGeneratePath(contPath); err != nil {
-					return nil, fmt.Errorf("slice %s_%s has %s", pkgName, sliceName, err)
+				if _, err := validateGeneratePath(contPath); err != nil {
+					return nil, fmt.Errorf("slice %s_%s has invalid generate path: %s", pkgName, sliceName, err)
 				}
 				kinds = append(kinds, GeneratePath)
 			} else if strings.ContainsAny(contPath, "*?") {
@@ -704,13 +706,12 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 	return &pkg, err
 }
 
-func GetGeneratePath(path string) (dir string, err error) {
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("invalid generate path: %s", err)
-		}
-	}()
-
+// validateGeneratePath validates that the path follows the following format:
+//   - /slashed/path/to/dir/**
+//
+// Wildcard characters can only appear at the end as **, and the path before
+// those wildcards must be a directory.
+func validateGeneratePath(path string) (string, error) {
 	if !strings.HasSuffix(path, "/**") {
 		return "", fmt.Errorf("%s does not end with /**", path)
 	}
