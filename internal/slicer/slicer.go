@@ -246,10 +246,10 @@ func Run(options *RunOptions) error {
 		}
 	}
 
-	// Create new content not coming from packages. First group them by their
-	// relative path. Then create them and attribute them to the appropriate
-	// slices.
-	contentRelPaths := map[string][]*setup.Slice{}
+	// Create new content not coming from packages excluding GeneratePath(s).
+	// First group them by their relative path. Then create them and attribute
+	// them to the appropriate slices.
+	relPaths := map[string][]*setup.Slice{}
 	for _, slice := range options.Selection.Slices {
 		arch := archives[slice.Package].Options().Arch
 		for relPath, pathInfo := range slice.Contents {
@@ -260,14 +260,14 @@ func Run(options *RunOptions) error {
 				pathInfo.Kind == setup.GeneratePath {
 				continue
 			}
-			if _, ok := contentRelPaths[relPath]; !ok {
-				contentRelPaths[relPath] = []*setup.Slice{slice}
+			if _, ok := relPaths[relPath]; !ok {
+				relPaths[relPath] = []*setup.Slice{slice}
 			} else {
-				contentRelPaths[relPath] = append(contentRelPaths[relPath], slice)
+				relPaths[relPath] = append(relPaths[relPath], slice)
 			}
 		}
 	}
-	for relPath, slices := range contentRelPaths {
+	for relPath, slices := range relPaths {
 		// All the pathInfo(s) are equivalent because of conflict validation.
 		pathInfo := slices[0].Contents[relPath]
 		data := pathData{
