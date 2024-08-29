@@ -169,9 +169,6 @@ func Run(options *RunOptions) error {
 	// listed as until: mutate in all the slices that reference them.
 	knownPaths := map[string]pathData{}
 	addKnownPath(knownPaths, "/", pathData{})
-
-	// Creates the filesystem entry and adds it to the report. It also updates
-	// knownPaths with the files created.
 	report, err := NewReport(targetDir)
 	if err != nil {
 		return fmt.Errorf("internal error: cannot create report: %w", err)
