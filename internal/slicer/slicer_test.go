@@ -1207,7 +1207,6 @@ func runSlicerTests(c *C, tests []slicerTest) {
 				}
 			}
 
-			// Create the files on disk.
 			releaseDir := c.MkDir()
 			for path, data := range test.release {
 				fpath := filepath.Join(releaseDir, path)
@@ -1217,7 +1216,6 @@ func runSlicerTests(c *C, tests []slicerTest) {
 				c.Assert(err, IsNil)
 			}
 
-			// Read the releases from the files on disk.
 			release, err := setup.ReadRelease(releaseDir)
 			c.Assert(err, IsNil)
 
@@ -1241,11 +1239,9 @@ func runSlicerTests(c *C, tests []slicerTest) {
 				Slice:   "manifest",
 			})
 
-			// Get the selection.
 			selection, err := setup.Select(release, slices)
 			c.Assert(err, IsNil)
 
-			// Set up the archives.
 			archives := map[string]archive.Archive{}
 			for name, setupArchive := range release.Archives {
 				archive := &testutil.TestArchive{
@@ -1261,7 +1257,6 @@ func runSlicerTests(c *C, tests []slicerTest) {
 				archives[name] = archive
 			}
 
-			// Create the root directory and cut the slice selection.
 			options := slicer.RunOptions{
 				Selection: selection,
 				Archives:  archives,
