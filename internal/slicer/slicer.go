@@ -252,13 +252,7 @@ func Run(options *RunOptions) error {
 	// Create new content not coming from packages. First group them by their
 	// relative path. Then create them and attribute them to the appropriate
 	// slices.
-	type contentNotInPkg struct {
-		// We have validated all the pathInfos to be the same so we can store
-		// one of them.
-		pathInfo setup.PathInfo
-		slices   []*setup.Slice
-	}
-	contentRelPaths := map[string]contentNotInPkg{}
+	contentRelPaths := map[string][]*setup.Slice{}
 	for _, slice := range options.Selection.Slices {
 		arch := archives[slice.Package].Options().Arch
 		for relPath, pathInfo := range slice.Contents {
@@ -270,32 +264,29 @@ func Run(options *RunOptions) error {
 				continue
 			}
 			if _, ok := contentRelPaths[relPath]; !ok {
-				contentRelPaths[relPath] = contentNotInPkg{
-					pathInfo: pathInfo,
-					slices:   []*setup.Slice{slice},
-				}
+				contentRelPaths[relPath] = []*setup.Slice{slice}
 			} else {
-				targetPath := contentRelPaths[relPath]
-				targetPath.slices = append(targetPath.slices, slice)
-				contentRelPaths[relPath] = targetPath
+				contentRelPaths[relPath] = append(contentRelPaths[relPath], slice)
 			}
 		}
 	}
-	for relPath, content := range contentRelPaths {
+	for relPath, slices := range contentRelPaths {
+		// All the pathInfo(s) are equivalent because of conflict validation.
+		pathInfo := slices[0].Contents[relPath]
 		data := pathData{
-			until:   content.pathInfo.Until,
-			mutable: content.pathInfo.Mutable,
+			until:   pathInfo.Until,
+			mutable: pathInfo.Mutable,
 		}
 		addKnownPath(knownPaths, relPath, data)
 		targetPath := filepath.Join(targetDir, relPath)
-		entry, err := createFile(targetPath, content.pathInfo)
+		entry, err := createFile(targetPath, pathInfo)
 		if err != nil {
 			return err
 		}
 
 		// Do not add paths with "until: mutate".
-		if content.pathInfo.Until != setup.UntilMutate {
-			for _, slice := range content.slices {
+		if pathInfo.Until != setup.UntilMutate {
+			for _, slice := range slices {
 				err = report.Add(slice, entry)
 				if err != nil {
 					return err
