@@ -164,7 +164,7 @@ func (r *Release) validate() error {
 	// with make:true) will always conflict with extracted content, because we
 	// cannot validate that they are the same without downloading the package.
 	paths := make(map[string]*Slice)
-	conflictable := make(map[string]*Slice)
+	globs := make(map[string]*Slice)
 	for _, pkg := range r.Packages {
 		for _, new := range pkg.Slices {
 			keys = append(keys, SliceKey{pkg.Name, new.Name})
@@ -184,7 +184,7 @@ func (r *Release) validate() error {
 				} else {
 					paths[newPath] = new
 					if newInfo.Kind == GeneratePath || newInfo.Kind == GlobPath {
-						conflictable[newPath] = new
+						globs[newPath] = new
 					}
 				}
 			}
@@ -192,13 +192,15 @@ func (r *Release) validate() error {
 	}
 
 	// Check for glob and generate conflicts.
-	for oldPath, old := range conflictable {
+	for oldPath, old := range globs {
 		oldInfo := old.Contents[oldPath]
 		for newPath, new := range paths {
-			newInfo := new.Contents[newPath]
 			if oldPath == newPath {
+				// Identical paths have been filtered earlier. This must be the
+				// exact same entry.
 				continue
 			}
+			newInfo := new.Contents[newPath]
 			if oldInfo.Kind == GlobPath && (newInfo.Kind == GlobPath || newInfo.Kind == CopyPath) {
 				if new.Package == old.Package {
 					continue
