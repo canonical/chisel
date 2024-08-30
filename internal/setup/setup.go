@@ -195,9 +195,9 @@ func (r *Release) validate() error {
 	for oldPath, old := range globs {
 		oldInfo := old.Contents[oldPath]
 		for newPath, new := range paths {
-			// Identical paths have been filtered earlier. This must be the exact
-			// same entry.
 			if oldPath == newPath {
+				// Identical paths have been filtered earlier. This must be the
+				// exact same entry.
 				continue
 			}
 			newInfo := new.Contents[newPath]
