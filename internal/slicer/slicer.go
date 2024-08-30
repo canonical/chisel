@@ -260,11 +260,7 @@ func Run(options *RunOptions) error {
 				pathInfo.Kind == setup.GeneratePath {
 				continue
 			}
-			if _, ok := relPaths[relPath]; !ok {
-				relPaths[relPath] = []*setup.Slice{slice}
-			} else {
-				relPaths[relPath] = append(relPaths[relPath], slice)
-			}
+			relPaths[relPath] = append(relPaths[relPath], slice)
 		}
 	}
 	for relPath, slices := range relPaths {
