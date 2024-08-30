@@ -1212,7 +1212,6 @@ func runSlicerTests(c *C, tests []slicerTest) {
 		for _, slices := range testutil.Permutations(test.slices) {
 			c.Logf("Summary: %s", test.summary)
 
-			// Defaults.
 			if _, ok := test.release["chisel.yaml"]; !ok {
 				test.release["chisel.yaml"] = defaultChiselYaml
 			}

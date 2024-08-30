@@ -323,7 +323,6 @@ func Run(options *RunOptions) error {
 		return err
 	}
 
-	// Generate manifests.
 	pkgInfos := []*archive.PackageInfo{}
 	for pkg, _ := range packages {
 		pkgInfo, err := archives[pkg].Info(pkg)
