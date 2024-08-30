@@ -264,8 +264,15 @@ func Run(options *RunOptions) error {
 		}
 	}
 	for relPath, slices := range relPaths {
-		// All the pathInfo(s) are equivalent because of conflict validation.
+		until := setup.UntilMutate
+		for _, slice := range slices {
+			if slice.Contents[relPath].Until == setup.UntilNone {
+				until = setup.UntilNone
+				break
+			}
+		}
 		pathInfo := slices[0].Contents[relPath]
+		pathInfo.Until = until
 		data := pathData{
 			until:   pathInfo.Until,
 			mutable: pathInfo.Mutable,

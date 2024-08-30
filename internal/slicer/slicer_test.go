@@ -1038,6 +1038,30 @@ var slicerTests = []slicerTest{{
 	filesystem:    map[string]string{},
 	manifestPaths: map[string]string{},
 }, {
+	summary: "Content not created in packages with until:mutate on one and reading from script",
+	slices: []setup.SliceKey{
+		{"test-package", "myslice1"},
+		{"test-package", "myslice2"},
+	},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice1:
+					contents:
+						/file: {text: foo, until: mutate}
+					mutate: |
+						content.read("/file")
+				myslice2:
+					contents:
+						/file: {text: foo}
+					mutate: |
+						content.read("/file")
+		`,
+	},
+	filesystem:    map[string]string{"/file": "file 0644 2c26b46b"},
+	manifestPaths: map[string]string{"/file": "file 0644 2c26b46b {test-package_myslice1,test-package_myslice2}"},
+}, {
 	summary: "Install two packages, both are recorded",
 	slices: []setup.SliceKey{
 		{"test-package", "myslice"},
