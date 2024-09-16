@@ -197,3 +197,16 @@ func Lnk(mode int64, path, target string) TarEntry {
 		},
 	}
 }
+
+// Hln is a shortcut for creating a hard link TarEntry structure (with
+// tar.Typeflag set to tar.TypeLink). Hln stands for "Hard LiNk".
+func Hln(mode int64, path, target string) TarEntry {
+	return TarEntry{
+		Header: tar.Header{
+			Typeflag: tar.TypeLink,
+			Name:     path,
+			Mode:     mode,
+			Linkname: target,
+		},
+	}
+}

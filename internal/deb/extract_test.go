@@ -352,6 +352,62 @@ var extractTests = []extractTest{{
 		},
 	},
 	error: `cannot extract from package "test-package": path /dir/ requested twice with diverging mode: 0777 != 0000`,
+}, {
+	summary: "Dangling hard link",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		testutil.Dir(0755, "./"),
+		testutil.Hln(0644, "./link", "./non-existing-target"),
+	}),
+	options: deb.ExtractOptions{
+		Extract: map[string][]deb.ExtractInfo{
+			"/**": []deb.ExtractInfo{{
+				Path: "/**",
+			}},
+		},
+	},
+	error: `cannot extract from package "test-package": link target does not exist: \/[^ ]*\/non-existing-target`,
+}, {
+	summary: "Hard link to symlink does not follow symlink",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		testutil.Dir(0755, "./"),
+		testutil.Lnk(0644, "./symlink", "./file"),
+		testutil.Hln(0644, "./hardlink", "./symlink"),
+	}),
+	options: deb.ExtractOptions{
+		Extract: map[string][]deb.ExtractInfo{
+			"/**": []deb.ExtractInfo{{
+				Path: "/**",
+			}},
+		},
+	},
+	result: map[string]string{
+		"/hardlink": "symlink ./file",
+		"/symlink":  "symlink ./file",
+	},
+	notCreated: []string{},
+}, {
+	summary: "Extract all types of files",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		testutil.Dir(0755, "./"),
+		testutil.Dir(0755, "./dir/"),
+		testutil.Reg(0644, "./dir/file", "text for file"),
+		testutil.Lnk(0644, "./symlink", "./dir/file"),
+		testutil.Hln(0644, "./hardlink", "./dir/file"),
+	}),
+	options: deb.ExtractOptions{
+		Extract: map[string][]deb.ExtractInfo{
+			"/**": []deb.ExtractInfo{{
+				Path: "/**",
+			}},
+		},
+	},
+	result: map[string]string{
+		"/dir/":     "dir 0755",
+		"/dir/file": "file 0644 28121945",
+		"/hardlink": "file 0644 28121945",
+		"/symlink":  "symlink ./dir/file",
+	},
+	notCreated: []string{},
 }}
 
 func (s *S) TestExtract(c *C) {
