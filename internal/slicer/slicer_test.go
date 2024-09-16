@@ -247,8 +247,8 @@ var slicerTests = []slicerTest{{
 	summary: "Copyright is installed",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
 	pkgs: map[string]testutil.TestPackage{
-		// Add the copyright entries to the package.
 		"test-package": {
+			// Add the copyright entries to the package.
 			Data: testutil.MustMakeDeb(append(testutil.TestPackageEntries, testPackageCopyrightEntries...)),
 		},
 	},

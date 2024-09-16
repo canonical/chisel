@@ -451,13 +451,13 @@ func generateManifests(options *generateManifestsOptions) error {
 		// Nothing to do.
 		return nil
 	}
-	jsonwallw := jsonwall.NewDBWriter(&jsonwall.DBWriterOptions{
+	dbw := jsonwall.NewDBWriter(&jsonwall.DBWriterOptions{
 		Schema: manifest.Schema,
 	})
 
 	// Add packages to the manifest.
 	for _, info := range options.packageInfo {
-		err := jsonwallw.Add(&manifest.Package{
+		err := dbw.Add(&manifest.Package{
 			Kind:    "package",
 			Name:    info.Name,
 			Version: info.Version,
@@ -470,7 +470,7 @@ func generateManifests(options *generateManifestsOptions) error {
 	}
 	// Add slices to the manifest.
 	for _, s := range options.selection {
-		err := jsonwallw.Add(&manifest.Slice{
+		err := dbw.Add(&manifest.Slice{
 			Kind: "slice",
 			Name: s.String(),
 		})
@@ -481,19 +481,19 @@ func generateManifests(options *generateManifestsOptions) error {
 	// Add paths and contents to the manifest.
 	for _, entry := range options.report.Entries {
 		sliceNames := []string{}
-		for s := range entry.Slices {
-			err := jsonwallw.Add(&manifest.Content{
+		for slice := range entry.Slices {
+			err := dbw.Add(&manifest.Content{
 				Kind:  "content",
-				Slice: s.String(),
+				Slice: slice.String(),
 				Path:  entry.Path,
 			})
 			if err != nil {
 				return err
 			}
-			sliceNames = append(sliceNames, s.String())
+			sliceNames = append(sliceNames, slice.String())
 		}
 		sort.Strings(sliceNames)
-		err := jsonwallw.Add(&manifest.Path{
+		err := dbw.Add(&manifest.Path{
 			Kind:      "path",
 			Path:      entry.Path,
 			Mode:      fmt.Sprintf("0%o", unixPerm(entry.Mode)),
@@ -510,19 +510,19 @@ func generateManifests(options *generateManifestsOptions) error {
 	// Add the manifest path and content entries to the manifest.
 	for path, slices := range manifestSlices {
 		sliceNames := []string{}
-		for _, s := range slices {
-			err := jsonwallw.Add(&manifest.Content{
+		for _, slice := range slices {
+			err := dbw.Add(&manifest.Content{
 				Kind:  "content",
-				Slice: s.String(),
+				Slice: slice.String(),
 				Path:  path,
 			})
 			if err != nil {
 				return err
 			}
-			sliceNames = append(sliceNames, s.String())
+			sliceNames = append(sliceNames, slice.String())
 		}
 		sort.Strings(sliceNames)
-		err := jsonwallw.Add(&manifest.Path{
+		err := dbw.Add(&manifest.Path{
 			Kind:   "path",
 			Path:   path,
 			Mode:   fmt.Sprintf("0%o", unixPerm(ManifestMode)),
@@ -552,7 +552,7 @@ func generateManifests(options *generateManifestsOptions) error {
 		return err
 	}
 	defer w.Close()
-	_, err = jsonwallw.WriteTo(w)
+	_, err = dbw.WriteTo(w)
 	return err
 }
 
@@ -568,12 +568,12 @@ func unixPerm(mode fs.FileMode) (perm uint32) {
 // returns a map from the manifest path to all the slices that declare it.
 func locateManifestSlices(slices []*setup.Slice) (map[string][]*setup.Slice, error) {
 	manifestSlices := make(map[string][]*setup.Slice)
-	for _, s := range slices {
-		for path, info := range s.Contents {
+	for _, slice := range slices {
+		for path, info := range slice.Contents {
 			if info.Generate == setup.GenerateManifest {
 				dir := strings.TrimSuffix(path, "**")
 				path = filepath.Join(dir, ManifestFileName)
-				manifestSlices[path] = append(manifestSlices[path], s)
+				manifestSlices[path] = append(manifestSlices[path], slice)
 			}
 		}
 	}
