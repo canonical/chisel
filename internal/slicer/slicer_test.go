@@ -1275,7 +1275,7 @@ func runSlicerTests(c *C, tests []slicerTest) {
 						Components: setupArchive.Components,
 						Arch:       test.arch,
 					},
-					Pkgs: test.pkgs,
+					Packages: test.pkgs,
 				}
 				archives[name] = archive
 			}

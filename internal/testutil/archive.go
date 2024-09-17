@@ -9,8 +9,8 @@ import (
 )
 
 type TestArchive struct {
-	Opts archive.Options
-	Pkgs map[string]TestPackage
+	Opts     archive.Options
+	Packages map[string]TestPackage
 }
 
 type TestPackage struct {
@@ -26,19 +26,19 @@ func (a *TestArchive) Options() *archive.Options {
 }
 
 func (a *TestArchive) Fetch(pkgName string) (io.ReadCloser, error) {
-	if pkg, ok := a.Pkgs[pkgName]; ok {
+	if pkg, ok := a.Packages[pkgName]; ok {
 		return io.NopCloser(bytes.NewBuffer(pkg.Data)), nil
 	}
 	return nil, fmt.Errorf("cannot find package %q in archive", pkgName)
 }
 
 func (a *TestArchive) Exists(pkg string) bool {
-	_, ok := a.Pkgs[pkg]
+	_, ok := a.Packages[pkg]
 	return ok
 }
 
 func (a *TestArchive) Info(pkgName string) (*archive.PackageInfo, error) {
-	pkg, ok := a.Pkgs[pkgName]
+	pkg, ok := a.Packages[pkgName]
 	if !ok {
 		return nil, fmt.Errorf("cannot find package %q in archive", pkgName)
 	}
