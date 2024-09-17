@@ -1295,25 +1295,7 @@ func runSlicerTests(c *C, tests []slicerTest) {
 			}
 			c.Assert(err, IsNil)
 
-			// Get the manifest from disk and read it.
-			s, err := os.Stat(path.Join(options.TargetDir, manifestPath))
-			c.Assert(err, IsNil)
-			c.Assert(s.Mode(), Equals, slicer.ManifestMode)
-			f, err := os.Open(path.Join(options.TargetDir, manifestPath))
-			c.Assert(err, IsNil)
-			defer f.Close()
-			r, err := zstd.NewReader(f)
-			c.Assert(err, IsNil)
-			defer r.Close()
-			mfest, err := manifest.Read(r)
-			c.Assert(err, IsNil)
-			err = manifest.Validate(mfest)
-			c.Assert(err, IsNil)
-			err = mfest.IteratePaths(manifestPath, func(p *manifest.Path) error {
-				c.Assert(p.Mode, Equals, fmt.Sprintf("%#o", slicer.ManifestMode))
-				return nil
-			})
-			c.Assert(err, IsNil)
+			mfest := readManifest(c, options.TargetDir, manifestPath)
 
 			// Assert state of final filesystem.
 			if test.filesystem != nil {
@@ -1388,4 +1370,30 @@ func dumpManifestPkgs(mfest *manifest.Manifest) (map[string]string, error) {
 		return nil, err
 	}
 	return result, nil
+}
+
+func readManifest(c *C, targetDir, manifestPath string) *manifest.Manifest {
+	f, err := os.Open(path.Join(targetDir, manifestPath))
+	c.Assert(err, IsNil)
+	defer f.Close()
+	r, err := zstd.NewReader(f)
+	c.Assert(err, IsNil)
+	defer r.Close()
+	mfest, err := manifest.Read(r)
+	c.Assert(err, IsNil)
+	err = manifest.Validate(mfest)
+	c.Assert(err, IsNil)
+
+	// Assert that the mode of the manifest.wall file matches the one recorded
+	// in the manifest itself.
+	s, err := os.Stat(path.Join(targetDir, manifestPath))
+	c.Assert(err, IsNil)
+	c.Assert(s.Mode(), Equals, slicer.ManifestMode)
+	err = mfest.IteratePaths(manifestPath, func(p *manifest.Path) error {
+		c.Assert(p.Mode, Equals, fmt.Sprintf("%#o", slicer.ManifestMode))
+		return nil
+	})
+	c.Assert(err, IsNil)
+
+	return mfest
 }
