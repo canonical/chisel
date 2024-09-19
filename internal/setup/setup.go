@@ -391,15 +391,14 @@ type yamlPackage struct {
 }
 
 type yamlPath struct {
-	Dir     bool    `yaml:"make,omitempty"`
-	Copy    string  `yaml:"copy,omitempty"`
-	Text    *string `yaml:"text,omitempty"`
-	Symlink string  `yaml:"symlink,omitempty"`
-	Mutable bool    `yaml:"mutable,omitempty"`
-
+	Dir      bool         `yaml:"make,omitempty"`
+	Mode     yamlMode     `yaml:"mode,omitempty"`
+	Copy     string       `yaml:"copy,omitempty"`
+	Text     *string      `yaml:"text,omitempty"`
+	Symlink  string       `yaml:"symlink,omitempty"`
+	Mutable  bool         `yaml:"mutable,omitempty"`
 	Until    PathUntil    `yaml:"until,omitempty"`
 	Arch     yamlArch     `yaml:"arch,omitempty"`
-	Mode     yamlMode     `yaml:"mode,omitempty"`
 	Generate GenerateKind `yaml:"generate,omitempty"`
 }
 

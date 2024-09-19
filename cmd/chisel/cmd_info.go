@@ -18,15 +18,14 @@ The info command shows detailed information about package slices.
 It accepts a whitespace-separated list of strings. The list can be
 composed of package names, slice names, or a combination of both. The
 default output format is YAML. When multiple arguments are provided,
-the output is a list of YAML documents, separated by a line
-consisting of three dashes ("---").
+the output is a list of YAML documents separated by a "---" line.
 
 Slice definitions are shown verbatim according to their definition in
-the Chisel Releases. For example, globs are not expanded.
+the selected release. For example, globs are not expanded.
 `
 
 var infoDescs = map[string]string{
-	"release": "Chisel Release (i.e. branch name) or directory",
+	"release": "Chisel release name or directory (e.g. ubuntu-22.04)",
 }
 
 type infoCmd struct {
