@@ -99,32 +99,6 @@ var infoTests = []infoTest{{
 					- mypkg2_myslice
 	`,
 }, {
-	summary: "All kinds of paths",
-	input:   infoRelease,
-	query:   []string{"mypkg3"},
-	stdout: `
-		package: mypkg3
-		archive: ubuntu
-		slices:
-			myslice:
-				essential:
-					- mypkg1_myslice1
-					- mypkg2_myslice
-				contents:
-					/dir/arch-specific*: {arch: [amd64, arm64, i386]}
-					/dir/copy: {copy: /dir/file}
-					/dir/glob*: {}
-					/dir/mutable: {text: TODO, mutable: true, arch: riscv64}
-					/dir/other-file: {}
-					/dir/sub-dir/: {make: true, mode: 0644}
-					/dir/symlink: {symlink: /dir/file}
-					/dir/unfolded: {copy: /dir/file, mode: 0644}
-					/dir/until: {until: mutate}
-				mutate: |
-					# Test multi-line string.
-					content.write("/dir/mutable", foo)
-	`,
-}, {
 	summary: "Same slice appearing multiple times",
 	input:   infoRelease,
 	query:   []string{"mypkg1_myslice1", "mypkg1_myslice1", "mypkg1_myslice1"},

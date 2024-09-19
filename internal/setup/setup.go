@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
-	"sort"
 	"strings"
 
 	"golang.org/x/crypto/openpgp/packet"
@@ -831,10 +830,12 @@ func pathInfoToYAML(pi *PathInfo) (*yamlPath, error) {
 	case CopyPath:
 		path.Copy = pi.Info
 	case TextPath:
-		path.Text = &pi.Info
+		text := pi.Info
+		path.Text = &text
 	case SymlinkPath:
 		path.Symlink = pi.Info
 	case GlobPath:
+		// Nothing more needs to be done for this type.
 	default:
 		return nil, fmt.Errorf("internal error: unrecognised PathInfo type: %s", pi.Kind)
 	}
@@ -851,10 +852,8 @@ func sliceToYAML(s *Slice) (*yamlSlice, error) {
 	for _, key := range s.Essential {
 		slice.Essential = append(slice.Essential, key.String())
 	}
-	sort.Strings(slice.Essential)
 	for path, info := range s.Contents {
-		pi := info
-		yamlPath, err := pathInfoToYAML(&pi)
+		yamlPath, err := pathInfoToYAML(&info)
 		if err != nil {
 			return nil, err
 		}

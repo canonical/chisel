@@ -1665,9 +1665,7 @@ func (s *S) TestPackageMarshalYAML(c *C) {
 		dir := c.MkDir()
 		// Write chisel.yaml.
 		fpath := filepath.Join(dir, "chisel.yaml")
-		err := os.MkdirAll(filepath.Dir(fpath), 0755)
-		c.Assert(err, IsNil)
-		err = os.WriteFile(fpath, testutil.Reindent(data), 0644)
+		err := os.WriteFile(fpath, testutil.Reindent(data), 0644)
 		c.Assert(err, IsNil)
 		// Write the packages YAML.
 		for _, pkg := range test.release.Packages {
@@ -1685,6 +1683,59 @@ func (s *S) TestPackageMarshalYAML(c *C) {
 
 		release.Path = ""
 		c.Assert(release, DeepEquals, test.release)
+	}
+}
+
+func (s *S) TestPackageYAMLFormat(c *C) {
+	var input = map[string]string{
+		"chisel.yaml": string(defaultChiselYaml),
+		"slices/mypkg1.yaml": `
+			package: mypkg1
+			archive: ubuntu
+			slices:
+				myslice1:
+					contents:
+						/dir/file: {}
+		`,
+		"slices/mypkg3.yaml": `
+			package: mypkg3
+			archive: ubuntu
+			slices:
+				myslice:
+					essential:
+						- mypkg1_myslice1
+					contents:
+						/dir/arch-specific*: {arch: [amd64, arm64, i386]}
+						/dir/copy: {copy: /dir/file}
+						/dir/glob*: {}
+						/dir/mutable: {text: TODO, mutable: true, arch: riscv64}
+						/dir/other-file: {}
+						/dir/sub-dir/: {make: true, mode: 0644}
+						/dir/symlink: {symlink: /dir/file}
+						/dir/until: {until: mutate}
+					mutate: |
+						# Test multi-line string.
+						content.write("/dir/mutable", foo)
+		`,
+	}
+
+	dir := c.MkDir()
+	for fname, data := range input {
+		fpath := filepath.Join(dir, fname)
+		err := os.MkdirAll(filepath.Dir(fpath), 0755)
+		c.Assert(err, IsNil)
+		err = os.WriteFile(fpath, testutil.Reindent(string(data)), 0644)
+		c.Assert(err, IsNil)
+	}
+
+	release, err := setup.ReadRelease(dir)
+	c.Assert(err, IsNil)
+
+	for _, pkg := range release.Packages {
+		data, err := yaml.Marshal(pkg)
+		c.Assert(err, IsNil)
+		expected := string(testutil.Reindent(input[pkg.Path]))
+		c.Assert(strings.TrimSpace(string(data)), Equals, strings.TrimSpace(expected))
 	}
 }
 
