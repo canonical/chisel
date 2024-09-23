@@ -33,7 +33,7 @@ func (a *TestArchive) Fetch(pkgName string) (io.ReadCloser, *archive.PackageInfo
 	info := &archive.PackageInfo{
 		Name:    pkg.Name,
 		Version: pkg.Version,
-		Hash:    pkg.Hash,
+		SHA256:  pkg.Hash,
 		Arch:    pkg.Arch,
 	}
 	return io.NopCloser(bytes.NewBuffer(pkg.Data)), info, nil
@@ -52,7 +52,7 @@ func (a *TestArchive) Info(pkgName string) (*archive.PackageInfo, error) {
 	return &archive.PackageInfo{
 		Name:    pkg.Name,
 		Version: pkg.Version,
-		Hash:    pkg.Hash,
+		SHA256:  pkg.Hash,
 		Arch:    pkg.Arch,
 	}, nil
 }

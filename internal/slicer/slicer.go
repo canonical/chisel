@@ -455,13 +455,14 @@ func generateManifests(options *generateManifestsOptions) error {
 			Kind:    "package",
 			Name:    info.Name,
 			Version: info.Version,
-			Digest:  info.Hash,
+			Digest:  info.SHA256,
 			Arch:    info.Arch,
 		})
 		if err != nil {
 			return err
 		}
 	}
+
 	// Add slices to the manifest.
 	for _, s := range options.selection {
 		err := dbw.Add(&manifest.Slice{
@@ -472,6 +473,7 @@ func generateManifests(options *generateManifestsOptions) error {
 			return err
 		}
 	}
+
 	// Add paths and contents to the manifest.
 	for _, entry := range options.report.Entries {
 		sliceNames := []string{}
@@ -501,6 +503,7 @@ func generateManifests(options *generateManifestsOptions) error {
 			return err
 		}
 	}
+
 	// Add the manifest path and content entries to the manifest.
 	for path, slices := range manifestSlices {
 		sliceNames := []string{}

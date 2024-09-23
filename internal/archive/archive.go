@@ -27,7 +27,7 @@ type PackageInfo struct {
 	Name    string
 	Version string
 	Arch    string
-	Hash    string
+	SHA256  string
 }
 
 type Options struct {
@@ -135,7 +135,7 @@ func (a *ubuntuArchive) Fetch(pkg string) (io.ReadCloser, *PackageInfo, error) {
 		Name:    section.Get("Package"),
 		Version: section.Get("Version"),
 		Arch:    section.Get("Architecture"),
-		Hash:    section.Get("SHA256"),
+		SHA256:  section.Get("SHA256"),
 	}
 	return reader, info, nil
 }
@@ -149,7 +149,7 @@ func (a *ubuntuArchive) Info(pkg string) (*PackageInfo, error) {
 		Name:    section.Get("Package"),
 		Version: section.Get("Version"),
 		Arch:    section.Get("Architecture"),
-		Hash:    section.Get("SHA256"),
+		SHA256:  section.Get("SHA256"),
 	}
 	return info, nil
 }

@@ -215,7 +215,7 @@ func (s *httpSuite) TestFetchPackage(c *C) {
 		Name:    "mypkg1",
 		Version: "1.1",
 		Arch:    "amd64",
-		Hash:    "1f08ef04cfe7a8087ee38a1ea35fa1810246648136c3c42d5a61ad6503d85e05",
+		SHA256:  "1f08ef04cfe7a8087ee38a1ea35fa1810246648136c3c42d5a61ad6503d85e05",
 	})
 	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
 
@@ -226,7 +226,7 @@ func (s *httpSuite) TestFetchPackage(c *C) {
 		Name:    "mypkg4",
 		Version: "1.4",
 		Arch:    "amd64",
-		Hash:    "54af70097b30b33cfcbb6911ad3d0df86c2d458928169e348fa7873e4fc678e4",
+		SHA256:  "54af70097b30b33cfcbb6911ad3d0df86c2d458928169e348fa7873e4fc678e4",
 	})
 	c.Assert(read(pkg), Equals, "mypkg4 1.4 data")
 }
@@ -257,7 +257,7 @@ func (s *httpSuite) TestFetchPortsPackage(c *C) {
 		Name:    "mypkg1",
 		Version: "1.1",
 		Arch:    "arm64",
-		Hash:    "1f08ef04cfe7a8087ee38a1ea35fa1810246648136c3c42d5a61ad6503d85e05",
+		SHA256:  "1f08ef04cfe7a8087ee38a1ea35fa1810246648136c3c42d5a61ad6503d85e05",
 	})
 	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
 
@@ -268,7 +268,7 @@ func (s *httpSuite) TestFetchPortsPackage(c *C) {
 		Name:    "mypkg4",
 		Version: "1.4",
 		Arch:    "arm64",
-		Hash:    "54af70097b30b33cfcbb6911ad3d0df86c2d458928169e348fa7873e4fc678e4",
+		SHA256:  "54af70097b30b33cfcbb6911ad3d0df86c2d458928169e348fa7873e4fc678e4",
 	})
 	c.Assert(read(pkg), Equals, "mypkg4 1.4 data")
 }
@@ -306,7 +306,7 @@ func (s *httpSuite) TestFetchSecurityPackage(c *C) {
 		Name:    "mypkg1",
 		Version: "1.1.2.2",
 		Arch:    "amd64",
-		Hash:    "5448585bdd916e5023eff2bc1bc3b30bcc6ee9db9c03e531375a6a11ddf0913c",
+		SHA256:  "5448585bdd916e5023eff2bc1bc3b30bcc6ee9db9c03e531375a6a11ddf0913c",
 	})
 	c.Assert(read(pkg), Equals, "package from jammy-security")
 
@@ -316,7 +316,7 @@ func (s *httpSuite) TestFetchSecurityPackage(c *C) {
 		Name:    "mypkg2",
 		Version: "1.2",
 		Arch:    "amd64",
-		Hash:    "a4b4f3f3a8fa09b69e3ba23c60a41a1f8144691fd371a2455812572fd02e6f79",
+		SHA256:  "a4b4f3f3a8fa09b69e3ba23c60a41a1f8144691fd371a2455812572fd02e6f79",
 	})
 	c.Assert(read(pkg), Equals, "mypkg2 1.2 data")
 }
@@ -447,7 +447,7 @@ var packageInfoTests = []struct {
 		Name:    "mypkg1",
 		Version: "1.1",
 		Arch:    "amd64",
-		Hash:    "1f08ef04cfe7a8087ee38a1ea35fa1810246648136c3c42d5a61ad6503d85e05",
+		SHA256:  "1f08ef04cfe7a8087ee38a1ea35fa1810246648136c3c42d5a61ad6503d85e05",
 	},
 }, {
 	summary: "Package not found in archive",
