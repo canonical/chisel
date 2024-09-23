@@ -3,6 +3,7 @@ package slicer_test
 import (
 	"archive/tar"
 	"fmt"
+	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -1388,9 +1389,9 @@ func readManifest(c *C, targetDir, manifestPath string) *manifest.Manifest {
 	// in the manifest itself.
 	s, err := os.Stat(path.Join(targetDir, manifestPath))
 	c.Assert(err, IsNil)
-	c.Assert(s.Mode(), Equals, slicer.ManifestMode)
+	c.Assert(s.Mode(), Equals, fs.FileMode(0644))
 	err = mfest.IteratePaths(manifestPath, func(p *manifest.Path) error {
-		c.Assert(p.Mode, Equals, fmt.Sprintf("%#o", slicer.ManifestMode))
+		c.Assert(p.Mode, Equals, fmt.Sprintf("%#o", fs.FileMode(0644)))
 		return nil
 	})
 	c.Assert(err, IsNil)

@@ -24,8 +24,8 @@ import (
 	"github.com/canonical/chisel/internal/setup"
 )
 
-const ManifestFileName = "manifest.wall"
-const ManifestMode fs.FileMode = 0644
+const manifestFileName = "manifest.wall"
+const manifestMode fs.FileMode = 0644
 
 type RunOptions struct {
 	Selection *setup.Selection
@@ -525,7 +525,7 @@ func generateManifests(options *generateManifestsOptions) error {
 		err := dbw.Add(&manifest.Path{
 			Kind:   "path",
 			Path:   path,
-			Mode:   fmt.Sprintf("0%o", unixPerm(ManifestMode)),
+			Mode:   fmt.Sprintf("0%o", unixPerm(manifestMode)),
 			Slices: sliceNames,
 		})
 		if err != nil {
@@ -540,7 +540,7 @@ func generateManifests(options *generateManifestsOptions) error {
 		if err := os.MkdirAll(filepath.Dir(absPath), 0755); err != nil {
 			return err
 		}
-		file, err := os.OpenFile(absPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, ManifestMode)
+		file, err := os.OpenFile(absPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, manifestMode)
 		if err != nil {
 			return err
 		}
@@ -572,7 +572,7 @@ func locateManifestSlices(slices []*setup.Slice) (map[string][]*setup.Slice, err
 		for path, info := range slice.Contents {
 			if info.Generate == setup.GenerateManifest {
 				dir := strings.TrimSuffix(path, "**")
-				path = filepath.Join(dir, ManifestFileName)
+				path = filepath.Join(dir, manifestFileName)
 				manifestSlices[path] = append(manifestSlices[path], slice)
 			}
 		}
