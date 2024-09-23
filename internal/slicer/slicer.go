@@ -153,16 +153,18 @@ func Run(options *RunOptions) error {
 
 	// Fetch all packages, using the selection order.
 	packages := make(map[string]io.ReadCloser)
+	var pkgInfos []*archive.PackageInfo
 	for _, slice := range options.Selection.Slices {
 		if packages[slice.Package] != nil {
 			continue
 		}
-		reader, err := archives[slice.Package].Fetch(slice.Package)
+		reader, info, err := archives[slice.Package].Fetch(slice.Package)
 		if err != nil {
 			return err
 		}
 		defer reader.Close()
 		packages[slice.Package] = reader
+		pkgInfos = append(pkgInfos, info)
 	}
 
 	// When creating content, record if a path is known and whether they are
@@ -323,14 +325,6 @@ func Run(options *RunOptions) error {
 		return err
 	}
 
-	pkgInfos := []*archive.PackageInfo{}
-	for pkg, _ := range packages {
-		pkgInfo, err := archives[pkg].Info(pkg)
-		if err != nil {
-			return err
-		}
-		pkgInfos = append(pkgInfos, pkgInfo)
-	}
 	err = generateManifests(&generateManifestsOptions{
 		packageInfo: pkgInfos,
 		selection:   options.Selection.Slices,

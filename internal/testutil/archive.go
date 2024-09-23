@@ -25,11 +25,18 @@ func (a *TestArchive) Options() *archive.Options {
 	return &a.Opts
 }
 
-func (a *TestArchive) Fetch(pkgName string) (io.ReadCloser, error) {
-	if pkg, ok := a.Packages[pkgName]; ok {
-		return io.NopCloser(bytes.NewBuffer(pkg.Data)), nil
+func (a *TestArchive) Fetch(pkgName string) (io.ReadCloser, *archive.PackageInfo, error) {
+	pkg, ok := a.Packages[pkgName]
+	if !ok {
+		return nil, nil, fmt.Errorf("cannot find package %q in archive", pkgName)
 	}
-	return nil, fmt.Errorf("cannot find package %q in archive", pkgName)
+	info := &archive.PackageInfo{
+		Name:    pkg.Name,
+		Version: pkg.Version,
+		Hash:    pkg.Hash,
+		Arch:    pkg.Arch,
+	}
+	return io.NopCloser(bytes.NewBuffer(pkg.Data)), info, nil
 }
 
 func (a *TestArchive) Exists(pkg string) bool {

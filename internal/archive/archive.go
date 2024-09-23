@@ -18,7 +18,7 @@ import (
 
 type Archive interface {
 	Options() *Options
-	Fetch(pkg string) (io.ReadCloser, error)
+	Fetch(pkg string) (io.ReadCloser, *PackageInfo, error)
 	Exists(pkg string) bool
 	Info(pkg string) (*PackageInfo, error)
 }
@@ -120,18 +120,24 @@ func (a *ubuntuArchive) selectPackage(pkg string) (control.Section, *ubuntuIndex
 	return selectedSection, selectedIndex, nil
 }
 
-func (a *ubuntuArchive) Fetch(pkg string) (io.ReadCloser, error) {
+func (a *ubuntuArchive) Fetch(pkg string) (io.ReadCloser, *PackageInfo, error) {
 	section, index, err := a.selectPackage(pkg)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	suffix := section.Get("Filename")
 	logf("Fetching %s...", suffix)
 	reader, err := index.fetch("../../"+suffix, section.Get("SHA256"), fetchBulk)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return reader, nil
+	info := &PackageInfo{
+		Name:    section.Get("Package"),
+		Version: section.Get("Version"),
+		Arch:    section.Get("Architecture"),
+		Hash:    section.Get("SHA256"),
+	}
+	return reader, info, nil
 }
 
 func (a *ubuntuArchive) Info(pkg string) (*PackageInfo, error) {
