@@ -817,6 +817,7 @@ func Select(release *Release, slices []SliceKey) (*Selection, error) {
 }
 
 // pathInfoToYAML converts a PathInfo object to a yamlPath object.
+// The returned object is going to have pointers to the given PathInfo object.
 func pathInfoToYAML(pi *PathInfo) (*yamlPath, error) {
 	path := &yamlPath{
 		Mode:    yamlMode(pi.Mode),
@@ -830,8 +831,7 @@ func pathInfoToYAML(pi *PathInfo) (*yamlPath, error) {
 	case CopyPath:
 		path.Copy = pi.Info
 	case TextPath:
-		text := pi.Info
-		path.Text = &text
+		path.Text = &pi.Info
 	case SymlinkPath:
 		path.Symlink = pi.Info
 	case GlobPath:
@@ -853,6 +853,8 @@ func sliceToYAML(s *Slice) (*yamlSlice, error) {
 		slice.Essential = append(slice.Essential, key.String())
 	}
 	for path, info := range s.Contents {
+		// TODO remove the following line after upgrading to Go 1.22 or higher.
+		info := info
 		yamlPath, err := pathInfoToYAML(&info)
 		if err != nil {
 			return nil, err

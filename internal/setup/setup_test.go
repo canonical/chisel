@@ -1687,55 +1687,121 @@ func (s *S) TestPackageMarshalYAML(c *C) {
 }
 
 func (s *S) TestPackageYAMLFormat(c *C) {
-	var input = map[string]string{
-		"chisel.yaml": string(defaultChiselYaml),
-		"slices/mypkg1.yaml": `
-			package: mypkg1
-			archive: ubuntu
-			slices:
-				myslice1:
-					contents:
-						/dir/file: {}
-		`,
-		"slices/mypkg3.yaml": `
-			package: mypkg3
-			archive: ubuntu
-			slices:
-				myslice:
-					essential:
-						- mypkg1_myslice1
-					contents:
-						/dir/arch-specific*: {arch: [amd64, arm64, i386]}
-						/dir/copy: {copy: /dir/file}
-						/dir/glob*: {}
-						/dir/mutable: {text: TODO, mutable: true, arch: riscv64}
-						/dir/other-file: {}
-						/dir/sub-dir/: {make: true, mode: 0644}
-						/dir/symlink: {symlink: /dir/file}
-						/dir/until: {until: mutate}
-					mutate: |
-						# Test multi-line string.
-						content.write("/dir/mutable", foo)
-		`,
-	}
+	var tests = []struct {
+		summary  string
+		input    map[string]string
+		expected map[string]string
+	}{{
+		summary: "Basic slice",
+		input: map[string]string{
+			"slices/mypkg.yaml": `
+				package: mypkg
+				archive: ubuntu
+				slices:
+					myslice:
+						contents:
+							/dir/file: {}
+			`,
+		},
+	}, {
+		summary: "All types of paths",
+		input: map[string]string{
+			"slices/mypkg.yaml": `
+				package: mypkg
+				archive: ubuntu
+				slices:
+					myslice:
+						contents:
+							/dir/arch-specific*: {arch: [amd64, arm64, i386]}
+							/dir/copy: {copy: /dir/file}
+							/dir/empty-file: {text: ""}
+							/dir/glob*: {}
+							/dir/mutable: {text: TODO, mutable: true, arch: riscv64}
+							/dir/other-file: {}
+							/dir/sub-dir/: {make: true, mode: 0644}
+							/dir/symlink: {symlink: /dir/file}
+							/dir/until: {until: mutate}
+						mutate: |
+							# Test multi-line string.
+							content.write("/dir/mutable", foo)
+			`,
+		},
+	}, {
+		summary: "Global and per-slice essentials",
+		input: map[string]string{
+			"slices/mypkg.yaml": `
+				package: mypkg
+				archive: ubuntu
+				essential:
+					- mypkg_myslice3
+				slices:
+					myslice1:
+						essential:
+							- mypkg_myslice2
+						contents:
+							/dir/file1: {}
+					myslice2:
+						contents:
+							/dir/file2: {}
+					myslice3:
+						contents:
+							/dir/file3: {}
+			`,
+		},
+		expected: map[string]string{
+			"slices/mypkg.yaml": `
+				package: mypkg
+				archive: ubuntu
+				slices:
+					myslice1:
+						essential:
+							- mypkg_myslice3
+							- mypkg_myslice2
+						contents:
+							/dir/file1: {}
+					myslice2:
+						essential:
+							- mypkg_myslice3
+						contents:
+							/dir/file2: {}
+					myslice3:
+						contents:
+							/dir/file3: {}
+			`,
+		},
+	}}
 
-	dir := c.MkDir()
-	for fname, data := range input {
-		fpath := filepath.Join(dir, fname)
-		err := os.MkdirAll(filepath.Dir(fpath), 0755)
-		c.Assert(err, IsNil)
-		err = os.WriteFile(fpath, testutil.Reindent(string(data)), 0644)
-		c.Assert(err, IsNil)
-	}
+	for _, test := range tests {
+		c.Logf("Summary: %s", test.summary)
 
-	release, err := setup.ReadRelease(dir)
-	c.Assert(err, IsNil)
+		if _, ok := test.input["chisel.yaml"]; !ok {
+			test.input["chisel.yaml"] = string(defaultChiselYaml)
+		}
 
-	for _, pkg := range release.Packages {
-		data, err := yaml.Marshal(pkg)
+		dir := c.MkDir()
+		for path, data := range test.input {
+			fpath := filepath.Join(dir, path)
+			err := os.MkdirAll(filepath.Dir(fpath), 0755)
+			c.Assert(err, IsNil)
+			err = os.WriteFile(fpath, testutil.Reindent(data), 0644)
+			c.Assert(err, IsNil)
+		}
+
+		release, err := setup.ReadRelease(dir)
 		c.Assert(err, IsNil)
-		expected := string(testutil.Reindent(input[pkg.Path]))
-		c.Assert(strings.TrimSpace(string(data)), Equals, strings.TrimSpace(expected))
+
+		for _, pkg := range release.Packages {
+			data, err := yaml.Marshal(pkg)
+			c.Assert(err, IsNil)
+			var expected string
+			if test.expected == nil || test.expected[pkg.Path] == "" {
+				expected = test.input[pkg.Path]
+			} else {
+				expected = test.expected[pkg.Path]
+			}
+			expected = string(testutil.Reindent(expected))
+			c.Assert(strings.TrimSpace(string(data)), Equals, strings.TrimSpace(expected))
+		}
 	}
 }
 
