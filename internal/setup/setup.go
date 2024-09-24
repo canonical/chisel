@@ -817,7 +817,7 @@ func Select(release *Release, slices []SliceKey) (*Selection, error) {
 }
 
 // pathInfoToYAML converts a PathInfo object to a yamlPath object.
-// The returned object is going to have pointers to the given PathInfo object.
+// The returned object takes pointers to the given PathInfo object.
 func pathInfoToYAML(pi *PathInfo) (*yamlPath, error) {
 	path := &yamlPath{
 		Mode:    yamlMode(pi.Mode),

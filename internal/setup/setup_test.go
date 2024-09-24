@@ -1790,16 +1790,13 @@ func (s *S) TestPackageYAMLFormat(c *C) {
 		release, err := setup.ReadRelease(dir)
 		c.Assert(err, IsNil)
 
+		if test.expected == nil {
+			test.expected = test.input
+		}
 		for _, pkg := range release.Packages {
 			data, err := yaml.Marshal(pkg)
 			c.Assert(err, IsNil)
-			var expected string
-			if test.expected == nil || test.expected[pkg.Path] == "" {
-				expected = test.input[pkg.Path]
-			} else {
-				expected = test.expected[pkg.Path]
-			}
-			expected = string(testutil.Reindent(expected))
+			expected := string(testutil.Reindent(test.expected[pkg.Path]))
 			c.Assert(strings.TrimSpace(string(data)), Equals, strings.TrimSpace(expected))
 		}
 	}
