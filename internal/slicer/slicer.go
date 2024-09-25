@@ -451,8 +451,51 @@ func generateManifests(options *generateManifestsOptions) error {
 		Schema: manifest.Schema,
 	})
 
-	// Add packages to the manifest.
-	for _, info := range options.packageInfo {
+	err = manifestAddPackages(dbw, options.packageInfo)
+	if err != nil {
+		return err
+	}
+
+	err = manifestAddSlices(dbw, options.selection)
+	if err != nil {
+		return err
+	}
+
+	err = manifestAddReport(dbw, options.report.Entries)
+	if err != nil {
+		return err
+	}
+
+	err = manifestAddManifestPaths(dbw, manifestSlices)
+	if err != nil {
+		return err
+	}
+
+	files := []io.Writer{}
+	for relPath := range manifestSlices {
+		logf("Generating manifest at %s...", relPath)
+		absPath := filepath.Join(options.targetDir, relPath)
+		if err := os.MkdirAll(filepath.Dir(absPath), 0755); err != nil {
+			return err
+		}
+		file, err := os.OpenFile(absPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, manifestMode)
+		if err != nil {
+			return err
+		}
+		files = append(files, file)
+		defer file.Close()
+	}
+	w, err := zstd.NewWriter(io.MultiWriter(files...))
+	if err != nil {
+		return err
+	}
+	defer w.Close()
+	_, err = dbw.WriteTo(w)
+	return err
+}
+
+func manifestAddPackages(dbw *jsonwall.DBWriter, infos []*archive.PackageInfo) error {
+	for _, info := range infos {
 		err := dbw.Add(&manifest.Package{
 			Kind:    "package",
 			Name:    info.Name,
@@ -464,20 +507,24 @@ func generateManifests(options *generateManifestsOptions) error {
 			return err
 		}
 	}
+	return nil
+}
 
-	// Add slices to the manifest.
-	for _, s := range options.selection {
+func manifestAddSlices(dbw *jsonwall.DBWriter, slices []*setup.Slice) error {
+	for _, slice := range slices {
 		err := dbw.Add(&manifest.Slice{
 			Kind: "slice",
-			Name: s.String(),
+			Name: slice.String(),
 		})
 		if err != nil {
 			return err
 		}
 	}
+	return nil
+}
 
-	// Add paths and contents to the manifest.
-	for _, entry := range options.report.Entries {
+func manifestAddReport(dbw *jsonwall.DBWriter, entries map[string]ReportEntry) error {
+	for _, entry := range entries {
 		sliceNames := []string{}
 		for slice := range entry.Slices {
 			err := dbw.Add(&manifest.Content{
@@ -505,8 +552,10 @@ func generateManifests(options *generateManifestsOptions) error {
 			return err
 		}
 	}
+	return nil
+}
 
-	// Add the manifest path and content entries to the manifest.
+func manifestAddManifestPaths(dbw *jsonwall.DBWriter, manifestSlices map[string][]*setup.Slice) error {
 	for path, slices := range manifestSlices {
 		sliceNames := []string{}
 		for _, slice := range slices {
@@ -531,28 +580,7 @@ func generateManifests(options *generateManifestsOptions) error {
 			return err
 		}
 	}
-
-	files := []io.Writer{}
-	for relPath := range manifestSlices {
-		logf("Generating manifest at %s...", relPath)
-		absPath := filepath.Join(options.targetDir, relPath)
-		if err := os.MkdirAll(filepath.Dir(absPath), 0755); err != nil {
-			return err
-		}
-		file, err := os.OpenFile(absPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, manifestMode)
-		if err != nil {
-			return err
-		}
-		files = append(files, file)
-		defer file.Close()
-	}
-	w, err := zstd.NewWriter(io.MultiWriter(files...))
-	if err != nil {
-		return err
-	}
-	defer w.Close()
-	_, err = dbw.WriteTo(w)
-	return err
+	return nil
 }
 
 func unixPerm(mode fs.FileMode) (perm uint32) {
