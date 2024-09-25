@@ -1172,6 +1172,28 @@ var slicerTests = []slicerTest{{
 						content.list("/foo-bar/")
 		`,
 	},
+}, {
+	summary: "Producing a manifest is not mandatory",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	hackopt: func(c *C, opts *slicer.RunOptions) {
+		// Remove the manifest slice that the tests add automatically.
+		var index int
+		for i, slice := range opts.Selection.Slices {
+			if slice.Name == "manifest" {
+				index = i
+				break
+			}
+		}
+		opts.Selection.Slices = append(opts.Selection.Slices[:index], opts.Selection.Slices[index+1:]...)
+	},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+		`,
+	},
 }}
 
 var defaultChiselYaml = `
@@ -1296,6 +1318,9 @@ func runSlicerTests(c *C, tests []slicerTest) {
 			}
 			c.Assert(err, IsNil)
 
+			if test.filesystem == nil && test.manifestPaths == nil && test.manifestPkgs == nil {
+				continue
+			}
 			mfest := readManifest(c, options.TargetDir, manifestPath)
 
 			// Assert state of final filesystem.
