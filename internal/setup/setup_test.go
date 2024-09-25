@@ -1659,7 +1659,7 @@ func (s *S) TestPackageMarshalYAML(c *C) {
 
 		data, ok := test.input["chisel.yaml"]
 		if !ok {
-			data = string(defaultChiselYaml)
+			data = defaultChiselYaml
 		}
 
 		dir := c.MkDir()
@@ -1775,7 +1775,7 @@ func (s *S) TestPackageYAMLFormat(c *C) {
 		c.Logf("Summary: %s", test.summary)
 
 		if _, ok := test.input["chisel.yaml"]; !ok {
-			test.input["chisel.yaml"] = string(defaultChiselYaml)
+			test.input["chisel.yaml"] = defaultChiselYaml
 		}
 
 		dir := c.MkDir()
