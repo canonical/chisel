@@ -248,7 +248,9 @@ func Run(options *RunOptions) error {
 		}
 	}
 
-	// Create new content not coming from packages excluding GeneratePath(s).
+	// Create new content not extracted from packages, e.g. TextPath or DirPath
+	// with {make: true}. The only exception is the manifest which will be created
+	// later.
 	// First group them by their relative path. Then create them and attribute
 	// them to the appropriate slices.
 	relPaths := map[string][]*setup.Slice{}
