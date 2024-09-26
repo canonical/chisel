@@ -439,10 +439,7 @@ type generateManifestsOptions struct {
 }
 
 func generateManifests(options *generateManifestsOptions) error {
-	manifestSlices, err := locateManifestSlices(options.selection)
-	if err != nil {
-		return err
-	}
+	manifestSlices := manifest.LocateManifestSlices(options.selection, manifestFileName)
 	if len(manifestSlices) == 0 {
 		// Nothing to do.
 		return nil
@@ -451,7 +448,7 @@ func generateManifests(options *generateManifestsOptions) error {
 		Schema: manifest.Schema,
 	})
 
-	err = manifestAddPackages(dbw, options.packageInfo)
+	err := manifestAddPackages(dbw, options.packageInfo)
 	if err != nil {
 		return err
 	}
@@ -589,20 +586,4 @@ func unixPerm(mode fs.FileMode) (perm uint32) {
 		perm |= 01000
 	}
 	return perm
-}
-
-// locateManifestSlices finds the paths marked with "generate:manifest" and
-// returns a map from the manifest path to all the slices that declare it.
-func locateManifestSlices(slices []*setup.Slice) (map[string][]*setup.Slice, error) {
-	manifestSlices := make(map[string][]*setup.Slice)
-	for _, slice := range slices {
-		for path, info := range slice.Contents {
-			if info.Generate == setup.GenerateManifest {
-				dir := strings.TrimSuffix(path, "**")
-				path = filepath.Join(dir, manifestFileName)
-				manifestSlices[path] = append(manifestSlices[path], slice)
-			}
-		}
-	}
-	return manifestSlices, nil
 }

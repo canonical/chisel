@@ -3,7 +3,9 @@ package manifest
 import (
 	"fmt"
 	"io"
+	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/canonical/chisel/internal/jsonwall"
 	"github.com/canonical/chisel/internal/setup"
@@ -156,6 +158,22 @@ func Validate(manifest *Manifest) (err error) {
 		}
 	}
 	return nil
+}
+
+// LocateManifestSlices finds the paths marked with "generate:manifest" and
+// returns a map from the manifest path to all the slices that declare it.
+func LocateManifestSlices(slices []*setup.Slice, manifestFileName string) map[string][]*setup.Slice {
+	manifestSlices := make(map[string][]*setup.Slice)
+	for _, slice := range slices {
+		for path, info := range slice.Contents {
+			if info.Generate == setup.GenerateManifest {
+				dir := strings.TrimSuffix(path, "**")
+				path = filepath.Join(dir, manifestFileName)
+				manifestSlices[path] = append(manifestSlices[path], slice)
+			}
+		}
+	}
+	return manifestSlices
 }
 
 type prefixable interface {

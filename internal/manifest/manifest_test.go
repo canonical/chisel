@@ -9,7 +9,11 @@ import (
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/chisel/internal/manifest"
+	"github.com/canonical/chisel/internal/setup"
+	"github.com/canonical/chisel/internal/testutil"
 )
+
+var testKey = testutil.PGPKeys["key1"]
 
 type manifestContents struct {
 	Paths    []*manifest.Path
@@ -123,7 +127,7 @@ var manifestTests = []struct {
 	readError: `cannot read manifest: unknown schema version "2.0"`,
 }}
 
-func (s *S) TestRun(c *C) {
+func (s *S) TestManifestReadValidate(c *C) {
 	for _, test := range manifestTests {
 		c.Logf("Summary: %s", test.summary)
 
@@ -165,6 +169,102 @@ func (s *S) TestRun(c *C) {
 		c.Assert(err, IsNil)
 		if test.mfest != nil {
 			c.Assert(dumpManifestContents(c, mfest), DeepEquals, test.mfest)
+		}
+	}
+}
+
+var locateManifestSlicesTests = []struct {
+	summary  string
+	slices   []*setup.Slice
+	filename string
+	expected map[string][]string
+}{{
+	summary: "Single slice",
+	slices: []*setup.Slice{{
+		Name: "slice1",
+		Contents: map[string]setup.PathInfo{
+			"/folder/**": {
+				Kind:     "generate",
+				Generate: "manifest",
+			},
+		},
+	}},
+	filename: "manifest.wall",
+	expected: map[string][]string{
+		"/folder/manifest.wall": []string{"slice1"},
+	},
+}, {
+	summary: "No slice matched",
+	slices: []*setup.Slice{{
+		Name:     "slice1",
+		Contents: map[string]setup.PathInfo{},
+	}},
+	filename: "manifest.wall",
+	expected: map[string][]string{},
+}, {
+	summary: "Several matches with several groups",
+	slices: []*setup.Slice{{
+		Name: "slice1",
+		Contents: map[string]setup.PathInfo{
+			"/folder/**": {
+				Kind:     "generate",
+				Generate: "manifest",
+			},
+		},
+	}, {
+		Name: "slice2",
+		Contents: map[string]setup.PathInfo{
+			"/folder/**": {
+				Kind:     "generate",
+				Generate: "manifest",
+			},
+		},
+	}, {
+		Name:     "slice3",
+		Contents: map[string]setup.PathInfo{},
+	}, {
+		Name: "slice4",
+		Contents: map[string]setup.PathInfo{
+			"/other-folder/**": {
+				Kind:     "generate",
+				Generate: "manifest",
+			},
+		},
+	}, {
+		Name: "slice5",
+		Contents: map[string]setup.PathInfo{
+			"/other-folder/**": {
+				Kind:     "generate",
+				Generate: "manifest",
+			},
+		},
+	}},
+	filename: "mfest.wall",
+	expected: map[string][]string{
+		"/folder/mfest.wall":       {"slice1", "slice2"},
+		"/other-folder/mfest.wall": {"slice4", "slice5"},
+	},
+}}
+
+func (s *S) TestLocateManifestSlices(c *C) {
+	for _, test := range locateManifestSlicesTests {
+		c.Logf("Summary: %s", test.summary)
+
+		manifestSlices := manifest.LocateManifestSlices(test.slices, test.filename)
+
+		slicesByName := map[string]*setup.Slice{}
+		for _, slice := range test.slices {
+			_, ok := slicesByName[slice.Name]
+			c.Assert(ok, Equals, false, Commentf("duplicated slice name"))
+			slicesByName[slice.Name] = slice
+		}
+
+		c.Assert(manifestSlices, HasLen, len(test.expected))
+		for path, slices := range manifestSlices {
+			c.Assert(slices, HasLen, len(test.expected[path]))
+			for i, sliceName := range test.expected[path] {
+				c.Assert(slicesByName[sliceName], DeepEquals, slices[i])
+			}
 		}
 	}
 }
