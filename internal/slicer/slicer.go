@@ -275,6 +275,10 @@ func Run(options *RunOptions) error {
 				break
 			}
 		}
+		// It is okay to take the first pathInfo because the release has been
+		// validated when read and there are no conflicts. The only field that
+		// was not checked was until because it is not used for conflict
+		// validation.
 		pathInfo := slices[0].Contents[relPath]
 		pathInfo.Until = until
 		data := pathData{
