@@ -10,10 +10,7 @@ import (
 
 	"github.com/canonical/chisel/internal/manifest"
 	"github.com/canonical/chisel/internal/setup"
-	"github.com/canonical/chisel/internal/testutil"
 )
-
-var testKey = testutil.PGPKeys["key1"]
 
 type manifestContents struct {
 	Paths    []*manifest.Path
