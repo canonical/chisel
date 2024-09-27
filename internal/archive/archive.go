@@ -131,12 +131,7 @@ func (a *ubuntuArchive) Fetch(pkg string) (io.ReadCloser, *PackageInfo, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	info := &PackageInfo{
-		Name:    section.Get("Package"),
-		Version: section.Get("Version"),
-		Arch:    section.Get("Architecture"),
-		SHA256:  section.Get("SHA256"),
-	}
+	info := sectionPackageInfo(section)
 	return reader, info, nil
 }
 
@@ -145,12 +140,7 @@ func (a *ubuntuArchive) Info(pkg string) (*PackageInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	info := &PackageInfo{
-		Name:    section.Get("Package"),
-		Version: section.Get("Version"),
-		Arch:    section.Get("Architecture"),
-		SHA256:  section.Get("SHA256"),
-	}
+	info := sectionPackageInfo(section)
 	return info, nil
 }
 
@@ -363,4 +353,13 @@ func (index *ubuntuIndex) fetch(suffix, digest string, flags fetchFlags) (io.Rea
 	}
 
 	return index.archive.cache.Open(writer.Digest())
+}
+
+func sectionPackageInfo(section control.Section) *PackageInfo {
+	return &PackageInfo{
+		Name:    section.Get("Package"),
+		Version: section.Get("Version"),
+		Arch:    section.Get("Architecture"),
+		SHA256:  section.Get("SHA256"),
+	}
 }
