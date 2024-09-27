@@ -1,4 +1,4 @@
-package slicer_test
+package manifest_test
 
 import (
 	"io/fs"
@@ -6,8 +6,8 @@ import (
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/chisel/internal/fsutil"
+	"github.com/canonical/chisel/internal/manifest"
 	"github.com/canonical/chisel/internal/setup"
-	"github.com/canonical/chisel/internal/slicer"
 )
 
 var oneSlice = &setup.Slice{
@@ -64,13 +64,13 @@ var reportTests = []struct {
 	add     []sliceAndEntry
 	mutate  []*fsutil.Entry
 	// indexed by path.
-	expected map[string]slicer.ReportEntry
+	expected map[string]manifest.ReportEntry
 	// error after adding the last [sliceAndEntry].
 	err string
 }{{
 	summary: "Regular directory",
 	add:     []sliceAndEntry{{entry: sampleDir, slice: oneSlice}},
-	expected: map[string]slicer.ReportEntry{
+	expected: map[string]manifest.ReportEntry{
 		"/example-dir/": {
 			Path:   "/example-dir/",
 			Mode:   fs.ModeDir | 0654,
@@ -83,7 +83,7 @@ var reportTests = []struct {
 		{entry: sampleDir, slice: oneSlice},
 		{entry: sampleDir, slice: otherSlice},
 	},
-	expected: map[string]slicer.ReportEntry{
+	expected: map[string]manifest.ReportEntry{
 		"/example-dir/": {
 			Path:   "/example-dir/",
 			Mode:   fs.ModeDir | 0654,
@@ -93,7 +93,7 @@ var reportTests = []struct {
 }, {
 	summary: "Regular file",
 	add:     []sliceAndEntry{{entry: sampleFile, slice: oneSlice}},
-	expected: map[string]slicer.ReportEntry{
+	expected: map[string]manifest.ReportEntry{
 		"/example-file": {
 			Path:   "/example-file",
 			Mode:   0777,
@@ -105,7 +105,7 @@ var reportTests = []struct {
 }, {
 	summary: "Regular file link",
 	add:     []sliceAndEntry{{entry: sampleLink, slice: oneSlice}},
-	expected: map[string]slicer.ReportEntry{
+	expected: map[string]manifest.ReportEntry{
 		"/example-link": {
 			Path:   "/example-link",
 			Mode:   0777,
@@ -120,7 +120,7 @@ var reportTests = []struct {
 		{entry: sampleDir, slice: oneSlice},
 		{entry: sampleFile, slice: otherSlice},
 	},
-	expected: map[string]slicer.ReportEntry{
+	expected: map[string]manifest.ReportEntry{
 		"/example-dir/": {
 			Path:   "/example-dir/",
 			Mode:   fs.ModeDir | 0654,
@@ -141,7 +141,7 @@ var reportTests = []struct {
 		{entry: sampleFile, slice: oneSlice},
 		{entry: sampleFile, slice: oneSlice},
 	},
-	expected: map[string]slicer.ReportEntry{
+	expected: map[string]manifest.ReportEntry{
 		"/example-file": {
 			Path:   "/example-file",
 			Mode:   0777,
@@ -225,7 +225,7 @@ var reportTests = []struct {
 		{entry: sampleDir, slice: oneSlice},
 	},
 	mutate: []*fsutil.Entry{&sampleFileMutated},
-	expected: map[string]slicer.ReportEntry{
+	expected: map[string]manifest.ReportEntry{
 		"/example-dir/": {
 			Path:   "/example-dir/",
 			Mode:   fs.ModeDir | 0654,
@@ -247,7 +247,7 @@ var reportTests = []struct {
 		{entry: sampleFile, slice: oneSlice},
 	},
 	mutate: []*fsutil.Entry{&sampleFile},
-	expected: map[string]slicer.ReportEntry{
+	expected: map[string]manifest.ReportEntry{
 		"/example-file": {
 			Path:   "/example-file",
 			Mode:   0777,
@@ -272,7 +272,7 @@ var reportTests = []struct {
 func (s *S) TestReport(c *C) {
 	for _, test := range reportTests {
 		var err error
-		report, err := slicer.NewReport("/base/")
+		report, err := manifest.NewReport("/base/")
 		c.Assert(err, IsNil)
 		for _, si := range test.add {
 			err = report.Add(si.slice, &si.entry)
@@ -290,6 +290,12 @@ func (s *S) TestReport(c *C) {
 }
 
 func (s *S) TestRootRelativePath(c *C) {
-	_, err := slicer.NewReport("../base/")
+	_, err := manifest.NewReport("../base/")
 	c.Assert(err, ErrorMatches, `cannot use relative path for report root: "../base/"`)
+}
+
+func (s *S) TestRootOnlySlash(c *C) {
+	report, err := manifest.NewReport("/")
+	c.Assert(err, IsNil)
+	c.Assert(report.Root, Equals, "/")
 }

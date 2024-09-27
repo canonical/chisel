@@ -1,15 +1,20 @@
 package manifest_test
 
 import (
+	"io/fs"
 	"os"
 	"path"
+	"path/filepath"
 	"slices"
 	"strings"
 
+	"github.com/klauspost/compress/zstd"
 	. "gopkg.in/check.v1"
 
+	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/manifest"
 	"github.com/canonical/chisel/internal/setup"
+	"github.com/canonical/chisel/internal/testutil"
 )
 
 type manifestContents struct {
@@ -19,7 +24,7 @@ type manifestContents struct {
 	Contents []*manifest.Content
 }
 
-var manifestTests = []struct {
+var readManifestTests = []struct {
 	summary   string
 	input     string
 	mfest     *manifestContents
@@ -125,7 +130,7 @@ var manifestTests = []struct {
 }}
 
 func (s *S) TestManifestReadValidate(c *C) {
-	for _, test := range manifestTests {
+	for _, test := range readManifestTests {
 		c.Logf("Summary: %s", test.summary)
 
 		// Reindent the jsonwall to remove leading tabs in each line.
@@ -264,6 +269,183 @@ func (s *S) TestLocateManifestSlices(c *C) {
 			}
 		}
 	}
+}
+
+func (s *S) TestGenerateManifests(c *C) {
+	slice1 := &setup.Slice{
+		Package: "package1",
+		Name:    "slice1",
+		Contents: map[string]setup.PathInfo{
+			"/dir/**": {
+				Kind:     "generate",
+				Generate: "manifest",
+			},
+			"/other-dir/**": {
+				Kind:     "generate",
+				Generate: "manifest",
+			},
+		},
+	}
+	slice2 := &setup.Slice{
+		Package: "package2",
+		Name:    "slice2",
+	}
+	report := &manifest.Report{
+		Root: "/",
+		Entries: map[string]manifest.ReportEntry{
+			"/file": {
+				Path:      "/file",
+				Mode:      0456,
+				Hash:      "hash",
+				Size:      1234,
+				Slices:    map[*setup.Slice]bool{slice1: true},
+				FinalHash: "final-hash",
+			},
+			"/link": {
+				Path:   "/link",
+				Mode:   0567,
+				Link:   "/target",
+				Slices: map[*setup.Slice]bool{slice1: true, slice2: true},
+			},
+		},
+	}
+	packageInfo := []*archive.PackageInfo{{
+		Name:    "package1",
+		Version: "v1",
+		Arch:    "a1",
+		SHA256:  "s1",
+	}, {
+		Name:    "package2",
+		Version: "v2",
+		Arch:    "a2",
+		SHA256:  "s2",
+	}}
+
+	expectedLocations := []string{
+		"/dir/manifest.wall",
+		"/other-dir/manifest.wall",
+	}
+	expected := &manifestContents{
+		Paths: []*manifest.Path{{
+			Kind:   "path",
+			Path:   "/dir/manifest.wall",
+			Mode:   "0645",
+			Slices: []string{"package1_slice1"},
+		}, {
+			Kind:      "path",
+			Path:      "/file",
+			Mode:      "0456",
+			Slices:    []string{"package1_slice1"},
+			Size:      1234,
+			Hash:      "hash",
+			FinalHash: "final-hash",
+		}, {
+			Kind:   "path",
+			Path:   "/link",
+			Link:   "/target",
+			Mode:   "0567",
+			Slices: []string{"package1_slice1", "package2_slice2"},
+		}, {
+			Kind:   "path",
+			Path:   "/other-dir/manifest.wall",
+			Mode:   "0645",
+			Slices: []string{"package1_slice1"},
+		}},
+		Packages: []*manifest.Package{{
+			Kind:    "package",
+			Name:    "package1",
+			Version: "v1",
+			Digest:  "s1",
+			Arch:    "a1",
+		}, {
+			Kind:    "package",
+			Name:    "package2",
+			Version: "v2",
+			Digest:  "s2",
+			Arch:    "a2",
+		}},
+		Slices: []*manifest.Slice{{
+			Kind: "slice",
+			Name: "package1_slice1",
+		}, {
+			Kind: "slice",
+			Name: "package2_slice2",
+		}},
+		Contents: []*manifest.Content{{
+			Kind:  "content",
+			Slice: "package1_slice1",
+			Path:  "/dir/manifest.wall",
+		}, {
+			Kind:  "content",
+			Slice: "package1_slice1",
+			Path:  "/file",
+		}, {
+			Kind:  "content",
+			Slice: "package1_slice1",
+			Path:  "/link",
+		}, {
+			Kind:  "content",
+			Slice: "package1_slice1",
+			Path:  "/other-dir/manifest.wall",
+		}, {
+			Kind:  "content",
+			Slice: "package2_slice2",
+			Path:  "/link",
+		}},
+	}
+
+	tmpDir := c.MkDir()
+	options := &manifest.GenerateManifestsOptions{
+		PackageInfo: packageInfo,
+		Selection:   []*setup.Slice{slice1, slice2},
+		Report:      report,
+		TargetDir:   tmpDir,
+		Filename:    "manifest.wall",
+		Mode:        0645,
+	}
+	found := map[string]bool{}
+	err := manifest.GenerateManifests(options)
+	c.Assert(err, IsNil)
+	err = filepath.WalkDir(tmpDir, func(path string, d fs.DirEntry, err error) error {
+		if d.IsDir() {
+			return nil
+		}
+		c.Assert(expectedLocations, testutil.Contains, strings.TrimPrefix(path, tmpDir))
+		found[path] = true
+		file, err := os.Open(path)
+		c.Assert(err, IsNil)
+		reader, err := zstd.NewReader(file)
+		c.Assert(err, IsNil)
+		mfest, err := manifest.Read(reader)
+		c.Assert(err, IsNil)
+		err = manifest.Validate(mfest)
+		c.Assert(err, IsNil)
+		contents := dumpManifestContents(c, mfest)
+		c.Assert(contents, DeepEquals, expected)
+		return nil
+	})
+	c.Assert(err, IsNil)
+	c.Assert(found, HasLen, len(expectedLocations))
+}
+
+func (s *S) TestGenerateNoManifests(c *C) {
+	tmpDir := c.MkDir()
+	options := &manifest.GenerateManifestsOptions{
+		PackageInfo: nil,
+		Selection:   nil,
+		Report:      nil,
+		TargetDir:   tmpDir,
+		Filename:    "manifest.wall",
+		Mode:        0645,
+	}
+	err := manifest.GenerateManifests(options)
+	c.Assert(err, IsNil)
+	err = filepath.WalkDir(tmpDir, func(path string, d fs.DirEntry, err error) error {
+		// If there is any regular file it means that a manifest was generated.
+		c.Assert(d.IsDir(), Equals, true)
+		return nil
+	})
+	c.Assert(err, IsNil)
 }
 
 func dumpManifestContents(c *C, mfest *manifest.Manifest) *manifestContents {

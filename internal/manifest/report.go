@@ -1,4 +1,4 @@
-package slicer
+package manifest
 
 import (
 	"fmt"
@@ -35,8 +35,12 @@ func NewReport(root string) (*Report, error) {
 	if !filepath.IsAbs(root) {
 		return nil, fmt.Errorf("cannot use relative path for report root: %q", root)
 	}
+	root = filepath.Clean(root)
+	if !strings.HasSuffix(root, "/") {
+		root = root + "/"
+	}
 	report := &Report{
-		Root:    filepath.Clean(root) + "/",
+		Root:    root,
 		Entries: make(map[string]ReportEntry),
 	}
 	return report, nil

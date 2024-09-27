@@ -3,10 +3,16 @@ package manifest
 import (
 	"fmt"
 	"io"
+	"io/fs"
+	"os"
 	"path/filepath"
 	"slices"
+	"sort"
 	"strings"
 
+	"github.com/klauspost/compress/zstd"
+
+	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/jsonwall"
 	"github.com/canonical/chisel/internal/setup"
 )
@@ -176,6 +182,68 @@ func LocateManifestSlices(slices []*setup.Slice, manifestFileName string) map[st
 	return manifestSlices
 }
 
+type GenerateManifestsOptions struct {
+	PackageInfo []*archive.PackageInfo
+	Selection   []*setup.Slice
+	Report      *Report
+	TargetDir   string
+	Filename    string
+	Mode        os.FileMode
+}
+
+func GenerateManifests(options *GenerateManifestsOptions) error {
+	manifestSlices := LocateManifestSlices(options.Selection, options.Filename)
+	if len(manifestSlices) == 0 {
+		// Nothing to do.
+		return nil
+	}
+	dbw := jsonwall.NewDBWriter(&jsonwall.DBWriterOptions{
+		Schema: Schema,
+	})
+
+	err := manifestAddPackages(dbw, options.PackageInfo)
+	if err != nil {
+		return err
+	}
+
+	err = manifestAddSlices(dbw, options.Selection)
+	if err != nil {
+		return err
+	}
+
+	err = manifestAddReport(dbw, options.Report.Entries)
+	if err != nil {
+		return err
+	}
+
+	err = manifestAddManifestPaths(dbw, options.Mode, manifestSlices)
+	if err != nil {
+		return err
+	}
+
+	files := []io.Writer{}
+	for relPath := range manifestSlices {
+		logf("Generating manifest at %s...", relPath)
+		absPath := filepath.Join(options.TargetDir, relPath)
+		if err := os.MkdirAll(filepath.Dir(absPath), 0755); err != nil {
+			return err
+		}
+		file, err := os.OpenFile(absPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, options.Mode)
+		if err != nil {
+			return err
+		}
+		files = append(files, file)
+		defer file.Close()
+	}
+	w, err := zstd.NewWriter(io.MultiWriter(files...))
+	if err != nil {
+		return err
+	}
+	defer w.Close()
+	_, err = dbw.WriteTo(w)
+	return err
+}
+
 type prefixable interface {
 	Path | Content | Package | Slice
 }
@@ -197,4 +265,101 @@ func iteratePrefix[T prefixable](manifest *Manifest, prefix *T, onMatch func(*T)
 		}
 	}
 	return nil
+}
+
+func manifestAddPackages(dbw *jsonwall.DBWriter, infos []*archive.PackageInfo) error {
+	for _, info := range infos {
+		err := dbw.Add(&Package{
+			Kind:    "package",
+			Name:    info.Name,
+			Version: info.Version,
+			Digest:  info.SHA256,
+			Arch:    info.Arch,
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func manifestAddSlices(dbw *jsonwall.DBWriter, slices []*setup.Slice) error {
+	for _, slice := range slices {
+		err := dbw.Add(&Slice{
+			Kind: "slice",
+			Name: slice.String(),
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func manifestAddReport(dbw *jsonwall.DBWriter, entries map[string]ReportEntry) error {
+	for _, entry := range entries {
+		sliceNames := []string{}
+		for slice := range entry.Slices {
+			err := dbw.Add(&Content{
+				Kind:  "content",
+				Slice: slice.String(),
+				Path:  entry.Path,
+			})
+			if err != nil {
+				return err
+			}
+			sliceNames = append(sliceNames, slice.String())
+		}
+		sort.Strings(sliceNames)
+		err := dbw.Add(&Path{
+			Kind:      "path",
+			Path:      entry.Path,
+			Mode:      fmt.Sprintf("0%o", unixPerm(entry.Mode)),
+			Slices:    sliceNames,
+			Hash:      entry.Hash,
+			FinalHash: entry.FinalHash,
+			Size:      uint64(entry.Size),
+			Link:      entry.Link,
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func manifestAddManifestPaths(dbw *jsonwall.DBWriter, manifestMode os.FileMode, manifestSlices map[string][]*setup.Slice) error {
+	for path, slices := range manifestSlices {
+		sliceNames := []string{}
+		for _, slice := range slices {
+			err := dbw.Add(&Content{
+				Kind:  "content",
+				Slice: slice.String(),
+				Path:  path,
+			})
+			if err != nil {
+				return err
+			}
+			sliceNames = append(sliceNames, slice.String())
+		}
+		sort.Strings(sliceNames)
+		err := dbw.Add(&Path{
+			Kind:   "path",
+			Path:   path,
+			Mode:   fmt.Sprintf("0%o", unixPerm(manifestMode)),
+			Slices: sliceNames,
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func unixPerm(mode fs.FileMode) (perm uint32) {
+	perm = uint32(mode.Perm())
+	if mode&fs.ModeSticky != 0 {
+		perm |= 01000
+	}
+	return perm
 }

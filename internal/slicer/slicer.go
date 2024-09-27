@@ -13,18 +13,15 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/klauspost/compress/zstd"
-
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/deb"
 	"github.com/canonical/chisel/internal/fsutil"
-	"github.com/canonical/chisel/internal/jsonwall"
 	"github.com/canonical/chisel/internal/manifest"
 	"github.com/canonical/chisel/internal/scripts"
 	"github.com/canonical/chisel/internal/setup"
 )
 
-const manifestFileName = "manifest.wall"
+const manifestFilename = "manifest.wall"
 const manifestMode fs.FileMode = 0644
 
 type RunOptions struct {
@@ -171,7 +168,7 @@ func Run(options *RunOptions) error {
 	// listed as until: mutate in all the slices that reference them.
 	knownPaths := map[string]pathData{}
 	addKnownPath(knownPaths, "/", pathData{})
-	report, err := NewReport(targetDir)
+	report, err := manifest.NewReport(targetDir)
 	if err != nil {
 		return fmt.Errorf("internal error: cannot create report: %w", err)
 	}
@@ -331,11 +328,13 @@ func Run(options *RunOptions) error {
 		return err
 	}
 
-	err = generateManifests(&generateManifestsOptions{
-		packageInfo: pkgInfos,
-		selection:   options.Selection.Slices,
-		report:      report,
-		targetDir:   targetDir,
+	err = manifest.GenerateManifests(&manifest.GenerateManifestsOptions{
+		PackageInfo: pkgInfos,
+		Selection:   options.Selection.Slices,
+		Report:      report,
+		TargetDir:   targetDir,
+		Filename:    manifestFilename,
+		Mode:        manifestMode,
 	})
 	return err
 }
@@ -433,161 +432,4 @@ func createFile(targetPath string, pathInfo setup.PathInfo) (*fsutil.Entry, erro
 		Link:        linkTarget,
 		MakeParents: true,
 	})
-}
-
-type generateManifestsOptions struct {
-	packageInfo []*archive.PackageInfo
-	selection   []*setup.Slice
-	report      *Report
-	targetDir   string
-}
-
-func generateManifests(options *generateManifestsOptions) error {
-	manifestSlices := manifest.LocateManifestSlices(options.selection, manifestFileName)
-	if len(manifestSlices) == 0 {
-		// Nothing to do.
-		return nil
-	}
-	dbw := jsonwall.NewDBWriter(&jsonwall.DBWriterOptions{
-		Schema: manifest.Schema,
-	})
-
-	err := manifestAddPackages(dbw, options.packageInfo)
-	if err != nil {
-		return err
-	}
-
-	err = manifestAddSlices(dbw, options.selection)
-	if err != nil {
-		return err
-	}
-
-	err = manifestAddReport(dbw, options.report.Entries)
-	if err != nil {
-		return err
-	}
-
-	err = manifestAddManifestPaths(dbw, manifestSlices)
-	if err != nil {
-		return err
-	}
-
-	files := []io.Writer{}
-	for relPath := range manifestSlices {
-		logf("Generating manifest at %s...", relPath)
-		absPath := filepath.Join(options.targetDir, relPath)
-		if err := os.MkdirAll(filepath.Dir(absPath), 0755); err != nil {
-			return err
-		}
-		file, err := os.OpenFile(absPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, manifestMode)
-		if err != nil {
-			return err
-		}
-		files = append(files, file)
-		defer file.Close()
-	}
-	w, err := zstd.NewWriter(io.MultiWriter(files...))
-	if err != nil {
-		return err
-	}
-	defer w.Close()
-	_, err = dbw.WriteTo(w)
-	return err
-}
-
-func manifestAddPackages(dbw *jsonwall.DBWriter, infos []*archive.PackageInfo) error {
-	for _, info := range infos {
-		err := dbw.Add(&manifest.Package{
-			Kind:    "package",
-			Name:    info.Name,
-			Version: info.Version,
-			Digest:  info.SHA256,
-			Arch:    info.Arch,
-		})
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func manifestAddSlices(dbw *jsonwall.DBWriter, slices []*setup.Slice) error {
-	for _, slice := range slices {
-		err := dbw.Add(&manifest.Slice{
-			Kind: "slice",
-			Name: slice.String(),
-		})
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func manifestAddReport(dbw *jsonwall.DBWriter, entries map[string]ReportEntry) error {
-	for _, entry := range entries {
-		sliceNames := []string{}
-		for slice := range entry.Slices {
-			err := dbw.Add(&manifest.Content{
-				Kind:  "content",
-				Slice: slice.String(),
-				Path:  entry.Path,
-			})
-			if err != nil {
-				return err
-			}
-			sliceNames = append(sliceNames, slice.String())
-		}
-		sort.Strings(sliceNames)
-		err := dbw.Add(&manifest.Path{
-			Kind:      "path",
-			Path:      entry.Path,
-			Mode:      fmt.Sprintf("0%o", unixPerm(entry.Mode)),
-			Slices:    sliceNames,
-			Hash:      entry.Hash,
-			FinalHash: entry.FinalHash,
-			Size:      uint64(entry.Size),
-			Link:      entry.Link,
-		})
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func manifestAddManifestPaths(dbw *jsonwall.DBWriter, manifestSlices map[string][]*setup.Slice) error {
-	for path, slices := range manifestSlices {
-		sliceNames := []string{}
-		for _, slice := range slices {
-			err := dbw.Add(&manifest.Content{
-				Kind:  "content",
-				Slice: slice.String(),
-				Path:  path,
-			})
-			if err != nil {
-				return err
-			}
-			sliceNames = append(sliceNames, slice.String())
-		}
-		sort.Strings(sliceNames)
-		err := dbw.Add(&manifest.Path{
-			Kind:   "path",
-			Path:   path,
-			Mode:   fmt.Sprintf("0%o", unixPerm(manifestMode)),
-			Slices: sliceNames,
-		})
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func unixPerm(mode fs.FileMode) (perm uint32) {
-	perm = uint32(mode.Perm())
-	if mode&fs.ModeSticky != 0 {
-		perm |= 01000
-	}
-	return perm
 }
