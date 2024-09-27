@@ -10,8 +10,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/klauspost/compress/zstd"
-
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/jsonwall"
 	"github.com/canonical/chisel/internal/setup"
@@ -182,18 +180,18 @@ func LocateManifestSlices(slices []*setup.Slice, manifestFileName string) map[st
 	return manifestSlices
 }
 
-type GenerateManifestsOptions struct {
+type WriteOptions struct {
 	PackageInfo []*archive.PackageInfo
 	Selection   []*setup.Slice
-	Report      *Report
-	TargetDir   string
-	Filename    string
-	Mode        os.FileMode
+	// Map manifest path to all the slices that declare it. See
+	// LocateManifestSlices.
+	ManifestSlices map[string][]*setup.Slice
+	Report         *Report
+	ManifestMode   os.FileMode
 }
 
-func GenerateManifests(options *GenerateManifestsOptions) error {
-	manifestSlices := LocateManifestSlices(options.Selection, options.Filename)
-	if len(manifestSlices) == 0 {
+func Write(options *WriteOptions, writer io.Writer) error {
+	if len(options.ManifestSlices) == 0 {
 		// Nothing to do.
 		return nil
 	}
@@ -216,31 +214,12 @@ func GenerateManifests(options *GenerateManifestsOptions) error {
 		return err
 	}
 
-	err = manifestAddManifestPaths(dbw, options.Mode, manifestSlices)
+	err = manifestAddManifestPaths(dbw, options.ManifestMode, options.ManifestSlices)
 	if err != nil {
 		return err
 	}
 
-	files := []io.Writer{}
-	for relPath := range manifestSlices {
-		logf("Generating manifest at %s...", relPath)
-		absPath := filepath.Join(options.TargetDir, relPath)
-		if err := os.MkdirAll(filepath.Dir(absPath), 0755); err != nil {
-			return err
-		}
-		file, err := os.OpenFile(absPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, options.Mode)
-		if err != nil {
-			return err
-		}
-		files = append(files, file)
-		defer file.Close()
-	}
-	w, err := zstd.NewWriter(io.MultiWriter(files...))
-	if err != nil {
-		return err
-	}
-	defer w.Close()
-	_, err = dbw.WriteTo(w)
+	_, err = dbw.WriteTo(writer)
 	return err
 }
 

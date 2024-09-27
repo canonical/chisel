@@ -13,6 +13,8 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/klauspost/compress/zstd"
+
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/deb"
 	"github.com/canonical/chisel/internal/fsutil"
@@ -328,15 +330,38 @@ func Run(options *RunOptions) error {
 		return err
 	}
 
-	err = manifest.GenerateManifests(&manifest.GenerateManifestsOptions{
-		PackageInfo: pkgInfos,
-		Selection:   options.Selection.Slices,
-		Report:      report,
-		TargetDir:   targetDir,
-		Filename:    manifestFilename,
-		Mode:        manifestMode,
-	})
-	return err
+	manifestSlices := manifest.LocateManifestSlices(options.Selection.Slices, manifestFilename)
+	if len(manifestSlices) > 0 {
+		var files []io.Writer
+		for relPath := range manifestSlices {
+			logf("Generating manifest at %s...", relPath)
+			absPath := filepath.Join(options.TargetDir, relPath)
+			if err := os.MkdirAll(filepath.Dir(absPath), 0755); err != nil {
+				return err
+			}
+			file, err := os.OpenFile(absPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, manifestMode)
+			if err != nil {
+				return err
+			}
+			files = append(files, file)
+			defer file.Close()
+		}
+		w, err := zstd.NewWriter(io.MultiWriter(files...))
+		if err != nil {
+			return err
+		}
+		defer w.Close()
+		writeOptions := &manifest.WriteOptions{
+			ManifestSlices: manifestSlices,
+			PackageInfo:    pkgInfos,
+			Selection:      options.Selection.Slices,
+			Report:         report,
+			ManifestMode:   manifestMode,
+		}
+		err = manifest.Write(writeOptions, w)
+		return err
+	}
+	return nil
 }
 
 // removeAfterMutate removes entries marked with until: mutate. A path is marked

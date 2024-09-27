@@ -1,20 +1,18 @@
 package manifest_test
 
 import (
-	"io/fs"
+	"bytes"
+	"io"
 	"os"
 	"path"
-	"path/filepath"
 	"slices"
 	"strings"
 
-	"github.com/klauspost/compress/zstd"
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/manifest"
 	"github.com/canonical/chisel/internal/setup"
-	"github.com/canonical/chisel/internal/testutil"
 )
 
 type manifestContents struct {
@@ -321,10 +319,6 @@ func (s *S) TestGenerateManifests(c *C) {
 		SHA256:  "s2",
 	}}
 
-	expectedLocations := []string{
-		"/dir/manifest.wall",
-		"/other-dir/manifest.wall",
-	}
 	expected := &manifestContents{
 		Paths: []*manifest.Path{{
 			Kind:   "path",
@@ -394,59 +388,41 @@ func (s *S) TestGenerateManifests(c *C) {
 		}},
 	}
 
-	tmpDir := c.MkDir()
-	options := &manifest.GenerateManifestsOptions{
-		PackageInfo: packageInfo,
-		Selection:   []*setup.Slice{slice1, slice2},
-		Report:      report,
-		TargetDir:   tmpDir,
-		Filename:    "manifest.wall",
-		Mode:        0645,
+	options := &manifest.WriteOptions{
+		ManifestSlices: map[string][]*setup.Slice{
+			"/dir/manifest.wall":       {slice1},
+			"/other-dir/manifest.wall": {slice1},
+		},
+		PackageInfo:  packageInfo,
+		Selection:    []*setup.Slice{slice1, slice2},
+		Report:       report,
+		ManifestMode: 0645,
 	}
-	found := map[string]bool{}
-	err := manifest.GenerateManifests(options)
+	var buffer bytes.Buffer
+	err := manifest.Write(options, &buffer)
 	c.Assert(err, IsNil)
-	err = filepath.WalkDir(tmpDir, func(path string, d fs.DirEntry, err error) error {
-		c.Assert(err, IsNil)
-		if d.IsDir() {
-			return nil
-		}
-		c.Assert(expectedLocations, testutil.Contains, strings.TrimPrefix(path, tmpDir))
-		found[path] = true
-		file, err := os.Open(path)
-		c.Assert(err, IsNil)
-		reader, err := zstd.NewReader(file)
-		c.Assert(err, IsNil)
-		mfest, err := manifest.Read(reader)
-		c.Assert(err, IsNil)
-		err = manifest.Validate(mfest)
-		c.Assert(err, IsNil)
-		contents := dumpManifestContents(c, mfest)
-		c.Assert(contents, DeepEquals, expected)
-		return nil
-	})
+	mfest, err := manifest.Read(&buffer)
 	c.Assert(err, IsNil)
-	c.Assert(found, HasLen, len(expectedLocations))
+	err = manifest.Validate(mfest)
+	c.Assert(err, IsNil)
+	contents := dumpManifestContents(c, mfest)
+	c.Assert(contents, DeepEquals, expected)
 }
 
 func (s *S) TestGenerateNoManifests(c *C) {
-	tmpDir := c.MkDir()
-	options := &manifest.GenerateManifestsOptions{
-		PackageInfo: nil,
-		Selection:   nil,
-		Report:      nil,
-		TargetDir:   tmpDir,
-		Filename:    "manifest.wall",
-		Mode:        0645,
+	options := &manifest.WriteOptions{
+		PackageInfo:  nil,
+		Selection:    nil,
+		Report:       nil,
+		ManifestMode: 0645,
 	}
-	err := manifest.GenerateManifests(options)
+	var buffer bytes.Buffer
+	err := manifest.Write(options, &buffer)
 	c.Assert(err, IsNil)
-	err = filepath.WalkDir(tmpDir, func(path string, d fs.DirEntry, err error) error {
-		// If there is any regular file it means that a manifest was generated.
-		c.Assert(d.IsDir(), Equals, true)
-		return nil
-	})
-	c.Assert(err, IsNil)
+	var reader io.Reader = &buffer
+	var bs []byte
+	n, err := reader.Read(bs)
+	c.Assert(n, Equals, 0)
 }
 
 func dumpManifestContents(c *C, mfest *manifest.Manifest) *manifestContents {
