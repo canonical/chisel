@@ -44,6 +44,12 @@ type Package struct {
 	Slices  map[string]*Slice
 }
 
+func (p *Package) MarshalYAML() (interface{}, error) {
+	return packageToYAML(p)
+}
+
+var _ yaml.Marshaler = (*Package)(nil)
+
 // Slice holds the details about a package slice.
 type Slice struct {
 	Package   string
@@ -378,23 +384,35 @@ type yamlArchive struct {
 
 type yamlPackage struct {
 	Name      string               `yaml:"package"`
-	Archive   string               `yaml:"archive"`
-	Essential []string             `yaml:"essential"`
-	Slices    map[string]yamlSlice `yaml:"slices"`
+	Archive   string               `yaml:"archive,omitempty"`
+	Essential []string             `yaml:"essential,omitempty"`
+	Slices    map[string]yamlSlice `yaml:"slices,omitempty"`
 }
 
 type yamlPath struct {
-	Dir     bool    `yaml:"make"`
-	Mode    uint    `yaml:"mode"`
-	Copy    string  `yaml:"copy"`
-	Text    *string `yaml:"text"`
-	Symlink string  `yaml:"symlink"`
-	Mutable bool    `yaml:"mutable"`
-
-	Until    PathUntil    `yaml:"until"`
-	Arch     yamlArch     `yaml:"arch"`
-	Generate GenerateKind `yaml:"generate"`
+	Dir      bool         `yaml:"make,omitempty"`
+	Mode     yamlMode     `yaml:"mode,omitempty"`
+	Copy     string       `yaml:"copy,omitempty"`
+	Text     *string      `yaml:"text,omitempty"`
+	Symlink  string       `yaml:"symlink,omitempty"`
+	Mutable  bool         `yaml:"mutable,omitempty"`
+	Until    PathUntil    `yaml:"until,omitempty"`
+	Arch     yamlArch     `yaml:"arch,omitempty"`
+	Generate GenerateKind `yaml:"generate,omitempty"`
 }
+
+func (yp *yamlPath) MarshalYAML() (interface{}, error) {
+	type flowPath *yamlPath
+	node := &yaml.Node{}
+	err := node.Encode(flowPath(yp))
+	if err != nil {
+		return nil, err
+	}
+	node.Style |= yaml.FlowStyle
+	return node, nil
+}
+
+var _ yaml.Marshaler = (*yamlPath)(nil)
 
 // SameContent returns whether the path has the same content properties as some
 // other path. In other words, the resulting file/dir entry is the same. The
@@ -410,16 +428,16 @@ func (yp *yamlPath) SameContent(other *yamlPath) bool {
 }
 
 type yamlArch struct {
-	list []string
+	List []string
 }
 
 func (ya *yamlArch) UnmarshalYAML(value *yaml.Node) error {
 	var s string
 	var l []string
 	if value.Decode(&s) == nil {
-		ya.list = []string{s}
+		ya.List = []string{s}
 	} else if value.Decode(&l) == nil {
-		ya.list = l
+		ya.List = l
 	} else {
 		return fmt.Errorf("cannot decode arch")
 	}
@@ -427,10 +445,35 @@ func (ya *yamlArch) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
+func (ya yamlArch) MarshalYAML() (interface{}, error) {
+	if len(ya.List) == 1 {
+		return ya.List[0], nil
+	}
+	return ya.List, nil
+}
+
+var _ yaml.Marshaler = yamlArch{}
+
+type yamlMode uint
+
+func (ym yamlMode) MarshalYAML() (interface{}, error) {
+	// Workaround for marshalling integers in octal format.
+	// Ref: https://github.com/go-yaml/yaml/issues/420.
+	node := &yaml.Node{}
+	err := node.Encode(uint(ym))
+	if err != nil {
+		return nil, err
+	}
+	node.Value = fmt.Sprintf("0%o", ym)
+	return node, nil
+}
+
+var _ yaml.Marshaler = yamlMode(0)
+
 type yamlSlice struct {
-	Essential []string             `yaml:"essential"`
-	Contents  map[string]*yamlPath `yaml:"contents"`
-	Mutate    string               `yaml:"mutate"`
+	Essential []string             `yaml:"essential,omitempty"`
+	Contents  map[string]*yamlPath `yaml:"contents,omitempty"`
+	Mutate    string               `yaml:"mutate,omitempty"`
 }
 
 type yamlPubKey struct {
@@ -640,7 +683,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 				kinds = append(kinds, GlobPath)
 			}
 			if yamlPath != nil {
-				mode = yamlPath.Mode
+				mode = uint(yamlPath.Mode)
 				mutable = yamlPath.Mutable
 				generate = yamlPath.Generate
 				if yamlPath.Dir {
@@ -671,7 +714,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 				default:
 					return nil, fmt.Errorf("slice %s_%s has invalid 'until' for path %s: %q", pkgName, sliceName, contPath, until)
 				}
-				arch = yamlPath.Arch.list
+				arch = yamlPath.Arch.List
 				for _, s := range arch {
 					if deb.ValidateArch(s) != nil {
 						return nil, fmt.Errorf("slice %s_%s has invalid 'arch' for path %s: %q", pkgName, sliceName, contPath, s)
@@ -771,4 +814,69 @@ func Select(release *Release, slices []SliceKey) (*Selection, error) {
 	}
 
 	return selection, nil
+}
+
+// pathInfoToYAML converts a PathInfo object to a yamlPath object.
+// The returned object takes pointers to the given PathInfo object.
+func pathInfoToYAML(pi *PathInfo) (*yamlPath, error) {
+	path := &yamlPath{
+		Mode:    yamlMode(pi.Mode),
+		Mutable: pi.Mutable,
+		Until:   pi.Until,
+		Arch:    yamlArch{List: pi.Arch},
+	}
+	switch pi.Kind {
+	case DirPath:
+		path.Dir = true
+	case CopyPath:
+		path.Copy = pi.Info
+	case TextPath:
+		path.Text = &pi.Info
+	case SymlinkPath:
+		path.Symlink = pi.Info
+	case GlobPath:
+		// Nothing more needs to be done for this type.
+	default:
+		return nil, fmt.Errorf("internal error: unrecognised PathInfo type: %s", pi.Kind)
+	}
+	return path, nil
+}
+
+// sliceToYAML converts a Slice object to a yamlSlice object.
+func sliceToYAML(s *Slice) (*yamlSlice, error) {
+	slice := &yamlSlice{
+		Essential: make([]string, 0, len(s.Essential)),
+		Contents:  make(map[string]*yamlPath, len(s.Contents)),
+		Mutate:    s.Scripts.Mutate,
+	}
+	for _, key := range s.Essential {
+		slice.Essential = append(slice.Essential, key.String())
+	}
+	for path, info := range s.Contents {
+		// TODO remove the following line after upgrading to Go 1.22 or higher.
+		info := info
+		yamlPath, err := pathInfoToYAML(&info)
+		if err != nil {
+			return nil, err
+		}
+		slice.Contents[path] = yamlPath
+	}
+	return slice, nil
+}
+
+// packageToYAML converts a Package object to a yamlPackage object.
+func packageToYAML(p *Package) (*yamlPackage, error) {
+	pkg := &yamlPackage{
+		Name:    p.Name,
+		Archive: p.Archive,
+		Slices:  make(map[string]yamlSlice, len(p.Slices)),
+	}
+	for name, slice := range p.Slices {
+		yamlSlice, err := sliceToYAML(slice)
+		if err != nil {
+			return nil, err
+		}
+		pkg.Slices[name] = *yamlSlice
+	}
+	return pkg, nil
 }

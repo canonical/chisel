@@ -7,6 +7,7 @@ import (
 
 	"golang.org/x/crypto/openpgp/packet"
 	. "gopkg.in/check.v1"
+	"gopkg.in/yaml.v3"
 
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/testutil"
@@ -1644,6 +1645,159 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 			if test.selection != nil {
 				c.Assert(selection, DeepEquals, test.selection)
 			}
+		}
+	}
+}
+
+func (s *S) TestPackageMarshalYAML(c *C) {
+	for _, test := range setupTests {
+		c.Logf("Summary: %s", test.summary)
+
+		if test.relerror == "" || test.release == nil {
+			continue
+		}
+
+		data, ok := test.input["chisel.yaml"]
+		if !ok {
+			data = defaultChiselYaml
+		}
+
+		dir := c.MkDir()
+		// Write chisel.yaml.
+		fpath := filepath.Join(dir, "chisel.yaml")
+		err := os.WriteFile(fpath, testutil.Reindent(data), 0644)
+		c.Assert(err, IsNil)
+		// Write the packages YAML.
+		for _, pkg := range test.release.Packages {
+			fpath = filepath.Join(dir, pkg.Path)
+			err = os.MkdirAll(filepath.Dir(fpath), 0755)
+			c.Assert(err, IsNil)
+			pkgData, err := yaml.Marshal(pkg)
+			c.Assert(err, IsNil)
+			err = os.WriteFile(fpath, testutil.Reindent(string(pkgData)), 0644)
+			c.Assert(err, IsNil)
+		}
+
+		release, err := setup.ReadRelease(dir)
+		c.Assert(err, IsNil)
+
+		release.Path = ""
+		c.Assert(release, DeepEquals, test.release)
+	}
+}
+
+func (s *S) TestPackageYAMLFormat(c *C) {
+	var tests = []struct {
+		summary  string
+		input    map[string]string
+		expected map[string]string
+	}{{
+		summary: "Basic slice",
+		input: map[string]string{
+			"slices/mypkg.yaml": `
+				package: mypkg
+				archive: ubuntu
+				slices:
+					myslice:
+						contents:
+							/dir/file: {}
+			`,
+		},
+	}, {
+		summary: "All types of paths",
+		input: map[string]string{
+			"slices/mypkg.yaml": `
+				package: mypkg
+				archive: ubuntu
+				slices:
+					myslice:
+						contents:
+							/dir/arch-specific*: {arch: [amd64, arm64, i386]}
+							/dir/copy: {copy: /dir/file}
+							/dir/empty-file: {text: ""}
+							/dir/glob*: {}
+							/dir/mutable: {text: TODO, mutable: true, arch: riscv64}
+							/dir/other-file: {}
+							/dir/sub-dir/: {make: true, mode: 0644}
+							/dir/symlink: {symlink: /dir/file}
+							/dir/until: {until: mutate}
+						mutate: |
+							# Test multi-line string.
+							content.write("/dir/mutable", foo)
+			`,
+		},
+	}, {
+		summary: "Global and per-slice essentials",
+		input: map[string]string{
+			"slices/mypkg.yaml": `
+				package: mypkg
+				archive: ubuntu
+				essential:
+					- mypkg_myslice3
+				slices:
+					myslice1:
+						essential:
+							- mypkg_myslice2
+						contents:
+							/dir/file1: {}
+					myslice2:
+						contents:
+							/dir/file2: {}
+					myslice3:
+						contents:
+							/dir/file3: {}
+			`,
+		},
+		expected: map[string]string{
+			"slices/mypkg.yaml": `
+				package: mypkg
+				archive: ubuntu
+				slices:
+					myslice1:
+						essential:
+							- mypkg_myslice3
+							- mypkg_myslice2
+						contents:
+							/dir/file1: {}
+					myslice2:
+						essential:
+							- mypkg_myslice3
+						contents:
+							/dir/file2: {}
+					myslice3:
+						contents:
+							/dir/file3: {}
+			`,
+		},
+	}}
+
+	for _, test := range tests {
+		c.Logf("Summary: %s", test.summary)
+
+		if _, ok := test.input["chisel.yaml"]; !ok {
+			test.input["chisel.yaml"] = defaultChiselYaml
+		}
+
+		dir := c.MkDir()
+		for path, data := range test.input {
+			fpath := filepath.Join(dir, path)
+			err := os.MkdirAll(filepath.Dir(fpath), 0755)
+			c.Assert(err, IsNil)
+			err = os.WriteFile(fpath, testutil.Reindent(data), 0644)
+			c.Assert(err, IsNil)
+		}
+
+		release, err := setup.ReadRelease(dir)
+		c.Assert(err, IsNil)
+
+		if test.expected == nil {
+			test.expected = test.input
+		}
+		for _, pkg := range release.Packages {
+			data, err := yaml.Marshal(pkg)
+			c.Assert(err, IsNil)
+			expected := string(testutil.Reindent(test.expected[pkg.Path]))
+			c.Assert(strings.TrimSpace(string(data)), Equals, strings.TrimSpace(expected))
 		}
 	}
 }
