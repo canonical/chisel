@@ -407,6 +407,7 @@ func (s *S) TestGenerateManifests(c *C) {
 	err := manifest.GenerateManifests(options)
 	c.Assert(err, IsNil)
 	err = filepath.WalkDir(tmpDir, func(path string, d fs.DirEntry, err error) error {
+		c.Assert(err, IsNil)
 		if d.IsDir() {
 			return nil
 		}
