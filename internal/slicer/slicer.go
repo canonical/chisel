@@ -330,45 +330,51 @@ func Run(options *RunOptions) error {
 		return err
 	}
 
-	manifestSlices := manifest.FindPaths(options.Selection.Slices, manifestFilename)
-	if len(manifestSlices) > 0 {
-		var writers []io.Writer
-		for relPath, slices := range manifestSlices {
-			logf("Generating manifest at %s...", relPath)
-			absPath := filepath.Join(targetDir, relPath)
-			createOptions := &fsutil.CreateOptions{
-				Path:        absPath,
-				Mode:        manifestMode,
-				MakeParents: true,
-			}
-			writer, info, err := fsutil.CreateWriter(createOptions)
-			if err != nil {
-				return err
-			}
-			defer writer.Close()
-			writers = append(writers, writer)
-			for _, slice := range slices {
-				err := report.Add(slice, info)
-				if err != nil {
-					return err
-				}
-			}
+	return generateManifests(targetDir, options.Selection, report, pkgInfos)
+}
+
+func generateManifests(targetDir string, selection *setup.Selection,
+	report *manifest.Report, pkgInfos []*archive.PackageInfo) error {
+	manifestSlices := manifest.FindPaths(selection.Slices, manifestFilename)
+	if len(manifestSlices) == 0 {
+		// Nothing to do.
+		return nil
+	}
+	var writers []io.Writer
+	for relPath, slices := range manifestSlices {
+		logf("Generating manifest at %s...", relPath)
+		absPath := filepath.Join(targetDir, relPath)
+		createOptions := &fsutil.CreateOptions{
+			Path:        absPath,
+			Mode:        manifestMode,
+			MakeParents: true,
 		}
-		w, err := zstd.NewWriter(io.MultiWriter(writers...))
+		writer, info, err := fsutil.CreateWriter(createOptions)
 		if err != nil {
 			return err
 		}
-		defer w.Close()
-		writeOptions := &manifest.WriteOptions{
-			ManifestSlices: manifestSlices,
-			PackageInfo:    pkgInfos,
-			Selection:      options.Selection.Slices,
-			Report:         report,
+		defer writer.Close()
+		writers = append(writers, writer)
+		for _, slice := range slices {
+			err := report.Add(slice, info)
+			if err != nil {
+				return err
+			}
 		}
-		err = manifest.Write(writeOptions, w)
+	}
+	w, err := zstd.NewWriter(io.MultiWriter(writers...))
+	if err != nil {
 		return err
 	}
-	return nil
+	defer w.Close()
+	writeOptions := &manifest.WriteOptions{
+		ManifestSlices: manifestSlices,
+		PackageInfo:    pkgInfos,
+		Selection:      selection.Slices,
+		Report:         report,
+	}
+	err = manifest.Write(writeOptions, w)
+	return err
 }
 
 // removeAfterMutate removes entries marked with until: mutate. A path is marked
