@@ -30,14 +30,14 @@ type Slice struct {
 }
 
 type Path struct {
-	Kind      string   `json:"kind"`
-	Path      string   `json:"path,omitempty"`
-	Mode      string   `json:"mode,omitempty"`
-	Slices    []string `json:"slices,omitempty"`
-	Hash      string   `json:"sha256,omitempty"`
-	FinalHash string   `json:"final_sha256,omitempty"`
-	Size      uint64   `json:"size,omitempty"`
-	Link      string   `json:"link,omitempty"`
+	Kind        string   `json:"kind"`
+	Path        string   `json:"path,omitempty"`
+	Mode        string   `json:"mode,omitempty"`
+	Slices      []string `json:"slices,omitempty"`
+	SHA256      string   `json:"sha256,omitempty"`
+	FinalSHA256 string   `json:"final_sha256,omitempty"`
+	Size        uint64   `json:"size,omitempty"`
+	Link        string   `json:"link,omitempty"`
 }
 
 type Content struct {
@@ -284,14 +284,14 @@ func manifestAddReport(dbw *jsonwall.DBWriter, report *Report) error {
 		}
 		sort.Strings(sliceNames)
 		err := dbw.Add(&Path{
-			Kind:      "path",
-			Path:      entry.Path,
-			Mode:      fmt.Sprintf("0%o", unixPerm(entry.Mode)),
-			Slices:    sliceNames,
-			Hash:      entry.Hash,
-			FinalHash: entry.FinalHash,
-			Size:      uint64(entry.Size),
-			Link:      entry.Link,
+			Kind:        "path",
+			Path:        entry.Path,
+			Mode:        fmt.Sprintf("0%o", unixPerm(entry.Mode)),
+			Slices:      sliceNames,
+			SHA256:      entry.SHA256,
+			FinalSHA256: entry.FinalSHA256,
+			Size:        uint64(entry.Size),
+			Link:        entry.Link,
 		})
 		if err != nil {
 			return err

@@ -33,25 +33,25 @@ var sampleDir = fsutil.Entry{
 }
 
 var sampleFile = fsutil.Entry{
-	Path: "/base/example-file",
-	Mode: 0777,
-	Hash: "example-file_hash",
-	Size: 5678,
-	Link: "",
+	Path:   "/base/example-file",
+	Mode:   0777,
+	SHA256: "example-file_hash",
+	Size:   5678,
+	Link:   "",
 }
 
 var sampleLink = fsutil.Entry{
-	Path: "/base/example-link",
-	Mode: 0777,
-	Hash: "example-file_hash",
-	Size: 5678,
-	Link: "/base/example-file",
+	Path:   "/base/example-link",
+	Mode:   0777,
+	SHA256: "example-file_hash",
+	Size:   5678,
+	Link:   "/base/example-file",
 }
 
 var sampleFileMutated = fsutil.Entry{
-	Path: sampleFile.Path,
-	Hash: sampleFile.Hash + "_changed",
-	Size: sampleFile.Size + 10,
+	Path:   sampleFile.Path,
+	SHA256: sampleFile.SHA256 + "_changed",
+	Size:   sampleFile.Size + 10,
 }
 
 type sliceAndEntry struct {
@@ -97,7 +97,7 @@ var reportTests = []struct {
 		"/example-file": {
 			Path:   "/example-file",
 			Mode:   0777,
-			Hash:   "example-file_hash",
+			SHA256: "example-file_hash",
 			Size:   5678,
 			Slices: map[*setup.Slice]bool{oneSlice: true},
 			Link:   "",
@@ -109,7 +109,7 @@ var reportTests = []struct {
 		"/example-link": {
 			Path:   "/example-link",
 			Mode:   0777,
-			Hash:   "example-file_hash",
+			SHA256: "example-file_hash",
 			Size:   5678,
 			Slices: map[*setup.Slice]bool{oneSlice: true},
 			Link:   "/base/example-file",
@@ -130,7 +130,7 @@ var reportTests = []struct {
 		"/example-file": {
 			Path:   "/example-file",
 			Mode:   0777,
-			Hash:   "example-file_hash",
+			SHA256: "example-file_hash",
 			Size:   5678,
 			Slices: map[*setup.Slice]bool{otherSlice: true},
 			Link:   "",
@@ -145,7 +145,7 @@ var reportTests = []struct {
 		"/example-file": {
 			Path:   "/example-file",
 			Mode:   0777,
-			Hash:   "example-file_hash",
+			SHA256: "example-file_hash",
 			Size:   5678,
 			Slices: map[*setup.Slice]bool{oneSlice: true},
 			Link:   "",
@@ -155,11 +155,11 @@ var reportTests = []struct {
 	add: []sliceAndEntry{
 		{entry: sampleFile, slice: oneSlice},
 		{entry: fsutil.Entry{
-			Path: sampleFile.Path,
-			Mode: 0,
-			Hash: sampleFile.Hash,
-			Size: sampleFile.Size,
-			Link: sampleFile.Link,
+			Path:   sampleFile.Path,
+			Mode:   0,
+			SHA256: sampleFile.SHA256,
+			Size:   sampleFile.Size,
+			Link:   sampleFile.Link,
 		}, slice: oneSlice},
 	},
 	err: `path /example-file reported twice with diverging mode: 0000 != 0777`,
@@ -168,11 +168,11 @@ var reportTests = []struct {
 	add: []sliceAndEntry{
 		{entry: sampleFile, slice: oneSlice},
 		{entry: fsutil.Entry{
-			Path: sampleFile.Path,
-			Mode: sampleFile.Mode,
-			Hash: "distinct hash",
-			Size: sampleFile.Size,
-			Link: sampleFile.Link,
+			Path:   sampleFile.Path,
+			Mode:   sampleFile.Mode,
+			SHA256: "distinct hash",
+			Size:   sampleFile.Size,
+			Link:   sampleFile.Link,
 		}, slice: oneSlice},
 	},
 	err: `path /example-file reported twice with diverging hash: "distinct hash" != "example-file_hash"`,
@@ -181,11 +181,11 @@ var reportTests = []struct {
 	add: []sliceAndEntry{
 		{entry: sampleFile, slice: oneSlice},
 		{entry: fsutil.Entry{
-			Path: sampleFile.Path,
-			Mode: sampleFile.Mode,
-			Hash: sampleFile.Hash,
-			Size: 0,
-			Link: sampleFile.Link,
+			Path:   sampleFile.Path,
+			Mode:   sampleFile.Mode,
+			SHA256: sampleFile.SHA256,
+			Size:   0,
+			Link:   sampleFile.Link,
 		}, slice: oneSlice},
 	},
 	err: `path /example-file reported twice with diverging size: 0 != 5678`,
@@ -194,11 +194,11 @@ var reportTests = []struct {
 	add: []sliceAndEntry{
 		{entry: sampleFile, slice: oneSlice},
 		{entry: fsutil.Entry{
-			Path: sampleFile.Path,
-			Mode: sampleFile.Mode,
-			Hash: sampleFile.Hash,
-			Size: sampleFile.Size,
-			Link: "distinct link",
+			Path:   sampleFile.Path,
+			Mode:   sampleFile.Mode,
+			SHA256: sampleFile.SHA256,
+			Size:   sampleFile.Size,
+			Link:   "distinct link",
 		}, slice: oneSlice},
 	},
 	err: `path /example-file reported twice with diverging link: "distinct link" != ""`,
@@ -233,13 +233,13 @@ var reportTests = []struct {
 			Link:   "",
 		},
 		"/example-file": {
-			Path:      "/example-file",
-			Mode:      0777,
-			Hash:      "example-file_hash",
-			Size:      5688,
-			Slices:    map[*setup.Slice]bool{oneSlice: true},
-			Link:      "",
-			FinalHash: "example-file_hash_changed",
+			Path:        "/example-file",
+			Mode:        0777,
+			SHA256:      "example-file_hash",
+			Size:        5688,
+			Slices:      map[*setup.Slice]bool{oneSlice: true},
+			Link:        "",
+			FinalSHA256: "example-file_hash_changed",
 		}},
 }, {
 	summary: "Calling mutated with identical content to initial file",
@@ -251,12 +251,12 @@ var reportTests = []struct {
 		"/example-file": {
 			Path:   "/example-file",
 			Mode:   0777,
-			Hash:   "example-file_hash",
+			SHA256: "example-file_hash",
 			Size:   5678,
 			Slices: map[*setup.Slice]bool{oneSlice: true},
 			Link:   "",
-			// FinalHash is not updated.
-			FinalHash: "",
+			// FinalSHA256 is not updated.
+			FinalSHA256: "",
 		}},
 }, {
 	summary: "Mutated paths must refer to previously added entries",

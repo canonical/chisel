@@ -22,11 +22,11 @@ type CreateOptions struct {
 }
 
 type Entry struct {
-	Path string
-	Mode fs.FileMode
-	Hash string
-	Size int
-	Link string
+	Path   string
+	Mode   fs.FileMode
+	SHA256 string
+	Size   int
+	Link   string
 }
 
 // Create creates a filesystem entry according to the provided options and returns
@@ -66,11 +66,11 @@ func Create(options *CreateOptions) (*Entry, error) {
 		return nil, err
 	}
 	entry := &Entry{
-		Path: o.Path,
-		Mode: s.Mode(),
-		Hash: hash,
-		Size: rp.size,
-		Link: o.Link,
+		Path:   o.Path,
+		Mode:   s.Mode(),
+		SHA256: hash,
+		Size:   rp.size,
+		Link:   o.Link,
 	}
 	return entry, nil
 }
@@ -187,7 +187,7 @@ func (rp *writerProxy) Write(p []byte) (n int, err error) {
 }
 
 func (rp *writerProxy) Close() error {
-	rp.entry.Hash = hex.EncodeToString(rp.h.Sum(nil))
+	rp.entry.SHA256 = hex.EncodeToString(rp.h.Sum(nil))
 	rp.entry.Size = rp.size
 	return rp.inner.Close()
 }

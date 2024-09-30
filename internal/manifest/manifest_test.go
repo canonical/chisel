@@ -49,10 +49,10 @@ var readManifestTests = []struct {
 	`,
 	mfest: &manifestContents{
 		Paths: []*manifest.Path{
-			{Kind: "path", Path: "/dir/file", Mode: "0644", Slices: []string{"pkg1_myslice"}, Hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", FinalHash: "8067926c032c090867013d14fb0eb21ae858344f62ad07086fd32375845c91a6", Size: 0x15, Link: ""},
-			{Kind: "path", Path: "/dir/foo/bar/", Mode: "01777", Slices: []string{"pkg2_myotherslice", "pkg1_myslice"}, Hash: "", FinalHash: "", Size: 0x0, Link: ""},
-			{Kind: "path", Path: "/dir/link/file", Mode: "0644", Slices: []string{"pkg1_myslice"}, Hash: "", FinalHash: "", Size: 0x0, Link: "/dir/file"},
-			{Kind: "path", Path: "/manifest/manifest.wall", Mode: "0644", Slices: []string{"pkg1_manifest"}, Hash: "", FinalHash: "", Size: 0x0, Link: ""},
+			{Kind: "path", Path: "/dir/file", Mode: "0644", Slices: []string{"pkg1_myslice"}, SHA256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", FinalSHA256: "8067926c032c090867013d14fb0eb21ae858344f62ad07086fd32375845c91a6", Size: 0x15, Link: ""},
+			{Kind: "path", Path: "/dir/foo/bar/", Mode: "01777", Slices: []string{"pkg2_myotherslice", "pkg1_myslice"}, SHA256: "", FinalSHA256: "", Size: 0x0, Link: ""},
+			{Kind: "path", Path: "/dir/link/file", Mode: "0644", Slices: []string{"pkg1_myslice"}, SHA256: "", FinalSHA256: "", Size: 0x0, Link: "/dir/file"},
+			{Kind: "path", Path: "/manifest/manifest.wall", Mode: "0644", Slices: []string{"pkg1_manifest"}, SHA256: "", FinalSHA256: "", Size: 0x0, Link: ""},
 		},
 		Packages: []*manifest.Package{
 			{Kind: "package", Name: "pkg1", Version: "v1", Digest: "hash1", Arch: "arch1"},
@@ -282,12 +282,12 @@ func (s *S) TestGenerateManifests(c *C) {
 		Root: "/",
 		Entries: map[string]manifest.ReportEntry{
 			"/file": {
-				Path:      "/file",
-				Mode:      0456,
-				Hash:      "hash",
-				Size:      1234,
-				Slices:    map[*setup.Slice]bool{slice1: true},
-				FinalHash: "final-hash",
+				Path:        "/file",
+				Mode:        0456,
+				SHA256:      "hash",
+				Size:        1234,
+				Slices:      map[*setup.Slice]bool{slice1: true},
+				FinalSHA256: "final-hash",
 			},
 			"/link": {
 				Path:   "/link",
@@ -311,13 +311,13 @@ func (s *S) TestGenerateManifests(c *C) {
 
 	expected := &manifestContents{
 		Paths: []*manifest.Path{{
-			Kind:      "path",
-			Path:      "/file",
-			Mode:      "0456",
-			Slices:    []string{"package1_slice1"},
-			Size:      1234,
-			Hash:      "hash",
-			FinalHash: "final-hash",
+			Kind:        "path",
+			Path:        "/file",
+			Mode:        "0456",
+			Slices:      []string{"package1_slice1"},
+			Size:        1234,
+			SHA256:      "hash",
+			FinalSHA256: "final-hash",
 		}, {
 			Kind:   "path",
 			Path:   "/link",

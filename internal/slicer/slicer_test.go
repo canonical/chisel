@@ -1364,10 +1364,10 @@ func treeDumpManifestPaths(mfest *manifest.Manifest) (map[string]string, error) 
 		default: // Regular
 			if path.Size == 0 {
 				fsDump = fmt.Sprintf("file %s empty", path.Mode)
-			} else if path.FinalHash != "" {
-				fsDump = fmt.Sprintf("file %s %s %s", path.Mode, path.Hash[:8], path.FinalHash[:8])
+			} else if path.FinalSHA256 != "" {
+				fsDump = fmt.Sprintf("file %s %s %s", path.Mode, path.SHA256[:8], path.FinalSHA256[:8])
 			} else {
-				fsDump = fmt.Sprintf("file %s %s", path.Mode, path.Hash[:8])
+				fsDump = fmt.Sprintf("file %s %s", path.Mode, path.SHA256[:8])
 			}
 		}
 

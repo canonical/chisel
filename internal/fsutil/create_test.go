@@ -213,7 +213,7 @@ func (s *S) TestCreateWriter(c *C) {
 		c.Assert(err, IsNil)
 		c.Assert(entry.Path, Equals, options.Path)
 		c.Assert(entry.Mode, Equals, options.Mode)
-		c.Assert(entry.Hash, Equals, "")
+		c.Assert(entry.SHA256, Equals, "")
 		c.Assert(entry.Size, Equals, 0)
 		err = writer.Close()
 		c.Assert(err, IsNil)
