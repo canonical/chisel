@@ -169,7 +169,8 @@ func (rp *readerProxy) Read(p []byte) (n int, err error) {
 
 // writerProxy implements the io.WriteCloser interface proxying the calls to its
 // inner io.WriteCloser. On each write, the proxy keeps track of the file size
-// and hash.
+// and hash. The associated entry hash and size are updated when Close() is
+// called.
 type writerProxy struct {
 	inner io.WriteCloser
 	h     hash.Hash
