@@ -422,6 +422,7 @@ func (s *S) TestGenerateNoManifests(c *C) {
 	var reader io.Reader = &buffer
 	var bs []byte
 	n, err := reader.Read(bs)
+	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 0)
 }
 
