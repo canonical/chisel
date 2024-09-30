@@ -36,8 +36,8 @@ func NewReport(root string) (*Report, error) {
 		return nil, fmt.Errorf("cannot use relative path for report root: %q", root)
 	}
 	root = filepath.Clean(root)
-	if !strings.HasSuffix(root, "/") {
-		root = root + "/"
+	if root != "/" {
+		root = filepath.Clean(root) + "/"
 	}
 	report := &Report{
 		Root:    root,
