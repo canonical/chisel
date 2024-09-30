@@ -263,9 +263,6 @@ func manifestAddSlices(dbw *jsonwall.DBWriter, slices []*setup.Slice) error {
 }
 
 func manifestAddReport(dbw *jsonwall.DBWriter, report *Report) error {
-	if report == nil {
-		return nil
-	}
 	for _, entry := range report.Entries {
 		sliceNames := []string{}
 		for slice := range entry.Slices {

@@ -373,9 +373,15 @@ func (s *S) TestGenerateManifests(c *C) {
 }
 
 func (s *S) TestGenerateNoManifests(c *C) {
-	var buffer bytes.Buffer
-	err := manifest.Write(&manifest.WriteOptions{}, &buffer)
+	report, err := manifest.NewReport("/")
 	c.Assert(err, IsNil)
+	options := &manifest.WriteOptions{
+		Report: report,
+	}
+	var buffer bytes.Buffer
+	err = manifest.Write(options, &buffer)
+	c.Assert(err, IsNil)
+
 	var reader io.Reader = &buffer
 	var bs []byte
 	n, err := reader.Read(bs)
