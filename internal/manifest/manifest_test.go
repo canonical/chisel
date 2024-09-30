@@ -173,7 +173,7 @@ func (s *S) TestManifestReadValidate(c *C) {
 	}
 }
 
-var locateManifestSlicesTests = []struct {
+var findPathsTests = []struct {
 	summary  string
 	slices   []*setup.Slice
 	filename string
@@ -246,11 +246,11 @@ var locateManifestSlicesTests = []struct {
 	},
 }}
 
-func (s *S) TestLocateManifestSlices(c *C) {
-	for _, test := range locateManifestSlicesTests {
+func (s *S) TestFindPaths(c *C) {
+	for _, test := range findPathsTests {
 		c.Logf("Summary: %s", test.summary)
 
-		manifestSlices := manifest.LocateManifestSlices(test.slices, test.filename)
+		manifestSlices := manifest.FindPaths(test.slices, test.filename)
 
 		slicesByName := map[string]*setup.Slice{}
 		for _, slice := range test.slices {

@@ -330,7 +330,7 @@ func Run(options *RunOptions) error {
 		return err
 	}
 
-	manifestSlices := manifest.LocateManifestSlices(options.Selection.Slices, manifestFilename)
+	manifestSlices := manifest.FindPaths(options.Selection.Slices, manifestFilename)
 	if len(manifestSlices) > 0 {
 		var writers []io.Writer
 		for relPath, slices := range manifestSlices {

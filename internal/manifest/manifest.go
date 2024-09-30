@@ -163,9 +163,9 @@ func Validate(manifest *Manifest) (err error) {
 	return nil
 }
 
-// LocateManifestSlices finds the paths marked with "generate:manifest" and
+// FindPaths finds the paths marked with "generate:manifest" and
 // returns a map from the manifest path to all the slices that declare it.
-func LocateManifestSlices(slices []*setup.Slice, manifestFileName string) map[string][]*setup.Slice {
+func FindPaths(slices []*setup.Slice, manifestFileName string) map[string][]*setup.Slice {
 	manifestSlices := make(map[string][]*setup.Slice)
 	for _, slice := range slices {
 		for path, info := range slice.Contents {
@@ -183,7 +183,7 @@ type WriteOptions struct {
 	PackageInfo []*archive.PackageInfo
 	Selection   []*setup.Slice
 	// Map manifest path to all the slices that declare it. See
-	// LocateManifestSlices.
+	// manifest.FindPaths.
 	ManifestSlices map[string][]*setup.Slice
 	Report         *Report
 }
