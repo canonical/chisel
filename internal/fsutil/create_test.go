@@ -133,3 +133,100 @@ func (s *S) TestCreate(c *C) {
 		c.Assert(testutil.TreeDumpEntry(entry), DeepEquals, test.result[slashPath])
 	}
 }
+
+type createWriterTest struct {
+	options fsutil.CreateOptions
+	data    []byte
+	hackdir func(c *C, dir string)
+	result  map[string]string
+	error   string
+}
+
+var createWriterTests = []createWriterTest{{
+	options: fsutil.CreateOptions{
+		Path: "foo",
+		Mode: 0644,
+	},
+	data: []byte("foo"),
+	result: map[string]string{
+		"/foo": "file 0644 2c26b46b",
+	},
+}, {
+	options: fsutil.CreateOptions{
+		Path: "foo",
+		Mode: 0644 | fs.ModeDir,
+	},
+	error: `unsupported file type: \/[a-z0-9\-\/]*foo`,
+}, {
+	options: fsutil.CreateOptions{
+		Path: "foo",
+		Mode: 0644 | fs.ModeSymlink,
+	},
+	error: `unsupported file type: /[a-z0-9\-\/]*/foo`,
+}, {
+	options: fsutil.CreateOptions{
+		Path:        "foo/bar",
+		Mode:        0644,
+		MakeParents: true,
+	},
+	data: []byte("foo"),
+	result: map[string]string{
+		"/foo/":    "dir 0755",
+		"/foo/bar": "file 0644 2c26b46b",
+	},
+}, {
+	options: fsutil.CreateOptions{
+		Path:        "foo/bar",
+		Mode:        0644,
+		MakeParents: false,
+	},
+	error: `open /[a-z0-9\-\/]*/foo/bar: no such file or directory`,
+}}
+
+func (s *S) TestCreateWriter(c *C) {
+	oldUmask := syscall.Umask(0)
+	defer func() {
+		syscall.Umask(oldUmask)
+	}()
+
+	for _, test := range createWriterTests {
+		if test.result == nil {
+			// Empty map for no files created.
+			test.result = make(map[string]string)
+		}
+		c.Logf("Options: %v", test.options)
+		dir := c.MkDir()
+		if test.hackdir != nil {
+			test.hackdir(c, dir)
+		}
+		options := test.options
+		options.Path = filepath.Join(dir, options.Path)
+		writer, entry, err := fsutil.CreateWriter(&options)
+		if test.error != "" {
+			c.Assert(err, ErrorMatches, test.error)
+			continue
+		}
+		c.Assert(err, IsNil)
+
+		// Hash and Size are only set when the writer is closed.
+		_, err = writer.Write(test.data)
+		c.Assert(err, IsNil)
+		c.Assert(entry.Path, Equals, options.Path)
+		c.Assert(entry.Mode, Equals, options.Mode)
+		c.Assert(entry.SHA256, Equals, "")
+		c.Assert(entry.Size, Equals, 0)
+		err = writer.Close()
+		c.Assert(err, IsNil)
+
+		c.Assert(testutil.TreeDump(dir), DeepEquals, test.result)
+		// [fsutil.CreateWriter] does not return information about parent
+		// directories created implicitly. We only check for the requested path.
+		entry.Path = strings.TrimPrefix(entry.Path, dir)
+		// Add the slashes that TreeDump adds to the path.
+		slashPath := "/" + test.options.Path
+		if test.options.Mode.IsDir() {
+			slashPath = slashPath + "/"
+		}
+		c.Assert(testutil.TreeDumpEntry(entry), DeepEquals, test.result[slashPath])
+	}
+}

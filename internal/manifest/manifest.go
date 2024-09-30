@@ -3,13 +3,19 @@ package manifest
 import (
 	"fmt"
 	"io"
+	"io/fs"
+	"path/filepath"
 	"slices"
+	"sort"
+	"strings"
 
+	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/jsonwall"
 	"github.com/canonical/chisel/internal/setup"
 )
 
-const schema = "1.0"
+const Schema = "1.0"
+const DefaultFilename = "manifest.wall"
 
 type Package struct {
 	Kind    string `json:"kind"`
@@ -25,14 +31,14 @@ type Slice struct {
 }
 
 type Path struct {
-	Kind      string   `json:"kind"`
-	Path      string   `json:"path,omitempty"`
-	Mode      string   `json:"mode,omitempty"`
-	Slices    []string `json:"slices,omitempty"`
-	Hash      string   `json:"sha256,omitempty"`
-	FinalHash string   `json:"final_sha256,omitempty"`
-	Size      uint64   `json:"size,omitempty"`
-	Link      string   `json:"link,omitempty"`
+	Kind        string   `json:"kind"`
+	Path        string   `json:"path,omitempty"`
+	Mode        string   `json:"mode,omitempty"`
+	Slices      []string `json:"slices,omitempty"`
+	SHA256      string   `json:"sha256,omitempty"`
+	FinalSHA256 string   `json:"final_sha256,omitempty"`
+	Size        uint64   `json:"size,omitempty"`
+	Link        string   `json:"link,omitempty"`
 }
 
 type Content struct {
@@ -59,7 +65,7 @@ func Read(reader io.Reader) (manifest *Manifest, err error) {
 		return nil, err
 	}
 	mfestSchema := db.Schema()
-	if mfestSchema != schema {
+	if mfestSchema != Schema {
 		return nil, fmt.Errorf("unknown schema version %q", mfestSchema)
 	}
 
@@ -158,6 +164,52 @@ func Validate(manifest *Manifest) (err error) {
 	return nil
 }
 
+// FindPaths finds the paths marked with "generate:manifest" and
+// returns a map from the manifest path to all the slices that declare it.
+func FindPaths(slices []*setup.Slice) map[string][]*setup.Slice {
+	manifestSlices := make(map[string][]*setup.Slice)
+	for _, slice := range slices {
+		for path, info := range slice.Contents {
+			if info.Generate == setup.GenerateManifest {
+				dir := strings.TrimSuffix(path, "**")
+				path = filepath.Join(dir, DefaultFilename)
+				manifestSlices[path] = append(manifestSlices[path], slice)
+			}
+		}
+	}
+	return manifestSlices
+}
+
+type WriteOptions struct {
+	PackageInfo []*archive.PackageInfo
+	Selection   []*setup.Slice
+	Report      *Report
+}
+
+func Write(options *WriteOptions, writer io.Writer) error {
+	dbw := jsonwall.NewDBWriter(&jsonwall.DBWriterOptions{
+		Schema: Schema,
+	})
+
+	err := manifestAddPackages(dbw, options.PackageInfo)
+	if err != nil {
+		return err
+	}
+
+	err = manifestAddSlices(dbw, options.Selection)
+	if err != nil {
+		return err
+	}
+
+	err = manifestAddReport(dbw, options.Report)
+	if err != nil {
+		return err
+	}
+
+	_, err = dbw.WriteTo(writer)
+	return err
+}
+
 type prefixable interface {
 	Path | Content | Package | Slice
 }
@@ -179,4 +231,73 @@ func iteratePrefix[T prefixable](manifest *Manifest, prefix *T, onMatch func(*T)
 		}
 	}
 	return nil
+}
+
+func manifestAddPackages(dbw *jsonwall.DBWriter, infos []*archive.PackageInfo) error {
+	for _, info := range infos {
+		err := dbw.Add(&Package{
+			Kind:    "package",
+			Name:    info.Name,
+			Version: info.Version,
+			Digest:  info.SHA256,
+			Arch:    info.Arch,
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func manifestAddSlices(dbw *jsonwall.DBWriter, slices []*setup.Slice) error {
+	for _, slice := range slices {
+		err := dbw.Add(&Slice{
+			Kind: "slice",
+			Name: slice.String(),
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func manifestAddReport(dbw *jsonwall.DBWriter, report *Report) error {
+	for _, entry := range report.Entries {
+		sliceNames := []string{}
+		for slice := range entry.Slices {
+			err := dbw.Add(&Content{
+				Kind:  "content",
+				Slice: slice.String(),
+				Path:  entry.Path,
+			})
+			if err != nil {
+				return err
+			}
+			sliceNames = append(sliceNames, slice.String())
+		}
+		sort.Strings(sliceNames)
+		err := dbw.Add(&Path{
+			Kind:        "path",
+			Path:        entry.Path,
+			Mode:        fmt.Sprintf("0%o", unixPerm(entry.Mode)),
+			Slices:      sliceNames,
+			SHA256:      entry.SHA256,
+			FinalSHA256: entry.FinalSHA256,
+			Size:        uint64(entry.Size),
+			Link:        entry.Link,
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func unixPerm(mode fs.FileMode) (perm uint32) {
+	perm = uint32(mode.Perm())
+	if mode&fs.ModeSticky != 0 {
+		perm |= 01000
+	}
+	return perm
 }
