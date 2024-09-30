@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -187,7 +186,6 @@ type WriteOptions struct {
 	// LocateManifestSlices.
 	ManifestSlices map[string][]*setup.Slice
 	Report         *Report
-	ManifestMode   os.FileMode
 }
 
 func Write(options *WriteOptions, writer io.Writer) error {
@@ -210,11 +208,6 @@ func Write(options *WriteOptions, writer io.Writer) error {
 	}
 
 	err = manifestAddReport(dbw, options.Report.Entries)
-	if err != nil {
-		return err
-	}
-
-	err = manifestAddManifestPaths(dbw, options.ManifestMode, options.ManifestSlices)
 	if err != nil {
 		return err
 	}
@@ -299,34 +292,6 @@ func manifestAddReport(dbw *jsonwall.DBWriter, entries map[string]ReportEntry) e
 			FinalHash: entry.FinalHash,
 			Size:      uint64(entry.Size),
 			Link:      entry.Link,
-		})
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func manifestAddManifestPaths(dbw *jsonwall.DBWriter, manifestMode os.FileMode, manifestSlices map[string][]*setup.Slice) error {
-	for path, slices := range manifestSlices {
-		sliceNames := []string{}
-		for _, slice := range slices {
-			err := dbw.Add(&Content{
-				Kind:  "content",
-				Slice: slice.String(),
-				Path:  path,
-			})
-			if err != nil {
-				return err
-			}
-			sliceNames = append(sliceNames, slice.String())
-		}
-		sort.Strings(sliceNames)
-		err := dbw.Add(&Path{
-			Kind:   "path",
-			Path:   path,
-			Mode:   fmt.Sprintf("0%o", unixPerm(manifestMode)),
-			Slices: sliceNames,
 		})
 		if err != nil {
 			return err

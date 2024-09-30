@@ -332,21 +332,29 @@ func Run(options *RunOptions) error {
 
 	manifestSlices := manifest.LocateManifestSlices(options.Selection.Slices, manifestFilename)
 	if len(manifestSlices) > 0 {
-		var files []io.Writer
-		for relPath := range manifestSlices {
+		var writers []io.Writer
+		for relPath, slices := range manifestSlices {
 			logf("Generating manifest at %s...", relPath)
-			absPath := filepath.Join(options.TargetDir, relPath)
-			if err := os.MkdirAll(filepath.Dir(absPath), 0755); err != nil {
-				return err
+			absPath := filepath.Join(targetDir, relPath)
+			createOptions := &fsutil.CreateOptions{
+				Path:        absPath,
+				Mode:        manifestMode,
+				MakeParents: true,
 			}
-			file, err := os.OpenFile(absPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, manifestMode)
+			writer, info, err := fsutil.CreateWriter(createOptions)
 			if err != nil {
 				return err
 			}
-			files = append(files, file)
-			defer file.Close()
+			defer writer.Close()
+			writers = append(writers, writer)
+			for _, slice := range slices {
+				err := report.Add(slice, info)
+				if err != nil {
+					return err
+				}
+			}
 		}
-		w, err := zstd.NewWriter(io.MultiWriter(files...))
+		w, err := zstd.NewWriter(io.MultiWriter(writers...))
 		if err != nil {
 			return err
 		}
@@ -356,7 +364,6 @@ func Run(options *RunOptions) error {
 			PackageInfo:    pkgInfos,
 			Selection:      options.Selection.Slices,
 			Report:         report,
-			ManifestMode:   manifestMode,
 		}
 		err = manifest.Write(writeOptions, w)
 		return err

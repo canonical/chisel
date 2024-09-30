@@ -273,16 +273,6 @@ func (s *S) TestGenerateManifests(c *C) {
 	slice1 := &setup.Slice{
 		Package: "package1",
 		Name:    "slice1",
-		Contents: map[string]setup.PathInfo{
-			"/dir/**": {
-				Kind:     "generate",
-				Generate: "manifest",
-			},
-			"/other-dir/**": {
-				Kind:     "generate",
-				Generate: "manifest",
-			},
-		},
 	}
 	slice2 := &setup.Slice{
 		Package: "package2",
@@ -321,11 +311,6 @@ func (s *S) TestGenerateManifests(c *C) {
 
 	expected := &manifestContents{
 		Paths: []*manifest.Path{{
-			Kind:   "path",
-			Path:   "/dir/manifest.wall",
-			Mode:   "0645",
-			Slices: []string{"package1_slice1"},
-		}, {
 			Kind:      "path",
 			Path:      "/file",
 			Mode:      "0456",
@@ -339,11 +324,6 @@ func (s *S) TestGenerateManifests(c *C) {
 			Link:   "/target",
 			Mode:   "0567",
 			Slices: []string{"package1_slice1", "package2_slice2"},
-		}, {
-			Kind:   "path",
-			Path:   "/other-dir/manifest.wall",
-			Mode:   "0645",
-			Slices: []string{"package1_slice1"},
 		}},
 		Packages: []*manifest.Package{{
 			Kind:    "package",
@@ -368,19 +348,11 @@ func (s *S) TestGenerateManifests(c *C) {
 		Contents: []*manifest.Content{{
 			Kind:  "content",
 			Slice: "package1_slice1",
-			Path:  "/dir/manifest.wall",
-		}, {
-			Kind:  "content",
-			Slice: "package1_slice1",
 			Path:  "/file",
 		}, {
 			Kind:  "content",
 			Slice: "package1_slice1",
 			Path:  "/link",
-		}, {
-			Kind:  "content",
-			Slice: "package1_slice1",
-			Path:  "/other-dir/manifest.wall",
 		}, {
 			Kind:  "content",
 			Slice: "package2_slice2",
@@ -393,10 +365,9 @@ func (s *S) TestGenerateManifests(c *C) {
 			"/dir/manifest.wall":       {slice1},
 			"/other-dir/manifest.wall": {slice1},
 		},
-		PackageInfo:  packageInfo,
-		Selection:    []*setup.Slice{slice1, slice2},
-		Report:       report,
-		ManifestMode: 0645,
+		PackageInfo: packageInfo,
+		Selection:   []*setup.Slice{slice1, slice2},
+		Report:      report,
 	}
 	var buffer bytes.Buffer
 	err := manifest.Write(options, &buffer)
@@ -410,14 +381,8 @@ func (s *S) TestGenerateManifests(c *C) {
 }
 
 func (s *S) TestGenerateNoManifests(c *C) {
-	options := &manifest.WriteOptions{
-		PackageInfo:  nil,
-		Selection:    nil,
-		Report:       nil,
-		ManifestMode: 0645,
-	}
 	var buffer bytes.Buffer
-	err := manifest.Write(options, &buffer)
+	err := manifest.Write(&manifest.WriteOptions{}, &buffer)
 	c.Assert(err, IsNil)
 	var reader io.Reader = &buffer
 	var bs []byte
