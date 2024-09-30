@@ -23,7 +23,6 @@ import (
 	"github.com/canonical/chisel/internal/setup"
 )
 
-const manifestFilename = "manifest.wall"
 const manifestMode fs.FileMode = 0644
 
 type RunOptions struct {
@@ -335,7 +334,7 @@ func Run(options *RunOptions) error {
 
 func generateManifests(targetDir string, selection *setup.Selection,
 	report *manifest.Report, pkgInfos []*archive.PackageInfo) error {
-	manifestSlices := manifest.FindPaths(selection.Slices, manifestFilename)
+	manifestSlices := manifest.FindPaths(selection.Slices)
 	if len(manifestSlices) == 0 {
 		// Nothing to do.
 		return nil

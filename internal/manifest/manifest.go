@@ -15,6 +15,7 @@ import (
 )
 
 const Schema = "1.0"
+const DefaultFilename = "manifest.wall"
 
 type Package struct {
 	Kind    string `json:"kind"`
@@ -165,13 +166,13 @@ func Validate(manifest *Manifest) (err error) {
 
 // FindPaths finds the paths marked with "generate:manifest" and
 // returns a map from the manifest path to all the slices that declare it.
-func FindPaths(slices []*setup.Slice, manifestFileName string) map[string][]*setup.Slice {
+func FindPaths(slices []*setup.Slice) map[string][]*setup.Slice {
 	manifestSlices := make(map[string][]*setup.Slice)
 	for _, slice := range slices {
 		for path, info := range slice.Contents {
 			if info.Generate == setup.GenerateManifest {
 				dir := strings.TrimSuffix(path, "**")
-				path = filepath.Join(dir, manifestFileName)
+				path = filepath.Join(dir, DefaultFilename)
 				manifestSlices[path] = append(manifestSlices[path], slice)
 			}
 		}

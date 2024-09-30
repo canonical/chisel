@@ -176,7 +176,6 @@ func (s *S) TestManifestReadValidate(c *C) {
 var findPathsTests = []struct {
 	summary  string
 	slices   []*setup.Slice
-	filename string
 	expected map[string][]string
 }{{
 	summary: "Single slice",
@@ -189,7 +188,6 @@ var findPathsTests = []struct {
 			},
 		},
 	}},
-	filename: "manifest.wall",
 	expected: map[string][]string{
 		"/folder/manifest.wall": []string{"slice1"},
 	},
@@ -199,7 +197,6 @@ var findPathsTests = []struct {
 		Name:     "slice1",
 		Contents: map[string]setup.PathInfo{},
 	}},
-	filename: "manifest.wall",
 	expected: map[string][]string{},
 }, {
 	summary: "Several matches with several groups",
@@ -239,10 +236,9 @@ var findPathsTests = []struct {
 			},
 		},
 	}},
-	filename: "mfest.wall",
 	expected: map[string][]string{
-		"/folder/mfest.wall":       {"slice1", "slice2"},
-		"/other-folder/mfest.wall": {"slice4", "slice5"},
+		"/folder/manifest.wall":       {"slice1", "slice2"},
+		"/other-folder/manifest.wall": {"slice4", "slice5"},
 	},
 }}
 
@@ -250,7 +246,7 @@ func (s *S) TestFindPaths(c *C) {
 	for _, test := range findPathsTests {
 		c.Logf("Summary: %s", test.summary)
 
-		manifestSlices := manifest.FindPaths(test.slices, test.filename)
+		manifestSlices := manifest.FindPaths(test.slices)
 
 		slicesByName := map[string]*setup.Slice{}
 		for _, slice := range test.slices {
