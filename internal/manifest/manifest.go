@@ -207,7 +207,7 @@ func Write(options *WriteOptions, writer io.Writer) error {
 		return err
 	}
 
-	err = manifestAddReport(dbw, options.Report.Entries)
+	err = manifestAddReport(dbw, options.Report)
 	if err != nil {
 		return err
 	}
@@ -268,8 +268,8 @@ func manifestAddSlices(dbw *jsonwall.DBWriter, slices []*setup.Slice) error {
 	return nil
 }
 
-func manifestAddReport(dbw *jsonwall.DBWriter, entries map[string]ReportEntry) error {
-	for _, entry := range entries {
+func manifestAddReport(dbw *jsonwall.DBWriter, report *Report) error {
+	for _, entry := range report.Entries {
 		sliceNames := []string{}
 		for slice := range entry.Slices {
 			err := dbw.Add(&Content{
