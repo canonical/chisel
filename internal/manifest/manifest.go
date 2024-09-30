@@ -183,17 +183,10 @@ func FindPaths(slices []*setup.Slice) map[string][]*setup.Slice {
 type WriteOptions struct {
 	PackageInfo []*archive.PackageInfo
 	Selection   []*setup.Slice
-	// Map manifest path to all the slices that declare it. See
-	// manifest.FindPaths.
-	ManifestSlices map[string][]*setup.Slice
-	Report         *Report
+	Report      *Report
 }
 
 func Write(options *WriteOptions, writer io.Writer) error {
-	if len(options.ManifestSlices) == 0 {
-		// Nothing to do.
-		return nil
-	}
 	dbw := jsonwall.NewDBWriter(&jsonwall.DBWriterOptions{
 		Schema: Schema,
 	})
@@ -270,6 +263,9 @@ func manifestAddSlices(dbw *jsonwall.DBWriter, slices []*setup.Slice) error {
 }
 
 func manifestAddReport(dbw *jsonwall.DBWriter, report *Report) error {
+	if report == nil {
+		return nil
+	}
 	for _, entry := range report.Entries {
 		sliceNames := []string{}
 		for slice := range entry.Slices {

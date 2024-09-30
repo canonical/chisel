@@ -367,10 +367,9 @@ func generateManifests(targetDir string, selection *setup.Selection,
 	}
 	defer w.Close()
 	writeOptions := &manifest.WriteOptions{
-		ManifestSlices: manifestSlices,
-		PackageInfo:    pkgInfos,
-		Selection:      selection.Slices,
-		Report:         report,
+		PackageInfo: pkgInfos,
+		Selection:   selection.Slices,
+		Report:      report,
 	}
 	err = manifest.Write(writeOptions, w)
 	return err

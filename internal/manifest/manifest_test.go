@@ -357,10 +357,6 @@ func (s *S) TestGenerateManifests(c *C) {
 	}
 
 	options := &manifest.WriteOptions{
-		ManifestSlices: map[string][]*setup.Slice{
-			"/dir/manifest.wall":       {slice1},
-			"/other-dir/manifest.wall": {slice1},
-		},
 		PackageInfo: packageInfo,
 		Selection:   []*setup.Slice{slice1, slice2},
 		Report:      report,
