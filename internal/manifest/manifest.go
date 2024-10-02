@@ -115,7 +115,7 @@ func Validate(manifest *Manifest) (err error) {
 			return err
 		}
 		if !pkgExist[sk.Package] {
-			return fmt.Errorf("package %q not found in packages", sk.Package)
+			return fmt.Errorf("slice %s refers to missing package %q", slice.Name, sk.Package)
 		}
 		sliceExist[slice.Name] = true
 		return nil
@@ -127,7 +127,7 @@ func Validate(manifest *Manifest) (err error) {
 	pathToSlices := map[string][]string{}
 	err = manifest.IterateContents("", func(content *Content) error {
 		if !sliceExist[content.Slice] {
-			return fmt.Errorf("slice %s not found in slices", content.Slice)
+			return fmt.Errorf("content path %q refers to missing slice %s", content.Path, content.Slice)
 		}
 		if !slices.Contains(pathToSlices[content.Path], content.Slice) {
 			pathToSlices[content.Path] = append(pathToSlices[content.Path], content.Slice)
@@ -191,7 +191,12 @@ func Write(options *WriteOptions, writer io.Writer) error {
 		Schema: Schema,
 	})
 
-	err := manifestAddPackages(dbw, options.PackageInfo)
+	err := fastValidate(options)
+	if err != nil {
+		return err
+	}
+
+	err = manifestAddPackages(dbw, options.PackageInfo)
 	if err != nil {
 		return err
 	}
@@ -300,4 +305,105 @@ func unixPerm(mode fs.FileMode) (perm uint32) {
 		perm |= 01000
 	}
 	return perm
+}
+
+func fastValidate(options *WriteOptions) (err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("internal error: invalid manifest: %s", err)
+		}
+	}()
+	pkgExist := map[string]bool{}
+	for _, pkg := range options.PackageInfo {
+		err := validatePackage(pkg)
+		if err != nil {
+			return err
+		}
+		pkgExist[pkg.Name] = true
+	}
+	sliceExist := map[string]bool{}
+	for _, slice := range options.Selection {
+		if _, ok := pkgExist[slice.Package]; !ok {
+			return fmt.Errorf("slice %s refers to missing package %q", slice.String(), slice.Package)
+		}
+		sliceExist[slice.String()] = true
+	}
+	for _, entry := range options.Report.Entries {
+		err := validateReportEntry(&entry)
+		if err != nil {
+			return err
+		}
+		for slice := range entry.Slices {
+			if _, ok := sliceExist[slice.String()]; !ok {
+				return fmt.Errorf("path %q refers to missing slice %s", entry.Path, slice.String())
+			}
+		}
+	}
+	return nil
+}
+
+func validateReportEntry(entry *ReportEntry) (err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("path %q has invalid options: %s", entry.Path, err)
+		}
+	}()
+
+	switch entry.Mode & fs.ModeType {
+	case 0:
+		// Regular file.
+		if entry.Link != "" {
+			return fmt.Errorf("link set for regular file")
+		}
+	case fs.ModeDir:
+		if entry.Link != "" {
+			return fmt.Errorf("link set for directory")
+		}
+		if entry.SHA256 != "" {
+			return fmt.Errorf("sha256 set for directory")
+		}
+		if entry.FinalSHA256 != "" {
+			return fmt.Errorf("final_sha256 set for directory")
+		}
+		if entry.Size != 0 {
+			return fmt.Errorf("size set for directory")
+		}
+	case fs.ModeSymlink:
+		if entry.Link == "" {
+			return fmt.Errorf("link not set for symlink")
+		}
+		if entry.SHA256 != "" {
+			return fmt.Errorf("sha256 set for symlink")
+		}
+		if entry.FinalSHA256 != "" {
+			return fmt.Errorf("final_sha256 set for symlink")
+		}
+		if entry.Size != 0 {
+			return fmt.Errorf("size set for symlink")
+		}
+	default:
+		return fmt.Errorf("unsupported file type: %s", entry.Path)
+	}
+
+	if len(entry.Slices) == 0 {
+		return fmt.Errorf("slices is empty")
+	}
+
+	return nil
+}
+
+func validatePackage(pkg *archive.PackageInfo) (err error) {
+	if pkg.Name == "" {
+		return fmt.Errorf("package name not set")
+	}
+	if pkg.Arch == "" {
+		return fmt.Errorf("package %q missing arch", pkg.Name)
+	}
+	if pkg.SHA256 == "" {
+		return fmt.Errorf("package %q missing sha256", pkg.Name)
+	}
+	if pkg.Version == "" {
+		return fmt.Errorf("package %q missing version", pkg.Name)
+	}
+	return nil
 }

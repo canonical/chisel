@@ -3,6 +3,7 @@ package manifest_test
 import (
 	"bytes"
 	"io"
+	"io/fs"
 	"os"
 	"path"
 	"slices"
@@ -77,14 +78,14 @@ var readManifestTests = []struct {
 		{"jsonwall":"1.0","schema":"1.0","count":1}
 		{"kind":"content","slice":"pkg1_manifest","path":"/manifest/manifest.wall"}
 	`,
-	valError: `invalid manifest: slice pkg1_manifest not found in slices`,
+	valError: `invalid manifest: content path "/manifest/manifest.wall" refers to missing slice pkg1_manifest`,
 }, {
 	summary: "Package not found",
 	input: `
 		{"jsonwall":"1.0","schema":"1.0","count":1}
 		{"kind":"slice","name":"pkg1_manifest"}
 	`,
-	valError: `invalid manifest: package "pkg1" not found in packages`,
+	valError: `invalid manifest: slice pkg1_manifest refers to missing package "pkg1"`,
 }, {
 	summary: "Path not found in contents",
 	input: `
@@ -265,16 +266,26 @@ func (s *S) TestFindPaths(c *C) {
 	}
 }
 
-func (s *S) TestGenerateManifests(c *C) {
-	slice1 := &setup.Slice{
-		Package: "package1",
-		Name:    "slice1",
-	}
-	slice2 := &setup.Slice{
-		Package: "package2",
-		Name:    "slice2",
-	}
-	report := &manifest.Report{
+var slice1 = &setup.Slice{
+	Package: "package1",
+	Name:    "slice1",
+}
+var slice2 = &setup.Slice{
+	Package: "package2",
+	Name:    "slice2",
+}
+
+var generateManifestTests = []struct {
+	summary     string
+	report      *manifest.Report
+	packageInfo []*archive.PackageInfo
+	selection   []*setup.Slice
+	expected    *manifestContents
+	error       string
+}{{
+	summary:   "Basic",
+	selection: []*setup.Slice{slice1, slice2},
+	report: &manifest.Report{
 		Root: "/",
 		Entries: map[string]manifest.ReportEntry{
 			"/file": {
@@ -287,13 +298,13 @@ func (s *S) TestGenerateManifests(c *C) {
 			},
 			"/link": {
 				Path:   "/link",
-				Mode:   0567,
+				Mode:   0567 | fs.ModeSymlink,
 				Link:   "/target",
 				Slices: map[*setup.Slice]bool{slice1: true, slice2: true},
 			},
 		},
-	}
-	packageInfo := []*archive.PackageInfo{{
+	},
+	packageInfo: []*archive.PackageInfo{{
 		Name:    "package1",
 		Version: "v1",
 		Arch:    "a1",
@@ -303,9 +314,8 @@ func (s *S) TestGenerateManifests(c *C) {
 		Version: "v2",
 		Arch:    "a2",
 		SHA256:  "s2",
-	}}
-
-	expected := &manifestContents{
+	}},
+	expected: &manifestContents{
 		Paths: []*manifest.Path{{
 			Kind:        "path",
 			Path:        "/file",
@@ -354,22 +364,249 @@ func (s *S) TestGenerateManifests(c *C) {
 			Slice: "package2_slice2",
 			Path:  "/link",
 		}},
-	}
+	},
+}, {
+	summary: "Missing slice",
+	report: &manifest.Report{
+		Root: "/",
+		Entries: map[string]manifest.ReportEntry{
+			"/file": {
+				Path:        "/file",
+				Mode:        0456,
+				SHA256:      "hash",
+				Size:        1234,
+				Slices:      map[*setup.Slice]bool{slice1: true},
+				FinalSHA256: "final-hash",
+			},
+		},
+	},
+	selection: []*setup.Slice{},
+	error:     `internal error: invalid manifest: path "/file" refers to missing slice package1_slice1`,
+}, {
+	summary: "Missing package",
+	report: &manifest.Report{
+		Root: "/",
+		Entries: map[string]manifest.ReportEntry{
+			"/file": {
+				Path:        "/file",
+				Mode:        0456,
+				SHA256:      "hash",
+				Size:        1234,
+				Slices:      map[*setup.Slice]bool{slice1: true},
+				FinalSHA256: "final-hash",
+			},
+		},
+	},
+	packageInfo: []*archive.PackageInfo{},
+	error:       `internal error: invalid manifest: slice package1_slice1 refers to missing package "package1"`,
+}, {
+	summary: "Invalid path: link set for regular file",
+	report: &manifest.Report{
+		Root: "/",
+		Entries: map[string]manifest.ReportEntry{
+			"/file": {
+				Path:   "/file",
+				Mode:   0456,
+				Slices: map[*setup.Slice]bool{slice1: true},
+				Link:   "something",
+			},
+		},
+	},
+	error: `internal error: invalid manifest: path "/file" has invalid options: link set for regular file`,
+}, {
+	summary: "Invalid path: slices is empty",
+	report: &manifest.Report{
+		Root: "/",
+		Entries: map[string]manifest.ReportEntry{
+			"/file": {
+				Path: "/file",
+				Mode: 0456,
+			},
+		},
+	},
+	error: `internal error: invalid manifest: path "/file" has invalid options: slices is empty`,
+}, {
+	summary: "Invalid path: link set for symlink",
+	report: &manifest.Report{
+		Root: "/",
+		Entries: map[string]manifest.ReportEntry{
+			"/link": {
+				Path:   "/link",
+				Mode:   0456 | fs.ModeSymlink,
+				Slices: map[*setup.Slice]bool{slice1: true},
+			},
+		},
+	},
+	error: `internal error: invalid manifest: path "/link" has invalid options: link not set for symlink`,
+}, {
+	summary: "Invalid path: sha256 set for symlink",
+	report: &manifest.Report{
+		Root: "/",
+		Entries: map[string]manifest.ReportEntry{
+			"/link": {
+				Path:   "/link",
+				Mode:   0456 | fs.ModeSymlink,
+				Slices: map[*setup.Slice]bool{slice1: true},
+				Link:   "valid",
+				SHA256: "not-empty",
+			},
+		},
+	},
+	error: `internal error: invalid manifest: path "/link" has invalid options: sha256 set for symlink`,
+}, {
+	summary: "Invalid path: final_sha256 set for symlink",
+	report: &manifest.Report{
+		Root: "/",
+		Entries: map[string]manifest.ReportEntry{
+			"/link": {
+				Path:        "/link",
+				Mode:        0456 | fs.ModeSymlink,
+				Slices:      map[*setup.Slice]bool{slice1: true},
+				Link:        "valid",
+				FinalSHA256: "not-empty",
+			},
+		},
+	},
+	error: `internal error: invalid manifest: path "/link" has invalid options: final_sha256 set for symlink`,
+}, {
+	summary: "Invalid path: size set for symlink",
+	report: &manifest.Report{
+		Root: "/",
+		Entries: map[string]manifest.ReportEntry{
+			"/link": {
+				Path:   "/link",
+				Mode:   0456 | fs.ModeSymlink,
+				Slices: map[*setup.Slice]bool{slice1: true},
+				Link:   "valid",
+				Size:   1234,
+			},
+		},
+	},
+	error: `internal error: invalid manifest: path "/link" has invalid options: size set for symlink`,
+}, {
+	summary: "Invalid path: link set for directory",
+	report: &manifest.Report{
+		Root: "/",
+		Entries: map[string]manifest.ReportEntry{
+			"/dir": {
+				Path:   "/dir",
+				Mode:   0456 | fs.ModeDir,
+				Slices: map[*setup.Slice]bool{slice1: true},
+				Link:   "not-empty",
+			},
+		},
+	},
+	error: `internal error: invalid manifest: path "/dir" has invalid options: link set for directory`,
+}, {
+	summary: "Invalid path: sha256 set for directory",
+	report: &manifest.Report{
+		Root: "/",
+		Entries: map[string]manifest.ReportEntry{
+			"/dir": {
+				Path:   "/dir",
+				Mode:   0456 | fs.ModeDir,
+				Slices: map[*setup.Slice]bool{slice1: true},
+				SHA256: "not-empty",
+			},
+		},
+	},
+	error: `internal error: invalid manifest: path "/dir" has invalid options: sha256 set for directory`,
+}, {
+	summary: "Invalid path: final_sha256 set for directory",
+	report: &manifest.Report{
+		Root: "/",
+		Entries: map[string]manifest.ReportEntry{
+			"/dir": {
+				Path:        "/dir",
+				Mode:        0456 | fs.ModeDir,
+				Slices:      map[*setup.Slice]bool{slice1: true},
+				FinalSHA256: "not-empty",
+			},
+		},
+	},
+	error: `internal error: invalid manifest: path "/dir" has invalid options: final_sha256 set for directory`,
+}, {
+	summary: "Invalid path: size set for directory",
+	report: &manifest.Report{
+		Root: "/",
+		Entries: map[string]manifest.ReportEntry{
+			"/dir": {
+				Path:   "/dir",
+				Mode:   0456 | fs.ModeDir,
+				Slices: map[*setup.Slice]bool{slice1: true},
+				Size:   1234,
+			},
+		},
+	},
+	error: `internal error: invalid manifest: path "/dir" has invalid options: size set for directory`,
+}, {
+	summary: "Invalid package: missing name",
+	packageInfo: []*archive.PackageInfo{{
+		Version: "v1",
+		Arch:    "a1",
+		SHA256:  "s1",
+	}},
+	error: `internal error: invalid manifest: package name not set`,
+}, {
+	summary: "Invalid package: missing version",
+	packageInfo: []*archive.PackageInfo{{
+		Name:   "package-1",
+		Arch:   "a1",
+		SHA256: "s1",
+	}},
+	error: `internal error: invalid manifest: package "package-1" missing version`,
+}, {
+	summary: "Invalid package: missing arch",
+	packageInfo: []*archive.PackageInfo{{
+		Name:    "package-1",
+		Version: "v1",
+		SHA256:  "s1",
+	}},
+	error: `internal error: invalid manifest: package "package-1" missing arch`,
+}, {
+	summary: "Invalid package: missing sha256",
+	packageInfo: []*archive.PackageInfo{{
+		Name:    "package-1",
+		Version: "v1",
+		Arch:    "a1",
+	}},
+	error: `internal error: invalid manifest: package "package-1" missing sha256`,
+}}
 
-	options := &manifest.WriteOptions{
-		PackageInfo: packageInfo,
-		Selection:   []*setup.Slice{slice1, slice2},
-		Report:      report,
+func (s *S) TestGenerateManifests(c *C) {
+	for _, test := range generateManifestTests {
+		c.Logf(test.summary)
+		if test.selection == nil {
+			test.selection = []*setup.Slice{slice1}
+		}
+		if test.packageInfo == nil {
+			test.packageInfo = []*archive.PackageInfo{{
+				Name:    "package1",
+				Version: "v1",
+				Arch:    "a1",
+				SHA256:  "s1",
+			}}
+		}
+
+		options := &manifest.WriteOptions{
+			PackageInfo: test.packageInfo,
+			Selection:   test.selection,
+			Report:      test.report,
+		}
+		var buffer bytes.Buffer
+		err := manifest.Write(options, &buffer)
+		if test.error != "" {
+			c.Assert(err, ErrorMatches, test.error)
+			continue
+		}
+		c.Assert(err, IsNil)
+		mfest, err := manifest.Read(&buffer)
+		c.Assert(err, IsNil)
+		err = manifest.Validate(mfest)
+		c.Assert(err, IsNil)
+		contents := dumpManifestContents(c, mfest)
+		c.Assert(contents, DeepEquals, test.expected)
 	}
-	var buffer bytes.Buffer
-	err := manifest.Write(options, &buffer)
-	c.Assert(err, IsNil)
-	mfest, err := manifest.Read(&buffer)
-	c.Assert(err, IsNil)
-	err = manifest.Validate(mfest)
-	c.Assert(err, IsNil)
-	contents := dumpManifestContents(c, mfest)
-	c.Assert(contents, DeepEquals, expected)
 }
 
 func (s *S) TestGenerateNoManifests(c *C) {
