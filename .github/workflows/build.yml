@@ -89,27 +89,34 @@ jobs:
           CHISEL_VERSION: ${{ steps.build.outputs.CHISEL_VERSION }}
         run: |
           ARCHIVE_FILE=chisel_${CHISEL_VERSION}_${GOOS}_${GOARCH}.tar.gz
+          ARCHIVE_FILE_SHA384="${ARCHIVE_FILE}.sha384"
           echo "Creating archive $ARCHIVE_FILE"
 
-          mkdir -p dist/build
-          cp chisel LICENSE README.md dist/build
-          find dist/build -printf "%P\n" | tar -czf dist/$ARCHIVE_FILE --no-recursion -C dist/build -T -
+          mkdir -p dist/
+          cp chisel LICENSE README.md dist/
+          find dist -printf "%P\n" | tar -czf $ARCHIVE_FILE --no-recursion -C dist -T -
+          sha384sum "${ARCHIVE_FILE}" > "${ARCHIVE_FILE_SHA384}"
 
           # Share variables with subsequent steps
           echo "ARCHIVE_FILE=${ARCHIVE_FILE}" >>$GITHUB_OUTPUT
+          echo "ARCHIVE_FILE_SHA384=${ARCHIVE_FILE_SHA384}" >>$GITHUB_OUTPUT
 
       - name: Upload archive as Actions artifact
         uses: actions/upload-artifact@v3
         with:
           name: ${{ steps.archive.outputs.ARCHIVE_FILE }}
-          path: dist/${{ steps.archive.outputs.ARCHIVE_FILE }}
+          path: |
+            ${{ steps.archive.outputs.ARCHIVE_FILE }}
+            ${{ steps.archive.outputs.ARCHIVE_FILE_SHA384 }}
 
       - name: Upload archive to release
         env:
           CHISEL_VERSION: ${{ steps.build.outputs.CHISEL_VERSION }}
           ARCHIVE_FILE: ${{ steps.archive.outputs.ARCHIVE_FILE }}
+          ARCHIVE_FILE_SHA384: ${{ steps.archive.outputs.ARCHIVE_FILE_SHA384 }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: ${{ github.event_name == 'release' }}
         run: |
           echo "Uploading $ARCHIVE_FILE to release $CHISEL_VERSION"
-          gh release upload $CHISEL_VERSION dist/$ARCHIVE_FILE
+          gh release upload $CHISEL_VERSION $ARCHIVE_FILE
+          gh release upload $CHISEL_VERSION $ARCHIVE_FILE_SHA384

@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -12,12 +13,17 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/klauspost/compress/zstd"
+
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/deb"
 	"github.com/canonical/chisel/internal/fsutil"
+	"github.com/canonical/chisel/internal/manifest"
 	"github.com/canonical/chisel/internal/scripts"
 	"github.com/canonical/chisel/internal/setup"
 )
+
+const manifestMode fs.FileMode = 0644
 
 type RunOptions struct {
 	Selection *setup.Selection
@@ -65,7 +71,7 @@ func (cc *contentChecker) checkKnown(path string) error {
 	return err
 }
 
-func Run(options *RunOptions) (*Report, error) {
+func Run(options *RunOptions) error {
 	oldUmask := syscall.Umask(0)
 	defer func() {
 		syscall.Umask(oldUmask)
@@ -75,7 +81,7 @@ func Run(options *RunOptions) (*Report, error) {
 	if !filepath.IsAbs(targetDir) {
 		dir, err := os.Getwd()
 		if err != nil {
-			return nil, fmt.Errorf("cannot obtain current directory: %w", err)
+			return fmt.Errorf("cannot obtain current directory: %w", err)
 		}
 		targetDir = filepath.Join(dir, targetDir)
 	}
@@ -89,10 +95,10 @@ func Run(options *RunOptions) (*Report, error) {
 			archiveName := options.Selection.Release.Packages[slice.Package].Archive
 			archive := options.Archives[archiveName]
 			if archive == nil {
-				return nil, fmt.Errorf("archive %q not defined", archiveName)
+				return fmt.Errorf("archive %q not defined", archiveName)
 			}
 			if !archive.Exists(slice.Package) {
-				return nil, fmt.Errorf("slice package %q missing from archive", slice.Package)
+				return fmt.Errorf("slice package %q missing from archive", slice.Package)
 			}
 			archives[slice.Package] = archive
 			extractPackage = make(map[string][]deb.ExtractInfo)
@@ -145,26 +151,27 @@ func Run(options *RunOptions) (*Report, error) {
 
 	// Fetch all packages, using the selection order.
 	packages := make(map[string]io.ReadCloser)
+	var pkgInfos []*archive.PackageInfo
 	for _, slice := range options.Selection.Slices {
 		if packages[slice.Package] != nil {
 			continue
 		}
-		reader, err := archives[slice.Package].Fetch(slice.Package)
+		reader, info, err := archives[slice.Package].Fetch(slice.Package)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		defer reader.Close()
 		packages[slice.Package] = reader
+		pkgInfos = append(pkgInfos, info)
 	}
 
 	// When creating content, record if a path is known and whether they are
 	// listed as until: mutate in all the slices that reference them.
 	knownPaths := map[string]pathData{}
 	addKnownPath(knownPaths, "/", pathData{})
-
-	report, err := NewReport(targetDir)
+	report, err := manifest.NewReport(targetDir)
 	if err != nil {
-		return nil, fmt.Errorf("internal error: cannot create report: %w", err)
+		return fmt.Errorf("internal error: cannot create report: %w", err)
 	}
 
 	// Creates the filesystem entry and adds it to the report. It also updates
@@ -235,38 +242,60 @@ func Run(options *RunOptions) (*Report, error) {
 		reader.Close()
 		packages[slice.Package] = nil
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	// Create new content not coming from packages.
-	done := make(map[string]bool)
+	// Create new content not extracted from packages, e.g. TextPath or DirPath
+	// with {make: true}. The only exception is the manifest which will be created
+	// later.
+	// First group them by their relative path. Then create them and attribute
+	// them to the appropriate slices.
+	relPaths := map[string][]*setup.Slice{}
 	for _, slice := range options.Selection.Slices {
 		arch := archives[slice.Package].Options().Arch
 		for relPath, pathInfo := range slice.Contents {
 			if len(pathInfo.Arch) > 0 && !slices.Contains(pathInfo.Arch, arch) {
 				continue
 			}
-			if done[relPath] || pathInfo.Kind == setup.CopyPath || pathInfo.Kind == setup.GlobPath {
+			if pathInfo.Kind == setup.CopyPath || pathInfo.Kind == setup.GlobPath ||
+				pathInfo.Kind == setup.GeneratePath {
 				continue
 			}
-			done[relPath] = true
-			data := pathData{
-				until:   pathInfo.Until,
-				mutable: pathInfo.Mutable,
+			relPaths[relPath] = append(relPaths[relPath], slice)
+		}
+	}
+	for relPath, slices := range relPaths {
+		until := setup.UntilMutate
+		for _, slice := range slices {
+			if slice.Contents[relPath].Until == setup.UntilNone {
+				until = setup.UntilNone
+				break
 			}
-			addKnownPath(knownPaths, relPath, data)
-			targetPath := filepath.Join(targetDir, relPath)
-			entry, err := createFile(targetPath, pathInfo)
-			if err != nil {
-				return nil, err
-			}
+		}
+		// It is okay to take the first pathInfo because the release has been
+		// validated when read and there are no conflicts. The only field that
+		// was not checked was until because it is not used for conflict
+		// validation.
+		pathInfo := slices[0].Contents[relPath]
+		pathInfo.Until = until
+		data := pathData{
+			until:   pathInfo.Until,
+			mutable: pathInfo.Mutable,
+		}
+		addKnownPath(knownPaths, relPath, data)
+		targetPath := filepath.Join(targetDir, relPath)
+		entry, err := createFile(targetPath, pathInfo)
+		if err != nil {
+			return err
+		}
 
-			// Do not add paths with "until: mutate".
-			if pathInfo.Until != setup.UntilMutate {
+		// Do not add paths with "until: mutate".
+		if pathInfo.Until != setup.UntilMutate {
+			for _, slice := range slices {
 				err = report.Add(slice, entry)
 				if err != nil {
-					return nil, err
+					return err
 				}
 			}
 		}
@@ -291,16 +320,59 @@ func Run(options *RunOptions) (*Report, error) {
 		}
 		err := scripts.Run(&opts)
 		if err != nil {
-			return nil, fmt.Errorf("slice %s: %w", slice, err)
+			return fmt.Errorf("slice %s: %w", slice, err)
 		}
 	}
 
 	err = removeAfterMutate(targetDir, knownPaths)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return report, nil
+	return generateManifests(targetDir, options.Selection, report, pkgInfos)
+}
+
+func generateManifests(targetDir string, selection *setup.Selection,
+	report *manifest.Report, pkgInfos []*archive.PackageInfo) error {
+	manifestSlices := manifest.FindPaths(selection.Slices)
+	if len(manifestSlices) == 0 {
+		// Nothing to do.
+		return nil
+	}
+	var writers []io.Writer
+	for relPath, slices := range manifestSlices {
+		logf("Generating manifest at %s...", relPath)
+		absPath := filepath.Join(targetDir, relPath)
+		createOptions := &fsutil.CreateOptions{
+			Path:        absPath,
+			Mode:        manifestMode,
+			MakeParents: true,
+		}
+		writer, info, err := fsutil.CreateWriter(createOptions)
+		if err != nil {
+			return err
+		}
+		defer writer.Close()
+		writers = append(writers, writer)
+		for _, slice := range slices {
+			err := report.Add(slice, info)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	w, err := zstd.NewWriter(io.MultiWriter(writers...))
+	if err != nil {
+		return err
+	}
+	defer w.Close()
+	writeOptions := &manifest.WriteOptions{
+		PackageInfo: pkgInfos,
+		Selection:   selection.Slices,
+		Report:      report,
+	}
+	err = manifest.Write(writeOptions, w)
+	return err
 }
 
 // removeAfterMutate removes entries marked with until: mutate. A path is marked

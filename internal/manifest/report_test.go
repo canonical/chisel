@@ -1,4 +1,4 @@
-package slicer_test
+package manifest_test
 
 import (
 	"io/fs"
@@ -6,8 +6,8 @@ import (
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/chisel/internal/fsutil"
+	"github.com/canonical/chisel/internal/manifest"
 	"github.com/canonical/chisel/internal/setup"
-	"github.com/canonical/chisel/internal/slicer"
 )
 
 var oneSlice = &setup.Slice{
@@ -33,25 +33,25 @@ var sampleDir = fsutil.Entry{
 }
 
 var sampleFile = fsutil.Entry{
-	Path: "/base/example-file",
-	Mode: 0777,
-	Hash: "example-file_hash",
-	Size: 5678,
-	Link: "",
+	Path:   "/base/example-file",
+	Mode:   0777,
+	SHA256: "example-file_hash",
+	Size:   5678,
+	Link:   "",
 }
 
 var sampleLink = fsutil.Entry{
-	Path: "/base/example-link",
-	Mode: 0777,
-	Hash: "example-file_hash",
-	Size: 5678,
-	Link: "/base/example-file",
+	Path:   "/base/example-link",
+	Mode:   0777,
+	SHA256: "example-file_hash",
+	Size:   5678,
+	Link:   "/base/example-file",
 }
 
 var sampleFileMutated = fsutil.Entry{
-	Path: sampleFile.Path,
-	Hash: sampleFile.Hash + "_changed",
-	Size: sampleFile.Size + 10,
+	Path:   sampleFile.Path,
+	SHA256: sampleFile.SHA256 + "_changed",
+	Size:   sampleFile.Size + 10,
 }
 
 type sliceAndEntry struct {
@@ -64,13 +64,13 @@ var reportTests = []struct {
 	add     []sliceAndEntry
 	mutate  []*fsutil.Entry
 	// indexed by path.
-	expected map[string]slicer.ReportEntry
+	expected map[string]manifest.ReportEntry
 	// error after adding the last [sliceAndEntry].
 	err string
 }{{
 	summary: "Regular directory",
 	add:     []sliceAndEntry{{entry: sampleDir, slice: oneSlice}},
-	expected: map[string]slicer.ReportEntry{
+	expected: map[string]manifest.ReportEntry{
 		"/example-dir/": {
 			Path:   "/example-dir/",
 			Mode:   fs.ModeDir | 0654,
@@ -83,7 +83,7 @@ var reportTests = []struct {
 		{entry: sampleDir, slice: oneSlice},
 		{entry: sampleDir, slice: otherSlice},
 	},
-	expected: map[string]slicer.ReportEntry{
+	expected: map[string]manifest.ReportEntry{
 		"/example-dir/": {
 			Path:   "/example-dir/",
 			Mode:   fs.ModeDir | 0654,
@@ -93,11 +93,11 @@ var reportTests = []struct {
 }, {
 	summary: "Regular file",
 	add:     []sliceAndEntry{{entry: sampleFile, slice: oneSlice}},
-	expected: map[string]slicer.ReportEntry{
+	expected: map[string]manifest.ReportEntry{
 		"/example-file": {
 			Path:   "/example-file",
 			Mode:   0777,
-			Hash:   "example-file_hash",
+			SHA256: "example-file_hash",
 			Size:   5678,
 			Slices: map[*setup.Slice]bool{oneSlice: true},
 			Link:   "",
@@ -105,11 +105,11 @@ var reportTests = []struct {
 }, {
 	summary: "Regular file link",
 	add:     []sliceAndEntry{{entry: sampleLink, slice: oneSlice}},
-	expected: map[string]slicer.ReportEntry{
+	expected: map[string]manifest.ReportEntry{
 		"/example-link": {
 			Path:   "/example-link",
 			Mode:   0777,
-			Hash:   "example-file_hash",
+			SHA256: "example-file_hash",
 			Size:   5678,
 			Slices: map[*setup.Slice]bool{oneSlice: true},
 			Link:   "/base/example-file",
@@ -120,7 +120,7 @@ var reportTests = []struct {
 		{entry: sampleDir, slice: oneSlice},
 		{entry: sampleFile, slice: otherSlice},
 	},
-	expected: map[string]slicer.ReportEntry{
+	expected: map[string]manifest.ReportEntry{
 		"/example-dir/": {
 			Path:   "/example-dir/",
 			Mode:   fs.ModeDir | 0654,
@@ -130,7 +130,7 @@ var reportTests = []struct {
 		"/example-file": {
 			Path:   "/example-file",
 			Mode:   0777,
-			Hash:   "example-file_hash",
+			SHA256: "example-file_hash",
 			Size:   5678,
 			Slices: map[*setup.Slice]bool{otherSlice: true},
 			Link:   "",
@@ -141,11 +141,11 @@ var reportTests = []struct {
 		{entry: sampleFile, slice: oneSlice},
 		{entry: sampleFile, slice: oneSlice},
 	},
-	expected: map[string]slicer.ReportEntry{
+	expected: map[string]manifest.ReportEntry{
 		"/example-file": {
 			Path:   "/example-file",
 			Mode:   0777,
-			Hash:   "example-file_hash",
+			SHA256: "example-file_hash",
 			Size:   5678,
 			Slices: map[*setup.Slice]bool{oneSlice: true},
 			Link:   "",
@@ -155,11 +155,11 @@ var reportTests = []struct {
 	add: []sliceAndEntry{
 		{entry: sampleFile, slice: oneSlice},
 		{entry: fsutil.Entry{
-			Path: sampleFile.Path,
-			Mode: 0,
-			Hash: sampleFile.Hash,
-			Size: sampleFile.Size,
-			Link: sampleFile.Link,
+			Path:   sampleFile.Path,
+			Mode:   0,
+			SHA256: sampleFile.SHA256,
+			Size:   sampleFile.Size,
+			Link:   sampleFile.Link,
 		}, slice: oneSlice},
 	},
 	err: `path /example-file reported twice with diverging mode: 0000 != 0777`,
@@ -168,11 +168,11 @@ var reportTests = []struct {
 	add: []sliceAndEntry{
 		{entry: sampleFile, slice: oneSlice},
 		{entry: fsutil.Entry{
-			Path: sampleFile.Path,
-			Mode: sampleFile.Mode,
-			Hash: "distinct hash",
-			Size: sampleFile.Size,
-			Link: sampleFile.Link,
+			Path:   sampleFile.Path,
+			Mode:   sampleFile.Mode,
+			SHA256: "distinct hash",
+			Size:   sampleFile.Size,
+			Link:   sampleFile.Link,
 		}, slice: oneSlice},
 	},
 	err: `path /example-file reported twice with diverging hash: "distinct hash" != "example-file_hash"`,
@@ -181,11 +181,11 @@ var reportTests = []struct {
 	add: []sliceAndEntry{
 		{entry: sampleFile, slice: oneSlice},
 		{entry: fsutil.Entry{
-			Path: sampleFile.Path,
-			Mode: sampleFile.Mode,
-			Hash: sampleFile.Hash,
-			Size: 0,
-			Link: sampleFile.Link,
+			Path:   sampleFile.Path,
+			Mode:   sampleFile.Mode,
+			SHA256: sampleFile.SHA256,
+			Size:   0,
+			Link:   sampleFile.Link,
 		}, slice: oneSlice},
 	},
 	err: `path /example-file reported twice with diverging size: 0 != 5678`,
@@ -194,11 +194,11 @@ var reportTests = []struct {
 	add: []sliceAndEntry{
 		{entry: sampleFile, slice: oneSlice},
 		{entry: fsutil.Entry{
-			Path: sampleFile.Path,
-			Mode: sampleFile.Mode,
-			Hash: sampleFile.Hash,
-			Size: sampleFile.Size,
-			Link: "distinct link",
+			Path:   sampleFile.Path,
+			Mode:   sampleFile.Mode,
+			SHA256: sampleFile.SHA256,
+			Size:   sampleFile.Size,
+			Link:   "distinct link",
 		}, slice: oneSlice},
 	},
 	err: `path /example-file reported twice with diverging link: "distinct link" != ""`,
@@ -225,7 +225,7 @@ var reportTests = []struct {
 		{entry: sampleDir, slice: oneSlice},
 	},
 	mutate: []*fsutil.Entry{&sampleFileMutated},
-	expected: map[string]slicer.ReportEntry{
+	expected: map[string]manifest.ReportEntry{
 		"/example-dir/": {
 			Path:   "/example-dir/",
 			Mode:   fs.ModeDir | 0654,
@@ -233,13 +233,13 @@ var reportTests = []struct {
 			Link:   "",
 		},
 		"/example-file": {
-			Path:      "/example-file",
-			Mode:      0777,
-			Hash:      "example-file_hash",
-			Size:      5688,
-			Slices:    map[*setup.Slice]bool{oneSlice: true},
-			Link:      "",
-			FinalHash: "example-file_hash_changed",
+			Path:        "/example-file",
+			Mode:        0777,
+			SHA256:      "example-file_hash",
+			Size:        5688,
+			Slices:      map[*setup.Slice]bool{oneSlice: true},
+			Link:        "",
+			FinalSHA256: "example-file_hash_changed",
 		}},
 }, {
 	summary: "Calling mutated with identical content to initial file",
@@ -247,16 +247,16 @@ var reportTests = []struct {
 		{entry: sampleFile, slice: oneSlice},
 	},
 	mutate: []*fsutil.Entry{&sampleFile},
-	expected: map[string]slicer.ReportEntry{
+	expected: map[string]manifest.ReportEntry{
 		"/example-file": {
 			Path:   "/example-file",
 			Mode:   0777,
-			Hash:   "example-file_hash",
+			SHA256: "example-file_hash",
 			Size:   5678,
 			Slices: map[*setup.Slice]bool{oneSlice: true},
 			Link:   "",
-			// FinalHash is not updated.
-			FinalHash: "",
+			// FinalSHA256 is not updated.
+			FinalSHA256: "",
 		}},
 }, {
 	summary: "Mutated paths must refer to previously added entries",
@@ -272,7 +272,7 @@ var reportTests = []struct {
 func (s *S) TestReport(c *C) {
 	for _, test := range reportTests {
 		var err error
-		report, err := slicer.NewReport("/base/")
+		report, err := manifest.NewReport("/base/")
 		c.Assert(err, IsNil)
 		for _, si := range test.add {
 			err = report.Add(si.slice, &si.entry)
@@ -290,6 +290,12 @@ func (s *S) TestReport(c *C) {
 }
 
 func (s *S) TestRootRelativePath(c *C) {
-	_, err := slicer.NewReport("../base/")
+	_, err := manifest.NewReport("../base/")
 	c.Assert(err, ErrorMatches, `cannot use relative path for report root: "../base/"`)
+}
+
+func (s *S) TestRootOnlySlash(c *C) {
+	report, err := manifest.NewReport("/")
+	c.Assert(err, IsNil)
+	c.Assert(report.Root, Equals, "/")
 }

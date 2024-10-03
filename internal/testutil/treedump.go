@@ -78,7 +78,7 @@ func TreeDumpEntry(entry *fsutil.Entry) string {
 		if entry.Size == 0 {
 			return fmt.Sprintf("file %#o empty", entry.Mode.Perm())
 		} else {
-			return fmt.Sprintf("file %#o %s", fperm, entry.Hash[:8])
+			return fmt.Sprintf("file %#o %s", fperm, entry.SHA256[:8])
 		}
 	default:
 		panic(fmt.Errorf("unknown file type %d: %s", entry.Mode.Type(), entry.Path))
