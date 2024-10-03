@@ -148,13 +148,13 @@ var infoTests = []infoTest{{
 var testKey = testutil.PGPKeys["key1"]
 
 var defaultChiselYaml = `
-	format: chisel-v1
+	format: v1
 	archives:
 		ubuntu:
 			version: 22.04
 			components: [main, universe]
-			v1-public-keys: [test-key]
-	v1-public-keys:
+			public-keys: [test-key]
+	public-keys:
 		test-key:
 			id: ` + testKey.ID + `
 			armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t")
