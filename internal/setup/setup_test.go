@@ -1570,6 +1570,7 @@ var defaultChiselYaml = `
 		ubuntu:
 			version: 22.04
 			components: [main, universe]
+			suites: [jammy]
 			v1-public-keys: [test-key]
 	v1-public-keys:
 		test-key:
