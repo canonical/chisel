@@ -25,7 +25,6 @@ var infoTests = []infoTest{{
 	query:   []string{"mypkg1_myslice1"},
 	stdout: `
 		package: mypkg1
-		archive: ubuntu
 		slices:
 			myslice1:
 				contents:
@@ -37,7 +36,6 @@ var infoTests = []infoTest{{
 	query:   []string{"mypkg2"},
 	stdout: `
 		package: mypkg2
-		archive: ubuntu
 		slices:
 			myslice:
 				contents:
@@ -49,7 +47,6 @@ var infoTests = []infoTest{{
 	query:   []string{"mypkg1_myslice2", "mypkg1_myslice1"},
 	stdout: `
 		package: mypkg1
-		archive: ubuntu
 		slices:
 			myslice1:
 				contents:
@@ -65,7 +62,6 @@ var infoTests = []infoTest{{
 	query:   []string{"mypkg1_myslice1", "mypkg2", "mypkg1_myslice2"},
 	stdout: `
 		package: mypkg1
-		archive: ubuntu
 		slices:
 			myslice1:
 				contents:
@@ -76,7 +72,6 @@ var infoTests = []infoTest{{
 					- mypkg2_myslice
 		---
 		package: mypkg2
-		archive: ubuntu
 		slices:
 			myslice:
 				contents:
@@ -88,7 +83,6 @@ var infoTests = []infoTest{{
 	query:   []string{"mypkg1_myslice1", "mypkg1"},
 	stdout: `
 		package: mypkg1
-		archive: ubuntu
 		slices:
 			myslice1:
 				contents:
@@ -104,7 +98,6 @@ var infoTests = []infoTest{{
 	query:   []string{"mypkg1_myslice1", "mypkg1_myslice1", "mypkg1_myslice1"},
 	stdout: `
 		package: mypkg1
-		archive: ubuntu
 		slices:
 			myslice1:
 				contents:
@@ -121,7 +114,6 @@ var infoTests = []infoTest{{
 	query:   []string{"foo", "mypkg1_myslice1", "bar_foo"},
 	stdout: `
 		package: mypkg1
-		archive: ubuntu
 		slices:
 			myslice1:
 				contents:
