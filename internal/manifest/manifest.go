@@ -307,6 +307,7 @@ func unixPerm(mode fs.FileMode) (perm uint32) {
 	return perm
 }
 
+// fastvalidate validates the data to be written into the manifest on disk.
 func fastValidate(options *WriteOptions) (err error) {
 	defer func() {
 		if err != nil {
