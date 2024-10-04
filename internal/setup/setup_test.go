@@ -1402,7 +1402,7 @@ var setupTests = []setupTest{{
 		},
 	},
 	selslices: []setup.SliceKey{{"mypkg", "myslice"}},
-	selerror:  `slice mypkg_myslice has invalid 'generate' for path /dir/\*\*: "foo", consider an update if available`,
+	selerror:  `slice mypkg_myslice has invalid 'generate' for path /dir/\*\*: "foo"`,
 }, {
 	summary: "Paths with generate: manifest must have trailing /**",
 	input: map[string]string{

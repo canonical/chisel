@@ -807,7 +807,7 @@ func Select(release *Release, slices []SliceKey) (*Selection, error) {
 			switch newInfo.Generate {
 			case GenerateNone, GenerateManifest:
 			default:
-				return nil, fmt.Errorf("slice %s has invalid 'generate' for path %s: %q, consider an update if available",
+				return nil, fmt.Errorf("slice %s has invalid 'generate' for path %s: %q",
 					new, newPath, newInfo.Generate)
 			}
 		}
