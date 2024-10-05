@@ -820,6 +820,18 @@ var setupTests = []setupTest{{
 		},
 	},
 }, {
+	summary: "Archive with suites unset",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v1
+			archives:
+				ubuntu:
+					version: 22.04
+					components: [main, other]
+		`,
+	},
+	relerror: `chisel.yaml: archive "ubuntu" missing suites field`,
+}, {
 	summary: "Extra fields in YAML are ignored (necessary for forward compatibility)",
 	input: map[string]string{
 		"chisel.yaml": `
