@@ -764,11 +764,13 @@ var slicerTests = []slicerTest{{
 				foo:
 					version: 22.04
 					components: [main, universe]
+					suites: [jammy]
 					default: true
 					v1-public-keys: [test-key]
 				bar:
 					version: 22.04
 					components: [main]
+					suites: [jammy]
 					v1-public-keys: [test-key]
 			v1-public-keys:
 				test-key:
@@ -1059,6 +1061,7 @@ var defaultChiselYaml = `
 		ubuntu:
 			version: 22.04
 			components: [main, universe]
+			suites: [jammy]
 			v1-public-keys: [test-key]
 	v1-public-keys:
 		test-key:
