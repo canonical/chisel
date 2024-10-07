@@ -1226,8 +1226,11 @@ func (s *S) TestRun(c *C) {
 			}
 			for pkgName, pkg := range test.pkgs {
 				if pkg.Name == "" {
-					// We need to add the name for the manifest validation.
+					// We need to set these fields for manifest validation.
 					pkg.Name = pkgName
+					pkg.Arch = "arch"
+					pkg.Hash = "hash"
+					pkg.Version = "version"
 					test.pkgs[pkgName] = pkg
 				}
 			}
