@@ -797,19 +797,19 @@ var slicerTests = []slicerTest{{
 	}},
 	release: map[string]string{
 		"chisel.yaml": `
-			format: chisel-v1
+			format: v1
 			archives:
 				foo:
 					version: 22.04
 					components: [main, universe]
 					priority: 20
-					v1-public-keys: [test-key]
+					public-keys: [test-key]
 				bar:
 					version: 22.04
 					components: [main]
 					priority: 10
-					v1-public-keys: [test-key]
-			v1-public-keys:
+					public-keys: [test-key]
+			public-keys:
 				test-key:
 					id: ` + testKey.ID + `
 					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
@@ -867,19 +867,19 @@ var slicerTests = []slicerTest{{
 	}},
 	release: map[string]string{
 		"chisel.yaml": `
-			format: chisel-v1
+			format: v1
 			archives:
 				foo:
 					version: 22.04
 					components: [main, universe]
 					priority: 20
-					v1-public-keys: [test-key]
+					public-keys: [test-key]
 				bar:
 					version: 22.04
 					components: [main]
 					priority: 10
-					v1-public-keys: [test-key]
-			v1-public-keys:
+					public-keys: [test-key]
+			public-keys:
 				test-key:
 					id: ` + testKey.ID + `
 					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
@@ -918,19 +918,19 @@ var slicerTests = []slicerTest{{
 	}},
 	release: map[string]string{
 		"chisel.yaml": `
-			format: chisel-v1
+			format: v1
 			archives:
 				foo:
 					version: 22.04
 					components: [main, universe]
 					priority: 20
-					v1-public-keys: [test-key]
+					public-keys: [test-key]
 				bar:
 					version: 22.04
 					components: [main]
 					priority: 10
-					v1-public-keys: [test-key]
-			v1-public-keys:
+					public-keys: [test-key]
+			public-keys:
 				test-key:
 					id: ` + testKey.ID + `
 					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
@@ -953,19 +953,19 @@ var slicerTests = []slicerTest{{
 	pkgs:    []*testutil.TestPackage{},
 	release: map[string]string{
 		"chisel.yaml": `
-			format: chisel-v1
+			format: v1
 			archives:
 				foo:
 					version: 22.04
 					components: [main, universe]
 					priority: 20
-					v1-public-keys: [test-key]
+					public-keys: [test-key]
 				bar:
 					version: 22.04
 					components: [main]
 					priority: 10
-					v1-public-keys: [test-key]
-			v1-public-keys:
+					public-keys: [test-key]
+			public-keys:
 				test-key:
 					id: ` + testKey.ID + `
 					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
@@ -991,14 +991,14 @@ var slicerTests = []slicerTest{{
 	}},
 	release: map[string]string{
 		"chisel.yaml": `
-			format: chisel-v1
+			format: v1
 			archives:
 				foo:
 					version: 22.04
 					components: [main, universe]
 					priority: -20
-					v1-public-keys: [test-key]
-			v1-public-keys:
+					public-keys: [test-key]
+			public-keys:
 				test-key:
 					id: ` + testKey.ID + `
 					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
@@ -1027,14 +1027,14 @@ var slicerTests = []slicerTest{{
 	}},
 	release: map[string]string{
 		"chisel.yaml": `
-			format: chisel-v1
+			format: v1
 			archives:
 				foo:
 					version: 22.04
 					components: [main, universe]
 					priority: -20
-					v1-public-keys: [test-key]
-			v1-public-keys:
+					public-keys: [test-key]
+			public-keys:
 				test-key:
 					id: ` + testKey.ID + `
 					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
@@ -1438,41 +1438,20 @@ var slicerTests = []slicerTest{{
 }}
 
 var defaultChiselYaml = `
-	format: chisel-v1
+	format: v1
 	archives:
 		ubuntu:
 			version: 22.04
 			components: [main, universe]
-			v1-public-keys: [test-key]
-	v1-public-keys:
+			public-keys: [test-key]
+	public-keys:
 		test-key:
 			id: ` + testKey.ID + `
 			armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
 `
 
 func (s *S) TestRun(c *C) {
-	// Run tests for format chisel-v1.
-	runSlicerTests(c, slicerTests)
-
-	// Run tests for format v1.
-	v1SlicerTests := make([]slicerTest, len(slicerTests))
-	for i, t := range slicerTests {
-		t.error = strings.Replace(t.error, "chisel-v1", "v1", -1)
-		t.error = strings.Replace(t.error, "v1-public-keys", "public-keys", -1)
-		m := map[string]string{}
-		for k, v := range t.release {
-			v = strings.Replace(v, "chisel-v1", "v1", -1)
-			v = strings.Replace(v, "v1-public-keys", "public-keys", -1)
-			m[k] = v
-		}
-		t.release = m
-		v1SlicerTests[i] = t
-	}
-	runSlicerTests(c, v1SlicerTests)
-}
-
-func runSlicerTests(c *C, tests []slicerTest) {
-	for _, test := range tests {
+	for _, test := range slicerTests {
 		for _, testSlices := range testutil.Permutations(test.slices) {
 			c.Logf("Summary: %s", test.summary)
 
@@ -1484,6 +1463,18 @@ func runSlicerTests(c *C, tests []slicerTest) {
 					Name: "test-package",
 					Data: testutil.PackageData["test-package"],
 				}}
+			}
+			for _, pkg := range test.pkgs {
+				// We need to set these fields for manifest validation.
+				if pkg.Arch == "" {
+					pkg.Arch = "arch"
+				}
+				if pkg.Hash == "" {
+					pkg.Hash = "hash"
+				}
+				if pkg.Version == "" {
+					pkg.Version = "version"
+				}
 			}
 
 			releaseDir := c.MkDir()
