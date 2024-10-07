@@ -1716,6 +1716,7 @@ func (s *S) TestPackageYAMLFormat(c *C) {
 							/dir/copy: {copy: /dir/file}
 							/dir/empty-file: {text: ""}
 							/dir/glob*: {}
+							/dir/manifest/**: {generate: manifest}
 							/dir/mutable: {text: TODO, mutable: true, arch: riscv64}
 							/dir/other-file: {}
 							/dir/sub-dir/: {make: true, mode: 0644}

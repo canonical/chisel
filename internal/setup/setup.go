@@ -820,10 +820,11 @@ func Select(release *Release, slices []SliceKey) (*Selection, error) {
 // The returned object takes pointers to the given PathInfo object.
 func pathInfoToYAML(pi *PathInfo) (*yamlPath, error) {
 	path := &yamlPath{
-		Mode:    yamlMode(pi.Mode),
-		Mutable: pi.Mutable,
-		Until:   pi.Until,
-		Arch:    yamlArch{List: pi.Arch},
+		Mode:     yamlMode(pi.Mode),
+		Mutable:  pi.Mutable,
+		Until:    pi.Until,
+		Arch:     yamlArch{List: pi.Arch},
+		Generate: pi.Generate,
 	}
 	switch pi.Kind {
 	case DirPath:
@@ -834,8 +835,8 @@ func pathInfoToYAML(pi *PathInfo) (*yamlPath, error) {
 		path.Text = &pi.Info
 	case SymlinkPath:
 		path.Symlink = pi.Info
-	case GlobPath:
-		// Nothing more needs to be done for this type.
+	case GlobPath, GeneratePath:
+		// Nothing more needs to be done for these types.
 	default:
 		return nil, fmt.Errorf("internal error: unrecognised PathInfo type: %s", pi.Kind)
 	}
