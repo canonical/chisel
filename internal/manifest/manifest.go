@@ -307,7 +307,10 @@ func unixPerm(mode fs.FileMode) (perm uint32) {
 	return perm
 }
 
-// fastvalidate validates the data to be written into the manifest on disk.
+// fastValidate validates the data to be written into the manifest.
+// This is validating internal structures which are supposed to be correct unless there is
+// a bug. As such, only assertions that can be done quickly are performed here, instead
+// of it being a comprehensive validation of all the structures.
 func fastValidate(options *WriteOptions) (err error) {
 	defer func() {
 		if err != nil {
