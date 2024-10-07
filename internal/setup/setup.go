@@ -368,8 +368,6 @@ type yamlRelease struct {
 	Format   string                 `yaml:"format"`
 	Archives map[string]yamlArchive `yaml:"archives"`
 	PubKeys  map[string]yamlPubKey  `yaml:"public-keys"`
-	// V1PubKeys is used for compatibility with format "chisel-v1".
-	V1PubKeys map[string]yamlPubKey `yaml:"v1-public-keys"`
 }
 
 type yamlArchive struct {
@@ -378,8 +376,6 @@ type yamlArchive struct {
 	Components []string `yaml:"components"`
 	Default    bool     `yaml:"default"`
 	PubKeys    []string `yaml:"public-keys"`
-	// V1PubKeys is used for compatibility with format "chisel-v1".
-	V1PubKeys []string `yaml:"v1-public-keys"`
 }
 
 type yamlPackage struct {
@@ -497,17 +493,8 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s: cannot parse release definition: %v", fileName, err)
 	}
-	if yamlVar.Format != "chisel-v1" && yamlVar.Format != "v1" {
+	if yamlVar.Format != "v1" {
 		return nil, fmt.Errorf("%s: unknown format %q", fileName, yamlVar.Format)
-	}
-	// If format is "chisel-v1" we have to translate from the yaml key "v1-public-keys" to
-	// "public-keys".
-	if yamlVar.Format == "chisel-v1" {
-		yamlVar.PubKeys = yamlVar.V1PubKeys
-		for name, details := range yamlVar.Archives {
-			details.PubKeys = details.V1PubKeys
-			yamlVar.Archives[name] = details
-		}
 	}
 	if len(yamlVar.Archives) == 0 {
 		return nil, fmt.Errorf("%s: no archives defined", fileName)
@@ -545,11 +532,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 			release.DefaultArchive = archiveName
 		}
 		if len(details.PubKeys) == 0 {
-			if yamlVar.Format == "chisel-v1" {
-				return nil, fmt.Errorf("%s: archive %q missing v1-public-keys field", fileName, archiveName)
-			} else {
-				return nil, fmt.Errorf("%s: archive %q missing public-keys field", fileName, archiveName)
-			}
+			return nil, fmt.Errorf("%s: archive %q missing public-keys field", fileName, archiveName)
 		}
 		var archiveKeys []*packet.PublicKey
 		for _, keyName := range details.PubKeys {
@@ -796,7 +779,7 @@ func Select(release *Release, slices []SliceKey) (*Selection, error) {
 			switch newInfo.Generate {
 			case GenerateNone, GenerateManifest:
 			default:
-				return nil, fmt.Errorf("slice %s has invalid 'generate' for path %s: %q, consider an update if available",
+				return nil, fmt.Errorf("slice %s has invalid 'generate' for path %s: %q",
 					new, newPath, newInfo.Generate)
 			}
 		}
@@ -809,10 +792,11 @@ func Select(release *Release, slices []SliceKey) (*Selection, error) {
 // The returned object takes pointers to the given PathInfo object.
 func pathInfoToYAML(pi *PathInfo) (*yamlPath, error) {
 	path := &yamlPath{
-		Mode:    yamlMode(pi.Mode),
-		Mutable: pi.Mutable,
-		Until:   pi.Until,
-		Arch:    yamlArch{List: pi.Arch},
+		Mode:     yamlMode(pi.Mode),
+		Mutable:  pi.Mutable,
+		Until:    pi.Until,
+		Arch:     yamlArch{List: pi.Arch},
+		Generate: pi.Generate,
 	}
 	switch pi.Kind {
 	case DirPath:
@@ -823,8 +807,8 @@ func pathInfoToYAML(pi *PathInfo) (*yamlPath, error) {
 		path.Text = &pi.Info
 	case SymlinkPath:
 		path.Symlink = pi.Info
-	case GlobPath:
-		// Nothing more needs to be done for this type.
+	case GlobPath, GeneratePath:
+		// Nothing more needs to be done for these types.
 	default:
 		return nil, fmt.Errorf("internal error: unrecognised PathInfo type: %s", pi.Kind)
 	}

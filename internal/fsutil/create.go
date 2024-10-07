@@ -22,11 +22,11 @@ type CreateOptions struct {
 }
 
 type Entry struct {
-	Path string
-	Mode fs.FileMode
-	Hash string
-	Size int
-	Link string
+	Path   string
+	Mode   fs.FileMode
+	SHA256 string
+	Size   int
+	Link   string
 }
 
 // Create creates a filesystem entry according to the provided options and returns
@@ -66,13 +66,42 @@ func Create(options *CreateOptions) (*Entry, error) {
 		return nil, err
 	}
 	entry := &Entry{
-		Path: o.Path,
-		Mode: s.Mode(),
-		Hash: hash,
-		Size: rp.size,
-		Link: o.Link,
+		Path:   o.Path,
+		Mode:   s.Mode(),
+		SHA256: hash,
+		Size:   rp.size,
+		Link:   o.Link,
 	}
 	return entry, nil
+}
+
+// CreateWriter handles the creation of a regular file and collects the
+// information recorded in Entry. The Hash and Size attributes are set on
+// calling Close() on the Writer.
+func CreateWriter(options *CreateOptions) (io.WriteCloser, *Entry, error) {
+	if !options.Mode.IsRegular() {
+		return nil, nil, fmt.Errorf("unsupported file type: %s", options.Path)
+	}
+	if options.MakeParents {
+		if err := os.MkdirAll(filepath.Dir(options.Path), 0755); err != nil {
+			return nil, nil, err
+		}
+	}
+	file, err := os.OpenFile(options.Path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, options.Mode)
+	if err != nil {
+		return nil, nil, err
+	}
+	entry := &Entry{
+		Path: options.Path,
+		Mode: options.Mode,
+	}
+	wp := &writerProxy{
+		entry: entry,
+		inner: file,
+		h:     sha256.New(),
+		size:  0,
+	}
+	return wp, entry, nil
 }
 
 func createDir(o *CreateOptions) error {
@@ -136,4 +165,30 @@ func (rp *readerProxy) Read(p []byte) (n int, err error) {
 	rp.h.Write(p[:n])
 	rp.size += n
 	return n, err
+}
+
+// writerProxy implements the io.WriteCloser interface proxying the calls to its
+// inner io.WriteCloser. On each write, the proxy keeps track of the file size
+// and hash. The associated entry hash and size are updated when Close() is
+// called.
+type writerProxy struct {
+	inner io.WriteCloser
+	h     hash.Hash
+	size  int
+	entry *Entry
+}
+
+var _ io.WriteCloser = (*writerProxy)(nil)
+
+func (rp *writerProxy) Write(p []byte) (n int, err error) {
+	n, err = rp.inner.Write(p)
+	rp.h.Write(p[:n])
+	rp.size += n
+	return n, err
+}
+
+func (rp *writerProxy) Close() error {
+	rp.entry.SHA256 = hex.EncodeToString(rp.h.Sum(nil))
+	rp.entry.Size = rp.size
+	return rp.inner.Close()
 }

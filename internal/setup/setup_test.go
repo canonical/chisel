@@ -40,7 +40,7 @@ var setupTests = []setupTest{{
 	summary: "Missing archives",
 	input: map[string]string{
 		"chisel.yaml": `
-			format: chisel-v1
+			format: v1
 		`,
 	},
 	relerror: `chisel.yaml: no archives defined`,
@@ -56,14 +56,14 @@ var setupTests = []setupTest{{
 	summary: "Archive with multiple suites",
 	input: map[string]string{
 		"chisel.yaml": `
-			format: chisel-v1
+			format: v1
 			archives:
 				ubuntu:
 					version: 22.04
 					components: [main, other]
 					suites: [jammy, jammy-security]
-					v1-public-keys: [test-key]
-			v1-public-keys:
+					public-keys: [test-key]
+			public-keys:
 				test-key:
 					id: ` + testKey.ID + `
 					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
@@ -769,20 +769,20 @@ var setupTests = []setupTest{{
 	summary: "Multiple archives",
 	input: map[string]string{
 		"chisel.yaml": `
-			format: chisel-v1
+			format: v1
 			archives:
 				foo:
 					version: 22.04
 					components: [main, universe]
 					suites: [jammy]
 					default: true
-					v1-public-keys: [test-key]
+					public-keys: [test-key]
 				bar:
 					version: 22.04
 					components: [universe]
 					suites: [jammy-updates]
-					v1-public-keys: [test-key]
-			v1-public-keys:
+					public-keys: [test-key]
+			public-keys:
 				test-key:
 					id: ` + testKey.ID + `
 					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
@@ -835,16 +835,16 @@ var setupTests = []setupTest{{
 	summary: "Extra fields in YAML are ignored (necessary for forward compatibility)",
 	input: map[string]string{
 		"chisel.yaml": `
-			format: chisel-v1
+			format: v1
 			archives:
 				ubuntu:
 					version: 22.04
 					components: [main, other]
 					suites: [jammy, jammy-security]
-					v1-public-keys: [test-key]
+					public-keys: [test-key]
 					madeUpKey1: whatever
 			madeUpKey2: whatever
-			v1-public-keys:
+			public-keys:
 				test-key:
 					id: ` + testKey.ID + `
 					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
@@ -893,20 +893,20 @@ var setupTests = []setupTest{{
 	summary: "Archives with public keys",
 	input: map[string]string{
 		"chisel.yaml": `
-			format: chisel-v1
+			format: v1
 			archives:
 				foo:
 					version: 22.04
 					components: [main, universe]
 					suites: [jammy]
-					v1-public-keys: [extra-key]
+					public-keys: [extra-key]
 					default: true
 				bar:
 					version: 22.04
 					components: [universe]
 					suites: [jammy-updates]
-					v1-public-keys: [test-key, extra-key]
-			v1-public-keys:
+					public-keys: [test-key, extra-key]
+			public-keys:
 				extra-key:
 					id: ` + extraTestKey.ID + `
 					armor: |` + "\n" + testutil.PrefixEachLine(extraTestKey.PubKeyArmor, "\t\t\t\t\t\t") + `
@@ -950,7 +950,7 @@ var setupTests = []setupTest{{
 	summary: "Archive without public keys",
 	input: map[string]string{
 		"chisel.yaml": `
-			format: chisel-v1
+			format: v1
 			archives:
 				foo:
 					version: 22.04
@@ -959,18 +959,18 @@ var setupTests = []setupTest{{
 					default: true
 		`,
 	},
-	relerror: `chisel.yaml: archive "foo" missing v1-public-keys field`,
+	relerror: `chisel.yaml: archive "foo" missing public-keys field`,
 }, {
 	summary: "Unknown public key",
 	input: map[string]string{
 		"chisel.yaml": `
-			format: chisel-v1
+			format: v1
 			archives:
 				foo:
 					version: 22.04
 					components: [main, universe]
 					suites: [jammy]
-					v1-public-keys: [extra-key]
+					public-keys: [extra-key]
 					default: true
 		`,
 		"slices/mydir/mypkg.yaml": `
@@ -982,15 +982,15 @@ var setupTests = []setupTest{{
 	summary: "Invalid public key",
 	input: map[string]string{
 		"chisel.yaml": `
-			format: chisel-v1
+			format: v1
 			archives:
 				foo:
 					version: 22.04
 					components: [main, universe]
 					suites: [jammy]
-					v1-public-keys: [extra-key]
+					public-keys: [extra-key]
 					default: true
-			v1-public-keys:
+			public-keys:
 				extra-key:
 					id: foo
 					armor: |
@@ -1010,15 +1010,15 @@ var setupTests = []setupTest{{
 	summary: "Mismatched public key ID",
 	input: map[string]string{
 		"chisel.yaml": `
-			format: chisel-v1
+			format: v1
 			archives:
 				foo:
 					version: 22.04
 					components: [main, universe]
 					suites: [jammy]
-					v1-public-keys: [extra-key]
+					public-keys: [extra-key]
 					default: true
-			v1-public-keys:
+			public-keys:
 				extra-key:
 					id: ` + extraTestKey.ID + `
 					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
@@ -1414,7 +1414,7 @@ var setupTests = []setupTest{{
 		},
 	},
 	selslices: []setup.SliceKey{{"mypkg", "myslice"}},
-	selerror:  `slice mypkg_myslice has invalid 'generate' for path /dir/\*\*: "foo", consider an update if available`,
+	selerror:  `slice mypkg_myslice has invalid 'generate' for path /dir/\*\*: "foo"`,
 }, {
 	summary: "Paths with generate: manifest must have trailing /**",
 	input: map[string]string{
@@ -1574,45 +1574,43 @@ var setupTests = []setupTest{{
 		`,
 	},
 	relerror: `slice mypkg_myslice path /path/\*\* has invalid generate options`,
+}, {
+	summary: "chisel-v1 is deprecated",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: chisel-v1
+			archives:
+				foo:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					v1-public-keys: [test-key]
+					default: true
+			v1-public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
+	},
+	relerror: `chisel.yaml: unknown format "chisel-v1"`,
 }}
 
 var defaultChiselYaml = `
-	format: chisel-v1
+	format: v1
 	archives:
 		ubuntu:
 			version: 22.04
 			components: [main, universe]
 			suites: [jammy]
-			v1-public-keys: [test-key]
-	v1-public-keys:
+			public-keys: [test-key]
+	public-keys:
 		test-key:
 			id: ` + testKey.ID + `
 			armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
 `
 
 func (s *S) TestParseRelease(c *C) {
-	// Run tests for format chisel-v1.
-	runParseReleaseTests(c, setupTests)
-
-	// Run tests for format v1.
-	v1SetupTests := make([]setupTest, len(setupTests))
-	for i, t := range setupTests {
-		t.relerror = strings.Replace(t.relerror, "chisel-v1", "v1", -1)
-		t.relerror = strings.Replace(t.relerror, "v1-public-keys", "public-keys", -1)
-		m := map[string]string{}
-		for k, v := range t.input {
-			v = strings.Replace(v, "chisel-v1", "v1", -1)
-			v = strings.Replace(v, "v1-public-keys", "public-keys", -1)
-			m[k] = v
-		}
-		t.input = m
-		v1SetupTests[i] = t
-	}
-	runParseReleaseTests(c, v1SetupTests)
-}
-
-func runParseReleaseTests(c *C, tests []setupTest) {
-	for _, test := range tests {
+	for _, test := range setupTests {
 		c.Logf("Summary: %s", test.summary)
 
 		if _, ok := test.input["chisel.yaml"]; !ok {
@@ -1729,6 +1727,7 @@ func (s *S) TestPackageYAMLFormat(c *C) {
 							/dir/copy: {copy: /dir/file}
 							/dir/empty-file: {text: ""}
 							/dir/glob*: {}
+							/dir/manifest/**: {generate: manifest}
 							/dir/mutable: {text: TODO, mutable: true, arch: riscv64}
 							/dir/other-file: {}
 							/dir/sub-dir/: {make: true, mode: 0644}

@@ -205,17 +205,29 @@ func (s *httpSuite) TestFetchPackage(c *C) {
 		PubKeys:    []*packet.PublicKey{s.pubKey},
 	}
 
-	archive, err := archive.Open(&options)
+	testArchive, err := archive.Open(&options)
 	c.Assert(err, IsNil)
 
 	// First on component main.
-	pkg, err := archive.Fetch("mypkg1")
+	pkg, info, err := testArchive.Fetch("mypkg1")
 	c.Assert(err, IsNil)
+	c.Assert(info, DeepEquals, &archive.PackageInfo{
+		Name:    "mypkg1",
+		Version: "1.1",
+		Arch:    "amd64",
+		SHA256:  "1f08ef04cfe7a8087ee38a1ea35fa1810246648136c3c42d5a61ad6503d85e05",
+	})
 	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
 
 	// Last on component universe.
-	pkg, err = archive.Fetch("mypkg4")
+	pkg, info, err = testArchive.Fetch("mypkg4")
 	c.Assert(err, IsNil)
+	c.Assert(info, DeepEquals, &archive.PackageInfo{
+		Name:    "mypkg4",
+		Version: "1.4",
+		Arch:    "amd64",
+		SHA256:  "54af70097b30b33cfcbb6911ad3d0df86c2d458928169e348fa7873e4fc678e4",
+	})
 	c.Assert(read(pkg), Equals, "mypkg4 1.4 data")
 }
 
@@ -235,17 +247,29 @@ func (s *httpSuite) TestFetchPortsPackage(c *C) {
 		PubKeys:    []*packet.PublicKey{s.pubKey},
 	}
 
-	archive, err := archive.Open(&options)
+	testArchive, err := archive.Open(&options)
 	c.Assert(err, IsNil)
 
 	// First on component main.
-	pkg, err := archive.Fetch("mypkg1")
+	pkg, info, err := testArchive.Fetch("mypkg1")
 	c.Assert(err, IsNil)
+	c.Assert(info, DeepEquals, &archive.PackageInfo{
+		Name:    "mypkg1",
+		Version: "1.1",
+		Arch:    "arm64",
+		SHA256:  "1f08ef04cfe7a8087ee38a1ea35fa1810246648136c3c42d5a61ad6503d85e05",
+	})
 	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
 
 	// Last on component universe.
-	pkg, err = archive.Fetch("mypkg4")
+	pkg, info, err = testArchive.Fetch("mypkg4")
 	c.Assert(err, IsNil)
+	c.Assert(info, DeepEquals, &archive.PackageInfo{
+		Name:    "mypkg4",
+		Version: "1.4",
+		Arch:    "arm64",
+		SHA256:  "54af70097b30b33cfcbb6911ad3d0df86c2d458928169e348fa7873e4fc678e4",
+	})
 	c.Assert(read(pkg), Equals, "mypkg4 1.4 data")
 }
 
@@ -273,15 +297,27 @@ func (s *httpSuite) TestFetchSecurityPackage(c *C) {
 		PubKeys:    []*packet.PublicKey{s.pubKey},
 	}
 
-	archive, err := archive.Open(&options)
+	testArchive, err := archive.Open(&options)
 	c.Assert(err, IsNil)
 
-	pkg, err := archive.Fetch("mypkg1")
+	pkg, info, err := testArchive.Fetch("mypkg1")
 	c.Assert(err, IsNil)
+	c.Assert(info, DeepEquals, &archive.PackageInfo{
+		Name:    "mypkg1",
+		Version: "1.1.2.2",
+		Arch:    "amd64",
+		SHA256:  "5448585bdd916e5023eff2bc1bc3b30bcc6ee9db9c03e531375a6a11ddf0913c",
+	})
 	c.Assert(read(pkg), Equals, "package from jammy-security")
 
-	pkg, err = archive.Fetch("mypkg2")
+	pkg, info, err = testArchive.Fetch("mypkg2")
 	c.Assert(err, IsNil)
+	c.Assert(info, DeepEquals, &archive.PackageInfo{
+		Name:    "mypkg2",
+		Version: "1.2",
+		Arch:    "amd64",
+		SHA256:  "a4b4f3f3a8fa09b69e3ba23c60a41a1f8144691fd371a2455812572fd02e6f79",
+	})
 	c.Assert(read(pkg), Equals, "mypkg2 1.2 data")
 }
 
@@ -399,6 +435,53 @@ func (s *httpSuite) TestVerifyArchiveRelease(c *C) {
 	}
 }
 
+var packageInfoTests = []struct {
+	summary string
+	pkg     string
+	info    *archive.PackageInfo
+	error   string
+}{{
+	summary: "Basic",
+	pkg:     "mypkg1",
+	info: &archive.PackageInfo{
+		Name:    "mypkg1",
+		Version: "1.1",
+		Arch:    "amd64",
+		SHA256:  "1f08ef04cfe7a8087ee38a1ea35fa1810246648136c3c42d5a61ad6503d85e05",
+	},
+}, {
+	summary: "Package not found in archive",
+	pkg:     "mypkg99",
+	error:   `cannot find package "mypkg99" in archive`,
+}}
+
+func (s *httpSuite) TestPackageInfo(c *C) {
+	s.prepareArchive("jammy", "22.04", "amd64", []string{"main", "universe"})
+
+	options := archive.Options{
+		Label:      "ubuntu",
+		Version:    "22.04",
+		Arch:       "amd64",
+		Suites:     []string{"jammy"},
+		Components: []string{"main", "universe"},
+		CacheDir:   c.MkDir(),
+		PubKeys:    []*packet.PublicKey{s.pubKey},
+	}
+
+	testArchive, err := archive.Open(&options)
+	c.Assert(err, IsNil)
+
+	for _, test := range packageInfoTests {
+		info, err := testArchive.Info(test.pkg)
+		if test.error != "" {
+			c.Assert(err, ErrorMatches, test.error)
+			continue
+		}
+		c.Assert(err, IsNil)
+		c.Assert(info, DeepEquals, test.info)
+	}
+}
+
 func read(r io.Reader) string {
 	data, err := io.ReadAll(r)
 	if err != nil {
@@ -481,13 +564,15 @@ func (s *S) testOpenArchiveArch(c *C, release ubuntuRelease, arch string) {
 		PubKeys:    release.archivePubKeys,
 	}
 
-	archive, err := archive.Open(&options)
+	testArchive, err := archive.Open(&options)
 	c.Assert(err, IsNil)
 
 	extractDir := c.MkDir()
 
-	pkg, err := archive.Fetch("hostname")
+	pkg, info, err := testArchive.Fetch("hostname")
 	c.Assert(err, IsNil)
+	c.Assert(info.Name, DeepEquals, "hostname")
+	c.Assert(info.Arch, DeepEquals, arch)
 
 	err = deb.Extract(pkg, &deb.ExtractOptions{
 		Package:   "hostname",
