@@ -33,8 +33,6 @@ func makeSamplePackage(pkg string, slices []string) *setup.Package {
 }
 
 var sampleRelease = &setup.Release{
-	DefaultArchive: "ubuntu",
-
 	Archives: map[string]*setup.Archive{
 		"ubuntu": {
 			Name:       "ubuntu",
