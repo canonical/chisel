@@ -86,7 +86,7 @@ func Run(options *RunOptions) error {
 		targetDir = filepath.Join(dir, targetDir)
 	}
 
-	pkgToArchive, err := selectPkgArchives(options.Archives, options.Selection)
+	pkgArchive, err := selectPkgArchives(options.Archives, options.Selection)
 	if err != nil {
 		return err
 	}
@@ -99,7 +99,7 @@ func Run(options *RunOptions) error {
 			extractPackage = make(map[string][]deb.ExtractInfo)
 			extract[slice.Package] = extractPackage
 		}
-		arch := pkgToArchive[slice.Package].Options().Arch
+		arch := pkgArchive[slice.Package].Options().Arch
 		copyrightPath := "/usr/share/doc/" + slice.Package + "/copyright"
 		hasCopyright := false
 		for targetPath, pathInfo := range slice.Contents {
@@ -151,7 +151,7 @@ func Run(options *RunOptions) error {
 		if packages[slice.Package] != nil {
 			continue
 		}
-		reader, info, err := pkgToArchive[slice.Package].Fetch(slice.Package)
+		reader, info, err := pkgArchive[slice.Package].Fetch(slice.Package)
 		if err != nil {
 			return err
 		}
@@ -248,7 +248,7 @@ func Run(options *RunOptions) error {
 	// them to the appropriate slices.
 	relPaths := map[string][]*setup.Slice{}
 	for _, slice := range options.Selection.Slices {
-		arch := pkgToArchive[slice.Package].Options().Arch
+		arch := pkgArchive[slice.Package].Options().Arch
 		for relPath, pathInfo := range slice.Contents {
 			if len(pathInfo.Arch) > 0 && !slices.Contains(pathInfo.Arch, arch) {
 				continue
@@ -482,9 +482,9 @@ func selectPkgArchives(archives map[string]archive.Archive, selection *setup.Sel
 		return b.Priority - a.Priority
 	})
 
-	pkgToArchive := make(map[string]archive.Archive)
+	pkgArchive := make(map[string]archive.Archive)
 	for _, s := range selection.Slices {
-		if _, ok := pkgToArchive[s.Package]; ok {
+		if _, ok := pkgArchive[s.Package]; ok {
 			continue
 		}
 		pkg := selection.Release.Packages[s.Package]
@@ -509,7 +509,7 @@ func selectPkgArchives(archives map[string]archive.Archive, selection *setup.Sel
 		if chosen == nil {
 			return nil, fmt.Errorf("cannot find package %q in archive(s)", pkg.Name)
 		}
-		pkgToArchive[pkg.Name] = chosen
+		pkgArchive[pkg.Name] = chosen
 	}
-	return pkgToArchive, nil
+	return pkgArchive, nil
 }
