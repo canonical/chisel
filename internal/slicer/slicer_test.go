@@ -802,11 +802,13 @@ var slicerTests = []slicerTest{{
 				foo:
 					version: 22.04
 					components: [main, universe]
+					suites: [jammy]
 					priority: 20
 					public-keys: [test-key]
 				bar:
 					version: 22.04
 					components: [main]
+					suites: [jammy]
 					priority: 10
 					public-keys: [test-key]
 			public-keys:
@@ -872,11 +874,13 @@ var slicerTests = []slicerTest{{
 				foo:
 					version: 22.04
 					components: [main, universe]
+					suites: [jammy]
 					priority: 20
 					public-keys: [test-key]
 				bar:
 					version: 22.04
 					components: [main]
+					suites: [jammy]
 					priority: 10
 					public-keys: [test-key]
 			public-keys:
@@ -923,11 +927,13 @@ var slicerTests = []slicerTest{{
 				foo:
 					version: 22.04
 					components: [main, universe]
+					suites: [jammy]
 					priority: 20
 					public-keys: [test-key]
 				bar:
 					version: 22.04
 					components: [main]
+					suites: [jammy]
 					priority: 10
 					public-keys: [test-key]
 			public-keys:
@@ -958,11 +964,13 @@ var slicerTests = []slicerTest{{
 				foo:
 					version: 22.04
 					components: [main, universe]
+					suites: [jammy]
 					priority: 20
 					public-keys: [test-key]
 				bar:
 					version: 22.04
 					components: [main]
+					suites: [jammy]
 					priority: 10
 					public-keys: [test-key]
 			public-keys:
@@ -996,6 +1004,7 @@ var slicerTests = []slicerTest{{
 				foo:
 					version: 22.04
 					components: [main, universe]
+					suites: [jammy]
 					priority: -20
 					public-keys: [test-key]
 			public-keys:
@@ -1032,6 +1041,7 @@ var slicerTests = []slicerTest{{
 				foo:
 					version: 22.04
 					components: [main, universe]
+					suites: [jammy]
 					priority: -20
 					public-keys: [test-key]
 			public-keys:
@@ -1443,6 +1453,7 @@ var defaultChiselYaml = `
 		ubuntu:
 			version: 22.04
 			components: [main, universe]
+			suites: [jammy]
 			public-keys: [test-key]
 	public-keys:
 		test-key:

@@ -501,13 +501,6 @@ type yamlPubKey struct {
 	Armor string `yaml:"armor"`
 }
 
-var ubuntuAdjectives = map[string]string{
-	"18.04": "bionic",
-	"20.04": "focal",
-	"22.04": "jammy",
-	"22.10": "kinetic",
-}
-
 func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 	release := &Release{
 		Path:     baseDir,
@@ -549,11 +542,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 			return nil, fmt.Errorf("%s: archive %q missing version field", fileName, archiveName)
 		}
 		if len(details.Suites) == 0 {
-			adjective := ubuntuAdjectives[details.Version]
-			if adjective == "" {
-				return nil, fmt.Errorf("%s: archive %q missing suites field", fileName, archiveName)
-			}
-			details.Suites = []string{adjective}
+			return nil, fmt.Errorf("%s: archive %q missing suites field", fileName, archiveName)
 		}
 		if len(details.Components) == 0 {
 			return nil, fmt.Errorf("%s: archive %q missing components field", fileName, archiveName)

@@ -799,6 +799,18 @@ var setupTests = []setupTest{{
 		},
 	},
 }, {
+	summary: "Archive with suites unset",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v1
+			archives:
+				ubuntu:
+					version: 22.04
+					components: [main, other]
+		`,
+	},
+	relerror: `chisel.yaml: archive "ubuntu" missing suites field`,
+}, {
 	summary: "Two archives cannot have same priority",
 	input: map[string]string{
 		"chisel.yaml": `
@@ -1636,6 +1648,7 @@ var defaultChiselYaml = `
 		ubuntu:
 			version: 22.04
 			components: [main, universe]
+			suites: [jammy]
 			public-keys: [test-key]
 	public-keys:
 		test-key:
