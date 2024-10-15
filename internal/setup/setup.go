@@ -591,7 +591,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		// negative priorities to all but the default one, which means all
 		// others will be ignored unless pinned.
 		i := -1
-		for archiveName, _ := range yamlVar.Archives {
+		for archiveName := range yamlVar.Archives {
 			release.Archives[archiveName].Priority = i
 			i--
 		}
