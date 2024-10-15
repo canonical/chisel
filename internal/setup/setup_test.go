@@ -1602,13 +1602,23 @@ var setupTests = []setupTest{{
 	},
 	relerror: `chisel.yaml: unknown format "chisel-v1"`,
 }, {
-	summary: "Default archive is deprecated and ignored",
+	summary: "Default archive compatibility",
 	input: map[string]string{
 		"chisel.yaml": `
 			format: v1
 			archives:
-				ubuntu:
+				default:
 					default: true
+					version: 22.04
+					components: [main]
+					suites: [jammy]
+					public-keys: [test-key]
+				other-1:
+					version: 22.04
+					components: [main]
+					suites: [jammy]
+					public-keys: [test-key]
+				other-2:
 					version: 22.04
 					components: [main]
 					suites: [jammy]
@@ -1624,12 +1634,29 @@ var setupTests = []setupTest{{
 	},
 	release: &setup.Release{
 		Archives: map[string]*setup.Archive{
-			"ubuntu": {
-				Name:       "ubuntu",
+			"default": {
+				Name:       "default",
 				Version:    "22.04",
 				Suites:     []string{"jammy"},
 				Components: []string{"main"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Priority:   0,
+			},
+			"other-1": {
+				Name:       "other-1",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Priority:   -2,
+			},
+			"other-2": {
+				Name:       "other-2",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Priority:   -3,
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -1640,6 +1667,89 @@ var setupTests = []setupTest{{
 			},
 		},
 	},
+}, {
+	summary: "Default is ignored",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v1
+			archives:
+				default:
+					default: true
+					priority: 10
+					version: 22.04
+					components: [main]
+					suites: [jammy]
+					public-keys: [test-key]
+				other:
+					priority: 20
+					version: 22.04
+					components: [main]
+					suites: [jammy]
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	release: &setup.Release{
+		Archives: map[string]*setup.Archive{
+			"default": {
+				Name:       "default",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Priority:   10,
+			},
+			"other": {
+				Name:       "other",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Priority:   20,
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Name:   "mypkg",
+				Path:   "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{},
+			},
+		},
+	},
+}, {
+	summary: "Multiple default archives",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v1
+			archives:
+				foo:
+					default: true
+					version: 22.04
+					components: [main]
+					suites: [jammy]
+					public-keys: [test-key]
+				bar:
+					default: true
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					v1-public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	relerror: `chisel.yaml: more than one default archive: foo, bar`,
 }}
 
 var defaultChiselYaml = `
