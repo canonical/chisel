@@ -588,10 +588,14 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		// For compatibility with the default archive behaviour we will set
 		// negative priorities to all but the default one, which means all
 		// others will be ignored unless pinned.
-		i := -1
+		var archiveNames []string
 		for archiveName := range yamlVar.Archives {
-			release.Archives[archiveName].Priority = i
-			i--
+			archiveNames = append(archiveNames, archiveName)
+		}
+		// Make it deterministic.
+		slices.Sort(archiveNames)
+		for i, archiveName := range archiveNames {
+			release.Archives[archiveName].Priority = -i - 1
 		}
 		release.Archives[defaultArchive].Priority = 0
 	}

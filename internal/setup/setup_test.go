@@ -1739,7 +1739,7 @@ var setupTests = []setupTest{{
 					version: 22.04
 					components: [main, universe]
 					suites: [jammy]
-					v1-public-keys: [test-key]
+					public-keys: [test-key]
 			public-keys:
 				test-key:
 					id: ` + testKey.ID + `
