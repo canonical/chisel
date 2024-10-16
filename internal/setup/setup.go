@@ -540,7 +540,6 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 
 	// For compatibility if there is a default archive set and priorities are
 	// not being used, we will revert back to the default archive behaviour.
-	hasDefault := false
 	hasPriority := false
 	var defaultArchive string
 	for archiveName, details := range yamlVar.Archives {
@@ -558,7 +557,6 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		}
 		if details.Default {
 			defaultArchive = archiveName
-			hasDefault = true
 		}
 		if len(details.PubKeys) == 0 {
 			return nil, fmt.Errorf("%s: archive %q missing public-keys field", fileName, archiveName)
@@ -586,7 +584,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 			PubKeys:    archiveKeys,
 		}
 	}
-	if hasDefault && !hasPriority {
+	if defaultArchive != "" && !hasPriority {
 		// For compatibility with the default archive behaviour we will set
 		// negative priorities to all but the default one, which means all
 		// others will be ignored unless pinned.
