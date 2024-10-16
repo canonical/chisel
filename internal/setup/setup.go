@@ -553,6 +553,9 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 			return nil, fmt.Errorf("%s: archive %q missing components field", fileName, archiveName)
 		}
 		if details.Default && defaultArchive != "" {
+			if archiveName < defaultArchive {
+				archiveName, defaultArchive = defaultArchive, archiveName
+			}
 			return nil, fmt.Errorf("%s: more than one default archive: %s, %s", fileName, defaultArchive, archiveName)
 		}
 		if details.Default {

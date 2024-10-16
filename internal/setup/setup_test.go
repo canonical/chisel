@@ -1749,7 +1749,7 @@ var setupTests = []setupTest{{
 			package: mypkg
 		`,
 	},
-	relerror: `chisel.yaml: more than one default archive: foo, bar`,
+	relerror: `chisel.yaml: more than one default archive: bar, foo`,
 }}
 
 var defaultChiselYaml = `
