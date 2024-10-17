@@ -320,33 +320,33 @@ var slicerTests = []slicerTest{{
 		"/file":     "file 0644 fc02ca0e {other-package_myslice}",
 	},
 }, {
-	summary: "Install two packages, explicit path has preference over implicit parent",
+	summary: "Install two packages, explicit path has preference over implicit parent (alphabetical order)",
 	slices: []setup.SliceKey{
-		{"implicit-parent", "myslice"},
-		{"explicit-dir", "myslice"}},
+		{"a-implicit-parent", "myslice"},
+		{"b-explicit-dir", "myslice"}},
 	pkgs: map[string]testutil.TestPackage{
-		"implicit-parent": {
+		"a-implicit-parent": {
 			Data: testutil.MustMakeDeb([]testutil.TarEntry{
 				testutil.Dir(0755, "./dir/"),
 				testutil.Reg(0644, "./dir/file", "random"),
 			}),
 		},
-		"explicit-dir": {
+		"b-explicit-dir": {
 			Data: testutil.MustMakeDeb([]testutil.TarEntry{
 				testutil.Dir(01777, "./dir/"),
 			}),
 		},
 	},
 	release: map[string]string{
-		"slices/mydir/implicit-parent.yaml": `
-			package: implicit-parent
+		"slices/mydir/a-implicit-parent.yaml": `
+			package: a-implicit-parent
 			slices:
 				myslice:
 					contents:
 						/dir/file:
 		`,
-		"slices/mydir/explicit-dir.yaml": `
-			package: explicit-dir
+		"slices/mydir/b-explicit-dir.yaml": `
+			package: b-explicit-dir
 			slices:
 				myslice:
 					contents:
@@ -358,8 +358,50 @@ var slicerTests = []slicerTest{{
 		"/dir/file": "file 0644 a441b15f",
 	},
 	manifestPaths: map[string]string{
-		"/dir/":     "dir 01777 {explicit-dir_myslice}",
-		"/dir/file": "file 0644 a441b15f {implicit-parent_myslice}",
+		"/dir/":     "dir 01777 {b-explicit-dir_myslice}",
+		"/dir/file": "file 0644 a441b15f {a-implicit-parent_myslice}",
+	},
+}, {
+	summary: "Install two packages, explicit path has preference over implicit parent (reverse order)",
+	slices: []setup.SliceKey{
+		{"b-implicit-parent", "myslice"},
+		{"a-explicit-dir", "myslice"}},
+	pkgs: map[string]testutil.TestPackage{
+		"b-implicit-parent": {
+			Data: testutil.MustMakeDeb([]testutil.TarEntry{
+				testutil.Dir(0755, "./dir/"),
+				testutil.Reg(0644, "./dir/file", "random"),
+			}),
+		},
+		"a-explicit-dir": {
+			Data: testutil.MustMakeDeb([]testutil.TarEntry{
+				testutil.Dir(01777, "./dir/"),
+			}),
+		},
+	},
+	release: map[string]string{
+		"slices/mydir/b-implicit-parent.yaml": `
+			package: b-implicit-parent
+			slices:
+				myslice:
+					contents:
+						/dir/file:
+		`,
+		"slices/mydir/a-explicit-dir.yaml": `
+			package: a-explicit-dir
+			slices:
+				myslice:
+					contents:
+						/dir/:
+		`,
+	},
+	filesystem: map[string]string{
+		"/dir/":     "dir 01777",
+		"/dir/file": "file 0644 a441b15f",
+	},
+	manifestPaths: map[string]string{
+		"/dir/":     "dir 01777 {a-explicit-dir_myslice}",
+		"/dir/file": "file 0644 a441b15f {b-implicit-parent_myslice}",
 	},
 }, {
 	summary: "Valid same file in two slices in different packages",
