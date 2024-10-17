@@ -247,11 +247,12 @@ func extractData(dataReader io.Reader, options *ExtractOptions) error {
 			}
 			// Create the entry itself.
 			createOptions := &fsutil.CreateOptions{
-				Path:        filepath.Join(options.TargetDir, targetPath),
-				Mode:        tarHeader.FileInfo().Mode(),
-				Data:        pathReader,
-				Link:        tarHeader.Linkname,
-				MakeParents: true,
+				Path:         filepath.Join(options.TargetDir, targetPath),
+				Mode:         tarHeader.FileInfo().Mode(),
+				Data:         pathReader,
+				Link:         tarHeader.Linkname,
+				MakeParents:  true,
+				OverrideMode: true,
 			}
 			err := options.Create(extractInfos, createOptions)
 			if err != nil {
