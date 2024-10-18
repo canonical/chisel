@@ -26,6 +26,13 @@ type Release struct {
 	Archives map[string]*Archive
 }
 
+const (
+	ProFIPS        = "fips"
+	ProFIPSUpdates = "fips-updates"
+	ProApps        = "apps"
+	ProInfra       = "infra"
+)
+
 // Archive is the location from which binary packages are obtained.
 type Archive struct {
 	Name       string
@@ -33,6 +40,7 @@ type Archive struct {
 	Suites     []string
 	Components []string
 	Priority   int
+	Pro        string
 	PubKeys    []*packet.PublicKey
 }
 
@@ -398,7 +406,8 @@ type yamlArchive struct {
 	Version    string   `yaml:"version"`
 	Suites     []string `yaml:"suites"`
 	Components []string `yaml:"components"`
-	Priority   *int     `yaml:"priority"`
+	Priority   *int      `yaml:"priority"`
+	Pro        string   `yaml:"pro"`
 	Default    bool     `yaml:"default"`
 	PubKeys    []string `yaml:"public-keys"`
 }
@@ -553,6 +562,12 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		if len(details.Components) == 0 {
 			return nil, fmt.Errorf("%s: archive %q missing components field", fileName, archiveName)
 		}
+		switch details.Pro {
+		case "", ProApps, ProFIPS, ProFIPSUpdates, ProInfra:
+		default:
+			logf("Ignoring archive %q (invalid pro value: %q)...", archiveName, details.Pro)
+			continue
+		}
 		if details.Default && defaultArchive != "" {
 			if archiveName < defaultArchive {
 				archiveName, defaultArchive = defaultArchive, archiveName
@@ -591,6 +606,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 			Version:    details.Version,
 			Suites:     details.Suites,
 			Components: details.Components,
+			Pro:        details.Pro,
 			Priority:   priority,
 			PubKeys:    archiveKeys,
 		}

@@ -41,6 +41,8 @@ parts:
     override-build: |
       go generate ./cmd
       craftctl default
+    stage:
+      - -bin/chrorder
 
   chisel-release-data:
     plugin: nil
@@ -56,9 +58,17 @@ parts:
       craftctl set grade="$grade"
     after: [chisel]
 
+plugs:
+  pro-credentials:
+    interface: system-files
+    read:
+      - /etc/apt/auth.conf.d
+      - /etc/apt/auth.conf.d/90ubuntu-advantage
+
 apps:
   chisel:
     command: bin/chisel
     plugs:
       - network
       - home
+      - pro-credentials
