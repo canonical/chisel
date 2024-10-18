@@ -576,18 +576,15 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		priority := 0
 		if details.Priority != nil {
 			hasPriority = true
-			if archiveNoPriority != "" {
-				return nil, fmt.Errorf("%s: archive %q missing priority", fileName, archiveNoPriority)
-			}
 			priority = *details.Priority
-			if priority > MaxArchivePriority || priority < MinArchivePriority {
+			if priority > MaxArchivePriority || priority < MinArchivePriority || priority == 0 {
 				return nil, fmt.Errorf("%s: archive %q has invalid priority value of %d", fileName, archiveName, priority)
 			}
 		} else {
-			if hasPriority {
-				return nil, fmt.Errorf("%s: archive %q missing priority", fileName, archiveName)
+			if archiveNoPriority == "" || archiveName < archiveNoPriority {
+				// Make it deterministic.
+				archiveNoPriority = archiveName
 			}
-			archiveNoPriority = archiveName
 		}
 		release.Archives[archiveName] = &Archive{
 			Name:       archiveName,
@@ -597,6 +594,10 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 			Priority:   priority,
 			PubKeys:    archiveKeys,
 		}
+	}
+	if (hasPriority && archiveNoPriority != "") ||
+		(!hasPriority && defaultArchive == "" && len(yamlVar.Archives) > 1) {
+		return nil, fmt.Errorf("%s: archive %q is missing the priority setting", fileName, archiveNoPriority)
 	}
 	if defaultArchive != "" && !hasPriority {
 		// For compatibility with the default archive behaviour we will set
@@ -611,7 +612,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		for i, archiveName := range archiveNames {
 			release.Archives[archiveName].Priority = -i - 1
 		}
-		release.Archives[defaultArchive].Priority = 0
+		release.Archives[defaultArchive].Priority = 1
 	}
 
 	return release, err

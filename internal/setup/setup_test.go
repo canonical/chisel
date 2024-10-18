@@ -824,7 +824,7 @@ var setupTests = []setupTest{{
 			package: mypkg
 		`,
 	},
-	relerror: `chisel.yaml: archive "bar" missing priority`,
+	relerror: `chisel.yaml: archive "bar" is missing the priority setting`,
 }, {
 	summary: "Multiple archives with no priorities",
 	input: map[string]string{
@@ -850,7 +850,7 @@ var setupTests = []setupTest{{
 			package: mypkg
 		`,
 	},
-	relerror: `chisel.yaml: archives "bar" and "foo" have the same priority value of 0`,
+	relerror: `chisel.yaml: archive "bar" is missing the priority setting`,
 }, {
 	summary: "Archive with suites unset",
 	input: map[string]string{
@@ -910,6 +910,25 @@ var setupTests = []setupTest{{
 		`,
 	},
 	relerror: `chisel.yaml: archive "foo" has invalid priority value of 10000`,
+}, {
+	summary: "Invalid archive priority of 0",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v1
+			archives:
+				foo:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					priority: 0
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
+	},
+	relerror: `chisel.yaml: archive "foo" has invalid priority value of 0`,
 }, {
 	summary: "Extra fields in YAML are ignored (necessary for forward compatibility)",
 	input: map[string]string{
@@ -1693,7 +1712,7 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy"},
 				Components: []string{"main"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
-				Priority:   0,
+				Priority:   1,
 			},
 			"other-1": {
 				Name:       "other-1",
