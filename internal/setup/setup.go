@@ -406,7 +406,7 @@ type yamlArchive struct {
 	Version    string   `yaml:"version"`
 	Suites     []string `yaml:"suites"`
 	Components []string `yaml:"components"`
-	Priority   *int      `yaml:"priority"`
+	Priority   *int     `yaml:"priority"`
 	Pro        string   `yaml:"pro"`
 	Default    bool     `yaml:"default"`
 	PubKeys    []string `yaml:"public-keys"`
