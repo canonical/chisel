@@ -12,11 +12,16 @@ description: |
 
   Commands can be classified as follows:
 
-    Basic: help, version
-    Action: cut
+    Basic (general operations):
+      find     Find existing slices
+      info     Show information about package slices
+      help     Show help about a command
+      version  Show version details
+
+    Action (make things happen):
+      cut      Cut a tree with selected slices
 
   For more information about a command, run 'chisel help <command>'.
-  For a short summary of all commands, run 'chisel help --all'.
 
   This snap can only install the slices in a location inside the
   user $HOME directory i.e. the --root option in "cut" command
