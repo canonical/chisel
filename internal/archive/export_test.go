@@ -19,3 +19,5 @@ type Credentials = credentials
 
 var FindCredentials = findCredentials
 var FindCredentialsInDir = findCredentialsInDir
+
+var ProArchiveInfo = proArchiveInfo

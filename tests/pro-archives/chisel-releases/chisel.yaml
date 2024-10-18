@@ -1,0 +1,45 @@
+format: v1
+
+archives:
+  ubuntu:
+    version: 24.04
+    pro: infra
+    components: [main]
+    suites: [noble-infra-security, noble-infra-updates]
+    public-keys: [ubuntu-esm-key-v2]
+
+public-keys:
+  # Ubuntu Extended Security Maintenance Automatic Signing Key v2 <esm@canonical.com>
+  # rsa4096/56f7650a24c9e9ecf87c4d8d4067e40313cb4b13 2019-04-17T02:33:33Z
+  ubuntu-esm-key-v2:
+    id: "4067E40313CB4B13"
+    armor: |
+      -----BEGIN PGP PUBLIC KEY BLOCK-----
+
+      mQINBFy2kH0BEADl/2e2pULZaSRovd3E1i1cVk3zebzndHZm/hK8/Srx69ivw3pY
+      680gFE/N3s3R/C5Jh9ThdD1zpGmxVdqcABSPmW1FczdFZY2E37HMH7Uijs4CsnFs
+      8nrNGQaqX/T1g2fQqjia3zkabMeehUEZC5GPYjpeeFW6Wy1O1A1Tzu7/Wjc+uF/t
+      YYe/ZPXea74QZphu/N+8dy/ts/IzL2VtXuxiegGLfBFqzgZuBmlxXHVhftKvcis9
+      t2ko65uVyDcLtItMhSJokKBsIYJliqOXjUbQf5dz8vLXkku94arBMgsxDWT4K/xI
+      OTsaI/GMlSIKQ6Ucd/GKrBEsy5O8RDtD9A2klV7YeEwPEgqL+RhpdxAs/xUeTOZG
+      JKwuvlBjzIhJF9bIfbyzx7DdcGFqRE+a8eBIUMQjVkt9Yk7jj0eV3oVTE7XNhb53
+      rHuPL+zJVkiharxiTgYvkow3Nlbg3oURx9Ln67ni9pUtI1HbortGZsAkyOcpep58
+      K9cYvUePJWzjkY+bjcGKR19CWPl7KaUalIf2Tao5OwtqjrblTsXdtV7eG45ys0MT
+      Kl/DeqTJ0w6+i4eq4ZUfOCL/DIwS5zUB9j1KMUgEfocjYIdHWI8TSrA8jLYNPbVE
+      6+WjekHMB9liNrEQoESWBddS+bglPxuVwy2paGTUYJW1GnRZOTD+CG4ETQARAQAB
+      tFFVYnVudHUgRXh0ZW5kZWQgU2VjdXJpdHkgTWFpbnRlbmFuY2UgQXV0b21hdGlj
+      IFNpZ25pbmcgS2V5IHYyIDxlc21AY2Fub25pY2FsLmNvbT6JAjgEEwECACIFAly2
+      kH0CGwMGCwkIBwMCBhUIAgkKCwQWAgMBAh4BAheAAAoJEEBn5AMTy0sTo/8QAJ1C
+      NhAkZ+Xq/BZ8UzAFCQn6GlIYg/ueY216xcQdDX1uN8hNOlPTNmftroIvohFAfFtB
+      m5galzY3DBPU8eZr8Y8XgiGD97wkR4zfhfh1EK/6diMG/HG00kdcWquFXMRB7E7S
+      nDTpyuPfkAzm9n6l69UB3UA53CaEUuVJ7qFfZsWgiQeUJpvqD0MIVsWr+T/paSx7
+      1JE9BVatFefq0egErv1sa2uYgcH9TRZMLw6gYxWtXeGA08Cpp0+OEvIzmJOHo5/F
+      EpJ3hGk87Of77BC7FbqSDpeYkcjnlI2i0QAxxFygKhPOMLuA4XVn3TDuqCgTFIFC
+      puupzIX/Up51FJmo64V9GZ/uF0jZy4tDxsCRJnEV+4Kv2sU5uMlmNchZMBjXYGiG
+      tpH9CqJkSZjFvB6bk+Ot98KI6+CuNWn1N0sXFKpEUGdJLuOKfJ9+xI5plo8Bct5C
+      DM9s4l0IuAPCsyayXrSmlyOAHzxDUeRMCEUnXWfycCUyqdyYIcCMPLV44Ccg9NyS
+      89dEauSCPuyCSxm5UYEHQdsSI/+rxRdS9IzoKs4za2L7fhY8PfdPlmghmXc/chz1
+      RtgjPfAsUHUPRr0h//TzxRm5dbYdUyqMPzZcDO8wYBT/4xrwnFkSHZhnVxpw7PDi
+      JYK4SVVc4ZO20PE1+RZc5oSbt4hRbFTCSb31Pydc
+      =KWLs
+      -----END PGP PUBLIC KEY BLOCK-----

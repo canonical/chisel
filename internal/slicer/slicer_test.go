@@ -1445,6 +1445,29 @@ var slicerTests = []slicerTest{{
 					contents:
 		`,
 	},
+}, {
+	summary: "No valid archives defined due to invalid pro value",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	release: map[string]string{
+		"chisel.yaml": `
+			format: v1
+			archives:
+				invalid:
+					version: 20.04
+					components: [main]
+					suites: [focal]
+					priority: 10
+					public-keys: [test-key]
+					pro: unknown-value
+		`,
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+		`,
+	},
+	error: `cannot find package "test-package" in archive\(s\)`,
 }}
 
 var defaultChiselYaml = `
@@ -1537,6 +1560,7 @@ func (s *S) TestRun(c *C) {
 						Version:    setupArchive.Version,
 						Suites:     setupArchive.Suites,
 						Components: setupArchive.Components,
+						Pro:        setupArchive.Pro,
 						Arch:       test.arch,
 					},
 					Packages: pkgs,

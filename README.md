@@ -67,6 +67,48 @@ provided packages and install only the desired slices into the *myrootfs*
 folder, according to the slice definitions available in the
 ["ubuntu-22.04" chisel-releases branch](<https://github.com/canonical/chisel-releases/tree/ubuntu-22.04>).
 
+## Chisel support for Pro archives
+
+Chisel can also fetch and install packages from Ubuntu Pro archives. For this,
+the archive has to be defined with the `archives.<archive>.pro` field in
+chisel.yaml and its credentials have to be made available to Chisel.
+
+
+```yaml
+# chisel.yaml
+format: v1
+archives:
+  <archive-name>:
+    pro: <value>
+    ...
+...
+```
+
+Chisel currently supports the following Pro archives:
+
+| `pro` value | Archive URL | Related Ubuntu Pro service |
+| - | - | - |
+| fips         | https://esm.ubuntu.com/fips/ubuntu         | fips         |
+| fips-updates | https://esm.ubuntu.com/fips-updates/ubuntu | fips-updates |
+| apps         | https://esm.ubuntu.com/apps/ubuntu         | esm-apps     |
+| infra        | https://esm.ubuntu.com/infra/ubuntu        | esm-infra    |
+
+Authentication to Pro archives requires that the host is Pro or it is equipped
+with the Pro credentials. By default, Chisel will support using credentials
+from the `/etc/apt/auth.conf.d/` directory, but this location can be configured
+using the environment variable `CHISEL_AUTH_DIR`. Note that Chisel must have
+read permission for the necessary credentials files.
+
+The format of the files is documented in the
+[apt_auth.conf(5)](https://manpages.debian.org/testing/apt/apt_auth.conf.5.en.html)
+man page. Below is a snippet of the `/etc/apt/auth.conf.d/90ubuntu-advantage`
+file from a host with the `fips-updates` and `infra` archives enabled:
+
+```
+machine esm.ubuntu.com/infra/ubuntu/ login bearer password <infra-token>
+machine esm.ubuntu.com/fips-updates/ubuntu/ login bearer password <fips-updates-token>
+```
+
 ## Reference
 
 ### Chisel releases

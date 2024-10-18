@@ -1,0 +1,22 @@
+summary: Chisel can fetch packages from Ubuntu Pro archives
+
+variants:
+  - noble
+
+environment:
+  ROOTFS: rootfs
+
+prepare: |
+  apt update && apt install -y ubuntu-pro-client
+  pro attach ${PRO_TOKEN} --no-auto-enable
+  pro enable esm-infra --assume-yes
+  mkdir ${ROOTFS}
+
+restore: |
+  pro detach --assume-yes
+  rm -r ${ROOTFS}
+
+execute: |
+  chisel cut --release ./chisel-releases/ --root ${ROOTFS} hello_bins
+  test -f ${ROOTFS}/usr/bin/hello
+  test -f ${ROOTFS}/usr/share/doc/hello/copyright

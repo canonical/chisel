@@ -14,6 +14,7 @@ import (
 	"github.com/canonical/chisel/internal/control"
 	"github.com/canonical/chisel/internal/deb"
 	"github.com/canonical/chisel/internal/pgputil"
+	"github.com/canonical/chisel/internal/setup"
 )
 
 type Archive interface {
@@ -36,6 +37,7 @@ type Options struct {
 	Arch       string
 	Suites     []string
 	Components []string
+	Pro        string
 	CacheDir   string
 	PubKeys    []*packet.PublicKey
 }
@@ -77,6 +79,8 @@ type ubuntuArchive struct {
 	indexes []*ubuntuIndex
 	cache   *cache.Cache
 	pubKeys []*packet.PublicKey
+	baseURL string
+	creds   *credentials
 }
 
 type ubuntuIndex struct {
@@ -147,6 +151,39 @@ func (a *ubuntuArchive) Info(pkg string) (*PackageInfo, error) {
 const ubuntuURL = "http://archive.ubuntu.com/ubuntu/"
 const ubuntuPortsURL = "http://ports.ubuntu.com/ubuntu-ports/"
 
+var proArchiveInfo = map[string]struct {
+	BaseURL, Label string
+}{
+	setup.ProFIPS: {
+		BaseURL: "https://esm.ubuntu.com/fips/ubuntu/",
+		Label:   "UbuntuFIPS",
+	},
+	setup.ProFIPSUpdates: {
+		BaseURL: "https://esm.ubuntu.com/fips-updates/ubuntu/",
+		Label:   "UbuntuFIPSUpdates",
+	},
+	setup.ProApps: {
+		BaseURL: "https://esm.ubuntu.com/apps/ubuntu/",
+		Label:   "UbuntuESMApps",
+	},
+	setup.ProInfra: {
+		BaseURL: "https://esm.ubuntu.com/infra/ubuntu/",
+		Label:   "UbuntuESM",
+	},
+}
+
+// archiveURL returns the archive base URL depending on the "pro" value and
+// selected architecture "arch".
+func archiveURL(pro, arch string) string {
+	if pro != "" {
+		return proArchiveInfo[pro].BaseURL
+	}
+	if arch == "amd64" || arch == "i386" {
+		return ubuntuURL
+	}
+	return ubuntuPortsURL
+}
+
 func openUbuntu(options *Options) (Archive, error) {
 	if len(options.Components) == 0 {
 		return nil, fmt.Errorf("archive options missing components")
@@ -157,6 +194,21 @@ func openUbuntu(options *Options) (Archive, error) {
 	if len(options.Version) == 0 {
 		return nil, fmt.Errorf("archive options missing version")
 	}
+	if options.Pro != "" {
+		if _, ok := proArchiveInfo[options.Pro]; !ok {
+			return nil, fmt.Errorf("invalid pro value: %q", options.Pro)
+		}
+	}
+
+	baseURL := archiveURL(options.Pro, options.Arch)
+	var creds *credentials
+	if options.Pro != "" {
+		var err error
+		creds, err = findCredentials(baseURL)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	archive := &ubuntuArchive{
 		options: *options,
@@ -164,6 +216,8 @@ func openUbuntu(options *Options) (Archive, error) {
 			Dir: options.CacheDir,
 		},
 		pubKeys: options.PubKeys,
+		baseURL: baseURL,
+		creds:   creds,
 	}
 
 	for _, suite := range options.Suites {
@@ -184,6 +238,13 @@ func openUbuntu(options *Options) (Archive, error) {
 					return nil, err
 				}
 				release = index.release
+				if !index.supportsArch(options.Arch) {
+					// Release does not support the specified architecture, do
+					// not add any of its indexes.
+					logf("Warning: ignoring %s %s %s suite (unsupported arch %s)...",
+						index.proSuffixedLabel(), index.version, index.suite, options.Arch)
+					break
+				}
 				err = index.checkComponents(options.Components)
 				if err != nil {
 					return nil, err
@@ -201,7 +262,7 @@ func openUbuntu(options *Options) (Archive, error) {
 }
 
 func (index *ubuntuIndex) fetchRelease() error {
-	logf("Fetching %s %s %s suite details...", index.label, index.version, index.suite)
+	logf("Fetching %s %s %s suite details...", index.proSuffixedLabel(), index.version, index.suite)
 	reader, err := index.fetch("InRelease", "", fetchDefault)
 	if err != nil {
 		return err
@@ -235,12 +296,14 @@ func (index *ubuntuIndex) fetchRelease() error {
 	if err != nil {
 		return fmt.Errorf("cannot parse InRelease file: %v", err)
 	}
-	section := ctrl.Section("Ubuntu")
+	// Parse the appropriate section for the type of archive.
+	label := "Ubuntu"
+	if index.archive.options.Pro != "" {
+		label = proArchiveInfo[index.archive.options.Pro].Label
+	}
+	section := ctrl.Section(label)
 	if section == nil {
-		section = ctrl.Section("UbuntuProFIPS")
-		if section == nil {
-			return fmt.Errorf("corrupted archive InRelease file: no Ubuntu section")
-		}
+		return fmt.Errorf("corrupted archive InRelease file: no %s section", label)
 	}
 	logf("Release date: %s", section.Get("Date"))
 
@@ -256,7 +319,7 @@ func (index *ubuntuIndex) fetchIndex() error {
 		return fmt.Errorf("%s is missing from %s %s component digests", packagesPath, index.suite, index.component)
 	}
 
-	logf("Fetching index for %s %s %s %s component...", index.label, index.version, index.suite, index.component)
+	logf("Fetching index for %s %s %s %s component...", index.proSuffixedLabel(), index.version, index.suite, index.component)
 	reader, err := index.fetch(packagesPath+".gz", digest, fetchBulk)
 	if err != nil {
 		return err
@@ -268,6 +331,17 @@ func (index *ubuntuIndex) fetchIndex() error {
 
 	index.packages = ctrl
 	return nil
+}
+
+// supportsArch returns true if the Architectures field in the index release
+// contains "arch". Per the Debian wiki [1], index release files should list the
+// supported architectures in the "Architectures" field.
+// The "ubuntuURL" archive only supports the amd64 and i386 architectures
+// whereas the "ubuntuPortsURL" one supports the rest. But each of them
+// (faultly) specifies all those architectures in their InRelease files.
+// Reference: [1] https://wiki.debian.org/DebianRepository/Format#Architectures
+func (index *ubuntuIndex) supportsArch(arch string) bool {
+	return strings.Contains(index.release.Get("Architectures"), arch)
 }
 
 func (index *ubuntuIndex) checkComponents(components []string) error {
@@ -295,10 +369,7 @@ func (index *ubuntuIndex) fetch(suffix, digest string, flags fetchFlags) (io.Rea
 		return nil, err
 	}
 
-	baseURL := ubuntuURL
-	if index.arch != "amd64" && index.arch != "i386" {
-		baseURL = ubuntuPortsURL
-	}
+	baseURL, creds := index.archive.baseURL, index.archive.creds
 
 	var url string
 	if strings.HasPrefix(suffix, "pool/") {
@@ -310,6 +381,9 @@ func (index *ubuntuIndex) fetch(suffix, digest string, flags fetchFlags) (io.Rea
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create HTTP request: %v", err)
+	}
+	if creds != nil && !creds.Empty() {
+		req.SetBasicAuth(creds.Username, creds.Password)
 	}
 	var resp *http.Response
 	if flags&fetchBulk != 0 {
@@ -325,7 +399,9 @@ func (index *ubuntuIndex) fetch(suffix, digest string, flags fetchFlags) (io.Rea
 	switch resp.StatusCode {
 	case 200:
 		// ok
-	case 401, 404:
+	case 401:
+		return nil, fmt.Errorf("cannot fetch from %q: unauthorized", index.label)
+	case 404:
 		return nil, fmt.Errorf("cannot find archive data")
 	default:
 		return nil, fmt.Errorf("error from archive: %v", resp.Status)
@@ -362,4 +438,14 @@ func sectionPackageInfo(section control.Section) *PackageInfo {
 		Arch:    section.Get("Architecture"),
 		SHA256:  section.Get("SHA256"),
 	}
+}
+
+// proSuffixedLabel adds "<pro value> (pro)" suffix to the label and returns it
+// if the archive is specified with pro value. Otherwise, it returns the
+// original label.
+func (index *ubuntuIndex) proSuffixedLabel() string {
+	if index.archive.options.Pro == "" {
+		return index.label
+	}
+	return index.label + " " + index.archive.options.Pro + " (pro)"
 }

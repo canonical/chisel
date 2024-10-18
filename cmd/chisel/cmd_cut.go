@@ -70,10 +70,15 @@ func (cmd *cmdCut) Execute(args []string) error {
 			Arch:       cmd.Arch,
 			Suites:     archiveInfo.Suites,
 			Components: archiveInfo.Components,
+			Pro:        archiveInfo.Pro,
 			CacheDir:   cache.DefaultDir("chisel"),
 			PubKeys:    archiveInfo.PubKeys,
 		})
 		if err != nil {
+			if err == archive.ErrCredentialsNotFound {
+				logf("Ignoring archive %q (credentials not found)...", archiveName)
+				continue
+			}
 			return err
 		}
 		archives[archiveName] = openArchive

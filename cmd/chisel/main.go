@@ -327,6 +327,7 @@ func run() error {
 	deb.SetLogger(log.Default())
 	setup.SetLogger(log.Default())
 	slicer.SetLogger(log.Default())
+	SetLogger(log.Default())
 
 	parser := Parser()
 	xtra, err := parser.Parse()
