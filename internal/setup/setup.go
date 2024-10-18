@@ -398,7 +398,7 @@ type yamlArchive struct {
 	Version    string   `yaml:"version"`
 	Suites     []string `yaml:"suites"`
 	Components []string `yaml:"components"`
-	Priority   int      `yaml:"priority"`
+	Priority   *int     `yaml:"priority"`
 	Default    bool     `yaml:"default"`
 	PubKeys    []string `yaml:"public-keys"`
 }
@@ -542,6 +542,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 	// not being used, we will revert back to the default archive behaviour.
 	hasPriority := false
 	var defaultArchive string
+	var archiveNoPriority string
 	for archiveName, details := range yamlVar.Archives {
 		if details.Version == "" {
 			return nil, fmt.Errorf("%s: archive %q missing version field", fileName, archiveName)
@@ -572,18 +573,28 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 			}
 			archiveKeys = append(archiveKeys, key)
 		}
-		if details.Priority > MaxArchivePriority || details.Priority < MinArchivePriority {
-			return nil, fmt.Errorf("%s: archive %q has invalid priority value of %d", fileName, archiveName, details.Priority)
-		}
-		if details.Priority != 0 {
+		priority := 0
+		if details.Priority != nil {
 			hasPriority = true
+			if archiveNoPriority != "" {
+				return nil, fmt.Errorf("%s: archive %q missing priority", fileName, archiveNoPriority)
+			}
+			priority = *details.Priority
+			if priority > MaxArchivePriority || priority < MinArchivePriority {
+				return nil, fmt.Errorf("%s: archive %q has invalid priority value of %d", fileName, archiveName, priority)
+			}
+		} else {
+			if hasPriority {
+				return nil, fmt.Errorf("%s: archive %q missing priority", fileName, archiveName)
+			}
+			archiveNoPriority = archiveName
 		}
 		release.Archives[archiveName] = &Archive{
 			Name:       archiveName,
 			Version:    details.Version,
 			Suites:     details.Suites,
 			Components: details.Components,
-			Priority:   details.Priority,
+			Priority:   priority,
 			PubKeys:    archiveKeys,
 		}
 	}

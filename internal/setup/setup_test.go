@@ -799,6 +799,59 @@ var setupTests = []setupTest{{
 		},
 	},
 }, {
+	summary: "Multiple archives inconsistent use of priorities",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v1
+			archives:
+				foo:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					priority: 20
+					public-keys: [test-key]
+				bar:
+					version: 22.04
+					components: [universe]
+					suites: [jammy-updates]
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	relerror: `chisel.yaml: archive "bar" missing priority`,
+}, {
+	summary: "Multiple archives with no priorities",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v1
+			archives:
+				foo:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					public-keys: [test-key]
+				bar:
+					version: 22.04
+					components: [universe]
+					suites: [jammy-updates]
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	relerror: `chisel.yaml: archives "bar" and "foo" have the same priority value of 0`,
+}, {
 	summary: "Archive with suites unset",
 	input: map[string]string{
 		"chisel.yaml": `
