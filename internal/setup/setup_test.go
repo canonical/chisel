@@ -73,8 +73,6 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		DefaultArchive: "ubuntu",
-
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -86,10 +84,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Archive: "ubuntu",
-				Name:    "mypkg",
-				Path:    "slices/mydir/mypkg.yaml",
-				Slices:  map[string]*setup.Slice{},
+				Name:   "mypkg",
+				Path:   "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{},
 			},
 		},
 	},
@@ -117,8 +114,6 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		DefaultArchive: "ubuntu",
-
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -130,9 +125,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Archive: "ubuntu",
-				Name:    "mypkg",
-				Path:    "slices/mydir/mypkg.yaml",
+				Name: "mypkg",
+				Path: "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice1": {
 						Package: "mypkg",
@@ -179,8 +173,6 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		DefaultArchive: "ubuntu",
-
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -192,9 +184,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Archive: "ubuntu",
-				Name:    "mypkg",
-				Path:    "slices/mydir/mypkg.yaml",
+				Name: "mypkg",
+				Path: "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice1": {
 						Package: "mypkg",
@@ -440,8 +431,6 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		DefaultArchive: "ubuntu",
-
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -453,9 +442,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Archive: "ubuntu",
-				Name:    "mypkg",
-				Path:    "slices/mydir/mypkg.yaml",
+				Name: "mypkg",
+				Path: "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice1": {
 						Package: "mypkg",
@@ -655,8 +643,6 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		DefaultArchive: "ubuntu",
-
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -668,9 +654,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Archive: "ubuntu",
-				Name:    "mypkg",
-				Path:    "slices/mydir/mypkg.yaml",
+				Name: "mypkg",
+				Path: "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg",
@@ -695,8 +680,6 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		DefaultArchive: "ubuntu",
-
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -708,9 +691,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Archive: "ubuntu",
-				Name:    "mypkg",
-				Path:    "slices/mydir/mypkg.yaml",
+				Name: "mypkg",
+				Path: "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg",
@@ -736,8 +718,6 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		DefaultArchive: "ubuntu",
-
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -749,9 +729,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Archive: "ubuntu",
-				Name:    "mypkg",
-				Path:    "slices/mydir/mypkg.yaml",
+				Name: "mypkg",
+				Path: "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg",
@@ -766,7 +745,7 @@ var setupTests = []setupTest{{
 		},
 	},
 }, {
-	summary: "Multiple archives",
+	summary: "Multiple archives with priorities",
 	input: map[string]string{
 		"chisel.yaml": `
 			format: v1
@@ -775,7 +754,61 @@ var setupTests = []setupTest{{
 					version: 22.04
 					components: [main, universe]
 					suites: [jammy]
-					default: true
+					priority: 20
+					public-keys: [test-key]
+				bar:
+					version: 22.04
+					components: [universe]
+					suites: [jammy-updates]
+					priority: -10
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	release: &setup.Release{
+		Archives: map[string]*setup.Archive{
+			"foo": {
+				Name:       "foo",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main", "universe"},
+				Priority:   20,
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+			},
+			"bar": {
+				Name:       "bar",
+				Version:    "22.04",
+				Suites:     []string{"jammy-updates"},
+				Components: []string{"universe"},
+				Priority:   -10,
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Name:   "mypkg",
+				Path:   "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{},
+			},
+		},
+	},
+}, {
+	summary: "Multiple archives inconsistent use of priorities",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v1
+			archives:
+				foo:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					priority: 20
 					public-keys: [test-key]
 				bar:
 					version: 22.04
@@ -791,34 +824,33 @@ var setupTests = []setupTest{{
 			package: mypkg
 		`,
 	},
-	release: &setup.Release{
-		DefaultArchive: "foo",
-
-		Archives: map[string]*setup.Archive{
-			"foo": {
-				Name:       "foo",
-				Version:    "22.04",
-				Suites:     []string{"jammy"},
-				Components: []string{"main", "universe"},
-				PubKeys:    []*packet.PublicKey{testKey.PubKey},
-			},
-			"bar": {
-				Name:       "bar",
-				Version:    "22.04",
-				Suites:     []string{"jammy-updates"},
-				Components: []string{"universe"},
-				PubKeys:    []*packet.PublicKey{testKey.PubKey},
-			},
-		},
-		Packages: map[string]*setup.Package{
-			"mypkg": {
-				Archive: "foo",
-				Name:    "mypkg",
-				Path:    "slices/mydir/mypkg.yaml",
-				Slices:  map[string]*setup.Slice{},
-			},
-		},
+	relerror: `chisel.yaml: archive "bar" is missing the priority setting`,
+}, {
+	summary: "Multiple archives with no priorities",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v1
+			archives:
+				foo:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					public-keys: [test-key]
+				bar:
+					version: 22.04
+					components: [universe]
+					suites: [jammy-updates]
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
 	},
+	relerror: `chisel.yaml: archive "bar" is missing the priority setting`,
 }, {
 	summary: "Archive with suites unset",
 	input: map[string]string{
@@ -831,6 +863,72 @@ var setupTests = []setupTest{{
 		`,
 	},
 	relerror: `chisel.yaml: archive "ubuntu" missing suites field`,
+}, {
+	summary: "Two archives cannot have same priority",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v1
+			archives:
+				foo:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					priority: 20
+					public-keys: [test-key]
+				bar:
+					version: 22.04
+					components: [universe]
+					suites: [jammy-updates]
+					priority: 20
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	relerror: `chisel.yaml: archives "bar" and "foo" have the same priority value of 20`,
+}, {
+	summary: "Invalid archive priority",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v1
+			archives:
+				foo:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					priority: 10000
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
+	},
+	relerror: `chisel.yaml: archive "foo" has invalid priority value of 10000`,
+}, {
+	summary: "Invalid archive priority of 0",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v1
+			archives:
+				foo:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					priority: 0
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
+	},
+	relerror: `chisel.yaml: archive "foo" has invalid priority value of 0`,
 }, {
 	summary: "Extra fields in YAML are ignored (necessary for forward compatibility)",
 	input: map[string]string{
@@ -861,8 +959,6 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		DefaultArchive: "ubuntu",
-
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -874,9 +970,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Archive: "ubuntu",
-				Name:    "mypkg",
-				Path:    "slices/mydir/mypkg.yaml",
+				Name: "mypkg",
+				Path: "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg",
@@ -900,12 +995,13 @@ var setupTests = []setupTest{{
 					components: [main, universe]
 					suites: [jammy]
 					public-keys: [extra-key]
-					default: true
+					priority: 20
 				bar:
 					version: 22.04
 					components: [universe]
 					suites: [jammy-updates]
 					public-keys: [test-key, extra-key]
+					priority: 10
 			public-keys:
 				extra-key:
 					id: ` + extraTestKey.ID + `
@@ -919,14 +1015,13 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		DefaultArchive: "foo",
-
 		Archives: map[string]*setup.Archive{
 			"foo": {
 				Name:       "foo",
 				Version:    "22.04",
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
+				Priority:   20,
 				PubKeys:    []*packet.PublicKey{extraTestKey.PubKey},
 			},
 			"bar": {
@@ -934,15 +1029,15 @@ var setupTests = []setupTest{{
 				Version:    "22.04",
 				Suites:     []string{"jammy-updates"},
 				Components: []string{"universe"},
+				Priority:   10,
 				PubKeys:    []*packet.PublicKey{testKey.PubKey, extraTestKey.PubKey},
 			},
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Archive: "foo",
-				Name:    "mypkg",
-				Path:    "slices/mydir/mypkg.yaml",
-				Slices:  map[string]*setup.Slice{},
+				Name:   "mypkg",
+				Path:   "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{},
 			},
 		},
 	},
@@ -956,7 +1051,6 @@ var setupTests = []setupTest{{
 					version: 22.04
 					components: [main, universe]
 					suites: [jammy]
-					default: true
 		`,
 	},
 	relerror: `chisel.yaml: archive "foo" missing public-keys field`,
@@ -971,7 +1065,6 @@ var setupTests = []setupTest{{
 					components: [main, universe]
 					suites: [jammy]
 					public-keys: [extra-key]
-					default: true
 		`,
 		"slices/mydir/mypkg.yaml": `
 			package: mypkg
@@ -989,7 +1082,6 @@ var setupTests = []setupTest{{
 					components: [main, universe]
 					suites: [jammy]
 					public-keys: [extra-key]
-					default: true
 			public-keys:
 				extra-key:
 					id: foo
@@ -1017,7 +1109,6 @@ var setupTests = []setupTest{{
 					components: [main, universe]
 					suites: [jammy]
 					public-keys: [extra-key]
-					default: true
 			public-keys:
 				extra-key:
 					id: ` + extraTestKey.ID + `
@@ -1040,8 +1131,6 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		DefaultArchive: "ubuntu",
-
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -1053,9 +1142,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"jq": {
-				Archive: "ubuntu",
-				Name:    "jq",
-				Path:    "slices/mydir/jq.yaml",
+				Name: "jq",
+				Path: "slices/mydir/jq.yaml",
 				Slices: map[string]*setup.Slice{
 					"bins": {
 						Package: "jq",
@@ -1094,7 +1182,6 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		DefaultArchive: "ubuntu",
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -1106,9 +1193,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Archive: "ubuntu",
-				Name:    "mypkg",
-				Path:    "slices/mydir/mypkg.yaml",
+				Name: "mypkg",
+				Path: "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"slice1": {
 						Package: "mypkg",
@@ -1163,8 +1249,6 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		DefaultArchive: "ubuntu",
-
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -1176,9 +1260,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Archive: "ubuntu",
-				Name:    "mypkg",
-				Path:    "slices/mydir/mypkg.yaml",
+				Name: "mypkg",
+				Path: "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"slice1": {
 						Package: "mypkg",
@@ -1199,9 +1282,8 @@ var setupTests = []setupTest{{
 				},
 			},
 			"myotherpkg": {
-				Archive: "ubuntu",
-				Name:    "myotherpkg",
-				Path:    "slices/mydir/myotherpkg.yaml",
+				Name: "myotherpkg",
+				Path: "slices/mydir/myotherpkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"slice1": {
 						Package: "myotherpkg",
@@ -1324,6 +1406,15 @@ var setupTests = []setupTest{{
 	},
 	relerror: `slices test-package_myslice1 and test-package_myslice2 conflict on /dir/\*\* and /dir/file`,
 }, {
+	summary: "Pinned archive is not defined",
+	input: map[string]string{
+		"slices/test-package.yaml": `
+			package: test-package
+			archive: non-existing
+		`,
+	},
+	relerror: `slices/test-package.yaml: package refers to undefined archive "non-existing"`,
+}, {
 	summary: "Specify generate: manifest",
 	input: map[string]string{
 		"slices/mydir/mypkg.yaml": `
@@ -1335,8 +1426,6 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		DefaultArchive: "ubuntu",
-
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -1348,9 +1437,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Archive: "ubuntu",
-				Name:    "mypkg",
-				Path:    "slices/mydir/mypkg.yaml",
+				Name: "mypkg",
+				Path: "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg",
@@ -1385,8 +1473,6 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		DefaultArchive: "ubuntu",
-
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -1398,9 +1484,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Archive: "ubuntu",
-				Name:    "mypkg",
-				Path:    "slices/mydir/mypkg.yaml",
+				Name: "mypkg",
+				Path: "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg",
@@ -1477,8 +1562,6 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
-		DefaultArchive: "ubuntu",
-
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -1490,9 +1573,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Archive: "ubuntu",
-				Name:    "mypkg",
-				Path:    "slices/mydir/mypkg.yaml",
+				Name: "mypkg",
+				Path: "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg",
@@ -1504,9 +1586,8 @@ var setupTests = []setupTest{{
 				},
 			},
 			"mypkg2": {
-				Archive: "ubuntu",
-				Name:    "mypkg2",
-				Path:    "slices/mydir/mypkg2.yaml",
+				Name: "mypkg2",
+				Path: "slices/mydir/mypkg2.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg2",
@@ -1585,7 +1666,6 @@ var setupTests = []setupTest{{
 					components: [main, universe]
 					suites: [jammy]
 					v1-public-keys: [test-key]
-					default: true
 			v1-public-keys:
 				test-key:
 					id: ` + testKey.ID + `
@@ -1593,6 +1673,155 @@ var setupTests = []setupTest{{
 		`,
 	},
 	relerror: `chisel.yaml: unknown format "chisel-v1"`,
+}, {
+	summary: "Default archive compatibility",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v1
+			archives:
+				default:
+					default: true
+					version: 22.04
+					components: [main]
+					suites: [jammy]
+					public-keys: [test-key]
+				other-1:
+					version: 22.04
+					components: [main]
+					suites: [jammy]
+					public-keys: [test-key]
+				other-2:
+					version: 22.04
+					components: [main]
+					suites: [jammy]
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	release: &setup.Release{
+		Archives: map[string]*setup.Archive{
+			"default": {
+				Name:       "default",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Priority:   1,
+			},
+			"other-1": {
+				Name:       "other-1",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Priority:   -2,
+			},
+			"other-2": {
+				Name:       "other-2",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Priority:   -3,
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Name:   "mypkg",
+				Path:   "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{},
+			},
+		},
+	},
+}, {
+	summary: "Default is ignored",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v1
+			archives:
+				default:
+					default: true
+					priority: 10
+					version: 22.04
+					components: [main]
+					suites: [jammy]
+					public-keys: [test-key]
+				other:
+					priority: 20
+					version: 22.04
+					components: [main]
+					suites: [jammy]
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	release: &setup.Release{
+		Archives: map[string]*setup.Archive{
+			"default": {
+				Name:       "default",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Priority:   10,
+			},
+			"other": {
+				Name:       "other",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Priority:   20,
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Name:   "mypkg",
+				Path:   "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{},
+			},
+		},
+	},
+}, {
+	summary: "Multiple default archives",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v1
+			archives:
+				foo:
+					default: true
+					version: 22.04
+					components: [main]
+					suites: [jammy]
+					public-keys: [test-key]
+				bar:
+					default: true
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	relerror: `chisel.yaml: more than one default archive: bar, foo`,
 }}
 
 var defaultChiselYaml = `
