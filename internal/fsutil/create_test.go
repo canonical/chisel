@@ -136,6 +136,24 @@ var createTests = []createTest{{
 	},
 }, {
 	options: fsutil.CreateOptions{
+		Path:         "foo",
+		Link:         "./bar",
+		Mode:         0776 | fs.ModeSymlink,
+		OverrideMode: true,
+	},
+	hackdir: func(c *C, dir string) {
+		err := os.WriteFile(filepath.Join(dir, "bar"), []byte("data"), 0666)
+		c.Assert(err, IsNil)
+		err = os.WriteFile(filepath.Join(dir, "foo"), []byte("data"), 0666)
+		c.Assert(err, IsNil)
+	},
+	result: map[string]string{
+		"/foo": "symlink ./bar",
+		// mode is not updated.
+		"/bar": "file 0666 3a6eb079",
+	},
+}, {
+	options: fsutil.CreateOptions{
 		Path: "bar",
 		// Existing link with different target.
 		Link: "other",
