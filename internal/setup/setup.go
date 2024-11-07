@@ -7,8 +7,10 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"slices"
 	"strings"
+	"sync"
 
 	"golang.org/x/crypto/openpgp/packet"
 	"gopkg.in/yaml.v3"
@@ -197,34 +199,60 @@ func (r *Release) validate() error {
 		}
 	}
 
-	// Check for glob and generate conflicts.
+	// Check for generate and glob conflicts.
+	maxInflight := runtime.NumCPU()
+	sem := NewSemaphore(maxInflight)
+	canceled := make(chan struct{})
+	var err error
+	var errOnce sync.Once
 	for oldPath, old := range globs {
-		oldInfo := old.Contents[oldPath]
-		for newPath, new := range paths {
-			if oldPath == newPath {
-				// Identical paths have been filtered earlier. This must be the
-				// exact same entry.
-				continue
-			}
-			newInfo := new.Contents[newPath]
-			if oldInfo.Kind == GlobPath && (newInfo.Kind == GlobPath || newInfo.Kind == CopyPath) {
-				if new.Package == old.Package {
+		select {
+		case <-canceled:
+			// Stop processing on the first failure.
+			break
+		default:
+		}
+
+		sem.Down()
+		go func(oldPath string, old *Slice) {
+			defer sem.Up()
+			oldInfo := old.Contents[oldPath]
+			for newPath, new := range paths {
+				if oldPath == newPath {
+					// Identical paths have been filtered earlier. This must be the
+					// exact same entry.
 					continue
 				}
-			}
-			if strdist.GlobPath(newPath, oldPath) {
-				if (old.Package > new.Package) || (old.Package == new.Package && old.Name > new.Name) ||
-					(old.Package == new.Package && old.Name == new.Name && oldPath > newPath) {
-					old, new = new, old
-					oldPath, newPath = newPath, oldPath
+				newInfo := new.Contents[newPath]
+				if oldInfo.Kind == GlobPath && (newInfo.Kind == GlobPath || newInfo.Kind == CopyPath) {
+					if new.Package == old.Package {
+						continue
+					}
 				}
-				return fmt.Errorf("slices %s and %s conflict on %s and %s", old, new, oldPath, newPath)
+				if strdist.GlobPath(newPath, oldPath) {
+					if (old.Package > new.Package) || (old.Package == new.Package && old.Name > new.Name) ||
+						(old.Package == new.Package && old.Name == new.Name && oldPath > newPath) {
+						old, new = new, old
+						oldPath, newPath = newPath, oldPath
+					}
+					errOnce.Do(func() {
+						err = fmt.Errorf("slices %s and %s conflict on %s and %s", old, new, oldPath, newPath)
+						close(canceled)
+					})
+				}
 			}
-		}
+		}(oldPath, old)
+	}
+	// Wait for all goroutines to finish.
+	for i := 0; i < maxInflight; i++ {
+		sem.Down()
+	}
+	if err != nil {
+		return err
 	}
 
 	// Check for cycles.
-	_, err := order(r.Packages, keys)
+	_, err = order(r.Packages, keys)
 	if err != nil {
 		return err
 	}
@@ -916,4 +944,23 @@ func packageToYAML(p *Package) (*yamlPackage, error) {
 		pkg.Slices[name] = *yamlSlice
 	}
 	return pkg, nil
+}
+
+type Semaphore struct {
+	c chan struct{}
+}
+
+func NewSemaphore(n int) *Semaphore {
+	sem := &Semaphore{
+		c: make(chan struct{}, n),
+	}
+	return sem
+}
+
+func (sem *Semaphore) Up() {
+	<-sem.c
+}
+
+func (sem *Semaphore) Down() {
+	sem.c <- struct{}{}
 }

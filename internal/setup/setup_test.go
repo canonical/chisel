@@ -481,7 +481,7 @@ var setupTests = []setupTest{{
 						/file/foob*r:
 		`,
 	},
-	relerror: `slices mypkg1_myslice and mypkg2_myslice conflict on /file/f\*obar and /file/foob\*r`,
+	relerror: `slices mypkg1_myslice and mypkg2_myslice conflict on (/file/f\*obar and /file/foob\*r)|(/file/foob\*r and /file/f\*obar)`,
 }, {
 	summary: "Conflicting globs and plain copies",
 	input: map[string]string{
