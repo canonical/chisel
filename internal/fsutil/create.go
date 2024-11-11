@@ -19,8 +19,8 @@ type CreateOptions struct {
 	// If MakeParents is true, missing parent directories of Path are
 	// created with permissions 0755.
 	MakeParents bool
-	// For the mode to be updated if the entry already exists, OverrideMode has
-	// to be set to true. It does not affect symlinks.
+	// If OverrideMode is true and entry already exists, update the mode. Does
+	// not affect symlinks.
 	OverrideMode bool
 }
 
