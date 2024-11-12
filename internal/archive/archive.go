@@ -239,8 +239,6 @@ func openUbuntu(options *Options) (Archive, error) {
 				if !index.supportsArch(options.Arch) {
 					// Release does not support the specified architecture, do
 					// not add any of its indexes.
-					logf("Warning: ignoring %s %s %s suite (unsupported arch %s)...",
-						index.proSuffixedLabel(), index.version, index.suite, options.Arch)
 					break
 				}
 				err = index.checkComponents(options.Components)
