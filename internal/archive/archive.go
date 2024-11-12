@@ -172,16 +172,24 @@ var proArchiveInfo = map[string]struct {
 	},
 }
 
-// archiveURL returns the archive base URL depending on the "pro" value and
-// selected architecture "arch".
-func archiveURL(pro, arch string) string {
+func archiveURL(pro, arch string) (string, *credentials, error) {
 	if pro != "" {
-		return proArchiveInfo[pro].BaseURL
+		archiveInfo, ok := proArchiveInfo[pro]
+		if !ok {
+			return "", nil, fmt.Errorf("invalid pro value: %q", pro)
+		}
+		url := archiveInfo.BaseURL
+		creds, err := findCredentials(url)
+		if err != nil {
+			return "", nil, err
+		}
+		return url, creds, nil
 	}
+
 	if arch == "amd64" || arch == "i386" {
-		return ubuntuURL
+		return ubuntuURL, nil, nil
 	}
-	return ubuntuPortsURL
+	return ubuntuPortsURL, nil, nil
 }
 
 func openUbuntu(options *Options) (Archive, error) {
@@ -194,20 +202,10 @@ func openUbuntu(options *Options) (Archive, error) {
 	if len(options.Version) == 0 {
 		return nil, fmt.Errorf("archive options missing version")
 	}
-	if options.Pro != "" {
-		if _, ok := proArchiveInfo[options.Pro]; !ok {
-			return nil, fmt.Errorf("invalid pro value: %q", options.Pro)
-		}
-	}
 
-	baseURL := archiveURL(options.Pro, options.Arch)
-	var creds *credentials
-	if options.Pro != "" {
-		var err error
-		creds, err = findCredentials(baseURL)
-		if err != nil {
-			return nil, err
-		}
+	baseURL, creds, err := archiveURL(options.Pro, options.Arch)
+	if err != nil {
+		return nil, err
 	}
 
 	archive := &ubuntuArchive{
