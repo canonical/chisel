@@ -13,6 +13,7 @@ import (
 	"golang.org/x/crypto/openpgp/packet"
 	"gopkg.in/yaml.v3"
 
+	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/deb"
 	"github.com/canonical/chisel/internal/pgputil"
 	"github.com/canonical/chisel/internal/strdist"
@@ -25,13 +26,6 @@ type Release struct {
 	Packages map[string]*Package
 	Archives map[string]*Archive
 }
-
-const (
-	ProFIPS        = "fips"
-	ProFIPSUpdates = "fips-updates"
-	ProApps        = "apps"
-	ProInfra       = "infra"
-)
 
 // Archive is the location from which binary packages are obtained.
 type Archive struct {
@@ -563,7 +557,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 			return nil, fmt.Errorf("%s: archive %q missing components field", fileName, archiveName)
 		}
 		switch details.Pro {
-		case "", ProApps, ProFIPS, ProFIPSUpdates, ProInfra:
+		case "", archive.ProApps, archive.ProFIPS, archive.ProFIPSUpdates, archive.ProInfra:
 		default:
 			logf("Archive %q ignored: invalid pro value: %q", archiveName, details.Pro)
 			continue

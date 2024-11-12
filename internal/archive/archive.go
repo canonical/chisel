@@ -14,7 +14,6 @@ import (
 	"github.com/canonical/chisel/internal/control"
 	"github.com/canonical/chisel/internal/deb"
 	"github.com/canonical/chisel/internal/pgputil"
-	"github.com/canonical/chisel/internal/setup"
 )
 
 type Archive interface {
@@ -151,22 +150,29 @@ func (a *ubuntuArchive) Info(pkg string) (*PackageInfo, error) {
 const ubuntuURL = "http://archive.ubuntu.com/ubuntu/"
 const ubuntuPortsURL = "http://ports.ubuntu.com/ubuntu-ports/"
 
+const (
+	ProFIPS        = "fips"
+	ProFIPSUpdates = "fips-updates"
+	ProApps        = "apps"
+	ProInfra       = "infra"
+)
+
 var proArchiveInfo = map[string]struct {
 	BaseURL, Label string
 }{
-	setup.ProFIPS: {
+	ProFIPS: {
 		BaseURL: "https://esm.ubuntu.com/fips/ubuntu/",
 		Label:   "UbuntuFIPS",
 	},
-	setup.ProFIPSUpdates: {
+	ProFIPSUpdates: {
 		BaseURL: "https://esm.ubuntu.com/fips-updates/ubuntu/",
 		Label:   "UbuntuFIPSUpdates",
 	},
-	setup.ProApps: {
+	ProApps: {
 		BaseURL: "https://esm.ubuntu.com/apps/ubuntu/",
 		Label:   "UbuntuESMApps",
 	},
-	setup.ProInfra: {
+	ProInfra: {
 		BaseURL: "https://esm.ubuntu.com/infra/ubuntu/",
 		Label:   "UbuntuESM",
 	},
