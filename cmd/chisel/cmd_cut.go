@@ -76,7 +76,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 		})
 		if err != nil {
 			if err == archive.ErrCredentialsNotFound {
-				logf("Ignoring archive %q (credentials not found)...", archiveName)
+				logf("Archive %q ignored: credentials not found", archiveName)
 				continue
 			}
 			return err
