@@ -67,24 +67,24 @@ provided packages and install only the desired slices into the *myrootfs*
 folder, according to the slice definitions available in the
 ["ubuntu-22.04" chisel-releases branch](<https://github.com/canonical/chisel-releases/tree/ubuntu-22.04>).
 
-## Chisel support for Pro archives
+## Support for Pro archives
 
-Chisel can also fetch and install packages from Ubuntu Pro archives. For this,
-the archive has to be defined with the `archives.<archive>.pro` field in
-chisel.yaml and its credentials have to be made available to Chisel.
+To fetch and install packages from Ubuntu Pro archives,
+the archive has to be defined with the `archives.<name>.pro` field in
+`chisel.yaml`:
 
 
 ```yaml
 # chisel.yaml
 format: v1
 archives:
-  <archive-name>:
+  <name>:
     pro: <value>
     ...
 ...
 ```
 
-Chisel currently supports the following Pro archives:
+The following Pro archives are currently supported:
 
 | `pro` value | Archive URL | Related Ubuntu Pro service |
 | - | - | - |
@@ -93,21 +93,20 @@ Chisel currently supports the following Pro archives:
 | apps         | https://esm.ubuntu.com/apps/ubuntu         | esm-apps     |
 | infra        | https://esm.ubuntu.com/infra/ubuntu        | esm-infra    |
 
-Authentication to Pro archives requires that the host is Pro or it is equipped
-with the Pro credentials. By default, Chisel will support using credentials
-from the `/etc/apt/auth.conf.d/` directory, but this location can be configured
-using the environment variable `CHISEL_AUTH_DIR`. Note that Chisel must have
-read permission for the necessary credentials files.
+If the system is using the [Pro client](https://ubuntu.com/pro/tutorial), and the
+services are enabled, the credentials will be automatically picked up from
+`/etc/apt/auth.conf.d/`. However, the default permissions of the credentials need
+to be changed for Chisel to be able to read them. Example workflow:
+```shell
+sudo pro enable fips
 
-The format of the files is documented in the
-[apt_auth.conf(5)](https://manpages.debian.org/testing/apt/apt_auth.conf.5.en.html)
-man page. Below is a snippet of the `/etc/apt/auth.conf.d/90ubuntu-advantage`
-file from a host with the `fips-updates` and `infra` archives enabled:
+sudo setfacl -m u:$USER:r /etc/apt/auth.conf.d/90ubuntu-advantage
+# or, alternatively,
+sudo chmod u+r /etc/apt/auth.conf.d/90ubuntu-advantage
+```
 
-```
-machine esm.ubuntu.com/infra/ubuntu/ login bearer password <infra-token>
-machine esm.ubuntu.com/fips-updates/ubuntu/ login bearer password <fips-updates-token>
-```
+Alternatively, the location of the credentials can be configured using the environment variable
+`CHISEL_AUTH_DIR`.
 
 ## Reference
 
