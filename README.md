@@ -68,10 +68,11 @@ folder, according to the slice definitions available in the
 ["ubuntu-22.04" chisel-releases branch](<https://github.com/canonical/chisel-releases/tree/ubuntu-22.04>).
 
 ## Support for Pro archives
+> [!IMPORTANT]
+> To chisel a Pro package you need to have a Pro-enabled host.
 
-To fetch and install packages from Ubuntu Pro archives,
-the archive has to be defined with the `archives.<name>.pro` field in
-`chisel.yaml`:
+To fetch and install slices from Ubuntu Pro packages, the Pro archive has to be
+defined with the `archives.<name>.pro` field in `chisel.yaml`:
 
 
 ```yaml
@@ -86,17 +87,17 @@ archives:
 
 The following Pro archives are currently supported:
 
-| `pro` value | Archive URL | Related Ubuntu Pro service |
-| - | - | - |
-| fips         | https://esm.ubuntu.com/fips/ubuntu         | fips         |
-| fips-updates | https://esm.ubuntu.com/fips-updates/ubuntu | fips-updates |
-| apps         | https://esm.ubuntu.com/apps/ubuntu         | esm-apps     |
-| infra        | https://esm.ubuntu.com/infra/ubuntu        | esm-infra    |
+| `pro` value | Archive URL | Corresponding Ubuntu Pro service |
+| - | - |----------------------------------|
+| fips         | https://esm.ubuntu.com/fips/ubuntu         | fips                             |
+| fips-updates | https://esm.ubuntu.com/fips-updates/ubuntu | fips-updates                     |
+| apps         | https://esm.ubuntu.com/apps/ubuntu         | esm-apps                         |
+| infra        | https://esm.ubuntu.com/infra/ubuntu        | esm-infra                        |
 
 If the system is using the [Pro client](https://ubuntu.com/pro/tutorial), and the
 services are enabled, the credentials will be automatically picked up from
-`/etc/apt/auth.conf.d/`. However, the default permissions of the credentials need
-to be changed for Chisel to be able to read them. Example workflow:
+`/etc/apt/auth.conf.d/`. However, the default permissions of the credentials file
+need to be changed so that Chisel can read it. Example:
 ```shell
 sudo pro enable fips
 
@@ -105,7 +106,7 @@ sudo setfacl -m u:$USER:r /etc/apt/auth.conf.d/90ubuntu-advantage
 sudo chmod u+r /etc/apt/auth.conf.d/90ubuntu-advantage
 ```
 
-Alternatively, the location of the credentials can be configured using the environment variable
+The location of the credentials can be configured using the environment variable
 `CHISEL_AUTH_DIR`.
 
 ## Reference
