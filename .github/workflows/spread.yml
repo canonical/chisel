@@ -27,8 +27,6 @@ jobs:
           go-version: '>=1.17.0'
 
       - name: Build and run spread
-        env:
-          PRO_TOKEN: ${{ secrets.PRO_TOKEN }}
         run: |
           (cd _spread/cmd/spread && go build)
-          _spread/cmd/spread/spread -v focal jammy mantic noble
+          _spread/cmd/spread/spread -v

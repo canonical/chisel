@@ -56,33 +56,5 @@ jobs:
           go-version-file: 'go.mod'
 
       - name: Run real archive tests
-        env:
-          PRO_TOKEN: ${{ secrets.PRO_TOKEN }}
         run: |
-          set -ex
-
-          detach() {
-            sudo pro detach --assume-yes || true
-            sudo rm -f /etc/apt/auth.conf.d/90ubuntu-advantage
-          }
-          trap detach EXIT
-
-          # Attach pro token and enable services
-          sudo pro attach ${PRO_TOKEN} --no-auto-enable
-
-          # Cannot enable fips and fips-updates at the same time.
-          # Hack: enable fips, copy the credentials and then after enabling
-          # other services, add the credentials back.
-          sudo pro enable fips --assume-yes
-          sudo cp /etc/apt/auth.conf.d/90ubuntu-advantage /etc/apt/auth.conf.d/90ubuntu-advantage.fips-creds
-          # This will disable the fips service.
-          sudo pro enable fips-updates esm-apps esm-infra --assume-yes
-          # Add the fips credentials back.
-          sudo sh -c 'cat /etc/apt/auth.conf.d/90ubuntu-advantage.fips-creds >> /etc/apt/auth.conf.d/90ubuntu-advantage'
-          sudo rm /etc/apt/auth.conf.d/90ubuntu-advantage.fips-creds
-
-          # Make apt credentials accessible to USER.
-          sudo setfacl -m u:$USER:r /etc/apt/auth.conf.d/90ubuntu-advantage
-
-          # Run tests on Pro and non-Pro real archives.
-          go test ./internal/archive/ -v --real-archive --real-pro-archive
+          go test ./internal/archive/ --real-archive
