@@ -1,5 +1,7 @@
 summary: Chisel can fetch packages from Ubuntu Pro archives
 
+manual: true
+
 variants:
   - noble
 
