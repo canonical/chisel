@@ -99,7 +99,7 @@ services are enabled, the credentials will be automatically picked up from
 `/etc/apt/auth.conf.d/`. However, the default permissions of the credentials file
 need to be changed so that Chisel can read it. Example:
 ```shell
-sudo pro enable fips
+sudo pro enable esm-infra
 
 sudo setfacl -m u:$USER:r /etc/apt/auth.conf.d/90ubuntu-advantage
 # or, alternatively,
