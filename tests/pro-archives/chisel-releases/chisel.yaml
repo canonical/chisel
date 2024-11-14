@@ -3,7 +3,7 @@ format: v1
 archives:
   ubuntu:
     version: 24.04
-    pro: infra
+    pro: esm-infra
     components: [main]
     suites: [noble-infra-security, noble-infra-updates]
     public-keys: [ubuntu-esm-key-v2]

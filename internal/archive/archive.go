@@ -153,8 +153,8 @@ const ubuntuPortsURL = "http://ports.ubuntu.com/ubuntu-ports/"
 const (
 	ProFIPS        = "fips"
 	ProFIPSUpdates = "fips-updates"
-	ProApps        = "apps"
-	ProInfra       = "infra"
+	ProApps        = "esm-apps"
+	ProInfra       = "esm-infra"
 )
 
 var proArchiveInfo = map[string]struct {

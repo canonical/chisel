@@ -1765,18 +1765,18 @@ var setupTests = []setupTest{{
 					pro: fips-updates
 					priority: 21
 					public-keys: [test-key]
-				apps:
+				esm-apps:
 					version: 20.04
 					components: [main]
 					suites: [focal-apps-security]
-					pro: apps
+					pro: esm-apps
 					priority: 16
 					public-keys: [test-key]
-				infra:
+				esm-infra:
 					version: 20.04
 					components: [main]
 					suites: [focal-infra-security]
-					pro: infra
+					pro: esm-infra
 					priority: 15
 					public-keys: [test-key]
 				ignored:
@@ -1823,21 +1823,21 @@ var setupTests = []setupTest{{
 				Priority:   21,
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
 			},
-			"apps": {
-				Name:       "apps",
+			"esm-apps": {
+				Name:       "esm-apps",
 				Version:    "20.04",
 				Suites:     []string{"focal-apps-security"},
 				Components: []string{"main"},
-				Pro:        "apps",
+				Pro:        "esm-apps",
 				Priority:   16,
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
 			},
-			"infra": {
-				Name:       "infra",
+			"esm-infra": {
+				Name:       "esm-infra",
 				Version:    "20.04",
 				Suites:     []string{"focal-infra-security"},
 				Components: []string{"main"},
-				Pro:        "infra",
+				Pro:        "esm-infra",
 				Priority:   15,
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
 			},
