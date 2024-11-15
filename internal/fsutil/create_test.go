@@ -93,6 +93,93 @@ var createTests = []createTest{{
 		// mode is not updated.
 		"/foo": "file 0666 d67e2e94",
 	},
+}, {
+	options: fsutil.CreateOptions{
+		Path:         "foo",
+		Mode:         fs.ModeDir | 0775,
+		OverrideMode: true,
+	},
+	hackdir: func(c *C, dir string) {
+		c.Assert(os.Mkdir(filepath.Join(dir, "foo/"), fs.ModeDir|0765), IsNil)
+	},
+	result: map[string]string{
+		// mode is updated.
+		"/foo/": "dir 0775",
+	},
+}, {
+	options: fsutil.CreateOptions{
+		Path:         "foo",
+		Mode:         0775,
+		Data:         bytes.NewBufferString("whatever"),
+		OverrideMode: true,
+	},
+	hackdir: func(c *C, dir string) {
+		err := os.WriteFile(filepath.Join(dir, "foo"), []byte("data"), 0666)
+		c.Assert(err, IsNil)
+	},
+	result: map[string]string{
+		// mode is updated.
+		"/foo": "file 0775 85738f8f",
+	},
+}, {
+	options: fsutil.CreateOptions{
+		Path: "foo",
+		Link: "./bar",
+		Mode: 0666 | fs.ModeSymlink,
+	},
+	hackdir: func(c *C, dir string) {
+		err := os.WriteFile(filepath.Join(dir, "foo"), []byte("data"), 0666)
+		c.Assert(err, IsNil)
+	},
+	result: map[string]string{
+		"/foo": "symlink ./bar",
+	},
+}, {
+	options: fsutil.CreateOptions{
+		Path:         "foo",
+		Link:         "./bar",
+		Mode:         0776 | fs.ModeSymlink,
+		OverrideMode: true,
+	},
+	hackdir: func(c *C, dir string) {
+		err := os.WriteFile(filepath.Join(dir, "bar"), []byte("data"), 0666)
+		c.Assert(err, IsNil)
+		err = os.WriteFile(filepath.Join(dir, "foo"), []byte("data"), 0666)
+		c.Assert(err, IsNil)
+	},
+	result: map[string]string{
+		"/foo": "symlink ./bar",
+		// mode is not updated.
+		"/bar": "file 0666 3a6eb079",
+	},
+}, {
+	options: fsutil.CreateOptions{
+		Path: "bar",
+		// Existing link with different target.
+		Link: "other",
+		Mode: 0666 | fs.ModeSymlink,
+	},
+	hackdir: func(c *C, dir string) {
+		err := os.Symlink("foo", filepath.Join(dir, "bar"))
+		c.Assert(err, IsNil)
+	},
+	result: map[string]string{
+		"/bar": "symlink other",
+	},
+}, {
+	options: fsutil.CreateOptions{
+		Path: "bar",
+		// Existing link with same target.
+		Link: "foo",
+		Mode: 0666 | fs.ModeSymlink,
+	},
+	hackdir: func(c *C, dir string) {
+		err := os.Symlink("foo", filepath.Join(dir, "bar"))
+		c.Assert(err, IsNil)
+	},
+	result: map[string]string{
+		"/bar": "symlink foo",
+	},
 }}
 
 func (s *S) TestCreate(c *C) {

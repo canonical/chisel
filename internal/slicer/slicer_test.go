@@ -321,43 +321,59 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Install two packages, explicit path has preference over implicit parent",
 	slices: []setup.SliceKey{
-		{"implicit-parent", "myslice"},
-		{"explicit-dir", "myslice"}},
+		{"a-implicit-parent", "myslice"},
+		{"b-explicit-dir", "myslice"},
+		{"c-implicit-parent", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
-		Name: "implicit-parent",
+		Name: "a-implicit-parent",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
 			testutil.Dir(0755, "./dir/"),
-			testutil.Reg(0644, "./dir/file", "random"),
+			testutil.Reg(0644, "./dir/file-1", "random"),
 		}),
 	}, {
-		Name: "explicit-dir",
+		Name: "b-explicit-dir",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
 			testutil.Dir(01777, "./dir/"),
 		}),
+	}, {
+		Name: "c-implicit-parent",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./dir/"),
+			testutil.Reg(0644, "./dir/file-2", "random"),
+		}),
 	}},
 	release: map[string]string{
-		"slices/mydir/implicit-parent.yaml": `
-			package: implicit-parent
+		"slices/mydir/a-implicit-parent.yaml": `
+			package: a-implicit-parent
 			slices:
 				myslice:
 					contents:
-						/dir/file:
+						/dir/file-1:
 		`,
-		"slices/mydir/explicit-dir.yaml": `
-			package: explicit-dir
+		"slices/mydir/b-explicit-dir.yaml": `
+			package: b-explicit-dir
 			slices:
 				myslice:
 					contents:
 						/dir/:
 		`,
+		"slices/mydir/c-implicit-parent.yaml": `
+			package: c-implicit-parent
+			slices:
+				myslice:
+					contents:
+						/dir/file-2:
+		`,
 	},
 	filesystem: map[string]string{
-		"/dir/":     "dir 01777",
-		"/dir/file": "file 0644 a441b15f",
+		"/dir/":       "dir 01777",
+		"/dir/file-1": "file 0644 a441b15f",
+		"/dir/file-2": "file 0644 a441b15f",
 	},
 	manifestPaths: map[string]string{
-		"/dir/":     "dir 01777 {explicit-dir_myslice}",
-		"/dir/file": "file 0644 a441b15f {implicit-parent_myslice}",
+		"/dir/":       "dir 01777 {b-explicit-dir_myslice}",
+		"/dir/file-1": "file 0644 a441b15f {a-implicit-parent_myslice}",
+		"/dir/file-2": "file 0644 a441b15f {c-implicit-parent_myslice}",
 	},
 }, {
 	summary: "Valid same file in two slices in different packages",
