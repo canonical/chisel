@@ -246,7 +246,7 @@ var slicerTests = []slicerTest{{
 		"/dir/text-file-3":   "file 0644 5b41362b {test-package_myslice}",
 	},
 }, {
-	summary: "Copyright is installed",
+	summary: "Copyright is not installed implicitly",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
@@ -265,12 +265,6 @@ var slicerTests = []slicerTest{{
 	filesystem: map[string]string{
 		"/dir/":     "dir 0755",
 		"/dir/file": "file 0644 cc55e2ec",
-		// Hardcoded copyright entries.
-		"/usr/":                                 "dir 0755",
-		"/usr/share/":                           "dir 0755",
-		"/usr/share/doc/":                       "dir 0755",
-		"/usr/share/doc/test-package/":          "dir 0755",
-		"/usr/share/doc/test-package/copyright": "file 0644 c2fca2aa",
 	},
 	manifestPaths: map[string]string{
 		"/dir/file": "file 0644 cc55e2ec {test-package_myslice}",
