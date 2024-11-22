@@ -43,3 +43,18 @@ jobs:
         with:
           name: chisel-test-coverage.html
           path: ./*.html
+
+  real-archive-tests:
+    # Do not change to newer releases as "fips" may not be available there.
+    runs-on: ubuntu-20.04
+    name: Real Archive Tests
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-go@v3
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Run real archive tests
+        run: |
+          go test ./internal/archive/ --real-archive
