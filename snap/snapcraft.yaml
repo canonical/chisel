@@ -8,16 +8,6 @@ description: |
   filesystem which can be packaged into an OCI-compliant
   container image or similar.
 
-  Usage: chisel <command> [<options>...]
-
-  Commands can be classified as follows:
-
-    Basic: help, version
-    Action: cut
-
-  For more information about a command, run 'chisel help <command>'.
-  For a short summary of all commands, run 'chisel help --all'.
-
   This snap can only install the slices in a location inside the
   user $HOME directory i.e. the --root option in "cut" command
   should have a location inside the user $HOME directory.
