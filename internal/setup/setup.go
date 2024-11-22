@@ -27,6 +27,7 @@ type Archive struct {
 	Suites     []string
 	Components []string
 	Priority   int
+	Pro        string
 	PubKeys    []*packet.PublicKey
 }
 

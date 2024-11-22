@@ -10,6 +10,7 @@ import (
 	"golang.org/x/crypto/openpgp/packet"
 	"gopkg.in/yaml.v3"
 
+	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/deb"
 	"github.com/canonical/chisel/internal/pgputil"
 )
@@ -36,6 +37,7 @@ type yamlArchive struct {
 	Suites     []string `yaml:"suites"`
 	Components []string `yaml:"components"`
 	Priority   *int     `yaml:"priority"`
+	Pro        string   `yaml:"pro"`
 	Default    bool     `yaml:"default"`
 	PubKeys    []string `yaml:"public-keys"`
 }
@@ -190,6 +192,12 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		if len(details.Components) == 0 {
 			return nil, fmt.Errorf("%s: archive %q missing components field", fileName, archiveName)
 		}
+		switch details.Pro {
+		case "", archive.ProApps, archive.ProFIPS, archive.ProFIPSUpdates, archive.ProInfra:
+		default:
+			logf("Archive %q ignored: invalid pro value: %q", archiveName, details.Pro)
+			continue
+		}
 		if details.Default && defaultArchive != "" {
 			if archiveName < defaultArchive {
 				archiveName, defaultArchive = defaultArchive, archiveName
@@ -228,6 +236,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 			Version:    details.Version,
 			Suites:     details.Suites,
 			Components: details.Components,
+			Pro:        details.Pro,
 			Priority:   priority,
 			PubKeys:    archiveKeys,
 		}

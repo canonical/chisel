@@ -4,6 +4,7 @@ path: /chisel
 
 environment:
   OS: ubuntu
+  PRO_TOKEN: $(HOST:echo $PRO_TOKEN)
 
 backends:
   # Cannot use LXD backend due to https://github.com/snapcore/spread/issues/154
