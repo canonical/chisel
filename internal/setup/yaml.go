@@ -84,7 +84,8 @@ func (yp *yamlPath) SameContent(other *yamlPath) bool {
 		yp.Copy == other.Copy &&
 		yp.Text == other.Text &&
 		yp.Symlink == other.Symlink &&
-		yp.Mutable == other.Mutable)
+		yp.Mutable == other.Mutable &&
+		yp.Generate == other.Generate)
 }
 
 type yamlArch struct {
