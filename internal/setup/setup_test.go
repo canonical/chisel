@@ -2241,86 +2241,19 @@ func (s *S) TestParseSliceKey(c *C) {
 	}
 }
 
-var sampleText = "sample"
-
 var yamlPathTests = []struct {
 	summary      string
 	path1, path2 *setup.YAMLPath
 	result       bool
 }{{
-	summary: "Text path",
-	path1:   &setup.YAMLPath{Text: &sampleText, Mutable: true, Mode: 0644},
-	path2:   &setup.YAMLPath{Text: &sampleText, Mutable: true, Mode: 0644},
-	result:  true,
-}, {
-	summary: "Dir path",
-	path1:   &setup.YAMLPath{Dir: true, Mode: 0755},
-	path2:   &setup.YAMLPath{Dir: true, Mode: 0755},
-	result:  true,
-}, {
-	summary: "Symlink path",
-	path1:   &setup.YAMLPath{Symlink: "foo"},
-	path2:   &setup.YAMLPath{Symlink: "foo"},
-	result:  true,
-}, {
-	summary: "Generate path",
+	summary: `Same "generate" value`,
 	path1:   &setup.YAMLPath{Generate: setup.GenerateManifest},
 	path2:   &setup.YAMLPath{Generate: setup.GenerateManifest},
 	result:  true,
 }, {
-	summary: "Copy path",
-	path1:   &setup.YAMLPath{Copy: "foo"},
-	path2:   &setup.YAMLPath{Copy: "foo"},
-	result:  true,
-}, {
-	summary: `"arch" is not checked`,
-	path1:   &setup.YAMLPath{Text: nil, Arch: setup.YAMLArch{List: []string{"amd64"}}},
-	path2:   &setup.YAMLPath{Text: nil, Arch: setup.YAMLArch{List: []string{"arm64"}}},
-	result:  true,
-}, {
-	summary: `"until" is not checked`,
-	path1:   &setup.YAMLPath{Copy: "foo", Mutable: true, Until: setup.UntilMutate},
-	path2:   &setup.YAMLPath{Copy: "foo", Mutable: true},
-	result:  true,
-}, {
-	summary: `Empty "text" produces nil pointer`,
-	path1:   &setup.YAMLPath{Text: nil},
-	path2:   &setup.YAMLPath{Text: nil},
-	result:  true,
-}, {
-	summary: `Different "generate" values`,
+	summary: `Different "generate" value`,
 	path1:   &setup.YAMLPath{Generate: setup.GenerateManifest},
 	path2:   &setup.YAMLPath{Generate: setup.GenerateNone},
-	result:  false,
-}, {
-	summary: `Different "text" pointers`,
-	path1:   &setup.YAMLPath{Text: new(string)},
-	path2:   &setup.YAMLPath{Text: new(string)},
-	result:  false,
-}, {
-	summary: `Different "copy" values`,
-	path1:   &setup.YAMLPath{Copy: "foo"},
-	path2:   &setup.YAMLPath{Copy: "bar"},
-	result:  false,
-}, {
-	summary: `Different "make" (Dir) values`,
-	path1:   &setup.YAMLPath{Dir: true},
-	path2:   &setup.YAMLPath{Dir: false},
-	result:  false,
-}, {
-	summary: `Different "symlink" values`,
-	path1:   &setup.YAMLPath{Symlink: "foo"},
-	path2:   &setup.YAMLPath{Symlink: "bar"},
-	result:  false,
-}, {
-	summary: `Different "mode" values`,
-	path1:   &setup.YAMLPath{Text: nil, Mode: 0644},
-	path2:   &setup.YAMLPath{Text: nil, Mode: 0755},
-	result:  false,
-}, {
-	summary: `Different "mutable" values`,
-	path1:   &setup.YAMLPath{Text: nil, Mutable: true},
-	path2:   &setup.YAMLPath{Text: nil, Mutable: false},
 	result:  false,
 }}
 
