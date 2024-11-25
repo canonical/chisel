@@ -2241,7 +2241,12 @@ func (s *S) TestParseSliceKey(c *C) {
 	}
 }
 
-var yamlPathTests = []struct {
+// This is an awkward test because right now the fact Generate is considered
+// by SameContent is irrelevant to the implementation, because the code path
+// happens to not touch it. More important than this test, there's an entry
+// in setupTests that verifies that two packages with slices having
+// {generate: manifest} in the same path are considered equal.
+var yamlPathGenerateTests = []struct {
 	summary      string
 	path1, path2 *setup.YAMLPath
 	result       bool
@@ -2257,8 +2262,8 @@ var yamlPathTests = []struct {
 	result:  false,
 }}
 
-func (s *S) TestYAMLPathSameContent(c *C) {
-	for _, test := range yamlPathTests {
+func (s *S) TestYAMLPathGenerate(c *C) {
+	for _, test := range yamlPathGenerateTests {
 		c.Logf("Summary: %s", test.summary)
 		result := test.path1.SameContent(test.path2)
 		c.Assert(result, Equals, test.result)
