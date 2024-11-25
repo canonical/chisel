@@ -1740,6 +1740,117 @@ var setupTests = []setupTest{{
 		},
 	},
 }, {
+	summary: "Pro values in archives",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v1
+			archives:
+				ubuntu:
+					version: 20.04
+					components: [main]
+					suites: [focal]
+					priority: 10
+					public-keys: [test-key]
+				fips:
+					version: 20.04
+					components: [main]
+					suites: [focal]
+					pro: fips
+					priority: 20
+					public-keys: [test-key]
+				fips-updates:
+					version: 20.04
+					components: [main]
+					suites: [focal-updates]
+					pro: fips-updates
+					priority: 21
+					public-keys: [test-key]
+				esm-apps:
+					version: 20.04
+					components: [main]
+					suites: [focal-apps-security]
+					pro: esm-apps
+					priority: 16
+					public-keys: [test-key]
+				esm-infra:
+					version: 20.04
+					components: [main]
+					suites: [focal-infra-security]
+					pro: esm-infra
+					priority: 15
+					public-keys: [test-key]
+				ignored:
+					version: 20.04
+					components: [main]
+					suites: [foo]
+					pro: unknown-value
+					priority: 10
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	release: &setup.Release{
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "20.04",
+				Suites:     []string{"focal"},
+				Components: []string{"main"},
+				Priority:   10,
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+			},
+			"fips": {
+				Name:       "fips",
+				Version:    "20.04",
+				Suites:     []string{"focal"},
+				Components: []string{"main"},
+				Pro:        "fips",
+				Priority:   20,
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+			},
+			"fips-updates": {
+				Name:       "fips-updates",
+				Version:    "20.04",
+				Suites:     []string{"focal-updates"},
+				Components: []string{"main"},
+				Pro:        "fips-updates",
+				Priority:   21,
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+			},
+			"esm-apps": {
+				Name:       "esm-apps",
+				Version:    "20.04",
+				Suites:     []string{"focal-apps-security"},
+				Components: []string{"main"},
+				Pro:        "esm-apps",
+				Priority:   16,
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+			},
+			"esm-infra": {
+				Name:       "esm-infra",
+				Version:    "20.04",
+				Suites:     []string{"focal-infra-security"},
+				Components: []string{"main"},
+				Pro:        "esm-infra",
+				Priority:   15,
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Name:   "mypkg",
+				Path:   "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{},
+			},
+		},
+	},
+}, {
 	summary: "Default is ignored",
 	input: map[string]string{
 		"chisel.yaml": `
@@ -2127,5 +2238,34 @@ func (s *S) TestParseSliceKey(c *C) {
 		}
 		c.Assert(err, IsNil)
 		c.Assert(key, DeepEquals, test.expected)
+	}
+}
+
+// This is an awkward test because right now the fact Generate is considered
+// by SameContent is irrelevant to the implementation, because the code path
+// happens to not touch it. More important than this test, there's an entry
+// in setupTests that verifies that two packages with slices having
+// {generate: manifest} in the same path are considered equal.
+var yamlPathGenerateTests = []struct {
+	summary      string
+	path1, path2 *setup.YAMLPath
+	result       bool
+}{{
+	summary: `Same "generate" value`,
+	path1:   &setup.YAMLPath{Generate: setup.GenerateManifest},
+	path2:   &setup.YAMLPath{Generate: setup.GenerateManifest},
+	result:  true,
+}, {
+	summary: `Different "generate" value`,
+	path1:   &setup.YAMLPath{Generate: setup.GenerateManifest},
+	path2:   &setup.YAMLPath{Generate: setup.GenerateNone},
+	result:  false,
+}}
+
+func (s *S) TestYAMLPathGenerate(c *C) {
+	for _, test := range yamlPathGenerateTests {
+		c.Logf("Summary: %s", test.summary)
+		result := test.path1.SameContent(test.path2)
+		c.Assert(result, Equals, test.result)
 	}
 }

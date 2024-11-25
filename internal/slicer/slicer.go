@@ -100,8 +100,6 @@ func Run(options *RunOptions) error {
 			extract[slice.Package] = extractPackage
 		}
 		arch := pkgArchive[slice.Package].Options().Arch
-		copyrightPath := "/usr/share/doc/" + slice.Package + "/copyright"
-		hasCopyright := false
 		for targetPath, pathInfo := range slice.Contents {
 			if targetPath == "" {
 				continue
@@ -119,9 +117,6 @@ func Run(options *RunOptions) error {
 					Path:    targetPath,
 					Context: slice,
 				})
-				if sourcePath == copyrightPath && targetPath == copyrightPath {
-					hasCopyright = true
-				}
 			} else {
 				// When the content is not extracted from the package (i.e. path is
 				// not glob or copy), we add a ExtractInfo for the parent directory
@@ -135,12 +130,6 @@ func Run(options *RunOptions) error {
 					Optional: true,
 				})
 			}
-		}
-		if !hasCopyright {
-			extractPackage[copyrightPath] = append(extractPackage[copyrightPath], deb.ExtractInfo{
-				Path:     copyrightPath,
-				Optional: true,
-			})
 		}
 	}
 

@@ -19,6 +19,9 @@ type CreateOptions struct {
 	// If MakeParents is true, missing parent directories of Path are
 	// created with permissions 0755.
 	MakeParents bool
+	// If OverrideMode is true and entry already exists, update the mode. Does
+	// not affect symlinks.
+	OverrideMode bool
 }
 
 type Entry struct {
@@ -65,9 +68,18 @@ func Create(options *CreateOptions) (*Entry, error) {
 	if err != nil {
 		return nil, err
 	}
+	mode := s.Mode()
+	if o.OverrideMode && mode != o.Mode && o.Mode&fs.ModeSymlink == 0 {
+		err := os.Chmod(o.Path, o.Mode)
+		if err != nil {
+			return nil, err
+		}
+		mode = o.Mode
+	}
+
 	entry := &Entry{
 		Path:   o.Path,
-		Mode:   s.Mode(),
+		Mode:   mode,
 		SHA256: hash,
 		Size:   rp.size,
 		Link:   o.Link,
