@@ -2240,3 +2240,53 @@ func (s *S) TestParseSliceKey(c *C) {
 		c.Assert(key, DeepEquals, test.expected)
 	}
 }
+
+var sampleText = "sample"
+
+var yamlPathTests = []struct {
+	path1, path2 *setup.YAMLPath
+	areSame      bool
+}{{
+	path1: &setup.YAMLPath{
+		Text:    &sampleText,
+		Mutable: true,
+		Mode:    0644,
+		Arch:    setup.YAMLArch{List: []string{"amd64", "arm64"}},
+	},
+	path2: &setup.YAMLPath{
+		Text:    &sampleText,
+		Mutable: true,
+		Mode:    0644,
+		Arch:    setup.YAMLArch{List: []string{"amd64", "arm64"}},
+	},
+	areSame: true,
+}, {
+	path1:   &setup.YAMLPath{Dir: true, Mode: 0755},
+	path2:   &setup.YAMLPath{Dir: true, Mode: 0755},
+	areSame: true,
+}, {
+	path1:   &setup.YAMLPath{Symlink: "foo"},
+	path2:   &setup.YAMLPath{Symlink: "foo"},
+	areSame: true,
+}, {
+	path1:   &setup.YAMLPath{Generate: setup.GenerateManifest},
+	path2:   &setup.YAMLPath{Generate: setup.GenerateManifest},
+	areSame: true,
+}, {
+	// "until" is not checked.
+	path1:   &setup.YAMLPath{Copy: "foo", Mutable: true, Until: setup.UntilMutate},
+	path2:   &setup.YAMLPath{Copy: "foo", Mutable: true},
+	areSame: true,
+}, {
+	// Empty texts produce nil Text pointer.
+	path1:   &setup.YAMLPath{Text: nil},
+	path2:   &setup.YAMLPath{Text: nil},
+	areSame: true,
+}}
+
+func (s *S) TestYAMLPathSameContent(c *C) {
+	for _, test := range yamlPathTests {
+		areSame := test.path1.SameContent(test.path2)
+		c.Assert(areSame, Equals, test.areSame)
+	}
+}
