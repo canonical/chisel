@@ -1,8 +1,7 @@
 # Reference
 
-TODO
-
 ```{toctree}
-:hidden:
 :maxdepth: 1
+
+cmd/index.md
 ```

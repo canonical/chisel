@@ -14,6 +14,8 @@ methods:
 We publish pre-built binaries for every version of Chisel on GitHub. To install
 the latest Chisel binary:
 
+<!-- Start: Install Chisel binary -->
+
 1. Visit the {{latest_release_page}} to determine the latest tag, for example,
    `v1.0.0`.
 
@@ -44,7 +46,7 @@ the latest Chisel binary:
    ```sh
    sudo mv chisel /usr/local/bin/
    ```
-
+<!-- End: Install Chisel binary -->
 
 (install_chisel_source)=
 ## Install from source
@@ -83,6 +85,8 @@ inside the user `$HOME` directory.
 
 ## Verify installation
 
+<!-- Start: Verify Chisel installation -->
+
 Once the installation is complete, verify that Chisel has been installed
 correctly by running:
 
@@ -102,3 +106,5 @@ Usage: chisel <command> [<options>...]
 
 ...
 ```
+
+<!-- End: Verify Chisel installation -->
