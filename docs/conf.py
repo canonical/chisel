@@ -1,5 +1,7 @@
-import datetime
 import ast
+import datetime
+import os
+import yaml
 
 # Configuration for the Sphinx documentation builder.
 # All configuration specific to your project should be done in this file.
@@ -59,7 +61,7 @@ html_title = project + " documentation"
 #         -H 'Accept: application/vnd.github.v3.raw' \
 #         https://api.github.com/repos/canonical/<REPO> | jq '.created_at'
 
-copyright = "%s CC-BY-SA, %s" % (datetime.date.today().year, author)
+copyright = "%s AGPL-3.0, %s" % (datetime.date.today().year, author)
 
 
 # Documentation website URL
@@ -142,7 +144,7 @@ html_context = {
     "github_folder": "/docs/",
     # TODO: To enable or disable the Previous / Next buttons at the bottom of pages
     # Valid options: none, prev, next, both
-    # "sequential_nav": "both",
+    "sequential_nav": "both",
 }
 
 # Project slug; see https://meta.discourse.org/t/what-is-category-slug/87897
@@ -183,7 +185,7 @@ redirects = {}
 #
 # TODO: Remove or adjust the ACME entry after you update the contributing guide
 
-linkcheck_ignore = ["http://127.0.0.1:8000", "https://github.com/canonical/ACME/*"]
+linkcheck_ignore = ["http://127.0.0.1:8000"]
 
 
 # A regex list of URLs where anchors are ignored by 'make linkcheck'
@@ -249,9 +251,18 @@ html_css_files = [
 
 # Specifies a reST snippet to be appended to each .rst file
 
-rst_epilog = """
-.. include:: /reuse/links.txt
-"""
+if os.path.exists('./reuse/links.txt'):
+    rst_epilog = """
+    .. include:: /reuse/links.txt
+    """
+
+# To reuse sentences or paragraphs that have little markup and special
+# formatting, use substitutions.
+# https://canonical-documentation-with-sphinx-and-readthedocscom.readthedocs-hosted.com/style-guide-myst/#substitution
+
+if os.path.exists('./reuse/substitutions.yaml'):
+  with open('./reuse/substitutions.yaml', 'r') as fd:
+        myst_substitutions = yaml.safe_load(fd.read())
 
 # Feedback button at the top; enabled by default
 #
