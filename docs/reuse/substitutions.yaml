@@ -1,0 +1,19 @@
+# To reuse sentences or paragraphs that have little markup and special
+# formatting, put them here. Read more at [1].
+#
+# This file is loaded into the myst_substitutions[2] variable in conf.py.
+#
+# [1] https://canonical-documentation-with-sphinx-and-readthedocscom.readthedocs-hosted.com/style-guide-myst/#reuse
+# [2] https://myst-parser.readthedocs.io/en/v0.13.5/using/syntax-optional.html#substitutions-with-jinja2
+
+
+#########
+# Links #
+#########
+
+
+AGPL3: "[AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.en.html)"
+Canonical: "[Canonical Ltd](https://www.canonical.com)"
+Docker: "[Docker](https://docs.docker.com/)"
+Rocks: "[Rocks](https://documentation.ubuntu.com/rockcraft/)"
+latest_release_page: "[latest release page](https://github.com/canonical/chisel/releases/latest)"
