@@ -16,4 +16,8 @@ AGPL3: "[AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.en.html)"
 Canonical: "[Canonical Ltd](https://www.canonical.com)"
 Docker: "[Docker](https://docs.docker.com/)"
 Rocks: "[Rocks](https://documentation.ubuntu.com/rockcraft/)"
-latest_release_page: "[latest release page](https://github.com/canonical/chisel/releases/latest)"
+
+latest_release_page: |
+  [latest release page](https://github.com/canonical/chisel/releases/latest)
+slice_definitions_ref: |
+  [slice definitions reference](https://github.com/canonical/chisel/#slice-definitions)
