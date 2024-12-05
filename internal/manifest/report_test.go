@@ -40,7 +40,7 @@ var sampleFile = fsutil.Entry{
 	Link:   "",
 }
 
-var sampleSymLink = fsutil.Entry{
+var sampleSymlink = fsutil.Entry{
 	Path:   "/base/example-link",
 	Mode:   fs.ModeSymlink | 0777,
 	SHA256: "example-file_hash",
@@ -111,7 +111,7 @@ var reportTests = []struct {
 		}},
 }, {
 	summary: "Regular file link",
-	add:     []sliceAndEntry{{entry: sampleSymLink, slice: oneSlice}},
+	add:     []sliceAndEntry{{entry: sampleSymlink, slice: oneSlice}},
 	expected: map[string]manifest.ReportEntry{
 		"/example-link": {
 			Path:   "/example-link",

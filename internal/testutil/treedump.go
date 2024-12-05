@@ -33,24 +33,23 @@ func TreeDump(dir string) map[string]string {
 		if finfo.Mode()&fs.ModeSticky != 0 {
 			fperm |= 01000
 		}
-		var resultEntry string
+		var entry string
 		switch ftype {
 		case fs.ModeDir:
 			path = "/" + path + "/"
-			resultEntry = fmt.Sprintf("dir %#o", fperm)
+			entry = fmt.Sprintf("dir %#o", fperm)
 		case fs.ModeSymlink:
 			lpath, err := os.Readlink(fpath)
 			if err != nil {
 				return err
 			}
 			path = "/" + path
-			resultEntry = fmt.Sprintf("symlink %s", lpath)
+			entry = fmt.Sprintf("symlink %s", lpath)
 		case 0: // Regular
 			data, err := os.ReadFile(fpath)
 			if err != nil {
 				return fmt.Errorf("cannot read file: %w", err)
 			}
-			var entry string
 			if len(data) == 0 {
 				entry = fmt.Sprintf("file %#o empty", fperm)
 			} else {
@@ -58,11 +57,10 @@ func TreeDump(dir string) map[string]string {
 				entry = fmt.Sprintf("file %#o %.4x", fperm, sum)
 			}
 			path = "/" + path
-			resultEntry = entry
 		default:
 			return fmt.Errorf("unknown file type %d: %s", ftype, fpath)
 		}
-		result[path] = resultEntry
+		result[path] = entry
 		if ftype != fs.ModeDir {
 			stat, ok := finfo.Sys().(*syscall.Stat_t)
 			if !ok {
@@ -82,8 +80,7 @@ func TreeDump(dir string) map[string]string {
 
 	// Append identifiers to paths who share an inode e.g. hard links.
 	for i := 0; i < len(inodes); i++ {
-		paths := pathsByInodes[inodes[i]]
-		for _, path := range paths {
+		for _, path := range pathsByInodes[inodes[i]] {
 			result[path] = fmt.Sprintf("%s <%d>", result[path], i+1)
 		}
 	}
