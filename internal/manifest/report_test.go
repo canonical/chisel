@@ -40,12 +40,19 @@ var sampleFile = fsutil.Entry{
 	Link:   "",
 }
 
-var sampleLink = fsutil.Entry{
+var sampleSymLink = fsutil.Entry{
 	Path:   "/base/example-link",
-	Mode:   0777,
+	Mode:   fs.ModeSymlink | 0777,
 	SHA256: "example-file_hash",
 	Size:   5678,
 	Link:   "/base/example-file",
+}
+
+var sampleHardLink = fsutil.Entry{
+	Path:     "/base/example-hard-link",
+	Mode:     sampleFile.Mode,
+	Link:     "/base/example-file",
+	HardLink: true,
 }
 
 var sampleFileMutated = fsutil.Entry{
@@ -104,11 +111,11 @@ var reportTests = []struct {
 		}},
 }, {
 	summary: "Regular file link",
-	add:     []sliceAndEntry{{entry: sampleLink, slice: oneSlice}},
+	add:     []sliceAndEntry{{entry: sampleSymLink, slice: oneSlice}},
 	expected: map[string]manifest.ReportEntry{
 		"/example-link": {
 			Path:   "/example-link",
-			Mode:   0777,
+			Mode:   fs.ModeSymlink | 0777,
 			SHA256: "example-file_hash",
 			Size:   5678,
 			Slices: map[*setup.Slice]bool{oneSlice: true},
@@ -267,6 +274,88 @@ var reportTests = []struct {
 	add:     []sliceAndEntry{{entry: sampleDir, slice: oneSlice}},
 	mutate:  []*fsutil.Entry{&sampleDir},
 	err:     `cannot mutate path in report: /example-dir/ is a directory`,
+}, {
+	summary: "Hard link to regular file",
+	add: []sliceAndEntry{
+		{entry: sampleFile, slice: oneSlice},
+		{entry: sampleHardLink, slice: oneSlice}},
+	expected: map[string]manifest.ReportEntry{
+		"/example-file": {
+			Path:       "/example-file",
+			Mode:       0777,
+			SHA256:     "example-file_hash",
+			Size:       5678,
+			Slices:     map[*setup.Slice]bool{oneSlice: true},
+			HardLinkID: 1,
+		},
+		"/example-hard-link": {
+			Path:       "/example-hard-link",
+			Mode:       0777,
+			SHA256:     "example-file_hash",
+			Size:       5678,
+			Slices:     map[*setup.Slice]bool{oneSlice: true},
+			HardLinkID: 1,
+		},
+	},
+}, {
+	summary: "Multiple hard links groups",
+	add: []sliceAndEntry{{
+		entry: sampleFile,
+		slice: oneSlice,
+	}, {
+		entry: sampleHardLink,
+		slice: oneSlice,
+	}, {
+		entry: fsutil.Entry{
+			Path:   "/base/another-file",
+			Mode:   0777,
+			SHA256: "another-file_hash",
+			Size:   5678,
+		},
+		slice: otherSlice,
+	}, {
+		entry: fsutil.Entry{
+			Path:     "/base/another-hard-link",
+			Mode:     0777,
+			Link:     "/base/another-file",
+			HardLink: true,
+		},
+		slice: otherSlice,
+	}},
+	expected: map[string]manifest.ReportEntry{
+		"/example-file": {
+			Path:       "/example-file",
+			Mode:       0777,
+			SHA256:     "example-file_hash",
+			Size:       5678,
+			Slices:     map[*setup.Slice]bool{oneSlice: true},
+			HardLinkID: 1,
+		},
+		"/example-hard-link": {
+			Path:       "/example-hard-link",
+			Mode:       0777,
+			SHA256:     "example-file_hash",
+			Size:       5678,
+			Slices:     map[*setup.Slice]bool{oneSlice: true},
+			HardLinkID: 1,
+		},
+		"/another-file": {
+			Path:       "/another-file",
+			Mode:       0777,
+			SHA256:     "another-file_hash",
+			Size:       5678,
+			Slices:     map[*setup.Slice]bool{otherSlice: true},
+			HardLinkID: 2,
+		},
+		"/another-hard-link": {
+			Path:       "/another-hard-link",
+			Mode:       0777,
+			SHA256:     "another-file_hash",
+			Size:       5678,
+			Slices:     map[*setup.Slice]bool{otherSlice: true},
+			HardLinkID: 2,
+		},
+	},
 }}
 
 func (s *S) TestReport(c *C) {
