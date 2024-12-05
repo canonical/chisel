@@ -35,13 +35,17 @@ var readManifestTests = []struct {
 		{"jsonwall":"1.0","schema":"1.0","count":13}
 		{"kind":"content","slice":"pkg1_manifest","path":"/manifest/manifest.wall"}
 		{"kind":"content","slice":"pkg1_myslice","path":"/dir/file"}
+		{"kind":"content","slice":"pkg1_myslice","path":"/dir/file2"}
 		{"kind":"content","slice":"pkg1_myslice","path":"/dir/foo/bar/"}
+		{"kind":"content","slice":"pkg1_myslice","path":"/dir/hardlink"}
 		{"kind":"content","slice":"pkg1_myslice","path":"/dir/link/file"}
 		{"kind":"content","slice":"pkg2_myotherslice","path":"/dir/foo/bar/"}
 		{"kind":"package","name":"pkg1","version":"v1","sha256":"hash1","arch":"arch1"}
 		{"kind":"package","name":"pkg2","version":"v2","sha256":"hash2","arch":"arch2"}
 		{"kind":"path","path":"/dir/file","mode":"0644","slices":["pkg1_myslice"],"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","final_sha256":"8067926c032c090867013d14fb0eb21ae858344f62ad07086fd32375845c91a6","size":21}
+		{"kind":"path","path":"/dir/file2","mode":"0644","slices":["pkg1_myslice"],"sha256":"b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c","size":3,"hard_link_id":1}
 		{"kind":"path","path":"/dir/foo/bar/","mode":"01777","slices":["pkg2_myotherslice","pkg1_myslice"]}
+		{"kind":"path","path":"/dir/hardlink","mode":"0644","slices":["pkg1_myslice"],"sha256":"b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c","size":3,"hard_link_id":1}
 		{"kind":"path","path":"/dir/link/file","mode":"0644","slices":["pkg1_myslice"],"link":"/dir/file"}
 		{"kind":"path","path":"/manifest/manifest.wall","mode":"0644","slices":["pkg1_manifest"]}
 		{"kind":"slice","name":"pkg1_manifest"}
@@ -51,7 +55,9 @@ var readManifestTests = []struct {
 	mfest: &manifestContents{
 		Paths: []*manifest.Path{
 			{Kind: "path", Path: "/dir/file", Mode: "0644", Slices: []string{"pkg1_myslice"}, SHA256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", FinalSHA256: "8067926c032c090867013d14fb0eb21ae858344f62ad07086fd32375845c91a6", Size: 0x15, Link: ""},
+			{Kind: "path", Path: "/dir/file2", Mode: "0644", Slices: []string{"pkg1_myslice"}, SHA256: "b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c", Size: 0x03, Link: "", HardLinkID: 0x01},
 			{Kind: "path", Path: "/dir/foo/bar/", Mode: "01777", Slices: []string{"pkg2_myotherslice", "pkg1_myslice"}, SHA256: "", FinalSHA256: "", Size: 0x0, Link: ""},
+			{Kind: "path", Path: "/dir/hardlink", Mode: "0644", Slices: []string{"pkg1_myslice"}, SHA256: "b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c", Size: 0x03, Link: "", HardLinkID: 0x01},
 			{Kind: "path", Path: "/dir/link/file", Mode: "0644", Slices: []string{"pkg1_myslice"}, SHA256: "", FinalSHA256: "", Size: 0x0, Link: "/dir/file"},
 			{Kind: "path", Path: "/manifest/manifest.wall", Mode: "0644", Slices: []string{"pkg1_manifest"}, SHA256: "", FinalSHA256: "", Size: 0x0, Link: ""},
 		},
@@ -67,7 +73,9 @@ var readManifestTests = []struct {
 		Contents: []*manifest.Content{
 			{Kind: "content", Slice: "pkg1_manifest", Path: "/manifest/manifest.wall"},
 			{Kind: "content", Slice: "pkg1_myslice", Path: "/dir/file"},
+			{Kind: "content", Slice: "pkg1_myslice", Path: "/dir/file2"},
 			{Kind: "content", Slice: "pkg1_myslice", Path: "/dir/foo/bar/"},
+			{Kind: "content", Slice: "pkg1_myslice", Path: "/dir/hardlink"},
 			{Kind: "content", Slice: "pkg1_myslice", Path: "/dir/link/file"},
 			{Kind: "content", Slice: "pkg2_myotherslice", Path: "/dir/foo/bar/"},
 		},
@@ -539,6 +547,129 @@ var generateManifestTests = []struct {
 		},
 	},
 	error: `internal error: invalid manifest: path "/dir" has invalid options: size set for directory`,
+}, {
+	summary:   "Basic hard link",
+	selection: []*setup.Slice{slice1},
+	report: &manifest.Report{
+		Root: "/",
+		Entries: map[string]manifest.ReportEntry{
+			"/file": {
+				Path:        "/file",
+				Mode:        0456,
+				SHA256:      "hash",
+				Size:        1234,
+				Slices:      map[*setup.Slice]bool{slice1: true},
+				FinalSHA256: "final-hash",
+				HardLinkID:  1,
+			},
+			"/hardlink": {
+				Path:        "/hardlink",
+				Mode:        0456,
+				SHA256:      "hash",
+				Size:        1234,
+				Slices:      map[*setup.Slice]bool{slice1: true},
+				FinalSHA256: "final-hash",
+				HardLinkID:  1,
+			},
+		},
+	},
+	packageInfo: []*archive.PackageInfo{{
+		Name:    "package1",
+		Version: "v1",
+		Arch:    "a1",
+		SHA256:  "s1",
+	}},
+	expected: &manifestContents{
+		Paths: []*manifest.Path{{
+			Kind:        "path",
+			Path:        "/file",
+			Mode:        "0456",
+			Slices:      []string{"package1_slice1"},
+			Size:        1234,
+			SHA256:      "hash",
+			FinalSHA256: "final-hash",
+			HardLinkID:  1,
+		}, {
+			Kind:        "path",
+			Path:        "/hardlink",
+			Mode:        "0456",
+			Slices:      []string{"package1_slice1"},
+			Size:        1234,
+			SHA256:      "hash",
+			FinalSHA256: "final-hash",
+			HardLinkID:  1,
+		}},
+		Packages: []*manifest.Package{{
+			Kind:    "package",
+			Name:    "package1",
+			Version: "v1",
+			Digest:  "s1",
+			Arch:    "a1",
+		}},
+		Slices: []*manifest.Slice{{
+			Kind: "slice",
+			Name: "package1_slice1",
+		}},
+		Contents: []*manifest.Content{{
+			Kind:  "content",
+			Slice: "package1_slice1",
+			Path:  "/file",
+		}, {
+			Kind:  "content",
+			Slice: "package1_slice1",
+			Path:  "/hardlink",
+		}},
+	},
+}, {
+	summary: "Skipped hard link id",
+	report: &manifest.Report{
+		Root: "/",
+		Entries: map[string]manifest.ReportEntry{
+			"/file": {
+				Path:       "/file",
+				Slices:     map[*setup.Slice]bool{slice1: true},
+				HardLinkID: 2,
+			},
+		},
+	},
+	error: `internal error: invalid manifest: cannot find hard link id 1`,
+}, {
+	summary: "Hard link group has only one path",
+	report: &manifest.Report{
+		Root: "/",
+		Entries: map[string]manifest.ReportEntry{
+			"/file": {
+				Path:       "/file",
+				Slices:     map[*setup.Slice]bool{slice1: true},
+				HardLinkID: 1,
+			},
+		},
+	},
+	error: `internal error: invalid manifest: hard link group 1 has only one path: /file`,
+}, {
+	summary: "Hard linked paths differ",
+	report: &manifest.Report{
+		Root: "/",
+		Entries: map[string]manifest.ReportEntry{
+			"/file": {
+				Path:       "/file",
+				Mode:       0456,
+				SHA256:     "hash",
+				Size:       1234,
+				Slices:     map[*setup.Slice]bool{slice1: true},
+				HardLinkID: 1,
+			},
+			"/hardlink": {
+				Path:       "/hardlink",
+				Mode:       0456,
+				SHA256:     "different-hash",
+				Size:       1234,
+				Slices:     map[*setup.Slice]bool{slice1: true},
+				HardLinkID: 1,
+			},
+		},
+	},
+	error: `internal error: invalid manifest: hard linked paths "/file" and "/hardlink" have diverging contents`,
 }, {
 	summary: "Invalid package: missing name",
 	packageInfo: []*archive.PackageInfo{{
