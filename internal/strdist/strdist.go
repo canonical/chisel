@@ -105,6 +105,11 @@ func Distance(a, b string, f CostFunc, cut int64) int64 {
 //	*  - Any zero or more characters, except for /
 //	** - Any zero or more characters, including /
 func GlobPath(a, b string) bool {
+	if !wildcardPrefixMatch(a, b) {
+		// Fast path.
+		return false
+	}
+
 	a = strings.ReplaceAll(a, "**", "⁑")
 	b = strings.ReplaceAll(b, "**", "⁑")
 	return Distance(a, b, globCost, 1) == 0
@@ -124,4 +129,17 @@ func globCost(ar, br rune) Cost {
 		return Cost{SwapAB: 0, DeleteA: 1, InsertB: 1}
 	}
 	return Cost{SwapAB: 1, DeleteA: 1, InsertB: 1}
+}
+
+func wildcardPrefixMatch(a, b string) bool {
+	ai := strings.IndexAny(a, "*?")
+	bi := strings.IndexAny(b, "*?")
+	if ai == -1 {
+		ai = len(a)
+	}
+	if bi == -1 {
+		bi = len(b)
+	}
+	mini := min(ai, bi)
+	return a[:mini] == b[:mini]
 }
