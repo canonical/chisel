@@ -51,28 +51,13 @@ jobs:
         with:
           go-version-file: 'go.mod'
 
-      - name: Build Chisel for linux/${{ matrix.arch }}
+      - uses: ./.github/actions/build-chisel/
+        name: Build Chisel for linux/${{ matrix.arch }}
         id: build
         env:
           GOOS: "linux"
           GOARCH: ${{ matrix.arch }}
           CGO_ENABLED: "0"
-        run: |
-          echo "Generating version file"
-          go generate ./cmd/
-
-          echo "Building for $GOOS $GOARCH"
-          go build -trimpath -ldflags='-s -w' ./cmd/chisel
-
-          # Get version via "chisel version" to ensure it matches that exactly
-          CHISEL_VERSION=$(GOOS=linux GOARCH=amd64 go run ./cmd/chisel version)
-          echo "Version: $CHISEL_VERSION"
-
-          # Version should not be "unknown"
-          [ "$CHISEL_VERSION" != "unknown" ] || exit 1
-
-          # Share variables with subsequent steps
-          echo "CHISEL_VERSION=${CHISEL_VERSION}" >>$GITHUB_OUTPUT
 
       - name: Test if is executable
         run: test -x ./chisel
