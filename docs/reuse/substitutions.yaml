@@ -31,6 +31,9 @@ package_slices: "[package slices](/explanation/slices)"
 cut_cmd: "{doc}`/reference/cmd/cut`"
 find_cmd: "{doc}`/reference/cmd/find`"
 
+# TODO fill the link once "generate" keyword reference is ready.
+generate: "{ref}`generate<TODO>`"
+
 
 ###############
 # Code blocks #
