@@ -109,6 +109,10 @@ func GlobPath(a, b string) bool {
 		// Fast path.
 		return false
 	}
+	if !wildcardSuffixMatch(a, b) {
+		// Fast path.
+		return false
+	}
 
 	a = strings.ReplaceAll(a, "**", "⁑")
 	b = strings.ReplaceAll(b, "**", "⁑")
@@ -142,4 +146,19 @@ func wildcardPrefixMatch(a, b string) bool {
 	}
 	mini := min(ai, bi)
 	return a[:mini] == b[:mini]
+}
+
+func wildcardSuffixMatch(a, b string) bool {
+	ai := strings.LastIndexAny(a, "*?")
+	la := 0
+	if ai != -1 {
+		la = len(a) - ai - 1
+	}
+	lb := 0
+	bi := strings.LastIndexAny(b, "*?")
+	if bi != -1 {
+		lb = len(b) - bi - 1
+	}
+	minl := min(la, lb)
+	return a[len(a)-minl:] == b[len(b)-minl:]
 }
