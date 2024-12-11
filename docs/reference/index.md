@@ -3,6 +3,7 @@
 ```{toctree}
 :maxdepth: 1
 
-cmd/index.md
+cmd/index
+chisel-releases/index
 Manifest <manifest>
 ```
