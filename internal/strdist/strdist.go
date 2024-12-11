@@ -135,6 +135,9 @@ func globCost(ar, br rune) Cost {
 	return Cost{SwapAB: 1, DeleteA: 1, InsertB: 1}
 }
 
+// wildcardPrefixMatch compares whether the prefixes of a and b are equal up
+// to the shortest one. The prefix is defined as the longest substring that
+// starts at index 0 and does not contain a wildcard.
 func wildcardPrefixMatch(a, b string) bool {
 	ai := strings.IndexAny(a, "*?")
 	bi := strings.IndexAny(b, "*?")
@@ -148,6 +151,9 @@ func wildcardPrefixMatch(a, b string) bool {
 	return a[:mini] == b[:mini]
 }
 
+// wildcardSuffixMatch compares whether the suffixes of a and b are equal up
+// to the shortest one. The suffix is defined as the longest substring that ends
+// at the string length and does not contain a wildcard.
 func wildcardSuffixMatch(a, b string) bool {
 	ai := strings.LastIndexAny(a, "*?")
 	la := 0
