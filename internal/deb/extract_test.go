@@ -2,6 +2,8 @@ package deb_test
 
 import (
 	"bytes"
+	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -17,7 +19,7 @@ type extractTest struct {
 	summary string
 	pkgdata []byte
 	options deb.ExtractOptions
-	hackopt func(o *deb.ExtractOptions)
+	hackopt func(c *C, o *deb.ExtractOptions)
 	result  map[string]string
 	// paths which the extractor did not create explicitly.
 	notCreated []string
@@ -98,7 +100,7 @@ var extractTests = []extractTest{{
 		"/dir/several/levels/deep/file": "file 0644 6bc26dff",
 		"/other-dir/":                   "dir 0755",
 	},
-	hackopt: func(o *deb.ExtractOptions) {
+	hackopt: func(c *C, o *deb.ExtractOptions) {
 		o.Create = nil
 	},
 }, {
@@ -352,6 +354,25 @@ var extractTests = []extractTest{{
 		},
 	},
 	error: `cannot extract from package "test-package": path /dir/ requested twice with diverging mode: 0777 != 0000`,
+}, {
+	summary: "Explicit extraction overrides existing file",
+	pkgdata: testutil.PackageData["test-package"],
+	options: deb.ExtractOptions{
+		Extract: map[string][]deb.ExtractInfo{
+			"/dir/": []deb.ExtractInfo{{
+				Path: "/dir/",
+				Mode: 0777,
+			}},
+		},
+	},
+	hackopt: func(c *C, o *deb.ExtractOptions) {
+		err := os.Mkdir(path.Join(o.TargetDir, "/dir"), 0666)
+		c.Assert(err, IsNil)
+	},
+	result: map[string]string{
+		"/dir/": "dir 0777",
+	},
+	notCreated: []string{},
 }}
 
 func (s *S) TestExtract(c *C) {
@@ -374,7 +395,7 @@ func (s *S) TestExtract(c *C) {
 		}
 
 		if test.hackopt != nil {
-			test.hackopt(&options)
+			test.hackopt(c, &options)
 		}
 
 		err := deb.Extract(bytes.NewBuffer(test.pkgdata), &options)
@@ -482,7 +503,7 @@ func (s *S) TestExtractCreateCallback(c *C) {
 				relPath = relPath + "/"
 			}
 			sort.Slice(extractInfos, func(i, j int) bool {
-				return strings.Compare(extractInfos[i].Path, extractInfos[j].Path) < 0
+				return extractInfos[i].Path < extractInfos[j].Path
 			})
 			createExtractInfos[relPath] = extractInfos
 			return nil

@@ -4,6 +4,7 @@ path: /chisel
 
 environment:
   OS: ubuntu
+  PRO_TOKEN: $(HOST:echo $PRO_TOKEN)
 
 backends:
   # Cannot use LXD backend due to https://github.com/snapcore/spread/issues/154
@@ -29,7 +30,7 @@ backends:
       docker run -e usr=$SPREAD_SYSTEM_USERNAME -e pass=$SPREAD_SYSTEM_PASSWORD --name $SPREAD_SYSTEM -d $image sh -c '
         set -x
         apt update
-        apt install -y openssh-server sudo
+        apt install -y openssh-server sudo zstd jq
         mkdir /run/sshd
         useradd -rm -d /home/ubuntu -s /bin/bash -g root -G sudo -u 1000 ubuntu
         echo "$usr:$pass" | chpasswd
@@ -40,7 +41,7 @@ backends:
     discard:
       docker rm -f $SPREAD_SYSTEM
     systems:
-      - ubuntu-23.04:
+      - ubuntu-24.04:
           username: ubuntu
           password: ubuntu
 
@@ -55,5 +56,4 @@ suites:
     environment:
         RELEASE/jammy: 22.04
         RELEASE/focal: 20.04
-        RELEASE/mantic: 23.10
         RELEASE/noble: 24.04

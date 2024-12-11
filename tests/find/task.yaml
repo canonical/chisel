@@ -1,0 +1,14 @@
+summary: Chisel can find slice by slice name, package name or a combination
+
+execute: |
+  find() {
+    fullname=$1
+    shift
+    query=$@
+    chisel find --release ${OS}-${RELEASE} $query | grep $fullname
+  }
+
+  find "ca-certificates_data" "ca-certificates_data"
+  find "ca-certificates_data" "ca-certificates" "_data"
+  find "ca-certificates_data" "_data" "ca-certificates"
+  ! find "ca-certificates_data" "ca-certificates" "foo"

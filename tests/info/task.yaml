@@ -1,0 +1,28 @@
+summary: Chisel can show detailed information about slices
+
+execute: |
+  # Install dependencies.
+  apt update && apt install -y wget
+  wget -q https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq &&\
+    chmod +x /usr/bin/yq
+
+  # Single slice.
+  chisel info --release ${OS}-${RELEASE} base-passwd_data > file.yaml
+  yq file.yaml
+  grep -q "/etc/group: {text: FIXME, mutable: true}" file.yaml
+  ! grep -q "/usr/share/doc/base-passwd/copyright" file.yaml
+
+  # Multiple slices.
+  chisel info --release ${OS}-${RELEASE} base-passwd_data base-passwd_copyright > file.yaml
+  yq file.yaml
+  grep -q "/etc/group: {text: FIXME, mutable: true}" file.yaml
+  grep -q "/usr/share/doc/base-passwd/copyright" file.yaml
+
+  # Whole package.
+  chisel info --release ${OS}-${RELEASE} base-passwd > file.yaml
+  yq file.yaml
+  grep -q "/etc/group: {text: FIXME, mutable: true}" file.yaml
+  grep -q "/usr/share/doc/base-passwd/copyright" file.yaml
+
+  # Non-existing.
+  ! chisel info --release ${OS}-${RELEASE} does-not-exist

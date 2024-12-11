@@ -3,11 +3,6 @@ package main
 import (
 	"github.com/jessevdk/go-flags"
 
-	"fmt"
-	"os"
-	"regexp"
-	"strings"
-
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/cache"
 	"github.com/canonical/chisel/internal/setup"
@@ -18,10 +13,13 @@ var shortCutHelp = "Cut a tree with selected slices"
 var longCutHelp = `
 The cut command uses the provided selection of package slices
 to create a new filesystem tree in the root location.
+
+By default it fetches the slices for the same Ubuntu version as the
+current host, unless the --release flag is used.
 `
 
 var cutDescs = map[string]string{
-	"release": "Chisel release directory",
+	"release": "Chisel release name or directory (e.g. ubuntu-22.04)",
 	"root":    "Root for generated content",
 	"arch":    "Package architecture",
 }
@@ -54,25 +52,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 		sliceKeys[i] = sliceKey
 	}
 
-	var release *setup.Release
-	var err error
-	if strings.Contains(cmd.Release, "/") {
-		release, err = setup.ReadRelease(cmd.Release)
-	} else {
-		var label, version string
-		if cmd.Release == "" {
-			label, version, err = readReleaseInfo()
-		} else {
-			label, version, err = parseReleaseInfo(cmd.Release)
-		}
-		if err != nil {
-			return err
-		}
-		release, err = setup.FetchRelease(&setup.FetchOptions{
-			Label:   label,
-			Version: version,
-		})
-	}
+	release, err := obtainRelease(cmd.Release)
 	if err != nil {
 		return err
 	}
@@ -90,51 +70,24 @@ func (cmd *cmdCut) Execute(args []string) error {
 			Arch:       cmd.Arch,
 			Suites:     archiveInfo.Suites,
 			Components: archiveInfo.Components,
+			Pro:        archiveInfo.Pro,
 			CacheDir:   cache.DefaultDir("chisel"),
 			PubKeys:    archiveInfo.PubKeys,
 		})
 		if err != nil {
+			if err == archive.ErrCredentialsNotFound {
+				logf("Archive %q ignored: credentials not found", archiveName)
+				continue
+			}
 			return err
 		}
 		archives[archiveName] = openArchive
 	}
 
-	_, err = slicer.Run(&slicer.RunOptions{
+	err = slicer.Run(&slicer.RunOptions{
 		Selection: selection,
 		Archives:  archives,
 		TargetDir: cmd.RootDir,
 	})
 	return err
-}
-
-// TODO These need testing, and maybe moving into a common file.
-
-var releaseExp = regexp.MustCompile(`^([a-z](?:-?[a-z0-9]){2,})-([0-9]+(?:\.?[0-9])+)$`)
-
-func parseReleaseInfo(release string) (label, version string, err error) {
-	match := releaseExp.FindStringSubmatch(release)
-	if match == nil {
-		return "", "", fmt.Errorf("invalid release reference: %q", release)
-	}
-	return match[1], match[2], nil
-}
-
-func readReleaseInfo() (label, version string, err error) {
-	data, err := os.ReadFile("/etc/lsb-release")
-	if err == nil {
-		const labelPrefix = "DISTRIB_ID="
-		const versionPrefix = "DISTRIB_RELEASE="
-		for _, line := range strings.Split(string(data), "\n") {
-			switch {
-			case strings.HasPrefix(line, labelPrefix):
-				label = strings.ToLower(line[len(labelPrefix):])
-			case strings.HasPrefix(line, versionPrefix):
-				version = line[len(versionPrefix):]
-			}
-			if label != "" && version != "" {
-				return label, version, nil
-			}
-		}
-	}
-	return "", "", fmt.Errorf("cannot infer release via /etc/lsb-release, see the --release option")
 }

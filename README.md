@@ -67,6 +67,48 @@ provided packages and install only the desired slices into the *myrootfs*
 folder, according to the slice definitions available in the
 ["ubuntu-22.04" chisel-releases branch](<https://github.com/canonical/chisel-releases/tree/ubuntu-22.04>).
 
+## Support for Pro archives
+> [!IMPORTANT]
+> To chisel a Pro package you need to have a Pro-enabled host.
+
+To fetch and install slices from Ubuntu Pro packages, the Pro archive has to be
+defined with the `archives.<name>.pro` field in `chisel.yaml`:
+
+
+```yaml
+# chisel.yaml
+format: v1
+archives:
+  <name>:
+    pro: <value>
+    ...
+...
+```
+
+The following Pro archives are currently supported:
+
+| `pro` value  | Archive URL                                |
+|--------------|--------------------------------------------|
+| fips         | https://esm.ubuntu.com/fips/ubuntu         |
+| fips-updates | https://esm.ubuntu.com/fips-updates/ubuntu |
+| esm-apps     | https://esm.ubuntu.com/apps/ubuntu         |
+| esm-infra    | https://esm.ubuntu.com/infra/ubuntu        |
+
+If the system is using the [Pro client](https://ubuntu.com/pro/tutorial), and the
+services are enabled, the credentials will be automatically picked up from
+`/etc/apt/auth.conf.d/`. However, the default permissions of the credentials file
+need to be changed so that Chisel can read it. Example:
+```shell
+sudo pro enable esm-infra
+
+sudo setfacl -m u:$USER:r /etc/apt/auth.conf.d/90ubuntu-advantage
+# or, alternatively,
+sudo chmod u+r /etc/apt/auth.conf.d/90ubuntu-advantage
+```
+
+The location of the credentials can be configured using the environment variable
+`CHISEL_AUTH_DIR`.
+
 ## Reference
 
 ### Chisel releases
@@ -269,11 +311,16 @@ have additional information for identifying the kind of content to expect:
  which are only available for certain architectures. Example:
  `/usr/bin/hello: {arch: amd64}` will instruct Chisel to extract and install
  the "/usr/bin/hello" file only when chiselling an amd64 filesystem.
+ - **generate**: accepts a `manifest` value to instruct Chisel to generate the
+ manifest files in the directory. Example: `/var/lib/chisel/**:{generate:
+ manifest}`. NOTE: the provided path has to be of the form
+ `/slashed/path/to/dir/**` and no wildcards can appear apart from the trailing
+ `**`.
 
 ## TODO
 
 - [ ] Preserve ownerships when possible
-- [ ] GPG signature checking for archives
+- [x] GPG signature checking for archives
 - [ ] Use a fake server for the archive tests
 - [ ] Functional tests
 
