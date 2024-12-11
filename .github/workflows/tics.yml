@@ -99,11 +99,24 @@ jobs:
 
       - run: go install honnef.co/go/tools/cmd/staticcheck@latest
 
-      - name: Run TiCS analysis
+      - name: Run TiCS client analysis
         uses: tiobe/tics-github-action@v3
+        if: github.event_name == 'pull_request'
         with:
-          mode: ${{ github.event_name == 'pull_request' && 'client' || 'qserver' }}
-          codetype: ${{ github.event_name == 'pull_request' && 'TESTCODE' || 'PRODUCTION' }}
+          mode: 'client'
+          codetype: 'TESTCODE'
+          project: chisel
+          filelist: ${{ env.TICS_FILELIST }}
+          viewerUrl: 'https://canonical.tiobe.com/tiobeweb/TICS/api/cfg?name=default'
+          displayUrl: 'https://canonical.tiobe.com/tiobeweb/TICS'
+          installTics: true
+
+      - name: Run TiCS server analysis
+        uses: tiobe/tics-github-action@v3
+        if: github.event_name != 'pull_request'
+        with:
+          mode: 'qserver'
+          codetype: 'PRODUCTION'
           project: chisel
           branchdir: .
           filelist: ${{ env.TICS_FILELIST }}
