@@ -23,14 +23,13 @@ equally functional container images.
 
 ```{grid-item-card} [Tutorial](tutorial/getting-started)
 
-**Get started** - become familiar with Chisel by installing slices to create
+**Get started** - become familiar with Chisel by slicing Ubuntu packages to create
 a minimal root file system.
 ```
 
 ```{grid-item-card} [How-to guides](how-to/index)
 
-**Step-by-step guides** - learn key operations and common tasks such as
-installation.
+**Step-by-step guides** - learn key operations and common tasks.
 ```
 
 ````
@@ -40,14 +39,14 @@ installation.
 
 ```{grid-item-card} [Reference](reference/index)
 
-**Technical information** - understand CLI commands, chisel.yaml and slice
-definition file and Chisel manifest formats.
+**Technical information** - understand the CLI commands, slice definitions files
+and Chisel manifests.
 ```
 
 ```{grid-item-card} [Explanations](explanation/index)
 
 **Discussion and clarification** - explore Chisel's mode of operation and learn
-about fundamental topics such as slices.
+about fundamental topics such as package slices.
 ```
 
 ````
