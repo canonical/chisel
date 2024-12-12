@@ -23,12 +23,14 @@ containers such as {{Rocks}}, or {{Docker}} images.
 
 ```{grid-item-card} [Tutorial](tutorial/getting-started)
 
-**Start here**: a hands-on introduction to Chisel for new users
+**Get started** - become familiar with Chisel by installing slices to create
+a minimal root file system.
 ```
 
 ```{grid-item-card} [How-to guides](how-to/index)
 
-**Step-by-step guides** covering key operations and common tasks
+**Step-by-step guides** - learn key operations and common tasks such as
+installation.
 ```
 
 ````
@@ -38,12 +40,14 @@ containers such as {{Rocks}}, or {{Docker}} images.
 
 ```{grid-item-card} [Reference](reference/index)
 
-**Technical information** - specifications, syntax, architecture
+**Technical information** - understand CLI commands, chisel.yaml and slice
+definition file and Chisel manifest formats.
 ```
 
 ```{grid-item-card} [Explanations](explanation/index)
 
-**Discussion and clarification** of key topics
+**Discussion and clarification** - explore Chisel's mode of operation and learn
+about fundamental topics such as slices.
 ```
 
 ````
