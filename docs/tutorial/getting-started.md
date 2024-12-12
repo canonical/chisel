@@ -39,9 +39,9 @@ system. We will use the Ubuntu 24.04 (noble) package as the source of the
 necessary files.
 
 Chisel uses slice definition files to define and install slices. These files are
-stored in the {{chisel_releases}} repository. Upon a quick look there, you can
-find that there is a `hello_bins` slice that contains the `hello` binary and
-looks like the following:
+stored in the {{chisel_releases_repo}}. Upon a quick look there, you can find
+that there is a `hello_bins` slice that contains the `hello` binary and looks
+like the following:
 
 {{hello_bins}}
 

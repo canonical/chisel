@@ -1,3 +1,4 @@
+(slices_explanation)=
 # Slices
 
 ## What are slices?
@@ -33,5 +34,5 @@ file system small and less exposed to vulnerabilities.
 
 ## Defining slices
 
-A package's slices can be defined via a YAML slice definitions file. Check the
-{{slice_definitions_ref}} for more information about this file's format.
+A package's slices can be defined via a YAML slice definitions file. Check
+{ref}`slice_definitions_ref` for more information about this file's format.

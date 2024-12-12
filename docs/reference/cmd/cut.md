@@ -30,8 +30,8 @@ current host, unless the --release flag is used.
 
 The cut command takes in the following options:
 
-- `--release` is used to specify the {{chisel_releases}} branch to get slice
-  definitions from or the local release directory path.
+- `--release` is used to specify the {{chisel_releases_repo}} branch to get
+  slice definitions from or the local release directory path.
 - `--root` is used to specify the path of the resulting root file system
   directory.
 - `--arch` is used to specify the package architecture.

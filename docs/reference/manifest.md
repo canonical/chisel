@@ -1,3 +1,4 @@
+(chisel_manifest_ref)=
 # Chisel Manifest
 
 Chisel manifest is a ZSTD-compressed file which lists the metadata about
@@ -11,9 +12,10 @@ for better compression.
 ## Location of the manifest
 
 Chisel manifest may be generated anywhere in the newly created root file system.
-To specify the location, the {{generate}} keyword is used in a slice definition.
-If the slice is installed, a `manifest.wall` file is generated at the
-specified location.
+To specify the location, the
+{ref}`slice_definitions_format_slices_contents_generate` keyword is used in a
+slice definition.  If the slice is installed, a `manifest.wall` file is
+generated at the specified location.
 
 Multiple paths may be specified and a manifest will be created in each of those
 paths, if the respective slices are installed.
@@ -35,7 +37,7 @@ slices:
 ```
 
 This slice is available in all supported branches of the upstream
-{{chisel_releases}} repository. Thus, installing the `base-files_chisel` slice
+{{chisel_releases_repo}}. Thus, installing the `base-files_chisel` slice
 produces a manifest at `/var/lib/chisel/manifest.wall`.
 
 
@@ -130,10 +132,10 @@ These JSON objects have the following attributes:
 
 ```{note}
 Unless explicitly included in the requested slices, the parent directories that
-are implicitly created in the filesystem are not written in the Chisel manifest.
-In the {ref}`example above<chisel_manifest_paths>`, it is assumed that `/etc/`
-is explicitly defined, with the same properties, in both `foo_bar` and
-`abc_xyz`.
+are implicitly created in the file system are not written in the Chisel
+manifest.  In the {ref}`example above<chisel_manifest_paths>`, it is assumed
+that `/etc/` is explicitly defined, with the same properties, in both `foo_bar`
+and `abc_xyz`.
 ```
 
 
@@ -159,7 +161,7 @@ It has the following attributes:
 (chisel_manifest_example)=
 ## Example
 
-This is an examle manifest file (uncompressed), generated from installing the
+This is an example manifest file (uncompressed), generated from installing the
 `base-files_chisel` and `hello_bins` slices:
 
 ```json

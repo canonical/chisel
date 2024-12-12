@@ -33,8 +33,8 @@ the selected release. For example, globs are not expanded.
 
 The info command takes in the following options:
 
-- `--release` is used to specify the {{chisel_releases}} branch to search slices
-  in or the local release directory path.
+- `--release` is used to specify the {{chisel_releases_repo}} branch to search
+slices in or the local release directory path.
 
 ## Example
 

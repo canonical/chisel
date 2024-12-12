@@ -34,15 +34,15 @@ has the following attributes:
 
 ```{important}
 The jsonwall header line always stays on top of the file. The following lines
-are sorted lexicographically.
+are sorted in a lexicographic order.
 ```
 
 (jsonwall_data)=
 ### Data
 
 The following lines after the header consists of actual data. These must be JSON
-objects, defined one per line. These lines are lexicographically sorted and the
-fields within these objects are also lexicographically sorted.
+objects, defined one per line. These lines are sorted in a lexicographic order
+and the fields within these objects are also sorted in a lexicographic order.
 
 
 (jsonwall_usage)=

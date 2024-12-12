@@ -20,19 +20,18 @@ Levenshtein_distance: |
   [Levenshtein Distance](https://en.wikipedia.org/wiki/Levenshtein_distance)
 latest_release_page: |
   [latest release page](https://github.com/canonical/chisel/releases/latest)
-slice_definitions_ref: |
-  [slice definitions reference](https://github.com/canonical/chisel/#slice-definitions)
-chisel_releases: |
-  [chisel-releases](https://github.com/canonical/chisel-releases)
+chisel_releases_repo: |
+  [chisel-releases repository](https://github.com/canonical/chisel-releases)
 hello_pkg: "[hello](https://packages.ubuntu.com/noble/hello)"
+Starlark: "[Starlark](https://github.com/google/starlark-go)"
 
 slices: "[slices](/explanation/slices)"
 package_slices: "[package slices](/explanation/slices)"
 cut_cmd: "{doc}`/reference/cmd/cut`"
 find_cmd: "{doc}`/reference/cmd/find`"
-
-# TODO fill the link once "generate" keyword reference is ready.
-generate: "{ref}`generate<TODO>`"
+info_cmd: "{doc}`/reference/cmd/info`"
+mutation_scripts: |
+  {ref}`mutation scripts <slice_definitions_format_slices_mutate>`
 
 
 ###############

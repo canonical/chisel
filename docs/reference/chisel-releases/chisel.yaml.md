@@ -69,8 +69,8 @@ point to:
 | `default` | `bool` | Optional | `true`, `false` |
 
 If `default` is `true`, Chisel fetches packages from this archive unless
-otherwise specified in the slice defintion file.
-<!-- TODO: link to the archive field in slice defintion file -->
+otherwise specified by {ref}`slice_definitions_format_archive` in the slice
+definition file.
 
 ```{tip}
 It is preferred to use {ref}`chisel_yaml_format_spec_archives_priority` instead
@@ -139,9 +139,8 @@ verify the `InRelease` file signatures. These key names must be defined in
 The `priority` field describes the priority of an archive compared to other
 archives. It is used to support multiple archives in Chisel. If a package is
 available in two archives, it is fetched from the archive with higher priority,
-unless otherwise specified in the slice defintion file or
-{ref}`chisel_yaml_format_spec_archives_default` is used.
-<!-- TODO: link to the archive field in slice defintion file -->
+unless otherwise specified by {ref}`slice_definitions_format_archive` in the
+slice definition file or {ref}`chisel_yaml_format_spec_archives_default` is used.
 
 - An unspecified `priority` field **does not** yield a 0 value.
 - Two archives must not have the same `priority` value.
@@ -166,7 +165,7 @@ fetch and install packages from.
 Chisel supports fetching and installing Ubuntu Pro packages, if the host machine
 is Pro-enabled. It reads the APT credentials in `/etc/apt/auth.conf.d` directory
 (unless `CHISEL_AUTH_DIR` environment variable is set) to find the Pro archive
-credentials. The following `pro` values are supported, and if specfied, the
+credentials. The following `pro` values are supported, and if specified, the
 archive points to their corresponding base URLs.
 
 | `pro` value | Base repository URL (hard-coded in Chisel) |

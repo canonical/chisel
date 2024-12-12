@@ -1,6 +1,6 @@
 # find command
 
-The **find** command queries {{chisel_releases}} for matching slices.
+The **find** command queries {{chisel_releases_repo}} for matching slices.
 
 ## Usage
 
@@ -25,8 +25,8 @@ current host, unless the --release flag is used.
 
 The find command takes in the following options:
 
-- `--release` is used to specify the {{chisel_releases}} branch to search slices
-  in or the local release directory path.
+- `--release` is used to specify the {{chisel_releases_repo}} branch to search
+  slices in or the local release directory path.
 
 ## Example
 
