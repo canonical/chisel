@@ -4,8 +4,9 @@
 Chisel is useful for creating minimal root file system based on Ubuntu packages.
 The {{cut_cmd}} accomplishes this in the following way:
 
-```{image} /_static/mode-of-operation.png
+```{image} /_static/mode-of-operation.svg
   :align: center
+  :width: 75%
   :alt: Chisel mode of operation
 ```
 
