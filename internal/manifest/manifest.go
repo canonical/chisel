@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/canonical/chisel/internal/archive"
-	"github.com/canonical/chisel/internal/jsonwall"
 	"github.com/canonical/chisel/internal/setup"
+	"github.com/canonical/chisel/jsonwall"
 )
 
 const Schema = "1.0"
