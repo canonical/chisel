@@ -1,19 +1,19 @@
 # Chisel
 
-**Chisel** is a tool for carving and cutting Debian packages.
+**Chisel** is a tool for carving and cutting Ubuntu packages.
 
-It can derive a minimal Ubuntu-like Linux distribution using a release
-database that defines "slices" of Debian packages. Slices enable users to
-cherry-pick just the files they need from the Ubuntu archives, and combine them
-to create a new root file system which can be packaged.
+It is built on the idea of {{package_slices}} - minimal, complimentary, and
+loosely coupled sets of files, based on the package's metadata and content.
+Slices are basically subsets of the Ubuntu packages, with their own content and
+set of dependencies to other internal and external slices.
 
-If you need a way to create a minimal root file system based on Ubuntu
-packages, Chisel might be for you. It handles package slice dependency,
-fetching Ubuntu Pro packages, and allows you to create a fully operational but
-minimal root file system for your application.
+Chisel is able to extract a highly customised and specialised _Slice_ of the
+Ubuntu distribution, which one could see as a block of stone from which we can
+carve and extract the small and relevant parts we need to run our applications.
 
-Chisel is particularly useful for developers who are creating minimal
-containers such as {{Rocks}}, or {{Docker}} images.
+It operates similar to a package manager, but for package slices, thus being
+particularly useful for supporting developers in the creation of smaller but
+equally functional container images.
 
 ---------
 
