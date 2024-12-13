@@ -1,7 +1,7 @@
 (slices_explanation)=
 # Slices
 
-## What are slices?
+## What are package slices?
 
 Since Debian packages are simply archives that can be inspected, navigated and
 deconstructed, it is possible to define slices of packages that contain
@@ -36,3 +36,15 @@ file system small and less exposed to vulnerabilities.
 
 A package's slices can be defined via a YAML slice definitions file. Check
 {ref}`slice_definitions_ref` for more information about this file's format.
+
+## Naming convention
+
+In Chisel, slices are recognized by the following pattern:
+`<package_name>_<slice_name>`. 
+
+For example, the slice `libc6_libs` refers to the slice definition `libs` of the
+package `libc6`.
+
+
+The use of an underscore in this pattern is what distinguishes package names from
+slice names, as this character is not allowed in Debian package names.

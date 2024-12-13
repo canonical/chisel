@@ -1,7 +1,7 @@
 (chisel-releases_ref)=
 # chisel-releases
 
-Chisel uses **slice definition files** (aka SDFs) to define the slices of packages.
+Chisel uses **slice definitions files** (aka SDFs) to define the slices of packages.
 SDFs are YAML files, and there is one per package and per Ubuntu release, named
 after the package name.
 

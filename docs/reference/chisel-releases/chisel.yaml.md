@@ -81,7 +81,7 @@ otherwise, the archive point to the Ubuntu Pro archives listed
 
 If `default` is `true`, Chisel fetches packages from this archive, unless
 otherwise specified by the field {ref}`"archive"<slice_definitions_format_archive>`
-in the slice definition file.
+in the slice definitions file.
 
 In case there are multiple archives, one, **and only one**, must be the default,
 **otherwise**, use {ref}`priorities<chisel_yaml_format_spec_archives_priority>`.
@@ -235,9 +235,9 @@ The key names are then referenced in
 (chisel_yaml_format_spec_public_keys_id)=
 ### `public-keys.<name>.id`
 
-| Field | Type  | Required | Supported values                                              |
-| ----- | ----- | -------- | ------------------------------------------------------------- |
-| `id`  | `str` | Required | Public key fingerprint in capital hex e.g. `871920D1991BC93C` |
+| Field | Type  | Required |
+| ----- | ----- | -------- |
+| `id`  | `str` | Required |
 
 The `id` field specifies the OpenPGP public key fingerprint in capital hex e.g.
 `871920D1991BC93C`. It must be 16 chars long and must match the decoded
@@ -247,9 +247,9 @@ fingerprint in {ref}`chisel_yaml_format_spec_public_keys_armor`.
 (chisel_yaml_format_spec_public_keys_armor)=
 ### `public-keys.<name>.armor`
 
-| Field   | Type  | Required | Supported values   |
-| ------- | ----- | -------- | ------------------ |
-| `armor` | `str` | Required | Armored ASCII data |
+| Field   | Type  | Required |
+| ------- | ----- | -------- |
+| `armor` | `str` | Required |
 
 The `armor` field contains the multi-line armored ASCII data of OpenPGP public
 key.
