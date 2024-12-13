@@ -1,19 +1,7 @@
 # version command
 
-The **version** command displays the versions of the running client.
+The **version** command displays the Chisel version and exits.
 
-## Usage
-
-```{terminal}
-:scroll:
-:input: chisel version --help
-
-Usage:
-  chisel version
-
-The version command displays the versions of the running client and server.
-
-```
 
 ## Example
 

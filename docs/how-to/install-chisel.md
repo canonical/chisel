@@ -16,11 +16,11 @@ the latest Chisel binary:
 
 <!-- Start: Install Chisel binary -->
 
-1. Visit the {{latest_release_page}} to determine the latest tag, for example,
-   `v1.0.0`.
+1. Visit the {{latest_release_page}} to determine the latest version, for example,
+   `v1.0.0` (update the following steps according to your desired version and
+   architecture).
 
-2. Run the following command to download the file. Make sure to replace
-   `v1.0.0` with the latest tag and `amd64` with your architecture.
+2. Run the following command to download the file.
    ```sh
    wget https://github.com/canonical/chisel/releases/download/v1.0.0/chisel_v1.0.0_linux_amd64.tar.gz
    ```
@@ -42,7 +42,7 @@ the latest Chisel binary:
    ```
 
 6. Install the Chisel binary. Make sure the installation directory is included
-   in your system’s `PATH` environment variable.
+   in your system’s `PATH` environment variable. For example:
    ```sh
    sudo mv chisel /usr/local/bin/
    ```
@@ -77,9 +77,9 @@ sudo snap install chisel
 ```
 
 ```{note}
-This snap can only install the slices in a location inside the user `$HOME`
-directory i.e. the `--root` option in the `cut` command should have a location
-inside the user `$HOME` directory.
+This snap can only install the slices in a location inside the user's `$HOME`
+directory, i.e. the `--root` option of the {ref}`cut_command_reference` must point to a location
+inside `$HOME`.
 ```
 
 

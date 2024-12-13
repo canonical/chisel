@@ -1,40 +1,19 @@
+(cut_command_reference)=
 # cut command
 
 The **cut** command uses the provided selection of package slices to create a
 new file system tree in the root location.
 
-## Usage
-
-```{terminal}
-:scroll:
-:input: chisel cut --help
-
-Usage:
-  chisel cut [cut-OPTIONS] [<slice names>...]
-
-The cut command uses the provided selection of package slices
-to create a new filesystem tree in the root location.
-
 By default it fetches the slices for the same Ubuntu version as the
-current host, unless the --release flag is used.
+current host, unless the `--release` option is used.
 
-[cut command options]
-      --release=<dir>       Chisel release name or directory (e.g. ubuntu-22.04)
-      --root=<dir>          Root for generated content
-      --arch=<arch>         Package architecture
-```
-
-### Options
+## Options
 
 <!-- Start: cut command options -->
 
-The cut command takes in the following options:
-
-- `--release` is used to specify the {{chisel_releases_repo}} branch to get
-  slice definitions from or the local release directory path.
-- `--root` is used to specify the path of the resulting root file system
-  directory.
-- `--arch` is used to specify the package architecture.
+- `--release` is a {{chisel_releases_repo}} branch or local directory (e.g. ubuntu-22.04).
+- `--root` is the path for the resulting root file system.
+- `--arch` is used to specify the desired package architecture.
 
 <!-- End: cut command options -->
 

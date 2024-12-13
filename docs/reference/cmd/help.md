@@ -2,20 +2,6 @@
 
 The **help** command displays information about commands.
 
-## Usage
-
-```{terminal}
-:scroll:
-:input: chisel help --help
-
-Usage:
-  chisel help [help-OPTIONS] [<command>...]
-
-The help command displays information about commands.
-
-[help command options]
-      --all          Show a short summary of all commands
-```
 
 ## Example
 

@@ -1,7 +1,6 @@
 # CLI Commands
 
-Chisel uses subcommands, like some other command-line tools such as go tool or
-git.
+Chisel uses subcommands, and is invoked using `chisel <command>`.
 
 Subcommands are keywords that invoke a new set of options and features, and each
 Chisel subcommand has its own set of flags.
