@@ -1495,7 +1495,27 @@ var defaultChiselYaml = `
 `
 
 func (s *S) TestRun(c *C) {
-	for _, test := range slicerTests {
+	// Run tests for "archives" field in "v1" format.
+	runSlicerTests(c, slicerTests)
+
+	// Run tests for "v2-archives" field in "v1" format.
+	v2ArchiveTests := make([]slicerTest, 0, len(slicerTests))
+	for _, t := range slicerTests {
+		m := make(map[string]string)
+		for k, v := range t.release {
+			if !strings.Contains(v, "v2-archives:") {
+				v = strings.Replace(v, "archives:", "v2-archives:", -1)
+			}
+			m[k] = v
+		}
+		t.release = m
+		v2ArchiveTests = append(v2ArchiveTests, t)
+	}
+	runSlicerTests(c, v2ArchiveTests)
+}
+
+func runSlicerTests(c *C, tests []slicerTest) {
+	for _, test := range tests {
 		for _, testSlices := range testutil.Permutations(test.slices) {
 			c.Logf("Summary: %s", test.summary)
 
