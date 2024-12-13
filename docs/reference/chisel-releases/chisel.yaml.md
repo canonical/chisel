@@ -1,7 +1,8 @@
 (chisel_yaml_ref)=
 # chisel.yaml
 
-`chisel.yaml` defines various configuration values for Chisel.
+The `chisel.yaml` file defines various configuration values for Chisel,
+for a given _chisel-release_.
 
 
 (chisel_yaml_location)=
@@ -14,63 +15,76 @@ directory.
 (chisel_yaml_format_spec)=
 ## Format specification
 
-The following sections describe various configurations used in `chisel.yaml`.
-
-
 (chisel_yaml_format_spec_format)=
 ### `format`
 
-| Field | Type | Required | Supported values |
-| - | - | - | - |
-| `format` | `str` | Required | `v1` |
+| Field    | Type  | Required | Supported values |
+| -------- | ----- | -------- | ---------------- |
+| `format` | `str` | Required | `v1`             |
 
-The top-level `format` field is used to describe the {ref}`chisel-releases_ref`
-format. New formats may have new and/or deprecated fields in `chisel.yaml`
-and/or slice definition files.
+Used to define the supported schemas for the {ref}`chisel-releases_ref`.
+For example:
 
 ```yaml
 format: v1
+```
+
+```{note}
+New formats are typically introduced with new _chisel-releases_ and may
+introduce disruptive changes to the previous formats.
 ```
 
 
 (chisel_yaml_format_spec_archives)=
 ### `archives`
 
-| Field | Type | Required |
-| - | - | - |
+| Field      | Type              | Required |
+| ---------- | ----------------- | -------- |
 | `archives` | `dict(str, dict)` | Required |
 
-The top-level `archives` field defines the archives to fetch packages from.
+Tells Chisel which Ubuntu archives to fetch packages from.
+
+```{note}
+Chisel only supports fetching packages from the official Ubuntu archives,
+including ESM.
+```
+
+For example:
 
 ```yaml
 archives:
-  <name>:
-    default: <bool>
-    version: <str>
-    suites: [...]
-    components: [...]
-    public-keys: [...]
-    priority: <int>
-    pro: <str>
+  ubuntu-esm-apps:
+    pro: esm-apps
+    priority: 16
+    version: 24.04
+    components: [main]
+    suites: [noble-apps-security, noble-apps-updates]
+    public-keys: [ubuntu-apps-key]
 ```
 
-If {ref}`chisel_yaml_format_spec_archives_pro` is unspecified, the archives
+If {ref}`chisel_yaml_format_spec_archives_pro` is not specified, the archives
 point to:
 
-- http://archive.ubuntu.com/ for `amd64` and `i386` package architecture.
+- http://archive.ubuntu.com/ for `amd64` and `i386` package architecture, and
 - http://ports.ubuntu.com/ubuntu-ports/ for other architectures.
+
+otherwise, the archive point to the Ubuntu Pro archives listed
+{ref}`below<chisel_yaml_format_spec_archives_pro>`.
 
 
 (chisel_yaml_format_spec_archives_default)=
 ### `archives.<name>.default`
 
-| Field | Type | Required | Supported values |
-| - | - | - | - |
-| `default` | `bool` | Optional | `true`, `false` |
+| Field     | Type   | Required                                                                                            | Supported values |
+| --------- | ------ | --------------------------------------------------------------------------------------------------- | ---------------- |
+| `default` | `bool` | Required with multiple archives, if no {ref}`priorities<chisel_yaml_format_spec_archives_priority>` | `true`, `false`  |
 
-If `default` is `true`, Chisel fetches packages from this archive unless
-otherwise specified by {ref}`slice_definitions_format_archive` in the slice
-definition file.
+If `default` is `true`, Chisel fetches packages from this archive, unless
+otherwise specified by the field {ref}`"archive"<slice_definitions_format_archive>`
+in the slice definition file.
+
+In case there are multiple archives, one, **and only one**, must be the default,
+**otherwise**, use {ref}`priorities<chisel_yaml_format_spec_archives_priority>`.
 
 ```{tip}
 It is preferred to use {ref}`chisel_yaml_format_spec_archives_priority` instead
@@ -81,11 +95,11 @@ of {ref}`chisel_yaml_format_spec_archives_default`.
 (chisel_yaml_format_spec_archives_version)=
 ### `archives.<name>.version`
 
-| Field | Type | Required | Supported values |
-| - | - | - | - |
+| Field     | Type  | Required | Supported values                                        |
+| --------- | ----- | -------- | ------------------------------------------------------- |
 | `version` | `str` | Required | Ubuntu release in `xx.yy` format e.g. 22.04, 24.04 etc. |
 
-The `version` field indicates the Ubuntu release this archive should fetch the
+Indicates the Ubuntu release this archive should fetch the
 packages for. This value is currently only used for logging, and does not change
 the archive behaviour.
 
@@ -93,11 +107,11 @@ the archive behaviour.
 (chisel_yaml_format_spec_archives_suites)=
 ### `archives.<name>.suites`
 
-| Field | Type | Required | Supported values |
-| - | - | - | - |
+| Field    | Type        | Required | Supported values                                              |
+| -------- | ----------- | -------- | ------------------------------------------------------------- |
 | `suites` | `list(str)` | Required | Ubuntu archive suite names e.g. `jammy`, `noble-updates` etc. |
 
-The `suites` field lists the archive suites to fetch packages from. Read more
+Lists the archive suites to fetch packages from. Read more
 about suites in the [Ubuntu packaging
 guide](https://canonical-ubuntu-packaging-guide.readthedocs-hosted.com/en/latest/explanation/archive/#suite).
 
@@ -105,11 +119,11 @@ guide](https://canonical-ubuntu-packaging-guide.readthedocs-hosted.com/en/latest
 (chisel_yaml_format_spec_archives_components)=
 ### `archives.<name>.components`
 
-| Field | Type | Required | Supported values |
-| - | - | - | - |
+| Field        | Type        | Required | Supported values                                   |
+| ------------ | ----------- | -------- | -------------------------------------------------- |
 | `components` | `list(str)` | Required | Suite component names e.g. `main`, `universe` etc. |
 
-The `components` field lists the components of the archive suites to fetch
+Lists the components of the archive suites to fetch
 packages from. Read more about components in the [Ubuntu packaging
 guide](https://canonical-ubuntu-packaging-guide.readthedocs-hosted.com/en/latest/explanation/archive/#components).
 
@@ -120,115 +134,121 @@ locate packages.
 (chisel_yaml_format_spec_archives_public_keys)=
 ### `archives.<name>.public-keys`
 
-| Field | Type | Required | Supported values |
-| - | - | - | - |
-| `public-keys` | `list(str)` | Required | List elements must be defined in {ref}`chisel_yaml_format_spec_public_keys` |
+| Field         | Type        | Required | Supported values                                                            |
+| ------------- | ----------- | -------- | --------------------------------------------------------------------------- |
+| `public-keys` | `list(str)` | Required | List of key names, as defined in {ref}`chisel_yaml_format_spec_public_keys` |
 
-The `public-keys` field lists the name of the OpenPGP public key names needed to
-verify the `InRelease` file signatures. These key names must be defined in
+Lists the names of the OpenPGP public keys needed to verify the archive's `InRelease`
+file signatures. These key names must be defined in
 {ref}`chisel_yaml_format_spec_public_keys`.
 
 
 (chisel_yaml_format_spec_archives_priority)=
 ### `archives.<name>.priority`
 
-| Field | Type | Required | Supported values |
-| - | - | - | - |
-| `priority` | `int` | Optional | Any integer between -1000 and 1000 |
+| Field      | Type  | Required                                         | Supported values                   |
+| ---------- | ----- | ------------------------------------------------ | ---------------------------------- |
+| `priority` | `int` | Required with multiple archives, if no `default` | Any integer between -1000 and 1000 |
 
-The `priority` field describes the priority of an archive compared to other
+Describes the priority of an archive compared to other
 archives. It is used to support multiple archives in Chisel. If a package is
 available in two archives, it is fetched from the archive with higher priority,
-unless otherwise specified by {ref}`slice_definitions_format_archive` in the
-slice definition file or {ref}`chisel_yaml_format_spec_archives_default` is used.
+unless:
+ - the package's slice definitions file specifies {ref}`"archive"<slice_definitions_format_archive>`, or
+ - the {ref}`chisel_yaml_format_spec_archives_default` field is `true` for any archive.
+In this case, the priority values of **all** archives are ignored.
 
-- An unspecified `priority` field **does not** yield a 0 value.
-- Two archives must not have the same `priority` value.
-- The value must be an integer within [-1000, 1000].
-
-```{important}
-If {ref}`chisel_yaml_format_spec_archives_default` is used on any archive, the
-`priority` values of all archives are ignored.
-```
+Note that:
+- an unspecified `priority` field **does not** yield a 0 value, and
+- two archives cannot have the same `priority` value.
 
 
 (chisel_yaml_format_spec_archives_pro)=
 ### `archives.<name>.pro`
 
-| Field | Type | Required | Supported values |
-| - | - | - | - |
+| Field | Type  | Required | Supported values                                 |
+| ----- | ----- | -------- | ------------------------------------------------ |
 | `pro` | `str` | Optional | `fips`, `fips-updates`, `esm-apps`, `esm-infra`. |
 
-The `pro` field specifies the [Ubuntu Pro](https://ubuntu.com/pro) archive to
+Specifies the [Ubuntu Pro](https://ubuntu.com/pro) archive to
 fetch and install packages from.
 
-Chisel supports fetching and installing Ubuntu Pro packages, if the host machine
-is Pro-enabled. It reads the APT credentials in `/etc/apt/auth.conf.d` directory
-(unless `CHISEL_AUTH_DIR` environment variable is set) to find the Pro archive
-credentials. The following `pro` values are supported, and if specified, the
+```{important}
+To chisel a Pro package you need to have a Pro-enabled host.
+```
+
+Chisel reads the Pro archives' credentials from the directory defined by the
+environment variable `CHISEL_AUTH_DIR` (which defaults to `/etc/apt/auth.conf.d`).
+
+The following `pro` values are supported, and if specified, the
 archive points to their corresponding base URLs.
 
-| `pro` value | Base repository URL (hard-coded in Chisel) |
-| - | - |
-| `fips` | https://esm.ubuntu.com/fips/ubuntu |
+| `pro` value    | Base repository URL                        |
+| -------------- | ------------------------------------------ |
+| `fips`         | https://esm.ubuntu.com/fips/ubuntu         |
 | `fips-updates` | https://esm.ubuntu.com/fips-updates/ubuntu |
-| `esm-apps` | https://esm.ubuntu.com/apps/ubuntu |
-| `esm-infra` | https://esm.ubuntu.com/infra/ubuntu |
+| `esm-apps`     | https://esm.ubuntu.com/apps/ubuntu         |
+| `esm-infra`    | https://esm.ubuntu.com/infra/ubuntu        |
 
-Although not hard-coded, the following `priority` values are suggested when
-`pro` is used.
+```{tip}
+Although not enforced, the following `priority` values are suggested when
+`pro` is used:
 
-| `pro` value | Suggested `priority` |
-| - | - |
-| `fips` | 20 |
-| `fips-updates` | 21 |
-| `esm-apps` | 16 |
-| `esm-infra` | 15 |
-| `""` (empty, indicates non-Pro archive) | 10 |
-
+| `pro` value                                                                        | Suggested `priority` |
+| ---------------------------------------------------------------------------------- | -------------------- |
+| `fips`                                                                             | 20                   |
+| `fips-updates`                                                                     | 21                   |
+| `esm-apps`                                                                         | 16                   |
+| `esm-infra`                                                                        | 15                   |
+| `""` (empty, indicates a {ref}`non-Pro archive<chisel_yaml_format_spec_archives>`) | 10                   |
+```
 
 (chisel_yaml_format_spec_public_keys)=
 ### `public-keys`
 
-| Field | Type | Required |
-| - | - | - |
+| Field         | Type              | Required |
+| ------------- | ----------------- | -------- |
 | `public-keys` | `dict(str, dict)` | Required |
 
 The top-level `public-keys` field is used to define OpenPGP public keys that are
-needed to verify the `InRelease` file signatures.
+needed to verify the `InRelease` file signatures of the 
+{ref}`chisel_yaml_format_spec_archives`.
+
+For example:
 
 ```yaml
 public-keys:
-  <name>:
-    id: <str>
+  ubuntu-archive-key-2018:
+    id: 871920D1991BC93C
     armor: |  # Armored ASCII data
       -----BEGIN PGP PUBLIC KEY BLOCK-----
+
       mQINBFufwdoBEADv/Gxytx/LcSXYuM0MwKojbBye81s0G1nEx+lz6VAUpIUZnbkq
       ...
       -----END PGP PUBLIC KEY BLOCK-----
 ```
 
-The key names are referenced in
+The key names are then referenced in
 {ref}`chisel_yaml_format_spec_archives_public_keys` as needed.
 
 
 (chisel_yaml_format_spec_public_keys_id)=
 ### `public-keys.<name>.id`
 
-| Field | Type | Required | Supported values |
-| - | - | - | - |
-| `id` | `str` | Required | Public key fingerprint in capital hex e.g. `6C7EE1B8621CC013` |
+| Field | Type  | Required | Supported values                                              |
+| ----- | ----- | -------- | ------------------------------------------------------------- |
+| `id`  | `str` | Required | Public key fingerprint in capital hex e.g. `871920D1991BC93C` |
 
 The `id` field specifies the OpenPGP public key fingerprint in capital hex e.g.
-`6C7EE1B8621CC013`. It must be 16 chars long and must match the decoded
+`871920D1991BC93C`. It must be 16 chars long and must match the decoded
 fingerprint in {ref}`chisel_yaml_format_spec_public_keys_armor`.
 
 
 (chisel_yaml_format_spec_public_keys_armor)=
 ### `public-keys.<name>.armor`
 
-| Field | Type | Required | Supported values |
-| - | - | - | - |
+| Field   | Type  | Required | Supported values   |
+| ------- | ----- | -------- | ------------------ |
 | `armor` | `str` | Required | Armored ASCII data |
 
 The `armor` field contains the multi-line armored ASCII data of OpenPGP public
@@ -238,7 +258,7 @@ key.
 (chisel_yaml_example)=
 ## Example
 
-The following `chisel.yaml` is used in Ubuntu 22.04 (Jammy) release:
+The following `chisel.yaml` is used in Ubuntu 24.04 (Noble) release:
 
 ```yaml
 format: v1
@@ -246,9 +266,9 @@ format: v1
 archives:
   ubuntu:
     default: true
-    version: 22.04
+    version: 24.04
     components: [main, universe]
-    suites: [jammy, jammy-security, jammy-updates]
+    suites: [noble, noble-security, noble-updates]
     public-keys: [ubuntu-archive-key-2018]
 
 public-keys:
