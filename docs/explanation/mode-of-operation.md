@@ -1,34 +1,95 @@
 (chisel_mo_explanation)=
 # Mode of operation
 
-Chisel is useful for creating minimal root file system based on Ubuntu packages.
-The {{cut_cmd}} accomplishes this in the following way:
+The main purpose of Chisel is to create a slice of Ubuntu - a minimal root file system 
+comprising only the application and its runtime dependencies.
 
-```{image} /_static/mode-of-operation.svg
+Such task can be accomplished with the {{cut_cmd}} command, whose workflow is depicted below:
+
+<table style="width: 100%;">
+  <colgroup>
+    <col style="width: 45%;">
+    <col style="width: 55%;">
+  </colgroup>
+
+<!-- MO 1 -->
+  <tr>
+    <td>
+
+```{image} /_static/MO-1.svg
   :align: center
-  :width: 75%
-  :alt: Chisel mode of operation
+  :alt: Read and parse chisel-releases
 ```
 
-1. Chisel (fetches and) reads the {ref}`chisel-releases_ref` directory. It
-  parses the {ref}`chisel_yaml_ref` and {ref}`slice_definitions_ref` files. It
-  also validates the release, including checking for conflicting paths across
-  packages. Finally, it finds the order of the slices to be installed based on
-  {ref}`slice_definitions_format_slices_essential`.
+</td>
+    <td>
 
-2. Based on the {ref}`chisel_yaml_format_spec_archives` configurations, Chisel
-  talks to the archives and fetches, validates and parses the `InRelease` files.
-  It then figures out the archive which holds each necessary package and fetches
-  the package tarball.
+Chisel fetches, reads and validates the {ref}`chisel-release<chisel-releases_ref>`.
+This includes parsing the {ref}`chisel_yaml_ref` and {ref}`slice 
+definitions<slice_definitions_ref>` while validating the release and checking for conflicting paths across packages.
+    
+</td>
+  </tr>
 
-3. For every package, Chisel extracts and creates the specified files in the
-  package's slices. Chisel does this once per package. Thus, if there were
-  multiple slices of the same package to be installed, the definitions are
-  merged in a way so that they can be extracted/created together.
 
-4. After extracting the files from the slices, Chisel runs the
-  {{mutation_scripts}} for every slice in the same order of slices. Only the
-  {ref}`mutable<slice_definitions_format_slices_contents_mutable>` files may be
-  modified in this step. Finally, the files specified with
-  {ref}`until:mutate<slice_definitions_format_slices_contents_until>` are
-  removed from the root file system.
+<!-- MO 2 -->
+  <tr>
+    <td>
+
+```{image} /_static/MO-2.svg
+  :align: center
+  :alt: Talk to archives and fetch packages
+```
+
+</td>
+    <td>
+
+Chisel talks to the {ref}`chisel_yaml_format_spec_archives` directly.
+It fetches, validates and parses their `InRelease` files.
+It then resolves which archive holds the **requested** packages and fetches
+the corresponding package tarballs.
+    
+</td>
+  </tr>
+
+<!-- MO 3 -->
+  <tr>
+    <td>
+
+```{image} /_static/MO-3.svg
+  :align: center
+  :alt: Install package slices
+```
+
+</td>
+    <td>
+
+Chisel groups and merges all slice definitions per package. Then,
+for every package, it extracts the **specified slices' paths** into
+the provided root file system.
+
+</td>
+  </tr>
+
+<!-- MO 4 -->
+  <tr>
+    <td>
+
+```{image} /_static/MO-4.svg
+  :align: center
+  :alt: Run mutation scripts
+```
+
+</td>
+    <td>
+
+Chisel then runs the {{mutation_scripts}}. Only the
+{ref}`mutable<slice_definitions_format_slices_contents_mutable>` files may be
+modified at this stage. Finally, the files specified with
+{ref}`until:mutate<slice_definitions_format_slices_contents_until>` are
+removed from the provided root file system.
+
+    
+</td>
+  </tr>
+</table>
