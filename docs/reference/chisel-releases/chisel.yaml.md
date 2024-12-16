@@ -153,10 +153,7 @@ file signatures. These key names must be defined in
 Describes the priority of an archive compared to other
 archives. It is used to support multiple archives in Chisel. If a package is
 available in two archives, it is fetched from the archive with higher priority,
-unless:
- - the package's slice definitions file specifies {ref}`"archive"<slice_definitions_format_archive>`, or
- - the {ref}`chisel_yaml_format_spec_archives_default` field is `true` for any archive.
-In this case, the priority values of **all** archives are ignored.
+unless the package's slice definitions file specifies {ref}`"archive"<slice_definitions_format_archive>`.
 
 Note that:
 - an unspecified `priority` field **does not** yield a 0 value, and
