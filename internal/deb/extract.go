@@ -326,8 +326,8 @@ func extractHardLinks(pkgReader io.ReadSeeker, opts *extractHardLinkOptions) err
 			continue
 		}
 
-		links, ok := opts.pendingLinks[sourcePath]
-		if !ok || len(links) == 0 {
+		links := opts.pendingLinks[sourcePath]
+		if len(links) == 0 {
 			continue
 		}
 
