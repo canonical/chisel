@@ -182,8 +182,7 @@ package onto `/bin/moved`.
 
 ```yaml
     contents:
-      /bin/moved:
-        copy: /bin/original
+      /bin/moved: {copy: /bin/original}
 ```
 
 ```{note}
@@ -205,8 +204,7 @@ creates the directory with `0755`.
 
 ```yaml
     contents:
-      /path/to/dir/:
-        make: true
+      /path/to/dir/: {make: true}
 ```
 
 ```{note}
@@ -229,8 +227,7 @@ Chisel creates the file with `0644`.
 
 ```yaml
     contents:
-      /file:
-        text: "Hello world!"
+      /file: {text: "Hello world!"}
 ```
 
 ```{note}
@@ -253,8 +250,7 @@ In the following example, Chisel creates the symlink `/link` which points to
 
 ```yaml
     contents:
-      /link:
-        symlink: /file
+      /link: {symlink: /file}
 ```
 
 ```{note}
@@ -274,9 +270,7 @@ format e.g. `0755` or `0o755`. For example:
 
 ```yaml
     contents:
-      /file:
-        text: "Hello world!"
-        mode: 0755
+      /file: {text: "Hello world!", mode: 0755}
 ```
 
 ```{note}
@@ -304,10 +298,8 @@ In the following example, `/foo` will be installed for `i386` installations and
 
 ```yaml
     contents:
-      /foo:
-        arch: i386
-      /bar:
-        arch: [amd64, arm64]
+      /foo: {arch: i386}
+      /bar: {arch: [amd64, arm64]}
 ```
 
 
@@ -341,8 +333,7 @@ system but will exist throughout the execution of the {{mutation_scripts}}.
 
 ```yaml
     contents:
-      /file:
-        until: mutate
+      /file: {until: mutate}
 ```
 
 
@@ -367,8 +358,7 @@ In the following example, Chisel creates the `/var/lib/chisel` directory with
 
 ```yaml
     contents:
-      /var/lib/chisel/**:
-        generate: manifest
+      /var/lib/chisel/**: {generate: manifest}
 ```
 
 
