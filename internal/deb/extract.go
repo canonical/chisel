@@ -373,11 +373,8 @@ func extractHardLinks(pkgReader io.ReadSeeker, opts *extractHardLinkOptions) err
 					link.path, target))
 			}
 		}
-		if len(errs) == 1 {
-			return fmt.Errorf("%s", errs[0])
-		}
 		sort.Strings(errs)
-		return fmt.Errorf("\n- %s", strings.Join(errs, "\n- "))
+		return fmt.Errorf("%s", errs[0])
 	}
 
 	return nil

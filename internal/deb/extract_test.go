@@ -419,9 +419,7 @@ var extractTests = []extractTest{{
 			}},
 		},
 	},
-	error: `cannot extract from package "test-package": ` +
-		`\n- cannot create hard link /hardlink1: no content at /non-existing-target` +
-		`\n- cannot create hard link /hardlink2: no content at /non-existing-target`,
+	error: `cannot extract from package "test-package": cannot create hard link /hardlink1: no content at /non-existing-target`,
 }, {
 	summary: "Hard link does not follow the symlink",
 	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
