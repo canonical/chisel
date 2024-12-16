@@ -38,14 +38,3 @@ mutation_scripts: |
 # Code blocks #
 ###############
 
-hello_bins: |
-  ```yaml
-  package: hello
-  slices:
-    bins:
-      essential:
-        - libc6_libs
-      contents:
-        /usr/bin/hello:
-    ...
-  ```
