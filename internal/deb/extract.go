@@ -134,8 +134,8 @@ func extractData(pkgReader io.ReadSeeker, options *ExtractOptions) error {
 			return err
 		}
 
-		sourcePath := sanitizeTarPath(tarHeader.Name)
-		if sourcePath == "" {
+		sourcePath, ok := sanitizeTarPath(tarHeader.Name)
+		if !ok {
 			continue
 		}
 
@@ -242,7 +242,10 @@ func extractData(pkgReader io.ReadSeeker, options *ExtractOptions) error {
 				// The hard link could not be created because the content
 				// was not extracted previously. Add this hard link entry
 				// to the pending list to extract later.
-				relLinkPath := sanitizeTarPath(tarHeader.Linkname)
+				relLinkPath, ok := sanitizeTarPath(tarHeader.Linkname)
+				if !ok {
+					return fmt.Errorf("invalid link target %s", tarHeader.Linkname)
+				}
 				info := pendingHardLink{
 					path:         targetPath,
 					extractInfos: extractInfos,
@@ -318,8 +321,8 @@ func extractHardLinks(pkgReader io.ReadSeeker, opts *extractHardLinkOptions) err
 			return err
 		}
 
-		sourcePath := sanitizeTarPath(tarHeader.Name)
-		if sourcePath == "" {
+		sourcePath, ok := sanitizeTarPath(tarHeader.Name)
+		if !ok {
 			continue
 		}
 
@@ -431,9 +434,9 @@ func parentDirs(path string) []string {
 
 // sanitizeTarPath removes the leading "./" from the source path in the tarball,
 // and verifies that the path is not empty.
-func sanitizeTarPath(path string) string {
+func sanitizeTarPath(path string) (string, bool) {
 	if len(path) < 3 || path[0] != '.' || path[1] != '/' {
-		return ""
+		return "", false
 	}
-	return path[1:]
+	return path[1:], true
 }
