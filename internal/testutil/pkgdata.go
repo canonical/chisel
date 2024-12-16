@@ -198,9 +198,9 @@ func Lnk(mode int64, path, target string) TarEntry {
 	}
 }
 
-// Hlk is a shortcut for creating a hard link TarEntry structure (with
-// tar.Typeflag set to tar.TypeLink). Hlk stands for "Hard LinK".
-func Hlk(mode int64, path, target string) TarEntry {
+// Hrd is a shortcut for creating a hard link TarEntry structure (with
+// tar.Typeflag set to tar.TypeLink). Hrd stands for "HaRD link".
+func Hrd(mode int64, path, target string) TarEntry {
 	return TarEntry{
 		Header: tar.Header{
 			Typeflag: tar.TypeLink,

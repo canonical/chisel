@@ -335,7 +335,7 @@ var extractTests = []extractTest{{
 		},
 	},
 	result: map[string]string{
-		"/日本/":  "dir 0766",
+		"/日本/":   "dir 0766",
 		"/日本/語": "file 0644 85738f8f",
 	},
 	notCreated: []string{},
@@ -359,7 +359,7 @@ var extractTests = []extractTest{{
 	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
 		testutil.Dir(0755, "./"),
 		testutil.Reg(0644, "./file", "text for file"),
-		testutil.Hlk(0644, "./hardlink", "./file"),
+		testutil.Hrd(0644, "./hardlink", "./file"),
 	}),
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
@@ -378,7 +378,7 @@ var extractTests = []extractTest{{
 	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
 		testutil.Dir(0755, "./"),
 		testutil.Reg(0644, "./file", "text for file"),
-		testutil.Hlk(0644, "./hardlink", "./file"),
+		testutil.Hrd(0644, "./hardlink", "./file"),
 	}),
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
@@ -395,7 +395,7 @@ var extractTests = []extractTest{{
 	summary: "Dangling hard link",
 	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
 		testutil.Dir(0755, "./"),
-		testutil.Hlk(0644, "./hardlink", "./non-existing-target"),
+		testutil.Hrd(0644, "./hardlink", "./non-existing-target"),
 	}),
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
@@ -409,8 +409,8 @@ var extractTests = []extractTest{{
 	summary: "Multiple dangling hard links",
 	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
 		testutil.Dir(0755, "./"),
-		testutil.Hlk(0644, "./hardlink1", "./non-existing-target"),
-		testutil.Hlk(0644, "./hardlink2", "./non-existing-target"),
+		testutil.Hrd(0644, "./hardlink1", "./non-existing-target"),
+		testutil.Hrd(0644, "./hardlink2", "./non-existing-target"),
 	}),
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{
@@ -427,7 +427,7 @@ var extractTests = []extractTest{{
 	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
 		testutil.Dir(0755, "./"),
 		testutil.Lnk(0644, "./symlink", "./file"),
-		testutil.Hlk(0644, "./hardlink", "./symlink"),
+		testutil.Hrd(0644, "./hardlink", "./symlink"),
 	}),
 	options: deb.ExtractOptions{
 		Extract: map[string][]deb.ExtractInfo{

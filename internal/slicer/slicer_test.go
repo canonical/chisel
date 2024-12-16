@@ -1488,7 +1488,7 @@ var slicerTests = []slicerTest{{
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
 			testutil.Dir(0755, "./"),
 			testutil.Reg(0644, "./file", "foo"),
-			testutil.Hlk(0644, "./hardlink", "./file"),
+			testutil.Hrd(0644, "./hardlink", "./file"),
 		}),
 	}},
 	release: map[string]string{
@@ -1521,8 +1521,8 @@ var slicerTests = []slicerTest{{
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
 			testutil.Dir(0755, "./"),
 			testutil.Reg(0644, "./file", "foo"),
-			testutil.Hlk(0644, "./hardlink1", "./file"),
-			testutil.Hlk(0644, "./hardlink2", "./file"),
+			testutil.Hrd(0644, "./hardlink1", "./file"),
+			testutil.Hrd(0644, "./hardlink2", "./file"),
 		}),
 	}},
 	release: map[string]string{
@@ -1552,8 +1552,8 @@ var slicerTests = []slicerTest{{
 			testutil.Dir(0755, "./"),
 			testutil.Reg(0644, "./file1", "text for file1"),
 			testutil.Reg(0644, "./file2", "text for file2"),
-			testutil.Hlk(0644, "./hardlink1", "./file1"),
-			testutil.Hlk(0644, "./hardlink2", "./file2"),
+			testutil.Hrd(0644, "./hardlink1", "./file1"),
+			testutil.Hrd(0644, "./hardlink2", "./file2"),
 		}),
 	}},
 	release: map[string]string{
@@ -1586,7 +1586,7 @@ var slicerTests = []slicerTest{{
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
 			testutil.Dir(0755, "./"),
 			testutil.Reg(0644, "./file", "foo"),
-			testutil.Hlk(0644, "./hardlink", "./file"),
+			testutil.Hrd(0644, "./hardlink", "./file"),
 		}),
 	}},
 	release: map[string]string{
@@ -1615,7 +1615,7 @@ var slicerTests = []slicerTest{{
 			testutil.Dir(0755, "./"),
 			testutil.Reg(0644, "./file", "foo"),
 			testutil.Lnk(0644, "./symlink", "./file"),
-			testutil.Hlk(0644, "./hardlink", "./symlink"),
+			testutil.Hrd(0644, "./hardlink", "./symlink"),
 		}),
 	}},
 	release: map[string]string{
@@ -1647,14 +1647,14 @@ var slicerTests = []slicerTest{{
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
 			testutil.Dir(0755, "./"),
 			testutil.Reg(0644, "./file1", "foo"),
-			testutil.Hlk(0644, "./hardlink1", "./file1"),
+			testutil.Hrd(0644, "./hardlink1", "./file1"),
 		}),
 	}, {
 		Name: "test-package2",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
 			testutil.Dir(0755, "./"),
 			testutil.Reg(0644, "./file2", "foo"),
-			testutil.Hlk(0644, "./hardlink2", "./file2"),
+			testutil.Hrd(0644, "./hardlink2", "./file2"),
 		}),
 	}},
 	release: map[string]string{
@@ -1696,7 +1696,7 @@ var slicerTests = []slicerTest{{
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
 			testutil.Dir(0755, "./"),
 			testutil.Reg(0644, "./file", "foo"),
-			testutil.Hlk(0644, "./hardlink", "./file"),
+			testutil.Hrd(0644, "./hardlink", "./file"),
 		}),
 	}},
 	release: map[string]string{
@@ -1721,7 +1721,7 @@ var slicerTests = []slicerTest{{
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
 			testutil.Dir(0755, "./"),
 			testutil.Reg(0644, "./file", "foo"),
-			testutil.Hlk(0644, "./hardlink", "./file"),
+			testutil.Hrd(0644, "./hardlink", "./file"),
 		}),
 	}},
 	release: map[string]string{
