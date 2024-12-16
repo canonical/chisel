@@ -5,7 +5,6 @@ import (
 	"io/fs"
 	"path/filepath"
 	"strings"
-	"sync/atomic"
 
 	"github.com/canonical/chisel/internal/fsutil"
 	"github.com/canonical/chisel/internal/setup"
@@ -32,7 +31,7 @@ type Report struct {
 	Entries map[string]ReportEntry
 	// lastHardLinkID is used internally to allocate unique HardLinkID for hard
 	// links.
-	lastHardLinkID atomic.Uint64
+	lastHardLinkID uint64
 }
 
 // NewReport returns an empty report for content that will be based at the
@@ -67,8 +66,8 @@ func (r *Report) Add(slice *setup.Slice, fsEntry *fsutil.Entry) error {
 			return fmt.Errorf("cannot add hard link %s to report: target %s not previously added", relPath, relLinkPath)
 		}
 		if entry.HardLinkID == 0 {
-			entry.HardLinkID = r.lastHardLinkID.Add(1)
-			r.lastHardLinkID.Store(entry.HardLinkID)
+			r.lastHardLinkID += 1
+			entry.HardLinkID = r.lastHardLinkID
 			r.Entries[relLinkPath] = entry
 		}
 		hardLinkID = entry.HardLinkID
