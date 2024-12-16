@@ -87,8 +87,8 @@ In case there are multiple archives, one, **and only one**, must be the default,
 **otherwise**, use {ref}`priorities<chisel_yaml_format_spec_archives_priority>`.
 
 ```{tip}
-It is preferred to use {ref}`chisel_yaml_format_spec_archives_priority` instead
-of {ref}`chisel_yaml_format_spec_archives_default`.
+{ref}`chisel_yaml_format_spec_archives_default` will soon be deprecated,
+so use {ref}`chisel_yaml_format_spec_archives_priority` instead.
 ```
 
 
