@@ -335,7 +335,7 @@ var extractTests = []extractTest{{
 		},
 	},
 	result: map[string]string{
-		"/日本/":   "dir 0766",
+		"/日本/":  "dir 0766",
 		"/日本/語": "file 0644 85738f8f",
 	},
 	notCreated: []string{},
