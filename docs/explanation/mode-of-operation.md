@@ -1,5 +1,5 @@
 (chisel_mo_explanation)=
-# Mode of operation
+# How it works
 
 The main purpose of Chisel is to create a slice of Ubuntu - a minimal root file system 
 comprising only the application and its runtime dependencies.
