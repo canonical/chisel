@@ -11,7 +11,7 @@ composed of package names, slice names, or a combination of both. The
 default output format is YAML. When multiple arguments are provided,
 the output is a list of YAML documents separated by a `---` line.
 
-Slice definitions are shown verbatim according to their definition in
+Slice definitions are shown according to their definition in
 the selected release. For example, globs are not expanded.
 
 
