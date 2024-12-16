@@ -48,10 +48,9 @@ Installing the `base-files_chisel` slice produces a manifest at
 ## Manifest format
 
 The uncompressed manifest is a "jsonwall" file. This is a custom database file
-format where there is one JSON object per line, and both the individual JSON
-fields and the lines themselves (except the
-{ref}`header<chisel_manifest_jsonwall_header>`) are sorted, a lexicographic order,
-to optimize for searching and iterating over the manifest.
+format where there is one JSON object per line. All JSON objects (except the
+{ref}`header<chisel_manifest_jsonwall_header>`) are sorted in a lexicographic order,
+according to the "kind" of object, to optimize for searching and iterating over the manifest.
 
 
 (chisel_manifest_jsonwall_header)=
