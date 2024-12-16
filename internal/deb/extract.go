@@ -263,6 +263,13 @@ func extractData(pkgReader io.ReadSeeker, options *ExtractOptions) error {
 			ExtractOptions: options,
 			pendingLinks:   pendingHardLinks,
 		}
+		offset, err := pkgReader.Seek(0, io.SeekStart)
+		if err != nil {
+			return err
+		}
+		if offset != 0 {
+			return fmt.Errorf("internal error: cannot seek to the beginning of the package")
+		}
 		err = extractHardLinks(pkgReader, extractHardLinkOptions)
 		if err != nil {
 			return err
@@ -298,13 +305,6 @@ type extractHardLinkOptions struct {
 // extractHardLinks iterates through the tarball a second time to extract the
 // hard links that were not extracted in the first pass.
 func extractHardLinks(pkgReader io.ReadSeeker, opts *extractHardLinkOptions) error {
-	offset, err := pkgReader.Seek(0, io.SeekStart)
-	if err != nil {
-		return err
-	}
-	if offset != 0 {
-		return fmt.Errorf("internal error: cannot seek to the beginning of the package")
-	}
 	dataReader, err := getDataReader(pkgReader)
 	if err != nil {
 		return err
