@@ -1478,6 +1478,270 @@ var slicerTests = []slicerTest{{
 		`,
 	},
 	error: `cannot find package "test-package" in archive\(s\)`,
+}, {
+	summary: "Valid hard link in two slices in the same package",
+	slices: []setup.SliceKey{
+		{"test-package", "slice1"},
+		{"test-package", "slice2"}},
+	pkgs: []*testutil.TestPackage{{
+		Name: "test-package",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			testutil.Reg(0644, "./file", "foo"),
+			testutil.Hrd(0644, "./hardlink", "./file"),
+		}),
+	}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+		package: test-package
+		slices:
+			slice1:
+				contents:
+					/file:
+					/hardlink:
+			slice2:
+				contents:
+					/hardlink:
+	`,
+	},
+	filesystem: map[string]string{
+		"/file":     "file 0644 2c26b46b <1>",
+		"/hardlink": "file 0644 2c26b46b <1>",
+	},
+	manifestPaths: map[string]string{
+		"/file":     "file 0644 2c26b46b <1> {test-package_slice1}",
+		"/hardlink": "file 0644 2c26b46b <1> {test-package_slice1,test-package_slice2}",
+	},
+}, {
+	summary: "Hard link entries can be extracted without extracting the regular file",
+	slices: []setup.SliceKey{
+		{"test-package", "myslice"}},
+	pkgs: []*testutil.TestPackage{{
+		Name: "test-package",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			testutil.Reg(0644, "./file", "foo"),
+			testutil.Hrd(0644, "./hardlink1", "./file"),
+			testutil.Hrd(0644, "./hardlink2", "./file"),
+		}),
+	}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/hardlink*:
+		`,
+	},
+	filesystem: map[string]string{
+		"/hardlink1": "file 0644 2c26b46b <1>",
+		"/hardlink2": "file 0644 2c26b46b <1>",
+	},
+	manifestPaths: map[string]string{
+		"/hardlink1": "file 0644 2c26b46b <1> {test-package_myslice}",
+		"/hardlink2": "file 0644 2c26b46b <1> {test-package_myslice}",
+	},
+}, {
+	summary: "Hard link identifier for different groups",
+	slices: []setup.SliceKey{
+		{"test-package", "myslice"}},
+	pkgs: []*testutil.TestPackage{{
+		Name: "test-package",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			testutil.Reg(0644, "./file1", "text for file1"),
+			testutil.Reg(0644, "./file2", "text for file2"),
+			testutil.Hrd(0644, "./hardlink1", "./file1"),
+			testutil.Hrd(0644, "./hardlink2", "./file2"),
+		}),
+	}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/**:
+		`,
+	},
+	filesystem: map[string]string{
+		"/file1":     "file 0644 df82bbbd <1>",
+		"/file2":     "file 0644 dcddda2e <2>",
+		"/hardlink1": "file 0644 df82bbbd <1>",
+		"/hardlink2": "file 0644 dcddda2e <2>",
+	},
+	manifestPaths: map[string]string{
+		"/file1":     "file 0644 df82bbbd <1> {test-package_myslice}",
+		"/file2":     "file 0644 dcddda2e <2> {test-package_myslice}",
+		"/hardlink1": "file 0644 df82bbbd <1> {test-package_myslice}",
+		"/hardlink2": "file 0644 dcddda2e <2> {test-package_myslice}",
+	},
+}, {
+	summary: "Single hard link entry can be extracted without regular file and no hard links are created",
+	slices: []setup.SliceKey{
+		{"test-package", "myslice"}},
+	pkgs: []*testutil.TestPackage{{
+		Name: "test-package",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			testutil.Reg(0644, "./file", "foo"),
+			testutil.Hrd(0644, "./hardlink", "./file"),
+		}),
+	}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/hardlink:
+		`,
+	},
+	filesystem: map[string]string{
+		"/hardlink": "file 0644 2c26b46b",
+	},
+	manifestPaths: map[string]string{
+		"/hardlink": "file 0644 2c26b46b {test-package_myslice}",
+	},
+}, {
+	summary: "Hard link to symlink does not follow symlink",
+	slices: []setup.SliceKey{
+		{"test-package", "myslice"}},
+	pkgs: []*testutil.TestPackage{{
+		Name: "test-package",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			testutil.Dir(0755, "./"),
+			testutil.Reg(0644, "./file", "foo"),
+			testutil.Lnk(0644, "./symlink", "./file"),
+			testutil.Hrd(0644, "./hardlink", "./symlink"),
+		}),
+	}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+					package: test-package
+					slices:
+						myslice:
+							contents:
+								/hardlink:
+								/symlink:
+				`,
+	},
+	filesystem: map[string]string{
+		"/hardlink": "symlink ./file <1>",
+		"/symlink":  "symlink ./file <1>",
+	},
+	manifestPaths: map[string]string{
+		"/symlink":  "symlink ./file <1> {test-package_myslice}",
+		"/hardlink": "symlink ./file <1> {test-package_myslice}",
+	},
+}, {
+	summary: "Hard link identifiers are unique across packages",
+	slices: []setup.SliceKey{
+		{"test-package1", "myslice"},
+		{"test-package2", "myslice"},
+	},
+	pkgs: []*testutil.TestPackage{{
+		Name: "test-package1",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			testutil.Reg(0644, "./file1", "foo"),
+			testutil.Hrd(0644, "./hardlink1", "./file1"),
+		}),
+	}, {
+		Name: "test-package2",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			testutil.Reg(0644, "./file2", "foo"),
+			testutil.Hrd(0644, "./hardlink2", "./file2"),
+		}),
+	}},
+	release: map[string]string{
+		"slices/mydir/test-package1.yaml": `
+			package: test-package1
+			slices:
+				myslice:
+					contents:
+						/file1:
+						/hardlink1:
+		`,
+		"slices/mydir/test-package2.yaml": `
+			package: test-package2
+			slices:
+				myslice:
+					contents:
+						/file2:
+						/hardlink2:
+		`,
+	},
+	filesystem: map[string]string{
+		"/file1":     "file 0644 2c26b46b <1>",
+		"/hardlink1": "file 0644 2c26b46b <1>",
+		"/file2":     "file 0644 2c26b46b <2>",
+		"/hardlink2": "file 0644 2c26b46b <2>",
+	},
+	manifestPaths: map[string]string{
+		"/file1":     "file 0644 2c26b46b <1> {test-package1_myslice}",
+		"/hardlink1": "file 0644 2c26b46b <1> {test-package1_myslice}",
+		"/file2":     "file 0644 2c26b46b <2> {test-package2_myslice}",
+		"/hardlink2": "file 0644 2c26b46b <2> {test-package2_myslice}",
+	},
+}, {
+	summary: "Mutations for hard links are forbidden",
+	slices: []setup.SliceKey{
+		{"test-package", "myslice"}},
+	pkgs: []*testutil.TestPackage{{
+		Name: "test-package",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			testutil.Reg(0644, "./file", "foo"),
+			testutil.Hrd(0644, "./hardlink", "./file"),
+		}),
+	}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/file:
+						/hardlink: {mutable: true}
+					mutate: |
+						content.write("/hardlink", "new content")
+		`,
+	},
+	error: `slice test-package_myslice: cannot mutate a hard link: /hardlink`,
+}, {
+	summary: "Hard links can be marked as mutable, but not mutated",
+	slices: []setup.SliceKey{
+		{"test-package", "myslice"}},
+	pkgs: []*testutil.TestPackage{{
+		Name: "test-package",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			testutil.Reg(0644, "./file", "foo"),
+			testutil.Hrd(0644, "./hardlink", "./file"),
+		}),
+	}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/file:
+						/hardlink: {mutable: true}
+		`,
+	},
+	filesystem: map[string]string{
+		"/file":     "file 0644 2c26b46b <1>",
+		"/hardlink": "file 0644 2c26b46b <1>",
+	},
+	manifestPaths: map[string]string{
+		"/file":     "file 0644 2c26b46b <1> {test-package_myslice}",
+		"/hardlink": "file 0644 2c26b46b <1> {test-package_myslice}",
+	},
 }}
 
 var defaultChiselYaml = `
@@ -1664,6 +1928,11 @@ func treeDumpManifestPaths(mfest *manifest.Manifest) (map[string]string, error) 
 			} else {
 				fsDump = fmt.Sprintf("file %s %s", path.Mode, path.SHA256[:8])
 			}
+		}
+
+		if path.Inode != 0 {
+			// Append <inode> to the end of the path dump.
+			fsDump = fmt.Sprintf("%s <%d>", fsDump, path.Inode)
 		}
 
 		// append {slice1, ..., sliceN} to the end of the path dump.
