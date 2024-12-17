@@ -25,11 +25,10 @@ type yamlRelease struct {
 	Format   string                 `yaml:"format"`
 	Archives map[string]yamlArchive `yaml:"archives"`
 	PubKeys  map[string]yamlPubKey  `yaml:"public-keys"`
-	// "v2-archives" is used for backwards compatibility with Chisel <= 1.0.0
-	// since it will be ignored. In new versions, it will be parsed with the new
-	// fields that break said compatibility, e.g. "pro" archives.
-	//
-	// Note: "archives" and "v2-archives" are merged together while parsing.
+	// "v2-archives" is used for backwards compatibility with Chisel <= 1.0.0,
+	// where it will be ignored. In new versions, it will be parsed with the new
+	// fields that break said compatibility (e.g. "pro" archives) and merged
+	// together with "archives".
 	V2Archives map[string]yamlArchive `yaml:"v2-archives"`
 }
 
