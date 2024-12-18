@@ -1,6 +1,23 @@
 name: Tests
 
 on:
+  workflow_call:
+    inputs:
+      repository:
+        description: 'Repository name (with owner) to clone'
+        required: true
+        type: string
+      ref:
+        description: 'The branch, tag or SHA to checkout'
+        required: true
+        type: string
+    outputs:
+      test-coverage-file:
+        description: 'The name of the coverage report file'
+        value: ${{ jobs.unit-tests.outputs.test-coverage-file }}
+      test-coverage-artifact:
+        description: 'The name used to upload the coverage file as a GH artifact'
+        value: ${{ jobs.unit-tests.outputs.test-coverage-artifact }}
   workflow_dispatch:
   push:
     paths-ignore:
@@ -14,9 +31,16 @@ jobs:
     name: Unit Tests
     env:
       TEST_COVERAGE_FILE: test-coverage.out
+      TEST_COVERAGE_ARTIFACT: chisel-test-coverage
       TEST_COVERAGE_HTML_FILE: test-coverage.html
+    outputs:
+      test-coverage-file: ${{ env.TEST_COVERAGE_FILE }}
+      test-coverage-artifact: ${{ env.TEST_COVERAGE_ARTIFACT }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_call' && inputs.ref || '' }}
+          repository: ${{ github.event_name == 'workflow_call' && inputs.repository || '' }}
 
       - uses: actions/setup-go@v3
         with:
@@ -36,13 +60,13 @@ jobs:
               -o=${TEST_COVERAGE_HTML_FILE}
           fi
 
-      - name: Upload HTML test coverage
-        uses: actions/upload-artifact@v3
+      - name: Upload test coverage
+        uses: actions/upload-artifact@v4
         if: always()
         continue-on-error: true
         with:
-          name: chisel-test-coverage.html
-          path: ./*.html
+          name: ${{ env.TEST_COVERAGE_ARTIFACT }}
+          path: ./test-coverage*
 
   real-archive-tests:
     # Do not change to newer releases as "fips" may not be available there.
