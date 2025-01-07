@@ -3,7 +3,7 @@ package testutil
 import (
 	"gopkg.in/check.v1"
 
-	"github.com/canonical/chisel/manifest"
+	"github.com/canonical/chisel/pkg/manifest"
 )
 
 type ManifestContents struct {

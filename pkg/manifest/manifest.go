@@ -6,7 +6,7 @@ import (
 	"slices"
 
 	"github.com/canonical/chisel/internal/setup"
-	"github.com/canonical/chisel/jsonwall"
+	"github.com/canonical/chisel/pkg/jsonwall"
 )
 
 const Schema = "1.0"

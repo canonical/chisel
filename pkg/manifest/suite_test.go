@@ -1,11 +1,11 @@
-package jsonwall_test
+package manifest_test
 
 import (
 	"testing"
 
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/chisel/jsonwall"
+	"github.com/canonical/chisel/pkg/manifest"
 )
 
 func Test(t *testing.T) { TestingT(t) }
@@ -15,11 +15,11 @@ type S struct{}
 var _ = Suite(&S{})
 
 func (s *S) SetUpTest(c *C) {
-	jsonwall.SetDebug(true)
-	jsonwall.SetLogger(c)
+	manifest.SetDebug(true)
+	manifest.SetLogger(c)
 }
 
 func (s *S) TearDownTest(c *C) {
-	jsonwall.SetDebug(false)
-	jsonwall.SetLogger(nil)
+	manifest.SetDebug(false)
+	manifest.SetLogger(nil)
 }
