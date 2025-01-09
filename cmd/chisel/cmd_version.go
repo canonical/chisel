@@ -10,7 +10,7 @@ import (
 
 var shortVersionHelp = "Show version details"
 var longVersionHelp = `
-Show the Chisel version and exit.
+Show the tool version and exit.
 `
 
 type cmdVersion struct{}
