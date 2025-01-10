@@ -18,7 +18,7 @@ import (
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/deb"
 	"github.com/canonical/chisel/internal/fsutil"
-	"github.com/canonical/chisel/internal/manifest"
+	"github.com/canonical/chisel/internal/manifestutil"
 	"github.com/canonical/chisel/internal/scripts"
 	"github.com/canonical/chisel/internal/setup"
 )
@@ -153,7 +153,7 @@ func Run(options *RunOptions) error {
 	// listed as until: mutate in all the slices that reference them.
 	knownPaths := map[string]pathData{}
 	addKnownPath(knownPaths, "/", pathData{})
-	report, err := manifest.NewReport(targetDir)
+	report, err := manifestutil.NewReport(targetDir)
 	if err != nil {
 		return fmt.Errorf("internal error: cannot create report: %w", err)
 	}
@@ -317,8 +317,8 @@ func Run(options *RunOptions) error {
 }
 
 func generateManifests(targetDir string, selection *setup.Selection,
-	report *manifest.Report, pkgInfos []*archive.PackageInfo) error {
-	manifestSlices := manifest.FindPaths(selection.Slices)
+	report *manifestutil.Report, pkgInfos []*archive.PackageInfo) error {
+	manifestSlices := manifestutil.FindPaths(selection.Slices)
 	if len(manifestSlices) == 0 {
 		// Nothing to do.
 		return nil
@@ -350,12 +350,12 @@ func generateManifests(targetDir string, selection *setup.Selection,
 		return err
 	}
 	defer w.Close()
-	writeOptions := &manifest.WriteOptions{
+	writeOptions := &manifestutil.WriteOptions{
 		PackageInfo: pkgInfos,
 		Selection:   selection.Slices,
 		Report:      report,
 	}
-	err = manifest.Write(writeOptions, w)
+	err = manifestutil.Write(writeOptions, w)
 	return err
 }
 

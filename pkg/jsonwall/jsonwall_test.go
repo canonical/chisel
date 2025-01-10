@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 package jsonwall_test
 
 import (
@@ -5,7 +6,7 @@ import (
 
 	"bytes"
 
-	"github.com/canonical/chisel/internal/jsonwall"
+	"github.com/canonical/chisel/pkg/jsonwall"
 )
 
 type DataType struct {
