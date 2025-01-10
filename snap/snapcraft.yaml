@@ -49,7 +49,7 @@ parts:
     after: [chisel]
 
 plugs:
-  pro-credentials:
+  etc-apt-auth-conf-d:
     interface: system-files
     read:
       - /etc/apt/auth.conf.d
@@ -61,4 +61,4 @@ apps:
     plugs:
       - network
       - home
-      - pro-credentials
+      - etc-apt-auth-conf-d
