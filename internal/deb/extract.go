@@ -225,6 +225,13 @@ func extractData(pkgReader io.ReadSeeker, options *ExtractOptions) error {
 			link := tarHeader.Linkname
 			if tarHeader.Typeflag == tar.TypeLink {
 				// A hard link requires the real path of the target file.
+				// TODO This path must be sanitized to prevent a crafted
+				// tarball from referring to content outside the target
+				// directory. This issue also affects targetPath, but it's more
+				// relevant here as this is importing external content into the
+				// target directory. This is not a more serious issue because
+				// these tarballs are signed official packages, but must be
+				// fixed regardless.
 				link = filepath.Join(options.TargetDir, link)
 			}
 
@@ -263,12 +270,9 @@ func extractData(pkgReader io.ReadSeeker, options *ExtractOptions) error {
 			ExtractOptions: options,
 			pendingLinks:   pendingHardLinks,
 		}
-		offset, err := pkgReader.Seek(0, io.SeekStart)
+		_, err := pkgReader.Seek(0, io.SeekStart)
 		if err != nil {
 			return err
-		}
-		if offset != 0 {
-			return fmt.Errorf("internal error: cannot seek to the beginning of the package")
 		}
 		err = extractHardLinks(pkgReader, extractHardLinkOptions)
 		if err != nil {
