@@ -7,7 +7,7 @@ shopt -s globstar
 
 # Check that the exported packages depend only on internal package that are
 # licensed Apache-2.0.
-deps=$(go list -deps ./pkg/* | grep "github.com/canonical/chisel/internal")
+deps=$(go list -deps -test ./pkg/* | grep "github.com/canonical/chisel/internal")
 for dep in $deps
 do
 	folder=$(echo "$dep" | grep -o "internal/.*")
