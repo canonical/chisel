@@ -10,7 +10,7 @@ import (
 
 var shortVersionHelp = "Show version details"
 var longVersionHelp = `
-The version command displays the versions of the running client and server.
+Show the tool version and exit.
 `
 
 type cmdVersion struct{}

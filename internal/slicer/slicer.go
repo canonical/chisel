@@ -32,8 +32,9 @@ type RunOptions struct {
 }
 
 type pathData struct {
-	until   setup.PathUntil
-	mutable bool
+	until    setup.PathUntil
+	mutable  bool
+	hardLink bool
 }
 
 type contentChecker struct {
@@ -43,6 +44,9 @@ type contentChecker struct {
 func (cc *contentChecker) checkMutable(path string) error {
 	if !cc.knownPaths[path].mutable {
 		return fmt.Errorf("cannot write file which is not mutable: %s", path)
+	}
+	if cc.knownPaths[path].hardLink {
+		return fmt.Errorf("cannot mutate a hard link: %s", path)
 	}
 	return nil
 }
@@ -134,7 +138,7 @@ func Run(options *RunOptions) error {
 	}
 
 	// Fetch all packages, using the selection order.
-	packages := make(map[string]io.ReadCloser)
+	packages := make(map[string]io.ReadSeekCloser)
 	var pkgInfos []*archive.PackageInfo
 	for _, slice := range options.Selection.Slices {
 		if packages[slice.Package] != nil {
@@ -205,7 +209,11 @@ func Run(options *RunOptions) error {
 		}
 
 		if inSliceContents {
-			data := pathData{mutable: mutable, until: until}
+			data := pathData{
+				mutable:  mutable,
+				until:    until,
+				hardLink: entry.Mode.IsRegular() && entry.Link != "",
+			}
 			addKnownPath(knownPaths, relPath, data)
 		}
 		return nil

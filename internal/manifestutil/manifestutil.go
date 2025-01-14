@@ -120,6 +120,7 @@ func manifestAddReport(dbw *jsonwall.DBWriter, report *Report) error {
 			FinalSHA256: entry.FinalSHA256,
 			Size:        uint64(entry.Size),
 			Link:        entry.Link,
+			Inode:       entry.Inode,
 		})
 		if err != nil {
 			return err
@@ -161,6 +162,7 @@ func fastValidate(options *WriteOptions) (err error) {
 		}
 		sliceExist[slice.String()] = true
 	}
+	hardLinkGroups := make(map[uint64][]*ReportEntry)
 	for _, entry := range options.Report.Entries {
 		err := validateReportEntry(&entry)
 		if err != nil {
@@ -171,7 +173,33 @@ func fastValidate(options *WriteOptions) (err error) {
 				return fmt.Errorf("path %q refers to missing slice %s", entry.Path, slice.String())
 			}
 		}
+		if entry.Inode != 0 {
+			// TODO remove the following line after upgrading to Go 1.22 or higher.
+			e := entry
+			hardLinkGroups[e.Inode] = append(hardLinkGroups[e.Inode], &e)
+		}
 	}
+	// Entries within a hard link group must have same content.
+	for id := 1; id <= len(hardLinkGroups); id++ {
+		entries, ok := hardLinkGroups[uint64(id)]
+		if !ok {
+			return fmt.Errorf("cannot find hard link id %d", id)
+		}
+		if len(entries) == 1 {
+			return fmt.Errorf("hard link group %d has only one path: %s", id, entries[0].Path)
+		}
+		sort.Slice(entries, func(i, j int) bool {
+			return entries[i].Path < entries[j].Path
+		})
+		e0 := entries[0]
+		for _, e := range entries[1:] {
+			if e.Link != e0.Link || unixPerm(e.Mode) != unixPerm(e0.Mode) || e.SHA256 != e0.SHA256 ||
+				e.Size != e0.Size || e.FinalSHA256 != e0.FinalSHA256 {
+				return fmt.Errorf("hard linked paths %q and %q have diverging contents", e0.Path, e.Path)
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -185,9 +213,6 @@ func validateReportEntry(entry *ReportEntry) (err error) {
 	switch entry.Mode & fs.ModeType {
 	case 0:
 		// Regular file.
-		if entry.Link != "" {
-			return fmt.Errorf("link set for regular file")
-		}
 	case fs.ModeDir:
 		if entry.Link != "" {
 			return fmt.Errorf("link set for directory")

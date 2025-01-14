@@ -40,12 +40,18 @@ var sampleFile = fsutil.Entry{
 	Link:   "",
 }
 
-var sampleLink = fsutil.Entry{
+var sampleSymlink = fsutil.Entry{
 	Path:   "/base/example-link",
-	Mode:   0777,
+	Mode:   fs.ModeSymlink | 0777,
 	SHA256: "example-file_hash",
 	Size:   5678,
 	Link:   "/base/example-file",
+}
+
+var sampleHardLink = fsutil.Entry{
+	Path: "/base/example-hard-link",
+	Mode: sampleFile.Mode,
+	Link: "/base/example-file",
 }
 
 var sampleFileMutated = fsutil.Entry{
@@ -104,11 +110,11 @@ var reportTests = []struct {
 		}},
 }, {
 	summary: "Regular file link",
-	add:     []sliceAndEntry{{entry: sampleLink, slice: oneSlice}},
+	add:     []sliceAndEntry{{entry: sampleSymlink, slice: oneSlice}},
 	expected: map[string]manifestutil.ReportEntry{
 		"/example-link": {
 			Path:   "/example-link",
-			Mode:   0777,
+			Mode:   fs.ModeSymlink | 0777,
 			SHA256: "example-file_hash",
 			Size:   5678,
 			Slices: map[*setup.Slice]bool{oneSlice: true},
@@ -192,16 +198,16 @@ var reportTests = []struct {
 }, {
 	summary: "Error for same path distinct link",
 	add: []sliceAndEntry{
-		{entry: sampleFile, slice: oneSlice},
+		{entry: sampleSymlink, slice: oneSlice},
 		{entry: fsutil.Entry{
-			Path:   sampleFile.Path,
-			Mode:   sampleFile.Mode,
-			SHA256: sampleFile.SHA256,
-			Size:   sampleFile.Size,
+			Path:   sampleSymlink.Path,
+			Mode:   sampleSymlink.Mode,
+			SHA256: sampleSymlink.SHA256,
+			Size:   sampleSymlink.Size,
 			Link:   "distinct link",
 		}, slice: oneSlice},
 	},
-	err: `path /example-file reported twice with diverging link: "distinct link" != ""`,
+	err: `path /example-link reported twice with diverging link: "distinct link" != "/base/example-file"`,
 }, {
 	summary: "Error for path outside root",
 	add: []sliceAndEntry{
@@ -267,6 +273,87 @@ var reportTests = []struct {
 	add:     []sliceAndEntry{{entry: sampleDir, slice: oneSlice}},
 	mutate:  []*fsutil.Entry{&sampleDir},
 	err:     `cannot mutate path in report: /example-dir/ is a directory`,
+}, {
+	summary: "Hard link to regular file",
+	add: []sliceAndEntry{
+		{entry: sampleFile, slice: oneSlice},
+		{entry: sampleHardLink, slice: oneSlice}},
+	expected: map[string]manifestutil.ReportEntry{
+		"/example-file": {
+			Path:   "/example-file",
+			Mode:   0777,
+			SHA256: "example-file_hash",
+			Size:   5678,
+			Slices: map[*setup.Slice]bool{oneSlice: true},
+			Inode:  1,
+		},
+		"/example-hard-link": {
+			Path:   "/example-hard-link",
+			Mode:   0777,
+			SHA256: "example-file_hash",
+			Size:   5678,
+			Slices: map[*setup.Slice]bool{oneSlice: true},
+			Inode:  1,
+		},
+	},
+}, {
+	summary: "Multiple hard links groups",
+	add: []sliceAndEntry{{
+		entry: sampleFile,
+		slice: oneSlice,
+	}, {
+		entry: sampleHardLink,
+		slice: oneSlice,
+	}, {
+		entry: fsutil.Entry{
+			Path:   "/base/another-file",
+			Mode:   0777,
+			SHA256: "another-file_hash",
+			Size:   5678,
+		},
+		slice: otherSlice,
+	}, {
+		entry: fsutil.Entry{
+			Path: "/base/another-hard-link",
+			Mode: 0777,
+			Link: "/base/another-file",
+		},
+		slice: otherSlice,
+	}},
+	expected: map[string]manifestutil.ReportEntry{
+		"/example-file": {
+			Path:   "/example-file",
+			Mode:   0777,
+			SHA256: "example-file_hash",
+			Size:   5678,
+			Slices: map[*setup.Slice]bool{oneSlice: true},
+			Inode:  1,
+		},
+		"/example-hard-link": {
+			Path:   "/example-hard-link",
+			Mode:   0777,
+			SHA256: "example-file_hash",
+			Size:   5678,
+			Slices: map[*setup.Slice]bool{oneSlice: true},
+			Inode:  1,
+		},
+		"/another-file": {
+			Path:   "/another-file",
+			Mode:   0777,
+			SHA256: "another-file_hash",
+			Size:   5678,
+			Slices: map[*setup.Slice]bool{otherSlice: true},
+			Inode:  2,
+		},
+		"/another-hard-link": {
+			Path:   "/another-hard-link",
+			Mode:   0777,
+			SHA256: "another-file_hash",
+			Size:   5678,
+			Slices: map[*setup.Slice]bool{otherSlice: true},
+			Inode:  2,
+		},
+	},
 }}
 
 func (s *S) TestReport(c *C) {

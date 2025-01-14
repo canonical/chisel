@@ -26,6 +26,11 @@ type yamlRelease struct {
 	Format   string                 `yaml:"format"`
 	Archives map[string]yamlArchive `yaml:"archives"`
 	PubKeys  map[string]yamlPubKey  `yaml:"public-keys"`
+	// "v2-archives" is used for backwards compatibility with Chisel <= 1.0.0,
+	// where it will be ignored. In new versions, it will be parsed with the new
+	// fields that break said compatibility (e.g. "pro" archives) and merged
+	// together with "archives".
+	V2Archives map[string]yamlArchive `yaml:"v2-archives"`
 }
 
 const (
@@ -162,7 +167,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 	if yamlVar.Format != "v1" {
 		return nil, fmt.Errorf("%s: unknown format %q", fileName, yamlVar.Format)
 	}
-	if len(yamlVar.Archives) == 0 {
+	if len(yamlVar.Archives)+len(yamlVar.V2Archives) == 0 {
 		return nil, fmt.Errorf("%s: no archives defined", fileName)
 	}
 
@@ -179,12 +184,24 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		pubKeys[keyName] = key
 	}
 
+	// Merge all archive definitions.
+	yamlArchives := make(map[string]yamlArchive, len(yamlVar.Archives)+len(yamlVar.V2Archives))
+	for archiveName, details := range yamlVar.Archives {
+		yamlArchives[archiveName] = details
+	}
+	for archiveName, details := range yamlVar.V2Archives {
+		if _, ok := yamlArchives[archiveName]; ok {
+			return nil, fmt.Errorf("%s: archive %q defined twice", fileName, archiveName)
+		}
+		yamlArchives[archiveName] = details
+	}
+
 	// For compatibility if there is a default archive set and priorities are
 	// not being used, we will revert back to the default archive behaviour.
 	hasPriority := false
 	var defaultArchive string
 	var archiveNoPriority string
-	for archiveName, details := range yamlVar.Archives {
+	for archiveName, details := range yamlArchives {
 		if details.Version == "" {
 			return nil, fmt.Errorf("%s: archive %q missing version field", fileName, archiveName)
 		}
@@ -244,7 +261,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		}
 	}
 	if (hasPriority && archiveNoPriority != "") ||
-		(!hasPriority && defaultArchive == "" && len(yamlVar.Archives) > 1) {
+		(!hasPriority && defaultArchive == "" && len(yamlArchives) > 1) {
 		return nil, fmt.Errorf("%s: archive %q is missing the priority setting", fileName, archiveNoPriority)
 	}
 	if defaultArchive != "" && !hasPriority {
@@ -252,7 +269,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		// negative priorities to all but the default one, which means all
 		// others will be ignored unless pinned.
 		var archiveNames []string
-		for archiveName := range yamlVar.Archives {
+		for archiveName := range yamlArchives {
 			archiveNames = append(archiveNames, archiveName)
 		}
 		// Make it deterministic.

@@ -107,7 +107,7 @@ func (s *Slice) String() string { return s.Package + "_" + s.Name }
 
 // Selection holds the required configuration to create a Build for a selection
 // of slices from a Release. It's still an abstract proposal in the sense that
-// the real information coming from pacakges is still unknown, so referenced
+// the real information coming from packages is still unknown, so referenced
 // paths could potentially be missing, for example.
 type Selection struct {
 	Release *Release

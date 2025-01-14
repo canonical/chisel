@@ -240,20 +240,6 @@ var generateManifestTests = []struct {
 	packageInfo: []*archive.PackageInfo{},
 	error:       `internal error: invalid manifest: slice package1_slice1 refers to missing package "package1"`,
 }, {
-	summary: "Invalid path: link set for regular file",
-	report: &manifestutil.Report{
-		Root: "/",
-		Entries: map[string]manifestutil.ReportEntry{
-			"/file": {
-				Path:   "/file",
-				Mode:   0456,
-				Slices: map[*setup.Slice]bool{slice1: true},
-				Link:   "something",
-			},
-		},
-	},
-	error: `internal error: invalid manifest: path "/file" has invalid options: link set for regular file`,
-}, {
 	summary: "Invalid path: slices is empty",
 	report: &manifestutil.Report{
 		Root: "/",
@@ -379,6 +365,129 @@ var generateManifestTests = []struct {
 		},
 	},
 	error: `internal error: invalid manifest: path "/dir" has invalid options: size set for directory`,
+}, {
+	summary:   "Basic hard link",
+	selection: []*setup.Slice{slice1},
+	report: &manifestutil.Report{
+		Root: "/",
+		Entries: map[string]manifestutil.ReportEntry{
+			"/file": {
+				Path:        "/file",
+				Mode:        0456,
+				SHA256:      "hash",
+				Size:        1234,
+				Slices:      map[*setup.Slice]bool{slice1: true},
+				FinalSHA256: "final-hash",
+				Inode:       1,
+			},
+			"/hardlink": {
+				Path:        "/hardlink",
+				Mode:        0456,
+				SHA256:      "hash",
+				Size:        1234,
+				Slices:      map[*setup.Slice]bool{slice1: true},
+				FinalSHA256: "final-hash",
+				Inode:       1,
+			},
+		},
+	},
+	packageInfo: []*archive.PackageInfo{{
+		Name:    "package1",
+		Version: "v1",
+		Arch:    "a1",
+		SHA256:  "s1",
+	}},
+	expected: &testutil.ManifestContents{
+		Paths: []*manifest.Path{{
+			Kind:        "path",
+			Path:        "/file",
+			Mode:        "0456",
+			Slices:      []string{"package1_slice1"},
+			Size:        1234,
+			SHA256:      "hash",
+			FinalSHA256: "final-hash",
+			Inode:       1,
+		}, {
+			Kind:        "path",
+			Path:        "/hardlink",
+			Mode:        "0456",
+			Slices:      []string{"package1_slice1"},
+			Size:        1234,
+			SHA256:      "hash",
+			FinalSHA256: "final-hash",
+			Inode:       1,
+		}},
+		Packages: []*manifest.Package{{
+			Kind:    "package",
+			Name:    "package1",
+			Version: "v1",
+			Digest:  "s1",
+			Arch:    "a1",
+		}},
+		Slices: []*manifest.Slice{{
+			Kind: "slice",
+			Name: "package1_slice1",
+		}},
+		Contents: []*manifest.Content{{
+			Kind:  "content",
+			Slice: "package1_slice1",
+			Path:  "/file",
+		}, {
+			Kind:  "content",
+			Slice: "package1_slice1",
+			Path:  "/hardlink",
+		}},
+	},
+}, {
+	summary: "Skipped hard link id",
+	report: &manifestutil.Report{
+		Root: "/",
+		Entries: map[string]manifestutil.ReportEntry{
+			"/file": {
+				Path:   "/file",
+				Slices: map[*setup.Slice]bool{slice1: true},
+				Inode:  2,
+			},
+		},
+	},
+	error: `internal error: invalid manifest: cannot find hard link id 1`,
+}, {
+	summary: "Hard link group has only one path",
+	report: &manifestutil.Report{
+		Root: "/",
+		Entries: map[string]manifestutil.ReportEntry{
+			"/file": {
+				Path:   "/file",
+				Slices: map[*setup.Slice]bool{slice1: true},
+				Inode:  1,
+			},
+		},
+	},
+	error: `internal error: invalid manifest: hard link group 1 has only one path: /file`,
+}, {
+	summary: "Hard linked paths differ",
+	report: &manifestutil.Report{
+		Root: "/",
+		Entries: map[string]manifestutil.ReportEntry{
+			"/file": {
+				Path:   "/file",
+				Mode:   0456,
+				SHA256: "hash",
+				Size:   1234,
+				Slices: map[*setup.Slice]bool{slice1: true},
+				Inode:  1,
+			},
+			"/hardlink": {
+				Path:   "/hardlink",
+				Mode:   0456,
+				SHA256: "different-hash",
+				Size:   1234,
+				Slices: map[*setup.Slice]bool{slice1: true},
+				Inode:  1,
+			},
+		},
+	},
+	error: `internal error: invalid manifest: hard linked paths "/file" and "/hardlink" have diverging contents`,
 }, {
 	summary: "Invalid package: missing name",
 	packageInfo: []*archive.PackageInfo{{

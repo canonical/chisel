@@ -35,6 +35,7 @@ type Path struct {
 	FinalSHA256 string   `json:"final_sha256,omitempty"`
 	Size        uint64   `json:"size,omitempty"`
 	Link        string   `json:"link,omitempty"`
+	Inode       uint64   `json:"inode,omitempty"`
 }
 
 type Content struct {
