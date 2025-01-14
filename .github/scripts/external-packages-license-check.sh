@@ -9,7 +9,7 @@ check_file() {
 	# Empty license or different from Apache-2.0.
 	if [ -z "$license" ] || [ -n "$(echo $license | grep -v '// SPDX-License-Identifier: Apache-2.0')" ]
 	then
-		echo "wrong license in file:" $file
+		echo "Wrong license in file:" $file
 		exit 1
 	fi
 }
@@ -26,6 +26,7 @@ done
 deps=$(go list -deps -test ./pkg/* | grep "github.com/canonical/chisel/internal")
 for dep in $deps
 do
+	echo "Checking dependency:" $dep
 	folder=$(echo "$dep" | grep -o "internal/.*")
 	[ -d "$folder" ]
 	files=$folder/**/**.go
