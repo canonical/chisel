@@ -13,6 +13,7 @@ import (
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/deb"
 	"github.com/canonical/chisel/internal/pgputil"
+	"github.com/canonical/chisel/internal/util"
 )
 
 func (p *Package) MarshalYAML() (interface{}, error) {
@@ -286,7 +287,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 
 	zeroPath := yamlPath{}
 	for sliceName, yamlSlice := range yamlPkg.Slices {
-		match := snameExp.FindStringSubmatch(sliceName)
+		match := util.SnameExp.FindStringSubmatch(sliceName)
 		if match == nil {
 			return nil, fmt.Errorf("invalid slice name %q in %s", sliceName, pkgPath)
 		}
@@ -299,7 +300,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 			},
 		}
 		for _, refName := range yamlPkg.Essential {
-			sliceKey, err := ParseSliceKey(refName)
+			sliceKey, err := util.ParseSliceKey(refName)
 			if err != nil {
 				return nil, fmt.Errorf("package %q has invalid essential slice reference: %q", pkgName, refName)
 			}
@@ -313,7 +314,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 			slice.Essential = append(slice.Essential, sliceKey)
 		}
 		for _, refName := range yamlSlice.Essential {
-			sliceKey, err := ParseSliceKey(refName)
+			sliceKey, err := util.ParseSliceKey(refName)
 			if err != nil {
 				return nil, fmt.Errorf("package %q has invalid essential slice reference: %q", pkgName, refName)
 			}

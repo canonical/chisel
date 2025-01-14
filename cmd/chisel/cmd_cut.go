@@ -7,6 +7,7 @@ import (
 	"github.com/canonical/chisel/internal/cache"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/slicer"
+	"github.com/canonical/chisel/internal/util"
 )
 
 var shortCutHelp = "Cut a tree with selected slices"
@@ -43,9 +44,9 @@ func (cmd *cmdCut) Execute(args []string) error {
 		return ErrExtraArgs
 	}
 
-	sliceKeys := make([]setup.SliceKey, len(cmd.Positional.SliceRefs))
+	sliceKeys := make([]util.SliceKey, len(cmd.Positional.SliceRefs))
 	for i, sliceRef := range cmd.Positional.SliceRefs {
-		sliceKey, err := setup.ParseSliceKey(sliceRef)
+		sliceKey, err := util.ParseSliceKey(sliceRef)
 		if err != nil {
 			return err
 		}

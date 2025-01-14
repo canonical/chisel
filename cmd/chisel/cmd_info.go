@@ -9,6 +9,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/canonical/chisel/internal/setup"
+	"github.com/canonical/chisel/internal/util"
 )
 
 var shortInfoHelp = "Show information about package slices"
@@ -82,7 +83,7 @@ func selectPackageSlices(release *setup.Release, queries []string) (packages []*
 	pkgSlices := make(map[string][]string)
 	allPkgSlices := make(map[string]bool)
 
-	sliceExists := func(key setup.SliceKey) bool {
+	sliceExists := func(key util.SliceKey) bool {
 		pkg, ok := release.Packages[key.Package]
 		if !ok {
 			return false
@@ -93,7 +94,7 @@ func selectPackageSlices(release *setup.Release, queries []string) (packages []*
 	for _, query := range queries {
 		var pkg, slice string
 		if strings.Contains(query, "_") {
-			key, err := setup.ParseSliceKey(query)
+			key, err := util.ParseSliceKey(query)
 			if err != nil || !sliceExists(key) {
 				notFound = append(notFound, query)
 				continue

@@ -11,6 +11,7 @@ import (
 
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/testutil"
+	"github.com/canonical/chisel/internal/util"
 )
 
 var (
@@ -23,7 +24,7 @@ type setupTest struct {
 	input     map[string]string
 	release   *setup.Release
 	relerror  string
-	selslices []setup.SliceKey
+	selslices []util.SliceKey
 	selection *setup.Selection
 	selerror  string
 }
@@ -143,7 +144,7 @@ var setupTests = []setupTest{{
 					"myslice2": {
 						Package: "mypkg",
 						Name:    "myslice2",
-						Essential: []setup.SliceKey{
+						Essential: []util.SliceKey{
 							{"mypkg", "myslice1"},
 						},
 						Contents: map[string]setup.PathInfo{
@@ -283,7 +284,7 @@ var setupTests = []setupTest{{
 				myslice2: {essential: [mypkg1_myslice1]}
 		`,
 	},
-	selslices: []setup.SliceKey{{"mypkg1", "myslice1"}},
+	selslices: []util.SliceKey{{"mypkg1", "myslice1"}},
 	selection: &setup.Selection{
 		Slices: []*setup.Slice{{
 			Package: "mypkg1",
@@ -306,7 +307,7 @@ var setupTests = []setupTest{{
 				myslice2: {essential: [mypkg1_myslice1]}
 		`,
 	},
-	selslices: []setup.SliceKey{{"mypkg2", "myslice2"}},
+	selslices: []util.SliceKey{{"mypkg2", "myslice2"}},
 	selection: &setup.Selection{
 		Slices: []*setup.Slice{{
 			Package: "mypkg1",
@@ -314,7 +315,7 @@ var setupTests = []setupTest{{
 		}, {
 			Package: "mypkg2",
 			Name:    "myslice2",
-			Essential: []setup.SliceKey{
+			Essential: []util.SliceKey{
 				{"mypkg1", "myslice1"},
 			},
 		}},
@@ -345,7 +346,7 @@ var setupTests = []setupTest{{
 						/path3: {symlink: /link}
 		`,
 	},
-	selslices: []setup.SliceKey{{"mypkg1", "myslice1"}, {"mypkg1", "myslice2"}, {"mypkg2", "myslice1"}},
+	selslices: []util.SliceKey{{"mypkg1", "myslice1"}, {"mypkg1", "myslice2"}, {"mypkg2", "myslice1"}},
 }, {
 	summary: "Conflicting paths across slices",
 	input: map[string]string{
@@ -1199,7 +1200,7 @@ var setupTests = []setupTest{{
 					"slice1": {
 						Package: "mypkg",
 						Name:    "slice1",
-						Essential: []setup.SliceKey{
+						Essential: []util.SliceKey{
 							{"mypkg", "slice2"},
 						},
 					},
@@ -1210,7 +1211,7 @@ var setupTests = []setupTest{{
 					"slice3": {
 						Package: "mypkg",
 						Name:    "slice3",
-						Essential: []setup.SliceKey{
+						Essential: []util.SliceKey{
 							{"mypkg", "slice2"},
 							{"mypkg", "slice1"},
 							{"mypkg", "slice4"},
@@ -1219,7 +1220,7 @@ var setupTests = []setupTest{{
 					"slice4": {
 						Package: "mypkg",
 						Name:    "slice4",
-						Essential: []setup.SliceKey{
+						Essential: []util.SliceKey{
 							{"mypkg", "slice2"},
 						},
 					},
@@ -1266,7 +1267,7 @@ var setupTests = []setupTest{{
 					"slice1": {
 						Package: "mypkg",
 						Name:    "slice1",
-						Essential: []setup.SliceKey{
+						Essential: []util.SliceKey{
 							{"myotherpkg", "slice2"},
 							{"mypkg", "slice2"},
 							{"myotherpkg", "slice1"},
@@ -1275,7 +1276,7 @@ var setupTests = []setupTest{{
 					"slice2": {
 						Package: "mypkg",
 						Name:    "slice2",
-						Essential: []setup.SliceKey{
+						Essential: []util.SliceKey{
 							{"myotherpkg", "slice2"},
 						},
 					},
@@ -1451,7 +1452,7 @@ var setupTests = []setupTest{{
 			},
 		},
 	},
-	selslices: []setup.SliceKey{{"mypkg", "myslice"}},
+	selslices: []util.SliceKey{{"mypkg", "myslice"}},
 	selection: &setup.Selection{
 		Slices: []*setup.Slice{{
 			Package: "mypkg",
@@ -1498,7 +1499,7 @@ var setupTests = []setupTest{{
 			},
 		},
 	},
-	selslices: []setup.SliceKey{{"mypkg", "myslice"}},
+	selslices: []util.SliceKey{{"mypkg", "myslice"}},
 	selerror:  `slice mypkg_myslice has invalid 'generate' for path /dir/\*\*: "foo"`,
 }, {
 	summary: "Paths with generate: manifest must have trailing /**",
@@ -2151,93 +2152,6 @@ func (s *S) TestPackageYAMLFormat(c *C) {
 			expected := string(testutil.Reindent(test.expected[pkg.Path]))
 			c.Assert(strings.TrimSpace(string(data)), Equals, strings.TrimSpace(expected))
 		}
-	}
-}
-
-var sliceKeyTests = []struct {
-	input    string
-	expected setup.SliceKey
-	err      string
-}{{
-	input:    "foo_bar",
-	expected: setup.SliceKey{Package: "foo", Slice: "bar"},
-}, {
-	input:    "fo_bar",
-	expected: setup.SliceKey{Package: "fo", Slice: "bar"},
-}, {
-	input:    "1234_bar",
-	expected: setup.SliceKey{Package: "1234", Slice: "bar"},
-}, {
-	input:    "foo1.1-2-3_bar",
-	expected: setup.SliceKey{Package: "foo1.1-2-3", Slice: "bar"},
-}, {
-	input:    "foo-pkg_dashed-slice-name",
-	expected: setup.SliceKey{Package: "foo-pkg", Slice: "dashed-slice-name"},
-}, {
-	input:    "foo+_bar",
-	expected: setup.SliceKey{Package: "foo+", Slice: "bar"},
-}, {
-	input:    "foo_slice123",
-	expected: setup.SliceKey{Package: "foo", Slice: "slice123"},
-}, {
-	input:    "g++_bins",
-	expected: setup.SliceKey{Package: "g++", Slice: "bins"},
-}, {
-	input:    "a+_bar",
-	expected: setup.SliceKey{Package: "a+", Slice: "bar"},
-}, {
-	input:    "a._bar",
-	expected: setup.SliceKey{Package: "a.", Slice: "bar"},
-}, {
-	input: "foo_ba",
-	err:   `invalid slice reference: "foo_ba"`,
-}, {
-	input: "f_bar",
-	err:   `invalid slice reference: "f_bar"`,
-}, {
-	input: "1234_789",
-	err:   `invalid slice reference: "1234_789"`,
-}, {
-	input: "foo_bar.x.y",
-	err:   `invalid slice reference: "foo_bar.x.y"`,
-}, {
-	input: "foo-_-bar",
-	err:   `invalid slice reference: "foo-_-bar"`,
-}, {
-	input: "foo_bar-",
-	err:   `invalid slice reference: "foo_bar-"`,
-}, {
-	input: "foo-_bar",
-	err:   `invalid slice reference: "foo-_bar"`,
-}, {
-	input: "-foo_bar",
-	err:   `invalid slice reference: "-foo_bar"`,
-}, {
-	input: "foo_bar_baz",
-	err:   `invalid slice reference: "foo_bar_baz"`,
-}, {
-	input: "a-_bar",
-	err:   `invalid slice reference: "a-_bar"`,
-}, {
-	input: "+++_bar",
-	err:   `invalid slice reference: "\+\+\+_bar"`,
-}, {
-	input: "..._bar",
-	err:   `invalid slice reference: "\.\.\._bar"`,
-}, {
-	input: "white space_no-whitespace",
-	err:   `invalid slice reference: "white space_no-whitespace"`,
-}}
-
-func (s *S) TestParseSliceKey(c *C) {
-	for _, test := range sliceKeyTests {
-		key, err := setup.ParseSliceKey(test.input)
-		if test.err != "" {
-			c.Assert(err, ErrorMatches, test.err)
-			continue
-		}
-		c.Assert(err, IsNil)
-		c.Assert(key, DeepEquals, test.expected)
 	}
 }
 

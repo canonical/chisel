@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"golang.org/x/crypto/openpgp/packet"
 
 	"github.com/canonical/chisel/internal/strdist"
+	"github.com/canonical/chisel/internal/util"
 )
 
 // Release is a collection of package slices targeting a particular
@@ -43,7 +43,7 @@ type Package struct {
 type Slice struct {
 	Package   string
 	Name      string
-	Essential []SliceKey
+	Essential []util.SliceKey
 	Contents  map[string]PathInfo
 	Scripts   SliceScripts
 }
@@ -103,13 +103,7 @@ func (pi *PathInfo) SameContent(other *PathInfo) bool {
 		pi.Generate == other.Generate)
 }
 
-type SliceKey struct {
-	Package string
-	Slice   string
-}
-
-func (s *Slice) String() string   { return s.Package + "_" + s.Name }
-func (s SliceKey) String() string { return s.Package + "_" + s.Slice }
+func (s *Slice) String() string { return s.Package + "_" + s.Name }
 
 // Selection holds the required configuration to create a Build for a selection
 // of slices from a Release. It's still an abstract proposal in the sense that
@@ -145,7 +139,7 @@ func ReadRelease(dir string) (*Release, error) {
 }
 
 func (r *Release) validate() error {
-	keys := []SliceKey(nil)
+	keys := []util.SliceKey(nil)
 
 	// Check for info conflicts and prepare for following checks. A conflict
 	// means that two slices attempt to extract different files or directories
@@ -162,7 +156,7 @@ func (r *Release) validate() error {
 	globs := make(map[string]*Slice)
 	for _, pkg := range r.Packages {
 		for _, new := range pkg.Slices {
-			keys = append(keys, SliceKey{pkg.Name, new.Name})
+			keys = append(keys, util.SliceKey{pkg.Name, new.Name})
 			for newPath, newInfo := range new.Contents {
 				if old, ok := paths[newPath]; ok {
 					oldInfo := old.Contents[newPath]
@@ -243,7 +237,7 @@ func (r *Release) validate() error {
 	return nil
 }
 
-func order(pkgs map[string]*Package, keys []SliceKey) ([]SliceKey, error) {
+func order(pkgs map[string]*Package, keys []util.SliceKey) ([]util.SliceKey, error) {
 
 	// Preprocess the list to improve error messages.
 	for _, key := range keys {
@@ -256,9 +250,9 @@ func order(pkgs map[string]*Package, keys []SliceKey) ([]SliceKey, error) {
 
 	// Collect all relevant package slices.
 	successors := map[string][]string{}
-	pending := append([]SliceKey(nil), keys...)
+	pending := append([]util.SliceKey(nil), keys...)
 
-	seen := make(map[SliceKey]bool)
+	seen := make(map[util.SliceKey]bool)
 	for i := 0; i < len(pending); i++ {
 		key := pending[i]
 		if seen[key] {
@@ -281,34 +275,17 @@ func order(pkgs map[string]*Package, keys []SliceKey) ([]SliceKey, error) {
 	}
 
 	// Sort them up.
-	var order []SliceKey
+	var order []util.SliceKey
 	for _, names := range tarjanSort(successors) {
 		if len(names) > 1 {
 			return nil, fmt.Errorf("essential loop detected: %s", strings.Join(names, ", "))
 		}
 		name := names[0]
 		dot := strings.IndexByte(name, '_')
-		order = append(order, SliceKey{name[:dot], name[dot+1:]})
+		order = append(order, util.SliceKey{name[:dot], name[dot+1:]})
 	}
 
 	return order, nil
-}
-
-// fnameExp matches the slice definition file basename.
-var fnameExp = regexp.MustCompile(`^([a-z0-9](?:-?[.a-z0-9+]){1,})\.yaml$`)
-
-// snameExp matches only the slice name, without the leading package name.
-var snameExp = regexp.MustCompile(`^([a-z](?:-?[a-z0-9]){2,})$`)
-
-// knameExp matches the slice full name in pkg_slice format.
-var knameExp = regexp.MustCompile(`^([a-z0-9](?:-?[.a-z0-9+]){1,})_([a-z](?:-?[a-z0-9]){2,})$`)
-
-func ParseSliceKey(sliceKey string) (SliceKey, error) {
-	match := knameExp.FindStringSubmatch(sliceKey)
-	if match == nil {
-		return SliceKey{}, fmt.Errorf("invalid slice reference: %q", sliceKey)
-	}
-	return SliceKey{match[1], match[2]}, nil
 }
 
 func readRelease(baseDir string) (*Release, error) {
@@ -346,7 +323,7 @@ func readSlices(release *Release, baseDir, dirName string) error {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".yaml") {
 			continue
 		}
-		match := fnameExp.FindStringSubmatch(entry.Name())
+		match := util.FnameExp.FindStringSubmatch(entry.Name())
 		if match == nil {
 			return fmt.Errorf("invalid slice definition filename: %q", entry.Name())
 		}
@@ -377,7 +354,7 @@ func stripBase(baseDir, path string) string {
 	return strings.TrimPrefix(path, baseDir+string(filepath.Separator))
 }
 
-func Select(release *Release, slices []SliceKey) (*Selection, error) {
+func Select(release *Release, slices []util.SliceKey) (*Selection, error) {
 	logf("Selecting slices...")
 
 	selection := &Selection{
