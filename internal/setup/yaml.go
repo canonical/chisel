@@ -10,10 +10,10 @@ import (
 	"golang.org/x/crypto/openpgp/packet"
 	"gopkg.in/yaml.v3"
 
+	"github.com/canonical/chisel/internal/apache/util"
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/deb"
 	"github.com/canonical/chisel/internal/pgputil"
-	"github.com/canonical/chisel/internal/util"
 )
 
 func (p *Package) MarshalYAML() (interface{}, error) {

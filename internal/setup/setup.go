@@ -8,8 +8,8 @@ import (
 
 	"golang.org/x/crypto/openpgp/packet"
 
+	"github.com/canonical/chisel/internal/apache/util"
 	"github.com/canonical/chisel/internal/strdist"
-	"github.com/canonical/chisel/internal/util"
 )
 
 // Release is a collection of package slices targeting a particular

@@ -7,7 +7,7 @@ import (
 	"io"
 	"slices"
 
-	"github.com/canonical/chisel/internal/util"
+	"github.com/canonical/chisel/internal/apache/util"
 	"github.com/canonical/chisel/pkg/jsonwall"
 )
 

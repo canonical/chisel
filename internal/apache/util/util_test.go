@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
+
 package util_test
 
 import (
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/chisel/internal/util"
+	"github.com/canonical/chisel/internal/apache/util"
 )
 
 var sliceKeyTests = []struct {

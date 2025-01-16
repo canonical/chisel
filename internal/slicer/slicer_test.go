@@ -14,11 +14,11 @@ import (
 	"github.com/klauspost/compress/zstd"
 	. "gopkg.in/check.v1"
 
+	"github.com/canonical/chisel/internal/apache/util"
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/slicer"
 	"github.com/canonical/chisel/internal/testutil"
-	"github.com/canonical/chisel/internal/util"
 	"github.com/canonical/chisel/pkg/manifest"
 )
 

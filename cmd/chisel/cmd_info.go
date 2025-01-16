@@ -8,8 +8,8 @@ import (
 	"github.com/jessevdk/go-flags"
 	"gopkg.in/yaml.v3"
 
+	"github.com/canonical/chisel/internal/apache/util"
 	"github.com/canonical/chisel/internal/setup"
-	"github.com/canonical/chisel/internal/util"
 )
 
 var shortInfoHelp = "Show information about package slices"

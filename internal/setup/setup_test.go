@@ -9,9 +9,9 @@ import (
 	. "gopkg.in/check.v1"
 	"gopkg.in/yaml.v3"
 
+	"github.com/canonical/chisel/internal/apache/util"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/testutil"
-	"github.com/canonical/chisel/internal/util"
 )
 
 var (
