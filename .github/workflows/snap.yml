@@ -27,7 +27,7 @@ jobs:
         uses: snapcore/action-build@v1
 
       - name: Attach chisel snap to GH workflow execution
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.build-chisel-snap.outputs.snap }}
           path: ${{ steps.build-chisel-snap.outputs.snap }}
@@ -40,7 +40,7 @@ jobs:
       chisel-version: ${{ steps.install-chisel-snap.outputs.version }}
 
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: ${{ needs.build.outputs.chisel-snap }}
 
