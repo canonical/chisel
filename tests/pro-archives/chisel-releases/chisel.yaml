@@ -1,6 +1,6 @@
 format: v1
 
-archives:
+v2-archives:
   ubuntu:
     version: 24.04
     pro: esm-infra

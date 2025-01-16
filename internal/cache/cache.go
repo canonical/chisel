@@ -132,7 +132,7 @@ func (c *Cache) Write(digest string, data []byte) error {
 	return err2
 }
 
-func (c *Cache) Open(digest string) (io.ReadCloser, error) {
+func (c *Cache) Open(digest string) (io.ReadSeekCloser, error) {
 	if c.Dir == "" || digest == "" {
 		return nil, MissErr
 	}

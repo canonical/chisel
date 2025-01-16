@@ -9,8 +9,8 @@ require (
 	github.com/klauspost/compress v1.15.4
 	github.com/ulikunitz/xz v0.5.10
 	go.starlark.net v0.0.0-20220328144851-d1966c6b9fcd
-	golang.org/x/crypto v0.21.0
-	golang.org/x/term v0.18.0
+	golang.org/x/crypto v0.32.0
+	golang.org/x/term v0.28.0
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -18,5 +18,5 @@ require (
 require (
 	github.com/kr/pretty v0.2.1 // indirect
 	github.com/kr/text v0.1.0 // indirect
-	golang.org/x/sys v0.18.0 // indirect
+	golang.org/x/sys v0.29.0 // indirect
 )
