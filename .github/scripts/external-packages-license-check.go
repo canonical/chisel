@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-var licenseRegexp *regexp.Regexp = regexp.MustCompile("// SPDX-License-Identifier: ([^\\s]*)")
+var licenseRegexp = regexp.MustCompile("// SPDX-License-Identifier: ([^\\s]*)$")
 
 func fileLicense(path string) (string, error) {
 	file, err := os.Open(path)
@@ -52,12 +52,13 @@ func checkDirLicense(path string, valid string) error {
 }
 
 func run() error {
-	exportedPkgsDir := "pkg"
-	err := checkDirLicense(exportedPkgsDir, "Apache-2.0")
+	// Check external packages licenses.
+	err := checkDirLicense("pkg", "Apache-2.0")
 	if err != nil {
 		return fmt.Errorf("invalid license in exported package: %s", err)
 	}
 
+	// Check the internal dependencies of the external packages.
 	output, err := exec.Command("sh", "-c", "go list -deps -test ./pkg/*").Output()
 	if err != nil {
 		return err
