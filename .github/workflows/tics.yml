@@ -103,7 +103,7 @@ jobs:
       - run: go install honnef.co/go/tools/cmd/staticcheck@latest
 
       - name: Run TiCS client analysis
-        uses: tiobe/tics-github-action@v34429-pull_request_target
+        uses: tiobe/tics-github-action@v3
         if: github.event_name == 'pull_request_target'
         with:
           mode: 'client'
@@ -115,7 +115,7 @@ jobs:
           installTics: true
 
       - name: Run TiCS server analysis
-        uses: tiobe/tics-github-action@34429-pull_request_target
+        uses: tiobe/tics-github-action@v3
         if: github.event_name != 'pull_request_target'
         with:
           mode: 'qserver'
