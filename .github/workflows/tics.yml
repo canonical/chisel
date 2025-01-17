@@ -6,7 +6,7 @@ on:
     branches: [main]
   # Running on pull_request_target instead of pull_request because this workflow
   # uses secrets, and thus we need to ensure it runs under this project's code base.
-  pull_request:
+  pull_request_target:
     branches: [main]
   schedule:
     - cron: '0 10 * * *'
@@ -55,7 +55,7 @@ jobs:
 
       - name: Check changed paths in PR
         id: changed-paths
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request_target'
         uses: dorny/paths-filter@v3
         with:
           filters: |
@@ -63,9 +63,10 @@ jobs:
               - "**/*"
           list-files: csv
 
-      - id: get-pr-filelist
+      - id: get-filelist
+        name: List of files to analyze
         run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]
+          if [[ "${{ github.event_name }}" == "pull_request_target" ]]
           then
               echo "${{ steps.changed-paths.outputs.any_files }}" | tr "," "\n" > ${TICS_FILELIST}
           else
@@ -86,6 +87,8 @@ jobs:
         env:
           CGO_ENABLED: "0"
       
+      # Get the coverage file produced by the unit tests workflow and get it
+      # ready for TiCS.
       - name: Prepare cobertura XML results
         env:
           TICS_COVERAGE_FOLDER: ".coverage"
@@ -100,8 +103,8 @@ jobs:
       - run: go install honnef.co/go/tools/cmd/staticcheck@latest
 
       - name: Run TiCS client analysis
-        uses: tiobe/tics-github-action@v3
-        if: github.event_name == 'pull_request'
+        uses: tiobe/tics-github-action@v34429-pull_request_target
+        if: github.event_name == 'pull_request_target'
         with:
           mode: 'client'
           codetype: 'TESTCODE'
@@ -112,8 +115,8 @@ jobs:
           installTics: true
 
       - name: Run TiCS server analysis
-        uses: tiobe/tics-github-action@v3
-        if: github.event_name != 'pull_request'
+        uses: tiobe/tics-github-action@34429-pull_request_target
+        if: github.event_name != 'pull_request_target'
         with:
           mode: 'qserver'
           codetype: 'PRODUCTION'
