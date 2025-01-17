@@ -17,6 +17,7 @@ import (
 // Hook up check.v1 into the "go test" runner
 func Test(t *testing.T) { TestingT(t) }
 
+// Hook up check.v1 into the "go test" runner
 type BaseChiselSuite struct {
 	testutil.BaseTest
 	stdin    *bytes.Buffer

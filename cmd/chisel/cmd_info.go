@@ -11,6 +11,7 @@ import (
 	"github.com/canonical/chisel/internal/setup"
 )
 
+// TODO Add --format flag
 var shortInfoHelp = "Show information about package slices"
 var longInfoHelp = `
 The info command shows detailed information about package slices.
