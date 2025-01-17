@@ -17,7 +17,9 @@ issues:
 source-code: https://github.com/canonical/chisel
 license: AGPL-3.0
 adopt-info: chisel-release-data
-contact: security@ubuntu.com
+contact:
+  - rocks@canonical.com
+  - security@ubuntu.com
 
 base: core22
 confinement: strict
