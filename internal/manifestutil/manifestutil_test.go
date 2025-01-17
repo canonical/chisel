@@ -7,7 +7,7 @@ import (
 
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/chisel/internal/apache/testutil"
+	"github.com/canonical/chisel/internal/apachetestutil"
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/manifestutil"
 	"github.com/canonical/chisel/internal/setup"
@@ -120,7 +120,7 @@ var generateManifestTests = []struct {
 	report      *manifestutil.Report
 	packageInfo []*archive.PackageInfo
 	selection   []*setup.Slice
-	expected    *testutil.ManifestContents
+	expected    *apachetestutil.ManifestContents
 	error       string
 }{{
 	summary:   "Basic",
@@ -155,7 +155,7 @@ var generateManifestTests = []struct {
 		Arch:    "a2",
 		SHA256:  "s2",
 	}},
-	expected: &testutil.ManifestContents{
+	expected: &apachetestutil.ManifestContents{
 		Paths: []*manifest.Path{{
 			Kind:        "path",
 			Path:        "/file",
@@ -397,7 +397,7 @@ var generateManifestTests = []struct {
 		Arch:    "a1",
 		SHA256:  "s1",
 	}},
-	expected: &testutil.ManifestContents{
+	expected: &apachetestutil.ManifestContents{
 		Paths: []*manifest.Path{{
 			Kind:        "path",
 			Path:        "/file",
@@ -553,7 +553,7 @@ func (s *S) TestGenerateManifests(c *C) {
 		c.Assert(err, IsNil)
 		err = manifest.Validate(mfest)
 		c.Assert(err, IsNil)
-		contents := testutil.DumpManifestContents(c, mfest)
+		contents := apachetestutil.DumpManifestContents(c, mfest)
 		c.Assert(contents, DeepEquals, test.expected)
 	}
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/jessevdk/go-flags"
 	"gopkg.in/yaml.v3"
 
-	"github.com/canonical/chisel/internal/apache/util"
+	"github.com/canonical/chisel/internal/apacheutil"
 	"github.com/canonical/chisel/internal/setup"
 )
 
@@ -83,7 +83,7 @@ func selectPackageSlices(release *setup.Release, queries []string) (packages []*
 	pkgSlices := make(map[string][]string)
 	allPkgSlices := make(map[string]bool)
 
-	sliceExists := func(key util.SliceKey) bool {
+	sliceExists := func(key apacheutil.SliceKey) bool {
 		pkg, ok := release.Packages[key.Package]
 		if !ok {
 			return false
@@ -94,7 +94,7 @@ func selectPackageSlices(release *setup.Release, queries []string) (packages []*
 	for _, query := range queries {
 		var pkg, slice string
 		if strings.Contains(query, "_") {
-			key, err := util.ParseSliceKey(query)
+			key, err := apacheutil.ParseSliceKey(query)
 			if err != nil || !sliceExists(key) {
 				notFound = append(notFound, query)
 				continue

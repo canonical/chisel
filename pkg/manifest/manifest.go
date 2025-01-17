@@ -7,7 +7,7 @@ import (
 	"io"
 	"slices"
 
-	"github.com/canonical/chisel/internal/apache/util"
+	"github.com/canonical/chisel/internal/apacheutil"
 	"github.com/canonical/chisel/pkg/jsonwall"
 )
 
@@ -107,7 +107,7 @@ func Validate(manifest *Manifest) (err error) {
 
 	sliceExist := map[string]bool{}
 	err = manifest.IterateSlices("", func(slice *Slice) error {
-		sk, err := util.ParseSliceKey(slice.Name)
+		sk, err := apacheutil.ParseSliceKey(slice.Name)
 		if err != nil {
 			return err
 		}

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-package testutil
+package apachetestutil
 
 import (
 	"gopkg.in/check.v1"

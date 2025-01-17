@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/jessevdk/go-flags"
 
-	"github.com/canonical/chisel/internal/apache/util"
+	"github.com/canonical/chisel/internal/apacheutil"
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/cache"
 	"github.com/canonical/chisel/internal/setup"
@@ -44,9 +44,9 @@ func (cmd *cmdCut) Execute(args []string) error {
 		return ErrExtraArgs
 	}
 
-	sliceKeys := make([]util.SliceKey, len(cmd.Positional.SliceRefs))
+	sliceKeys := make([]apacheutil.SliceKey, len(cmd.Positional.SliceRefs))
 	for i, sliceRef := range cmd.Positional.SliceRefs {
-		sliceKey, err := util.ParseSliceKey(sliceRef)
+		sliceKey, err := apacheutil.ParseSliceKey(sliceRef)
 		if err != nil {
 			return err
 		}

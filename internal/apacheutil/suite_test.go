@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
-package util_test
+package apacheutil_test
 
 import (
 	"testing"
 
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/chisel/internal/apache/util"
+	"github.com/canonical/chisel/internal/apacheutil"
 )
 
 func Test(t *testing.T) { TestingT(t) }
@@ -17,11 +17,11 @@ type S struct{}
 var _ = Suite(&S{})
 
 func (s *S) SetUpTest(c *C) {
-	util.SetDebug(true)
-	util.SetLogger(c)
+	apacheutil.SetDebug(true)
+	apacheutil.SetLogger(c)
 }
 
 func (s *S) TearDownTest(c *C) {
-	util.SetDebug(false)
-	util.SetLogger(nil)
+	apacheutil.SetDebug(false)
+	apacheutil.SetLogger(nil)
 }

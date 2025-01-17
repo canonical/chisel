@@ -8,7 +8,7 @@ import (
 
 	"golang.org/x/crypto/openpgp/packet"
 
-	"github.com/canonical/chisel/internal/apache/util"
+	"github.com/canonical/chisel/internal/apacheutil"
 	"github.com/canonical/chisel/internal/strdist"
 )
 
@@ -43,7 +43,7 @@ type Package struct {
 type Slice struct {
 	Package   string
 	Name      string
-	Essential []util.SliceKey
+	Essential []apacheutil.SliceKey
 	Contents  map[string]PathInfo
 	Scripts   SliceScripts
 }
@@ -139,7 +139,7 @@ func ReadRelease(dir string) (*Release, error) {
 }
 
 func (r *Release) validate() error {
-	keys := []util.SliceKey(nil)
+	keys := []apacheutil.SliceKey(nil)
 
 	// Check for info conflicts and prepare for following checks. A conflict
 	// means that two slices attempt to extract different files or directories
@@ -156,7 +156,7 @@ func (r *Release) validate() error {
 	globs := make(map[string]*Slice)
 	for _, pkg := range r.Packages {
 		for _, new := range pkg.Slices {
-			keys = append(keys, util.SliceKey{pkg.Name, new.Name})
+			keys = append(keys, apacheutil.SliceKey{pkg.Name, new.Name})
 			for newPath, newInfo := range new.Contents {
 				if old, ok := paths[newPath]; ok {
 					oldInfo := old.Contents[newPath]
@@ -237,7 +237,7 @@ func (r *Release) validate() error {
 	return nil
 }
 
-func order(pkgs map[string]*Package, keys []util.SliceKey) ([]util.SliceKey, error) {
+func order(pkgs map[string]*Package, keys []apacheutil.SliceKey) ([]apacheutil.SliceKey, error) {
 
 	// Preprocess the list to improve error messages.
 	for _, key := range keys {
@@ -250,9 +250,9 @@ func order(pkgs map[string]*Package, keys []util.SliceKey) ([]util.SliceKey, err
 
 	// Collect all relevant package slices.
 	successors := map[string][]string{}
-	pending := append([]util.SliceKey(nil), keys...)
+	pending := append([]apacheutil.SliceKey(nil), keys...)
 
-	seen := make(map[util.SliceKey]bool)
+	seen := make(map[apacheutil.SliceKey]bool)
 	for i := 0; i < len(pending); i++ {
 		key := pending[i]
 		if seen[key] {
@@ -275,14 +275,14 @@ func order(pkgs map[string]*Package, keys []util.SliceKey) ([]util.SliceKey, err
 	}
 
 	// Sort them up.
-	var order []util.SliceKey
+	var order []apacheutil.SliceKey
 	for _, names := range tarjanSort(successors) {
 		if len(names) > 1 {
 			return nil, fmt.Errorf("essential loop detected: %s", strings.Join(names, ", "))
 		}
 		name := names[0]
 		dot := strings.IndexByte(name, '_')
-		order = append(order, util.SliceKey{name[:dot], name[dot+1:]})
+		order = append(order, apacheutil.SliceKey{name[:dot], name[dot+1:]})
 	}
 
 	return order, nil
@@ -323,7 +323,7 @@ func readSlices(release *Release, baseDir, dirName string) error {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".yaml") {
 			continue
 		}
-		match := util.FnameExp.FindStringSubmatch(entry.Name())
+		match := apacheutil.FnameExp.FindStringSubmatch(entry.Name())
 		if match == nil {
 			return fmt.Errorf("invalid slice definition filename: %q", entry.Name())
 		}
@@ -354,7 +354,7 @@ func stripBase(baseDir, path string) string {
 	return strings.TrimPrefix(path, baseDir+string(filepath.Separator))
 }
 
-func Select(release *Release, slices []util.SliceKey) (*Selection, error) {
+func Select(release *Release, slices []apacheutil.SliceKey) (*Selection, error) {
 	logf("Selecting slices...")
 
 	selection := &Selection{

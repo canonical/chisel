@@ -1,47 +1,47 @@
 // SPDX-License-Identifier: Apache-2.0
 
-package util_test
+package apacheutil_test
 
 import (
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/chisel/internal/apache/util"
+	"github.com/canonical/chisel/internal/apacheutil"
 )
 
 var sliceKeyTests = []struct {
 	input    string
-	expected util.SliceKey
+	expected apacheutil.SliceKey
 	err      string
 }{{
 	input:    "foo_bar",
-	expected: util.SliceKey{Package: "foo", Slice: "bar"},
+	expected: apacheutil.SliceKey{Package: "foo", Slice: "bar"},
 }, {
 	input:    "fo_bar",
-	expected: util.SliceKey{Package: "fo", Slice: "bar"},
+	expected: apacheutil.SliceKey{Package: "fo", Slice: "bar"},
 }, {
 	input:    "1234_bar",
-	expected: util.SliceKey{Package: "1234", Slice: "bar"},
+	expected: apacheutil.SliceKey{Package: "1234", Slice: "bar"},
 }, {
 	input:    "foo1.1-2-3_bar",
-	expected: util.SliceKey{Package: "foo1.1-2-3", Slice: "bar"},
+	expected: apacheutil.SliceKey{Package: "foo1.1-2-3", Slice: "bar"},
 }, {
 	input:    "foo-pkg_dashed-slice-name",
-	expected: util.SliceKey{Package: "foo-pkg", Slice: "dashed-slice-name"},
+	expected: apacheutil.SliceKey{Package: "foo-pkg", Slice: "dashed-slice-name"},
 }, {
 	input:    "foo+_bar",
-	expected: util.SliceKey{Package: "foo+", Slice: "bar"},
+	expected: apacheutil.SliceKey{Package: "foo+", Slice: "bar"},
 }, {
 	input:    "foo_slice123",
-	expected: util.SliceKey{Package: "foo", Slice: "slice123"},
+	expected: apacheutil.SliceKey{Package: "foo", Slice: "slice123"},
 }, {
 	input:    "g++_bins",
-	expected: util.SliceKey{Package: "g++", Slice: "bins"},
+	expected: apacheutil.SliceKey{Package: "g++", Slice: "bins"},
 }, {
 	input:    "a+_bar",
-	expected: util.SliceKey{Package: "a+", Slice: "bar"},
+	expected: apacheutil.SliceKey{Package: "a+", Slice: "bar"},
 }, {
 	input:    "a._bar",
-	expected: util.SliceKey{Package: "a.", Slice: "bar"},
+	expected: apacheutil.SliceKey{Package: "a.", Slice: "bar"},
 }, {
 	input: "foo_ba",
 	err:   `invalid slice reference: "foo_ba"`,
@@ -85,7 +85,7 @@ var sliceKeyTests = []struct {
 
 func (s *S) TestParseSliceKey(c *C) {
 	for _, test := range sliceKeyTests {
-		key, err := util.ParseSliceKey(test.input)
+		key, err := apacheutil.ParseSliceKey(test.input)
 		if test.err != "" {
 			c.Assert(err, ErrorMatches, test.err)
 			continue

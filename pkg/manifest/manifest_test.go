@@ -10,14 +10,14 @@ import (
 
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/chisel/internal/apache/testutil"
+	"github.com/canonical/chisel/internal/apachetestutil"
 	"github.com/canonical/chisel/pkg/manifest"
 )
 
 var readManifestTests = []struct {
 	summary   string
 	input     string
-	mfest     *testutil.ManifestContents
+	mfest     *apachetestutil.ManifestContents
 	valError  string
 	readError string
 }{{
@@ -43,7 +43,7 @@ var readManifestTests = []struct {
 		{"kind":"slice","name":"pkg1_myslice"}
 		{"kind":"slice","name":"pkg2_myotherslice"}
 	`,
-	mfest: &testutil.ManifestContents{
+	mfest: &apachetestutil.ManifestContents{
 		Paths: []*manifest.Path{
 			{Kind: "path", Path: "/dir/file", Mode: "0644", Slices: []string{"pkg1_myslice"}, SHA256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", FinalSHA256: "8067926c032c090867013d14fb0eb21ae858344f62ad07086fd32375845c91a6", Size: 0x15, Link: ""},
 			{Kind: "path", Path: "/dir/file2", Mode: "0644", Slices: []string{"pkg1_myslice"}, SHA256: "b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c", Size: 0x03, Link: "", Inode: 0x01},
@@ -168,7 +168,7 @@ func (s *S) TestManifestReadValidate(c *C) {
 		}
 		c.Assert(err, IsNil)
 		if test.mfest != nil {
-			c.Assert(testutil.DumpManifestContents(c, mfest), DeepEquals, test.mfest)
+			c.Assert(apachetestutil.DumpManifestContents(c, mfest), DeepEquals, test.mfest)
 		}
 	}
 }
