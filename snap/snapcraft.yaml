@@ -14,10 +14,10 @@ description: |
 issues:
   - https://github.com/canonical/chisel/issues
   - https://github.com/Canonical/chisel/security/advisories
-  - security@ubuntu.com
 source-code: https://github.com/canonical/chisel
 license: AGPL-3.0
 adopt-info: chisel-release-data
+contact: security@ubuntu.com
 
 base: core22
 confinement: strict
