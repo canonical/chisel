@@ -1,0 +1,74 @@
+name: Performance
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        version:
+          - name: base
+            sha: ${{ github.event.pull_request.base.sha }}
+          - name: head
+            sha: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.version.sha }}
+
+      - uses: actions/setup-go@v4
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Build
+        run: |
+          go build -o ${{ matrix.version.name }} ./cmd/chisel
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.version.name }}
+          path: ${{ matrix.version.name }}
+
+
+  benchmark-info:
+    runs-on: ubuntu-22.04
+    needs: build
+    name: Benchmark chisel info (24.04)
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Download base
+        uses: actions/download-artifact@v3
+        with:
+          name: base
+
+      - name: Download head
+        uses: actions/download-artifact@v3
+        with:
+          name: head
+
+      - name: Download chisel-releases
+        uses: actions/checkout@v4
+        with:
+          repository: canonical/chisel-releases
+          ref: ubuntu-24.04
+          path: chisel-releases
+
+      - name: Install hyperfine
+        run: sudo apt-get install -y hyperfine
+
+      - name: Run benchmark
+        id: benchmark
+        run: |
+          msg_file="$(mktemp)"
+          echo "msg_file=$msg_file" >> $GITHUB_OUTPUT
+          chmod +x base head
+          hyperfine --export-markdown "$msg_file" "./base info --release ./chisel-releases 'python3.12_core'" -n "BASE" "./head info --release ./chisel-releases 'python3.12_core'" -n "HEAD"
+
+      - name: Post message to PR
+        uses: mshick/add-pr-comment@v2
+        with:
+          message-path: ${{ steps.benchmark.outputs.msg_file }}
