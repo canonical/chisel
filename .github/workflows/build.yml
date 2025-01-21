@@ -102,7 +102,7 @@ jobs:
           echo "ARCHIVE_FILE_SHA384=${ARCHIVE_FILE_SHA384}" >>$GITHUB_OUTPUT
 
       - name: Upload archive as Actions artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.archive.outputs.ARCHIVE_FILE }}
           path: |
