@@ -11,10 +11,15 @@ description: |
   This snap can only install the slices in a location inside the
   user $HOME directory i.e. the --root option in "cut" command
   should have a location inside the user $HOME directory.
-issues: https://github.com/canonical/chisel/issues
+issues:
+  - https://github.com/canonical/chisel/issues
+  - https://github.com/Canonical/chisel/security/advisories
 source-code: https://github.com/canonical/chisel
 license: AGPL-3.0
 adopt-info: chisel-release-data
+contact:
+  - rocks@canonical.com
+  - security@ubuntu.com
 
 base: core22
 confinement: strict
