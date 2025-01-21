@@ -271,6 +271,24 @@ var createTests = []createTest{{
 	result: map[string]string{
 		"/bar": "symlink foo",
 	},
+}, {
+	summary: "Cannot create file outside of Root",
+	options: fsutil.CreateOptions{
+		Root: "/root",
+		Path: "../file",
+		Mode: 0666,
+		Data: bytes.NewBufferString("hijacking system file"),
+	},
+	error: `cannot create path /file outside of root /root`,
+}, {
+	summary: "Hardlink cannot escape Root",
+	options: fsutil.CreateOptions{
+		Root: "/root",
+		Path: "/system-file",
+		Link: "/etc/group",
+		Mode: 0666,
+	},
+	error: `invalid hardlink /root/system-file target: /etc/group is outside the root /root`,
 }}
 
 func (s *S) TestCreate(c *C) {
@@ -288,7 +306,9 @@ func (s *S) TestCreate(c *C) {
 		c.Logf("Options: %v", test.options)
 		dir := c.MkDir()
 		options := test.options
-		options.Path = filepath.Join(dir, options.Path)
+		if options.Root == "" {
+			options.Root = dir
+		}
 		if test.hackopt != nil {
 			test.hackopt(c, dir, &options)
 		}
@@ -374,6 +394,14 @@ var createWriterTests = []createWriterTest{{
 		MakeParents: false,
 	},
 	error: `open /[a-z0-9\-\/]*/foo/bar: no such file or directory`,
+}, {
+	options: fsutil.CreateOptions{
+		Root:        "/root",
+		Path:        "../file",
+		Mode:        0644,
+		MakeParents: true,
+	},
+	error: `cannot create path /file outside of root /root`,
 }}
 
 func (s *S) TestCreateWriter(c *C) {
@@ -393,7 +421,9 @@ func (s *S) TestCreateWriter(c *C) {
 			test.hackdir(c, dir)
 		}
 		options := test.options
-		options.Path = filepath.Join(dir, options.Path)
+		if test.options.Root == "" {
+			options.Root = dir
+		}
 		writer, entry, err := fsutil.CreateWriter(&options)
 		if test.error != "" {
 			c.Assert(err, ErrorMatches, test.error)
@@ -404,7 +434,7 @@ func (s *S) TestCreateWriter(c *C) {
 		// Hash and Size are only set when the writer is closed.
 		_, err = writer.Write(test.data)
 		c.Assert(err, IsNil)
-		c.Assert(entry.Path, Equals, options.Path)
+		c.Assert(entry.Path, Equals, filepath.Clean(filepath.Join(options.Root, options.Path)))
 		c.Assert(entry.Mode, Equals, options.Mode)
 		c.Assert(entry.SHA256, Equals, "")
 		c.Assert(entry.Size, Equals, 0)

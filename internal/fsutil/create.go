@@ -9,9 +9,13 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type CreateOptions struct {
+	// Root defaults to "/" if empty.
+	Root string
+	// Path is relative to Root.
 	Path string
 	Mode fs.FileMode
 	Data io.Reader
@@ -45,6 +49,14 @@ func Create(options *CreateOptions) (*Entry, error) {
 	optsCopy.Data = rp
 	o := &optsCopy
 
+	if o.Root == "" {
+		o.Root = "/"
+	}
+	o.Path = filepath.Clean(filepath.Join(o.Root, o.Path))
+	if !strings.HasPrefix(o.Path, o.Root) {
+		return nil, fmt.Errorf("cannot create path %s outside of root %s", o.Path, o.Root)
+	}
+
 	var err error
 	var hash string
 	if o.MakeParents {
@@ -56,6 +68,12 @@ func Create(options *CreateOptions) (*Entry, error) {
 	switch o.Mode & fs.ModeType {
 	case 0:
 		if o.Link != "" {
+			o.Link = filepath.Clean(o.Link)
+			if filepath.IsAbs(o.Link) {
+				if !strings.HasPrefix(o.Link, o.Root) {
+					return nil, fmt.Errorf("invalid hardlink %s target: %s is outside the root %s", o.Path, o.Link, o.Root)
+				}
+			}
 			err = createHardLink(o)
 		} else {
 			err = createFile(o)
@@ -108,21 +126,32 @@ func Create(options *CreateOptions) (*Entry, error) {
 // information recorded in Entry. The Hash and Size attributes are set on
 // calling Close() on the Writer.
 func CreateWriter(options *CreateOptions) (io.WriteCloser, *Entry, error) {
-	if !options.Mode.IsRegular() {
-		return nil, nil, fmt.Errorf("unsupported file type: %s", options.Path)
+	optsCopy := *options
+	o := &optsCopy
+
+	if o.Root == "" {
+		o.Root = "/"
 	}
-	if options.MakeParents {
-		if err := os.MkdirAll(filepath.Dir(options.Path), 0755); err != nil {
+	o.Path = filepath.Clean(filepath.Join(o.Root, o.Path))
+	if !strings.HasPrefix(o.Path, o.Root) {
+		return nil, nil, fmt.Errorf("cannot create path %s outside of root %s", o.Path, o.Root)
+	}
+	if !o.Mode.IsRegular() {
+		return nil, nil, fmt.Errorf("unsupported file type: %s", o.Path)
+	}
+	if o.MakeParents {
+		if err := os.MkdirAll(filepath.Dir(o.Path), 0755); err != nil {
 			return nil, nil, err
 		}
 	}
-	file, err := os.OpenFile(options.Path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, options.Mode)
+
+	file, err := os.OpenFile(o.Path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, o.Mode)
 	if err != nil {
 		return nil, nil, err
 	}
 	entry := &Entry{
-		Path: options.Path,
-		Mode: options.Mode,
+		Path: o.Path,
+		Mode: o.Mode,
 	}
 	wp := &writerProxy{
 		entry: entry,
