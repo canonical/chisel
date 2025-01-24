@@ -163,9 +163,13 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s: cannot parse release definition: %v", fileName, err)
 	}
-	if yamlVar.Format != "v1" {
+	if yamlVar.Format != "v1" && yamlVar.Format != "v2" {
 		return nil, fmt.Errorf("%s: unknown format %q", fileName, yamlVar.Format)
 	}
+	if yamlVar.Format != "v1" && len(yamlVar.V2Archives) > 0 {
+		return nil, fmt.Errorf("%s: v2-archives is deprecated since format v2", fileName)
+	}
+
 	if len(yamlVar.Archives)+len(yamlVar.V2Archives) == 0 {
 		return nil, fmt.Errorf("%s: no archives defined", fileName)
 	}
@@ -201,6 +205,9 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 	var defaultArchive string
 	var archiveNoPriority string
 	for archiveName, details := range yamlArchives {
+		if yamlVar.Format != "v1" && details.Default {
+			return nil, fmt.Errorf("%s: archive %q has 'default' field which is deprecated since format v2", fileName, archiveName)
+		}
 		if details.Version == "" {
 			return nil, fmt.Errorf("%s: archive %q missing version field", fileName, archiveName)
 		}
