@@ -46,7 +46,10 @@ backends:
           password: ubuntu
 
 prepare: |
-  apt install -y golang git
+  apt install -y git wget
+  wget https://go.dev/dl/go1.23.5.linux-$(dpkg --print-architecture).tar.gz
+  tar -xf go1.23.5.linux-$(dpkg --print-architecture).tar.gz -C /usr/local
+  export PATH=$PATH:/usr/local/go/bin
   go build -buildvcs=false ./cmd/chisel/
   mv chisel /usr/local/bin
 
