@@ -53,13 +53,13 @@ func checkDirLicense(path string, valid string) error {
 
 func run() error {
 	// Check external packages licenses.
-	err := checkDirLicense("pkg", "Apache-2.0")
+	err := checkDirLicense("public", "Apache-2.0")
 	if err != nil {
 		return fmt.Errorf("invalid license in exported package: %s", err)
 	}
 
 	// Check the internal dependencies of the external packages.
-	output, err := exec.Command("sh", "-c", "go list -deps -test ./pkg/*").Output()
+	output, err := exec.Command("sh", "-c", "go list -deps -test ./public/*").Output()
 	if err != nil {
 		return err
 	}

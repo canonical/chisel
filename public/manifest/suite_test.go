@@ -7,7 +7,7 @@ import (
 
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/chisel/pkg/manifest"
+	"github.com/canonical/chisel/public/manifest"
 )
 
 func Test(t *testing.T) { TestingT(t) }

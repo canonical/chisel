@@ -11,7 +11,7 @@ import (
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/manifestutil"
 	"github.com/canonical/chisel/internal/setup"
-	"github.com/canonical/chisel/pkg/manifest"
+	"github.com/canonical/chisel/public/manifest"
 )
 
 var findPathsTests = []struct {

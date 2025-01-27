@@ -10,8 +10,8 @@ import (
 
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/setup"
-	"github.com/canonical/chisel/pkg/jsonwall"
-	"github.com/canonical/chisel/pkg/manifest"
+	"github.com/canonical/chisel/public/jsonwall"
+	"github.com/canonical/chisel/public/manifest"
 )
 
 const DefaultFilename = "manifest.wall"
