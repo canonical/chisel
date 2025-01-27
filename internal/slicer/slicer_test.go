@@ -15,10 +15,11 @@ import (
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/chisel/internal/archive"
-	"github.com/canonical/chisel/internal/manifest"
+	"github.com/canonical/chisel/internal/manifestutil"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/slicer"
 	"github.com/canonical/chisel/internal/testutil"
+	"github.com/canonical/chisel/public/manifest"
 )
 
 var (
@@ -1971,7 +1972,7 @@ func readManifest(c *C, targetDir, manifestPath string) *manifest.Manifest {
 	defer r.Close()
 	mfest, err := manifest.Read(r)
 	c.Assert(err, IsNil)
-	err = manifest.Validate(mfest)
+	err = manifestutil.Validate(mfest)
 	c.Assert(err, IsNil)
 
 	// Assert that the mode of the manifest.wall file matches the one recorded

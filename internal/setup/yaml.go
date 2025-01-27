@@ -10,6 +10,7 @@ import (
 	"golang.org/x/crypto/openpgp/packet"
 	"gopkg.in/yaml.v3"
 
+	"github.com/canonical/chisel/internal/apacheutil"
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/deb"
 	"github.com/canonical/chisel/internal/pgputil"
@@ -303,7 +304,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 
 	zeroPath := yamlPath{}
 	for sliceName, yamlSlice := range yamlPkg.Slices {
-		match := snameExp.FindStringSubmatch(sliceName)
+		match := apacheutil.SnameExp.FindStringSubmatch(sliceName)
 		if match == nil {
 			return nil, fmt.Errorf("invalid slice name %q in %s", sliceName, pkgPath)
 		}

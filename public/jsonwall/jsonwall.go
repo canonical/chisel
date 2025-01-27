@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Package jsonwall provides an interface to work with database files in the simple
 // "jsonwall" format, which consists of a text file with one JSON object per line,
 // where both the individual JSON fields and the lines themselves are sorted to

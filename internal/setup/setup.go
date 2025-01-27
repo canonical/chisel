@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"golang.org/x/crypto/openpgp/packet"
 
+	"github.com/canonical/chisel/internal/apacheutil"
 	"github.com/canonical/chisel/internal/strdist"
 )
 
@@ -103,13 +103,13 @@ func (pi *PathInfo) SameContent(other *PathInfo) bool {
 		pi.Generate == other.Generate)
 }
 
-type SliceKey struct {
-	Package string
-	Slice   string
+type SliceKey = apacheutil.SliceKey
+
+func ParseSliceKey(sliceKey string) (SliceKey, error) {
+	return apacheutil.ParseSliceKey(sliceKey)
 }
 
-func (s *Slice) String() string   { return s.Package + "_" + s.Name }
-func (s SliceKey) String() string { return s.Package + "_" + s.Slice }
+func (s *Slice) String() string { return s.Package + "_" + s.Name }
 
 // Selection holds the required configuration to create a Build for a selection
 // of slices from a Release. It's still an abstract proposal in the sense that
@@ -294,23 +294,6 @@ func order(pkgs map[string]*Package, keys []SliceKey) ([]SliceKey, error) {
 	return order, nil
 }
 
-// fnameExp matches the slice definition file basename.
-var fnameExp = regexp.MustCompile(`^([a-z0-9](?:-?[.a-z0-9+]){1,})\.yaml$`)
-
-// snameExp matches only the slice name, without the leading package name.
-var snameExp = regexp.MustCompile(`^([a-z](?:-?[a-z0-9]){2,})$`)
-
-// knameExp matches the slice full name in pkg_slice format.
-var knameExp = regexp.MustCompile(`^([a-z0-9](?:-?[.a-z0-9+]){1,})_([a-z](?:-?[a-z0-9]){2,})$`)
-
-func ParseSliceKey(sliceKey string) (SliceKey, error) {
-	match := knameExp.FindStringSubmatch(sliceKey)
-	if match == nil {
-		return SliceKey{}, fmt.Errorf("invalid slice reference: %q", sliceKey)
-	}
-	return SliceKey{match[1], match[2]}, nil
-}
-
 func readRelease(baseDir string) (*Release, error) {
 	baseDir = filepath.Clean(baseDir)
 	filePath := filepath.Join(baseDir, "chisel.yaml")
@@ -346,7 +329,7 @@ func readSlices(release *Release, baseDir, dirName string) error {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".yaml") {
 			continue
 		}
-		match := fnameExp.FindStringSubmatch(entry.Name())
+		match := apacheutil.FnameExp.FindStringSubmatch(entry.Name())
 		if match == nil {
 			return fmt.Errorf("invalid slice definition filename: %q", entry.Name())
 		}

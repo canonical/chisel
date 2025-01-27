@@ -1,4 +1,4 @@
-package manifest
+package manifestutil
 
 import (
 	"fmt"
@@ -9,161 +9,14 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/canonical/chisel/internal/apacheutil"
 	"github.com/canonical/chisel/internal/archive"
-	"github.com/canonical/chisel/internal/jsonwall"
 	"github.com/canonical/chisel/internal/setup"
+	"github.com/canonical/chisel/public/jsonwall"
+	"github.com/canonical/chisel/public/manifest"
 )
 
-const Schema = "1.0"
 const DefaultFilename = "manifest.wall"
-
-type Package struct {
-	Kind    string `json:"kind"`
-	Name    string `json:"name,omitempty"`
-	Version string `json:"version,omitempty"`
-	Digest  string `json:"sha256,omitempty"`
-	Arch    string `json:"arch,omitempty"`
-}
-
-type Slice struct {
-	Kind string `json:"kind"`
-	Name string `json:"name,omitempty"`
-}
-
-type Path struct {
-	Kind        string   `json:"kind"`
-	Path        string   `json:"path,omitempty"`
-	Mode        string   `json:"mode,omitempty"`
-	Slices      []string `json:"slices,omitempty"`
-	SHA256      string   `json:"sha256,omitempty"`
-	FinalSHA256 string   `json:"final_sha256,omitempty"`
-	Size        uint64   `json:"size,omitempty"`
-	Link        string   `json:"link,omitempty"`
-	Inode       uint64   `json:"inode,omitempty"`
-}
-
-type Content struct {
-	Kind  string `json:"kind"`
-	Slice string `json:"slice,omitempty"`
-	Path  string `json:"path,omitempty"`
-}
-
-type Manifest struct {
-	db *jsonwall.DB
-}
-
-// Read loads a Manifest without performing any validation. The data is assumed
-// to be both valid jsonwall and a valid Manifest (see Validate).
-func Read(reader io.Reader) (manifest *Manifest, err error) {
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("cannot read manifest: %s", err)
-		}
-	}()
-
-	db, err := jsonwall.ReadDB(reader)
-	if err != nil {
-		return nil, err
-	}
-	mfestSchema := db.Schema()
-	if mfestSchema != Schema {
-		return nil, fmt.Errorf("unknown schema version %q", mfestSchema)
-	}
-
-	manifest = &Manifest{db: db}
-	return manifest, nil
-}
-
-func (manifest *Manifest) IteratePaths(pathPrefix string, onMatch func(*Path) error) (err error) {
-	return iteratePrefix(manifest, &Path{Kind: "path", Path: pathPrefix}, onMatch)
-}
-
-func (manifest *Manifest) IteratePackages(onMatch func(*Package) error) (err error) {
-	return iteratePrefix(manifest, &Package{Kind: "package"}, onMatch)
-}
-
-func (manifest *Manifest) IterateSlices(pkgName string, onMatch func(*Slice) error) (err error) {
-	return iteratePrefix(manifest, &Slice{Kind: "slice", Name: pkgName}, onMatch)
-}
-
-func (manifest *Manifest) IterateContents(slice string, onMatch func(*Content) error) (err error) {
-	return iteratePrefix(manifest, &Content{Kind: "content", Slice: slice}, onMatch)
-}
-
-// Validate checks that the Manifest is valid. Note that to do that it has to
-// load practically the whole manifest into memory and unmarshall all the
-// entries.
-func Validate(manifest *Manifest) (err error) {
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("invalid manifest: %s", err)
-		}
-	}()
-
-	pkgExist := map[string]bool{}
-	err = manifest.IteratePackages(func(pkg *Package) error {
-		pkgExist[pkg.Name] = true
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	sliceExist := map[string]bool{}
-	err = manifest.IterateSlices("", func(slice *Slice) error {
-		sk, err := setup.ParseSliceKey(slice.Name)
-		if err != nil {
-			return err
-		}
-		if !pkgExist[sk.Package] {
-			return fmt.Errorf("slice %s refers to missing package %q", slice.Name, sk.Package)
-		}
-		sliceExist[slice.Name] = true
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	pathToSlices := map[string][]string{}
-	err = manifest.IterateContents("", func(content *Content) error {
-		if !sliceExist[content.Slice] {
-			return fmt.Errorf("content path %q refers to missing slice %s", content.Path, content.Slice)
-		}
-		if !slices.Contains(pathToSlices[content.Path], content.Slice) {
-			pathToSlices[content.Path] = append(pathToSlices[content.Path], content.Slice)
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	done := map[string]bool{}
-	err = manifest.IteratePaths("", func(path *Path) error {
-		pathSlices, ok := pathToSlices[path.Path]
-		if !ok {
-			return fmt.Errorf("path %s has no matching entry in contents", path.Path)
-		}
-		slices.Sort(pathSlices)
-		slices.Sort(path.Slices)
-		if !slices.Equal(pathSlices, path.Slices) {
-			return fmt.Errorf("path %s and content have diverging slices: %q != %q", path.Path, path.Slices, pathSlices)
-		}
-		done[path.Path] = true
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	if len(done) != len(pathToSlices) {
-		for path := range pathToSlices {
-			return fmt.Errorf("content path %s has no matching entry in paths", path)
-		}
-	}
-	return nil
-}
 
 // FindPaths finds the paths marked with "generate:manifest" and
 // returns a map from the manifest path to all the slices that declare it.
@@ -189,7 +42,7 @@ type WriteOptions struct {
 
 func Write(options *WriteOptions, writer io.Writer) error {
 	dbw := jsonwall.NewDBWriter(&jsonwall.DBWriterOptions{
-		Schema: Schema,
+		Schema: manifest.Schema,
 	})
 
 	err := fastValidate(options)
@@ -216,32 +69,9 @@ func Write(options *WriteOptions, writer io.Writer) error {
 	return err
 }
 
-type prefixable interface {
-	Path | Content | Package | Slice
-}
-
-func iteratePrefix[T prefixable](manifest *Manifest, prefix *T, onMatch func(*T) error) error {
-	iter, err := manifest.db.IteratePrefix(prefix)
-	if err != nil {
-		return err
-	}
-	for iter.Next() {
-		var val T
-		err := iter.Get(&val)
-		if err != nil {
-			return fmt.Errorf("cannot read manifest: %s", err)
-		}
-		err = onMatch(&val)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func manifestAddPackages(dbw *jsonwall.DBWriter, infos []*archive.PackageInfo) error {
 	for _, info := range infos {
-		err := dbw.Add(&Package{
+		err := dbw.Add(&manifest.Package{
 			Kind:    "package",
 			Name:    info.Name,
 			Version: info.Version,
@@ -257,7 +87,7 @@ func manifestAddPackages(dbw *jsonwall.DBWriter, infos []*archive.PackageInfo) e
 
 func manifestAddSlices(dbw *jsonwall.DBWriter, slices []*setup.Slice) error {
 	for _, slice := range slices {
-		err := dbw.Add(&Slice{
+		err := dbw.Add(&manifest.Slice{
 			Kind: "slice",
 			Name: slice.String(),
 		})
@@ -272,7 +102,7 @@ func manifestAddReport(dbw *jsonwall.DBWriter, report *Report) error {
 	for _, entry := range report.Entries {
 		sliceNames := []string{}
 		for slice := range entry.Slices {
-			err := dbw.Add(&Content{
+			err := dbw.Add(&manifest.Content{
 				Kind:  "content",
 				Slice: slice.String(),
 				Path:  entry.Path,
@@ -283,7 +113,7 @@ func manifestAddReport(dbw *jsonwall.DBWriter, report *Report) error {
 			sliceNames = append(sliceNames, slice.String())
 		}
 		sort.Strings(sliceNames)
-		err := dbw.Add(&Path{
+		err := dbw.Add(&manifest.Path{
 			Kind:        "path",
 			Path:        entry.Path,
 			Mode:        fmt.Sprintf("0%o", unixPerm(entry.Mode)),
@@ -434,6 +264,81 @@ func validatePackage(pkg *archive.PackageInfo) (err error) {
 	}
 	if pkg.Version == "" {
 		return fmt.Errorf("package %q missing version", pkg.Name)
+	}
+	return nil
+}
+
+// Validate checks that the Manifest is valid. Note that to do that it has to
+// load practically the whole manifest into memory and unmarshall all the
+// entries.
+func Validate(mfest *manifest.Manifest) (err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("invalid manifest: %s", err)
+		}
+	}()
+
+	pkgExist := map[string]bool{}
+	err = mfest.IteratePackages(func(pkg *manifest.Package) error {
+		pkgExist[pkg.Name] = true
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	sliceExist := map[string]bool{}
+	err = mfest.IterateSlices("", func(slice *manifest.Slice) error {
+		sk, err := apacheutil.ParseSliceKey(slice.Name)
+		if err != nil {
+			return err
+		}
+		if !pkgExist[sk.Package] {
+			return fmt.Errorf("slice %s refers to missing package %q", slice.Name, sk.Package)
+		}
+		sliceExist[slice.Name] = true
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	pathToSlices := map[string][]string{}
+	err = mfest.IterateContents("", func(content *manifest.Content) error {
+		if !sliceExist[content.Slice] {
+			return fmt.Errorf("content path %q refers to missing slice %s", content.Path, content.Slice)
+		}
+		if !slices.Contains(pathToSlices[content.Path], content.Slice) {
+			pathToSlices[content.Path] = append(pathToSlices[content.Path], content.Slice)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	done := map[string]bool{}
+	err = mfest.IteratePaths("", func(path *manifest.Path) error {
+		pathSlices, ok := pathToSlices[path.Path]
+		if !ok {
+			return fmt.Errorf("path %s has no matching entry in contents", path.Path)
+		}
+		slices.Sort(pathSlices)
+		slices.Sort(path.Slices)
+		if !slices.Equal(pathSlices, path.Slices) {
+			return fmt.Errorf("path %s and content have diverging slices: %q != %q", path.Path, path.Slices, pathSlices)
+		}
+		done[path.Path] = true
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	if len(done) != len(pathToSlices) {
+		for path := range pathToSlices {
+			return fmt.Errorf("content path %s has no matching entry in paths", path)
+		}
 	}
 	return nil
 }
