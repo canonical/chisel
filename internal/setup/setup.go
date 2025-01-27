@@ -43,7 +43,7 @@ type Package struct {
 type Slice struct {
 	Package   string
 	Name      string
-	Essential []SetupKey
+	Essential []SliceKey
 	Contents  map[string]PathInfo
 	Scripts   SliceScripts
 }
@@ -103,10 +103,10 @@ func (pi *PathInfo) SameContent(other *PathInfo) bool {
 		pi.Generate == other.Generate)
 }
 
-type SetupKey = apacheutil.SliceKey
+type SliceKey = apacheutil.SliceKey
 
-func ParseSetupKey(setupKey string) (SetupKey, error) {
-	return apacheutil.ParseSliceKey(setupKey)
+func ParseSliceKey(sliceKey string) (SliceKey, error) {
+	return apacheutil.ParseSliceKey(sliceKey)
 }
 
 func (s *Slice) String() string { return s.Package + "_" + s.Name }
@@ -145,7 +145,7 @@ func ReadRelease(dir string) (*Release, error) {
 }
 
 func (r *Release) validate() error {
-	keys := []SetupKey(nil)
+	keys := []SliceKey(nil)
 
 	// Check for info conflicts and prepare for following checks. A conflict
 	// means that two slices attempt to extract different files or directories
@@ -162,7 +162,7 @@ func (r *Release) validate() error {
 	globs := make(map[string]*Slice)
 	for _, pkg := range r.Packages {
 		for _, new := range pkg.Slices {
-			keys = append(keys, SetupKey{pkg.Name, new.Name})
+			keys = append(keys, SliceKey{pkg.Name, new.Name})
 			for newPath, newInfo := range new.Contents {
 				if old, ok := paths[newPath]; ok {
 					oldInfo := old.Contents[newPath]
@@ -243,7 +243,7 @@ func (r *Release) validate() error {
 	return nil
 }
 
-func order(pkgs map[string]*Package, keys []SetupKey) ([]SetupKey, error) {
+func order(pkgs map[string]*Package, keys []SliceKey) ([]SliceKey, error) {
 
 	// Preprocess the list to improve error messages.
 	for _, key := range keys {
@@ -256,9 +256,9 @@ func order(pkgs map[string]*Package, keys []SetupKey) ([]SetupKey, error) {
 
 	// Collect all relevant package slices.
 	successors := map[string][]string{}
-	pending := append([]SetupKey(nil), keys...)
+	pending := append([]SliceKey(nil), keys...)
 
-	seen := make(map[SetupKey]bool)
+	seen := make(map[SliceKey]bool)
 	for i := 0; i < len(pending); i++ {
 		key := pending[i]
 		if seen[key] {
@@ -281,14 +281,14 @@ func order(pkgs map[string]*Package, keys []SetupKey) ([]SetupKey, error) {
 	}
 
 	// Sort them up.
-	var order []SetupKey
+	var order []SliceKey
 	for _, names := range tarjanSort(successors) {
 		if len(names) > 1 {
 			return nil, fmt.Errorf("essential loop detected: %s", strings.Join(names, ", "))
 		}
 		name := names[0]
 		dot := strings.IndexByte(name, '_')
-		order = append(order, SetupKey{name[:dot], name[dot+1:]})
+		order = append(order, SliceKey{name[:dot], name[dot+1:]})
 	}
 
 	return order, nil
@@ -360,7 +360,7 @@ func stripBase(baseDir, path string) string {
 	return strings.TrimPrefix(path, baseDir+string(filepath.Separator))
 }
 
-func Select(release *Release, slices []SetupKey) (*Selection, error) {
+func Select(release *Release, slices []SliceKey) (*Selection, error) {
 	logf("Selecting slices...")
 
 	selection := &Selection{

@@ -43,9 +43,9 @@ func (cmd *cmdCut) Execute(args []string) error {
 		return ErrExtraArgs
 	}
 
-	sliceKeys := make([]setup.SetupKey, len(cmd.Positional.SliceRefs))
+	sliceKeys := make([]setup.SliceKey, len(cmd.Positional.SliceRefs))
 	for i, sliceRef := range cmd.Positional.SliceRefs {
-		sliceKey, err := setup.ParseSetupKey(sliceRef)
+		sliceKey, err := setup.ParseSliceKey(sliceRef)
 		if err != nil {
 			return err
 		}

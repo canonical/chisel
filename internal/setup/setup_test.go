@@ -23,7 +23,7 @@ type setupTest struct {
 	input     map[string]string
 	release   *setup.Release
 	relerror  string
-	selslices []setup.SetupKey
+	selslices []setup.SliceKey
 	selection *setup.Selection
 	selerror  string
 }
@@ -143,7 +143,7 @@ var setupTests = []setupTest{{
 					"myslice2": {
 						Package: "mypkg",
 						Name:    "myslice2",
-						Essential: []setup.SetupKey{
+						Essential: []setup.SliceKey{
 							{"mypkg", "myslice1"},
 						},
 						Contents: map[string]setup.PathInfo{
@@ -283,7 +283,7 @@ var setupTests = []setupTest{{
 				myslice2: {essential: [mypkg1_myslice1]}
 		`,
 	},
-	selslices: []setup.SetupKey{{"mypkg1", "myslice1"}},
+	selslices: []setup.SliceKey{{"mypkg1", "myslice1"}},
 	selection: &setup.Selection{
 		Slices: []*setup.Slice{{
 			Package: "mypkg1",
@@ -306,7 +306,7 @@ var setupTests = []setupTest{{
 				myslice2: {essential: [mypkg1_myslice1]}
 		`,
 	},
-	selslices: []setup.SetupKey{{"mypkg2", "myslice2"}},
+	selslices: []setup.SliceKey{{"mypkg2", "myslice2"}},
 	selection: &setup.Selection{
 		Slices: []*setup.Slice{{
 			Package: "mypkg1",
@@ -314,7 +314,7 @@ var setupTests = []setupTest{{
 		}, {
 			Package: "mypkg2",
 			Name:    "myslice2",
-			Essential: []setup.SetupKey{
+			Essential: []setup.SliceKey{
 				{"mypkg1", "myslice1"},
 			},
 		}},
@@ -345,7 +345,7 @@ var setupTests = []setupTest{{
 						/path3: {symlink: /link}
 		`,
 	},
-	selslices: []setup.SetupKey{{"mypkg1", "myslice1"}, {"mypkg1", "myslice2"}, {"mypkg2", "myslice1"}},
+	selslices: []setup.SliceKey{{"mypkg1", "myslice1"}, {"mypkg1", "myslice2"}, {"mypkg2", "myslice1"}},
 }, {
 	summary: "Conflicting paths across slices",
 	input: map[string]string{
@@ -1199,7 +1199,7 @@ var setupTests = []setupTest{{
 					"slice1": {
 						Package: "mypkg",
 						Name:    "slice1",
-						Essential: []setup.SetupKey{
+						Essential: []setup.SliceKey{
 							{"mypkg", "slice2"},
 						},
 					},
@@ -1210,7 +1210,7 @@ var setupTests = []setupTest{{
 					"slice3": {
 						Package: "mypkg",
 						Name:    "slice3",
-						Essential: []setup.SetupKey{
+						Essential: []setup.SliceKey{
 							{"mypkg", "slice2"},
 							{"mypkg", "slice1"},
 							{"mypkg", "slice4"},
@@ -1219,7 +1219,7 @@ var setupTests = []setupTest{{
 					"slice4": {
 						Package: "mypkg",
 						Name:    "slice4",
-						Essential: []setup.SetupKey{
+						Essential: []setup.SliceKey{
 							{"mypkg", "slice2"},
 						},
 					},
@@ -1266,7 +1266,7 @@ var setupTests = []setupTest{{
 					"slice1": {
 						Package: "mypkg",
 						Name:    "slice1",
-						Essential: []setup.SetupKey{
+						Essential: []setup.SliceKey{
 							{"myotherpkg", "slice2"},
 							{"mypkg", "slice2"},
 							{"myotherpkg", "slice1"},
@@ -1275,7 +1275,7 @@ var setupTests = []setupTest{{
 					"slice2": {
 						Package: "mypkg",
 						Name:    "slice2",
-						Essential: []setup.SetupKey{
+						Essential: []setup.SliceKey{
 							{"myotherpkg", "slice2"},
 						},
 					},
@@ -1451,7 +1451,7 @@ var setupTests = []setupTest{{
 			},
 		},
 	},
-	selslices: []setup.SetupKey{{"mypkg", "myslice"}},
+	selslices: []setup.SliceKey{{"mypkg", "myslice"}},
 	selection: &setup.Selection{
 		Slices: []*setup.Slice{{
 			Package: "mypkg",
@@ -1498,7 +1498,7 @@ var setupTests = []setupTest{{
 			},
 		},
 	},
-	selslices: []setup.SetupKey{{"mypkg", "myslice"}},
+	selslices: []setup.SliceKey{{"mypkg", "myslice"}},
 	selerror:  `slice mypkg_myslice has invalid 'generate' for path /dir/\*\*: "foo"`,
 }, {
 	summary: "Paths with generate: manifest must have trailing /**",

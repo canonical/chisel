@@ -82,7 +82,7 @@ func selectPackageSlices(release *setup.Release, queries []string) (packages []*
 	pkgSlices := make(map[string][]string)
 	allPkgSlices := make(map[string]bool)
 
-	sliceExists := func(key setup.SetupKey) bool {
+	sliceExists := func(key setup.SliceKey) bool {
 		pkg, ok := release.Packages[key.Package]
 		if !ok {
 			return false
@@ -93,7 +93,7 @@ func selectPackageSlices(release *setup.Release, queries []string) (packages []*
 	for _, query := range queries {
 		var pkg, slice string
 		if strings.Contains(query, "_") {
-			key, err := setup.ParseSetupKey(query)
+			key, err := setup.ParseSliceKey(query)
 			if err != nil || !sliceExists(key) {
 				notFound = append(notFound, query)
 				continue
