@@ -14,7 +14,6 @@ import (
 	"github.com/klauspost/compress/zstd"
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/chisel/internal/apacheutil"
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/slicer"
@@ -31,7 +30,7 @@ type slicerTest struct {
 	arch          string
 	release       map[string]string
 	pkgs          []*testutil.TestPackage
-	slices        []apacheutil.SliceKey
+	slices        []setup.SetupKey
 	hackopt       func(c *C, opts *slicer.RunOptions)
 	filesystem    map[string]string
 	manifestPaths map[string]string
@@ -77,7 +76,7 @@ var testPackageCopyrightEntries = []testutil.TarEntry{
 
 var slicerTests = []slicerTest{{
 	summary: "Basic slicing",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -110,7 +109,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Glob extraction",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -132,7 +131,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Create new file under extracted directory and preserve parent directory permissions",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -152,7 +151,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Create new nested file under extracted directory and preserve parent directory permissions",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -173,7 +172,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Create new directory under extracted directory and preserve parent directory permissions",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -193,7 +192,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Create new file using glob and preserve parent directory permissions",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -217,7 +216,7 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Conditional architecture",
 	arch:    "amd64",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -248,7 +247,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Copyright is not installed implicitly",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		// Add the copyright entries to the package.
@@ -272,7 +271,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Install two packages",
-	slices: []apacheutil.SliceKey{
+	slices: []setup.SetupKey{
 		{"test-package", "myslice"},
 		{"other-package", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
@@ -315,7 +314,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Install two packages, explicit path has preference over implicit parent",
-	slices: []apacheutil.SliceKey{
+	slices: []setup.SetupKey{
 		{"a-implicit-parent", "myslice"},
 		{"b-explicit-dir", "myslice"},
 		{"c-implicit-parent", "myslice"}},
@@ -372,7 +371,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Valid same file in two slices in different packages",
-	slices: []apacheutil.SliceKey{
+	slices: []setup.SetupKey{
 		{"test-package", "myslice"},
 		{"other-package", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
@@ -406,7 +405,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Script: write a file",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -427,7 +426,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Script: read a file",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -453,7 +452,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Script: use 'until' to remove file after mutate",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -477,7 +476,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Script: use 'until' to remove wildcard after mutate",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -495,7 +494,7 @@ var slicerTests = []slicerTest{{
 	manifestPaths: map[string]string{},
 }, {
 	summary: "Script: 'until' does not remove non-empty directories",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -516,7 +515,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Script: writing same contents to existing file does not set the final hash in report",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -537,7 +536,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Script: cannot write non-mutable files",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -552,7 +551,7 @@ var slicerTests = []slicerTest{{
 	error: `slice test-package_myslice: cannot write file which is not mutable: /dir/text-file`,
 }, {
 	summary: "Script: cannot write to unlisted file",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -566,7 +565,7 @@ var slicerTests = []slicerTest{{
 	error: `slice test-package_myslice: cannot write file which is not mutable: /dir/text-file`,
 }, {
 	summary: "Script: cannot write to directory",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -581,7 +580,7 @@ var slicerTests = []slicerTest{{
 	error: `slice test-package_myslice: cannot write file which is not mutable: /dir/`,
 }, {
 	summary: "Script: cannot read unlisted content",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice2"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice2"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -597,7 +596,7 @@ var slicerTests = []slicerTest{{
 	error: `slice test-package_myslice2: cannot read file which is not selected: /dir/text-file`,
 }, {
 	summary: "Script: can read globbed content",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice1"}, {"test-package", "myslice2"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice1"}, {"test-package", "myslice2"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -612,7 +611,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Relative content root directory must not error",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -633,7 +632,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Can list parent directories of normal paths",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -652,7 +651,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Cannot list unselected directory",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -667,7 +666,7 @@ var slicerTests = []slicerTest{{
 	error: `slice test-package_myslice: cannot list directory which is not selected: /a/d/`,
 }, {
 	summary: "Cannot list file path as a directory",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -682,7 +681,7 @@ var slicerTests = []slicerTest{{
 	error: `slice test-package_myslice: content is not a directory: /a/b/c`,
 }, {
 	summary: "Can list parent directories of globs",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -696,7 +695,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Cannot list directories not matched by glob",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -711,7 +710,7 @@ var slicerTests = []slicerTest{{
 	error: `slice test-package_myslice: cannot list directory which is not selected: /other-dir/`,
 }, {
 	summary: "Duplicate copyright symlink is ignored",
-	slices:  []apacheutil.SliceKey{{"copyright-symlink-openssl", "bins"}},
+	slices:  []setup.SetupKey{{"copyright-symlink-openssl", "bins"}},
 	pkgs: []*testutil.TestPackage{{
 		Name: "copyright-symlink-openssl",
 		Data: testutil.MustMakeDeb(packageEntries["copyright-symlink-openssl"]),
@@ -743,7 +742,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Can list unclean directory paths",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -762,7 +761,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Cannot read directories",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -777,7 +776,7 @@ var slicerTests = []slicerTest{{
 	error: `slice test-package_myslice: content is not a file: /x/y`,
 }, {
 	summary: "Multiple archives with priority",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}, {"other-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}, {"other-package", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name:    "test-package",
 		Hash:    "h1",
@@ -858,7 +857,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Pinned archive bypasses higher priority",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name:    "test-package",
 		Hash:    "h1",
@@ -923,7 +922,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Pinned archive does not have the package",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
@@ -966,7 +965,7 @@ var slicerTests = []slicerTest{{
 	error: `cannot find package "test-package" in archive\(s\)`,
 }, {
 	summary: "No archives have the package",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}},
 	pkgs:    []*testutil.TestPackage{},
 	release: map[string]string{
 		"chisel.yaml": `
@@ -1000,7 +999,7 @@ var slicerTests = []slicerTest{{
 	error: `cannot find package "test-package" in archive\(s\)`,
 }, {
 	summary: "Negative priority archives are ignored when not explicitly pinned in package",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
@@ -1034,7 +1033,7 @@ var slicerTests = []slicerTest{{
 	error: `cannot find package "test-package" in archive\(s\)`,
 }, {
 	summary: "Negative priority archive explicitly pinned in package",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name:    "test-package",
 		Hash:    "h1",
@@ -1080,7 +1079,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Multiple slices of same package",
-	slices: []apacheutil.SliceKey{
+	slices: []setup.SetupKey{
 		{"test-package", "myslice1"},
 		{"test-package", "myslice2"},
 	},
@@ -1118,7 +1117,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Same glob in several entries with until:mutate and reading from script",
-	slices: []apacheutil.SliceKey{
+	slices: []setup.SetupKey{
 		{"test-package", "myslice1"},
 		{"test-package", "myslice2"},
 	},
@@ -1164,7 +1163,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Overlapping globs, until:mutate and reading from script",
-	slices: []apacheutil.SliceKey{
+	slices: []setup.SetupKey{
 		{"test-package", "myslice2"},
 		{"test-package", "myslice1"},
 	},
@@ -1210,7 +1209,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Overlapping glob and single entry, until:mutate on entry and reading from script",
-	slices: []apacheutil.SliceKey{
+	slices: []setup.SetupKey{
 		{"test-package", "myslice1"},
 		{"test-package", "myslice2"},
 	},
@@ -1256,7 +1255,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Overlapping glob and single entry, until:mutate on glob and reading from script",
-	slices: []apacheutil.SliceKey{
+	slices: []setup.SetupKey{
 		{"test-package", "myslice1"},
 		{"test-package", "myslice2"},
 	},
@@ -1285,7 +1284,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Overlapping glob and single entry, until:mutate on both and reading from script",
-	slices: []apacheutil.SliceKey{
+	slices: []setup.SetupKey{
 		{"test-package", "myslice1"},
 		{"test-package", "myslice2"},
 	},
@@ -1309,7 +1308,7 @@ var slicerTests = []slicerTest{{
 	manifestPaths: map[string]string{},
 }, {
 	summary: "Content not created in packages with until:mutate on one and reading from script",
-	slices: []apacheutil.SliceKey{
+	slices: []setup.SetupKey{
 		{"test-package", "myslice1"},
 		{"test-package", "myslice2"},
 	},
@@ -1333,7 +1332,7 @@ var slicerTests = []slicerTest{{
 	manifestPaths: map[string]string{"/file": "file 0644 2c26b46b {test-package_myslice1,test-package_myslice2}"},
 }, {
 	summary: "Install two packages, both are recorded",
-	slices: []apacheutil.SliceKey{
+	slices: []setup.SetupKey{
 		{"test-package", "myslice"},
 		{"other-package", "myslice"},
 	},
@@ -1370,7 +1369,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Two packages, only one is selected and recorded",
-	slices: []apacheutil.SliceKey{
+	slices: []setup.SetupKey{
 		{"test-package", "myslice"},
 	},
 	pkgs: []*testutil.TestPackage{{
@@ -1405,7 +1404,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Relative paths are properly trimmed during extraction",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
@@ -1436,7 +1435,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Producing a manifest is not mandatory",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}},
 	hackopt: func(c *C, opts *slicer.RunOptions) {
 		// Remove the manifest slice that the tests add automatically.
 		var index int
@@ -1458,7 +1457,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "No valid archives defined due to invalid pro value",
-	slices:  []apacheutil.SliceKey{{"test-package", "myslice"}},
+	slices:  []setup.SetupKey{{"test-package", "myslice"}},
 	release: map[string]string{
 		"chisel.yaml": `
 			format: v1
@@ -1481,7 +1480,7 @@ var slicerTests = []slicerTest{{
 	error: `cannot find package "test-package" in archive\(s\)`,
 }, {
 	summary: "Valid hard link in two slices in the same package",
-	slices: []apacheutil.SliceKey{
+	slices: []setup.SetupKey{
 		{"test-package", "slice1"},
 		{"test-package", "slice2"}},
 	pkgs: []*testutil.TestPackage{{
@@ -1515,7 +1514,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Hard link entries can be extracted without extracting the regular file",
-	slices: []apacheutil.SliceKey{
+	slices: []setup.SetupKey{
 		{"test-package", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
@@ -1545,7 +1544,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Hard link identifier for different groups",
-	slices: []apacheutil.SliceKey{
+	slices: []setup.SetupKey{
 		{"test-package", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
@@ -1580,7 +1579,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Single hard link entry can be extracted without regular file and no hard links are created",
-	slices: []apacheutil.SliceKey{
+	slices: []setup.SetupKey{
 		{"test-package", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
@@ -1607,7 +1606,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Hard link to symlink does not follow symlink",
-	slices: []apacheutil.SliceKey{
+	slices: []setup.SetupKey{
 		{"test-package", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
@@ -1639,7 +1638,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Hard link identifiers are unique across packages",
-	slices: []apacheutil.SliceKey{
+	slices: []setup.SetupKey{
 		{"test-package1", "myslice"},
 		{"test-package2", "myslice"},
 	},
@@ -1690,7 +1689,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Mutations for hard links are forbidden",
-	slices: []apacheutil.SliceKey{
+	slices: []setup.SetupKey{
 		{"test-package", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
@@ -1715,7 +1714,7 @@ var slicerTests = []slicerTest{{
 	error: `slice test-package_myslice: cannot mutate a hard link: /hardlink`,
 }, {
 	summary: "Hard links can be marked as mutable, but not mutated",
-	slices: []apacheutil.SliceKey{
+	slices: []setup.SetupKey{
 		{"test-package", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
@@ -1833,7 +1832,7 @@ func runSlicerTests(c *C, tests []slicerTest) {
 				},
 				Scripts: setup.SliceScripts{},
 			}
-			testSlices = append(testSlices, apacheutil.SliceKey{
+			testSlices = append(testSlices, setup.SetupKey{
 				Package: manifestPackage,
 				Slice:   "manifest",
 			})

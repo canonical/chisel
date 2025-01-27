@@ -83,7 +83,7 @@ func selectPackageSlices(release *setup.Release, queries []string) (packages []*
 	pkgSlices := make(map[string][]string)
 	allPkgSlices := make(map[string]bool)
 
-	sliceExists := func(key apacheutil.SliceKey) bool {
+	sliceExists := func(key setup.SetupKey) bool {
 		pkg, ok := release.Packages[key.Package]
 		if !ok {
 			return false
