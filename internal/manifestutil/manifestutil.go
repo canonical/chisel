@@ -5,9 +5,11 @@ import (
 	"io"
 	"io/fs"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
+	"github.com/canonical/chisel/internal/apacheutil"
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/public/jsonwall"
@@ -262,6 +264,81 @@ func validatePackage(pkg *archive.PackageInfo) (err error) {
 	}
 	if pkg.Version == "" {
 		return fmt.Errorf("package %q missing version", pkg.Name)
+	}
+	return nil
+}
+
+// Validate checks that the Manifest is valid. Note that to do that it has to
+// load practically the whole manifest into memory and unmarshall all the
+// entries.
+func Validate(mfest *manifest.Manifest) (err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("invalid manifest: %s", err)
+		}
+	}()
+
+	pkgExist := map[string]bool{}
+	err = mfest.IteratePackages(func(pkg *manifest.Package) error {
+		pkgExist[pkg.Name] = true
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	sliceExist := map[string]bool{}
+	err = mfest.IterateSlices("", func(slice *manifest.Slice) error {
+		sk, err := apacheutil.ParseSliceKey(slice.Name)
+		if err != nil {
+			return err
+		}
+		if !pkgExist[sk.Package] {
+			return fmt.Errorf("slice %s refers to missing package %q", slice.Name, sk.Package)
+		}
+		sliceExist[slice.Name] = true
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	pathToSlices := map[string][]string{}
+	err = mfest.IterateContents("", func(content *manifest.Content) error {
+		if !sliceExist[content.Slice] {
+			return fmt.Errorf("content path %q refers to missing slice %s", content.Path, content.Slice)
+		}
+		if !slices.Contains(pathToSlices[content.Path], content.Slice) {
+			pathToSlices[content.Path] = append(pathToSlices[content.Path], content.Slice)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	done := map[string]bool{}
+	err = mfest.IteratePaths("", func(path *manifest.Path) error {
+		pathSlices, ok := pathToSlices[path.Path]
+		if !ok {
+			return fmt.Errorf("path %s has no matching entry in contents", path.Path)
+		}
+		slices.Sort(pathSlices)
+		slices.Sort(path.Slices)
+		if !slices.Equal(pathSlices, path.Slices) {
+			return fmt.Errorf("path %s and content have diverging slices: %q != %q", path.Path, path.Slices, pathSlices)
+		}
+		done[path.Path] = true
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	if len(done) != len(pathToSlices) {
+		for path := range pathToSlices {
+			return fmt.Errorf("content path %s has no matching entry in paths", path)
+		}
 	}
 	return nil
 }

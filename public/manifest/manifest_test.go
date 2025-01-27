@@ -15,11 +15,10 @@ import (
 )
 
 var readManifestTests = []struct {
-	summary   string
-	input     string
-	mfest     *apachetestutil.ManifestContents
-	valError  string
-	readError string
+	summary string
+	input   string
+	mfest   *apachetestutil.ManifestContents
+	error   string
 }{{
 	summary: "All types",
 	input: `
@@ -72,62 +71,15 @@ var readManifestTests = []struct {
 		},
 	},
 }, {
-	summary: "Slice not found",
-	input: `
-		{"jsonwall":"1.0","schema":"1.0","count":1}
-		{"kind":"content","slice":"pkg1_manifest","path":"/manifest/manifest.wall"}
-	`,
-	valError: `invalid manifest: content path "/manifest/manifest.wall" refers to missing slice pkg1_manifest`,
-}, {
-	summary: "Package not found",
-	input: `
-		{"jsonwall":"1.0","schema":"1.0","count":1}
-		{"kind":"slice","name":"pkg1_manifest"}
-	`,
-	valError: `invalid manifest: slice pkg1_manifest refers to missing package "pkg1"`,
-}, {
-	summary: "Path not found in contents",
-	input: `
-		{"jsonwall":"1.0","schema":"1.0","count":1}
-		{"kind":"path","path":"/dir/","mode":"01777","slices":["pkg1_myslice"]}
-	`,
-	valError: `invalid manifest: path /dir/ has no matching entry in contents`,
-}, {
-	summary: "Content and path have different slices",
-	input: `
-		{"jsonwall":"1.0","schema":"1.0","count":3}
-		{"kind":"content","slice":"pkg1_myotherslice","path":"/dir/"}
-		{"kind":"package","name":"pkg1","version":"v1","sha256":"hash1","arch":"arch1"}
-		{"kind":"path","path":"/dir/","mode":"01777","slices":["pkg1_myslice"]}
-		{"kind":"slice","name":"pkg1_myotherslice"}
-	`,
-	valError: `invalid manifest: path /dir/ and content have diverging slices: \["pkg1_myslice"\] != \["pkg1_myotherslice"\]`,
-}, {
-	summary: "Content not found in paths",
-	input: `
-		{"jsonwall":"1.0","schema":"1.0","count":3}
-		{"kind":"content","slice":"pkg1_myslice","path":"/dir/"}
-		{"kind":"package","name":"pkg1","version":"v1","sha256":"hash1","arch":"arch1"}
-		{"kind":"slice","name":"pkg1_myslice"}
-	`,
-	valError: `invalid manifest: content path /dir/ has no matching entry in paths`,
-}, {
-	summary: "Malformed jsonwall",
-	input: `
-		{"jsonwall":"1.0","schema":"1.0","count":1}
-		{"kind":"content", "not valid json"
-	`,
-	valError: `invalid manifest: cannot read manifest: unexpected end of JSON input`,
-}, {
 	summary: "Unknown schema",
 	input: `
 		{"jsonwall":"1.0","schema":"2.0","count":1}
 		{"kind":"package","name":"pkg1","version":"v1","sha256":"hash1","arch":"arch1"}
 	`,
-	readError: `cannot read manifest: unknown schema version "2.0"`,
+	error: `cannot read manifest: unknown schema version "2.0"`,
 }}
 
-func (s *S) TestManifestReadValidate(c *C) {
+func (s *S) TestManifestRead(c *C) {
 	for _, test := range readManifestTests {
 		c.Logf("Summary: %s", test.summary)
 
@@ -156,14 +108,8 @@ func (s *S) TestManifestReadValidate(c *C) {
 		defer r.Close()
 
 		mfest, err := manifest.Read(r)
-		if test.readError != "" {
-			c.Assert(err, ErrorMatches, test.readError)
-			continue
-		}
-		c.Assert(err, IsNil)
-		err = manifest.Validate(mfest)
-		if test.valError != "" {
-			c.Assert(err, ErrorMatches, test.valError)
+		if test.error != "" {
+			c.Assert(err, ErrorMatches, test.error)
 			continue
 		}
 		c.Assert(err, IsNil)
