@@ -12,12 +12,6 @@ import (
 	"github.com/canonical/chisel/internal/strdist"
 )
 
-type SetupKey = apacheutil.SliceKey
-
-func ParseSetupKey(setupKey string) (SetupKey, error) {
-	return apacheutil.ParseSliceKey(setupKey)
-}
-
 // Release is a collection of package slices targeting a particular
 // distribution version.
 type Release struct {
@@ -107,6 +101,12 @@ func (pi *PathInfo) SameContent(other *PathInfo) bool {
 		pi.Mode == other.Mode &&
 		pi.Mutable == other.Mutable &&
 		pi.Generate == other.Generate)
+}
+
+type SetupKey = apacheutil.SliceKey
+
+func ParseSetupKey(setupKey string) (SetupKey, error) {
+	return apacheutil.ParseSliceKey(setupKey)
 }
 
 func (s *Slice) String() string { return s.Package + "_" + s.Name }
