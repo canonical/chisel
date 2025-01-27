@@ -505,8 +505,6 @@ func sliceToYAML(s *Slice) (*yamlSlice, error) {
 		slice.Essential = append(slice.Essential, key.String())
 	}
 	for path, info := range s.Contents {
-		// TODO remove the following line after upgrading to Go 1.22 or higher.
-		info := info
 		yamlPath, err := pathInfoToYAML(&info)
 		if err != nil {
 			return nil, err

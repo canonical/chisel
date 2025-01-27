@@ -346,9 +346,7 @@ func fastValidate(options *WriteOptions) (err error) {
 			}
 		}
 		if entry.Inode != 0 {
-			// TODO remove the following line after upgrading to Go 1.22 or higher.
-			e := entry
-			hardLinkGroups[e.Inode] = append(hardLinkGroups[e.Inode], &e)
+			hardLinkGroups[entry.Inode] = append(hardLinkGroups[entry.Inode], &entry)
 		}
 	}
 	// Entries within a hard link group must have same content.
