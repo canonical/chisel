@@ -14,6 +14,10 @@ import (
 
 type SetupKey = apacheutil.SliceKey
 
+func ParseSetupKey(setupKey string) (SetupKey, error) {
+	return apacheutil.ParseSliceKey(setupKey)
+}
+
 // Release is a collection of package slices targeting a particular
 // distribution version.
 type Release struct {
