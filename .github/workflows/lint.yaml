@@ -26,4 +26,4 @@ jobs:
       - name: Check bugs and unused code
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.54.1
+          version: v1.63.4
