@@ -19,13 +19,14 @@ var (
 )
 
 type setupTest struct {
-	summary   string
-	input     map[string]string
-	release   *setup.Release
-	relerror  string
-	selslices []setup.SliceKey
-	selection *setup.Selection
-	selerror  string
+	summary      string
+	input        map[string]string
+	release      *setup.Release
+	relerror     string
+	pathOrdering map[string][]string
+	selslices    []setup.SliceKey
+	selection    *setup.Selection
+	selerror     string
 }
 
 var setupTests = []setupTest{{
@@ -2020,6 +2021,278 @@ var setupTests = []setupTest{{
 		`,
 	},
 	relerror: `chisel.yaml: archive "ubuntu" defined twice`,
+}, {
+	summary: "Path conflicts with 'prefer'",
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice1:
+					contents:
+						/path: {prefer: mypkg2}
+						/link: {symlink: /file1}
+				myslice2:
+					contents:
+						/path: {prefer: mypkg2}
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+			slices:
+				myslice1:
+					contents:
+						/path: {prefer: mypkg3}
+						/link: {symlink: /file2, prefer: mypkg1}
+		`,
+		"slices/mydir/mypkg3.yaml": `
+			package: mypkg3
+			slices:
+				myslice1:
+					contents:
+						/path:
+		`,
+	},
+	release: &setup.Release{
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"mypkg1": {
+				Name: "mypkg1",
+				Path: "slices/mydir/mypkg1.yaml",
+				Slices: map[string]*setup.Slice{
+					"myslice1": {
+						Package: "mypkg1",
+						Name:    "myslice1",
+						Contents: map[string]setup.PathInfo{
+							"/path": {Kind: "copy", Prefer: "mypkg2"},
+							"/link": {Kind: "symlink", Info: "/file1"},
+						},
+					},
+					"myslice2": {
+						Package: "mypkg1",
+						Name:    "myslice2",
+						Contents: map[string]setup.PathInfo{
+							"/path": {Kind: "copy", Prefer: "mypkg2"},
+						},
+					},
+				},
+			},
+			"mypkg2": {
+				Name: "mypkg2",
+				Path: "slices/mydir/mypkg2.yaml",
+				Slices: map[string]*setup.Slice{
+					"myslice1": {
+						Package: "mypkg2",
+						Name:    "myslice1",
+						Contents: map[string]setup.PathInfo{
+							"/path": {Kind: "copy", Prefer: "mypkg3"},
+							"/link": {Kind: "symlink", Info: "/file2", Prefer: "mypkg1"},
+						},
+					},
+				},
+			},
+			"mypkg3": {
+				Name: "mypkg3",
+				Path: "slices/mydir/mypkg3.yaml",
+				Slices: map[string]*setup.Slice{
+					"myslice1": {
+						Package: "mypkg3",
+						Name:    "myslice1",
+						Contents: map[string]setup.PathInfo{
+							"/path": {Kind: "copy"},
+						},
+					},
+				},
+			},
+		},
+	},
+	pathOrdering: map[string][]string{
+		"/path": {"mypkg3", "mypkg2", "mypkg1"},
+		"/link": {"mypkg1", "mypkg2"},
+	},
+}, {
+	summary: "Cannot specify same package in 'prefer'",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+					contents:
+						/path: {prefer: mypkg}
+		`,
+	},
+	relerror: `slice mypkg_myslice cannot 'prefer' its own package for path /path`,
+}, {
+	summary: "Cannot specify non-existent package in 'prefer'",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+					contents:
+						/path: {prefer: non-existent}
+		`,
+	},
+	relerror: `slice mypkg_myslice path /path 'prefer' refers to undefined package "non-existent"`,
+}, {
+	summary: "Path prefers package, but package does not have path",
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice:
+					contents:
+						/path: {prefer: mypkg2}
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+		`,
+	},
+	relerror: `slice mypkg1_myslice path /path has invalid 'prefer': "mypkg2": package does not have path /path`,
+}, {
+	summary: "Path has 'prefer' cycle",
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice:
+					contents:
+						/path: {prefer: mypkg2}
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+			slices:
+				myslice:
+					contents:
+						/path: {prefer: mypkg3}
+		`,
+		"slices/mydir/mypkg3.yaml": `
+			package: mypkg3
+			slices:
+				myslice:
+					contents:
+						/path: {prefer: mypkg1}
+		`,
+		"slices/mydir/mypkg4.yaml": `
+			package: mypkg4
+			slices:
+				myslice:
+					contents:
+						/path: {prefer: mypkg1}
+		`,
+	},
+	relerror: `slice mypkg1_myslice path /path has a 'prefer' cycle: mypkg1, mypkg2, mypkg3`,
+}, {
+	summary: "Path has a invalid 'prefer' graph with two nodes without prefers",
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice:
+					contents:
+						/text: {text: foo}
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+			slices:
+				myslice:
+					contents:
+						/text: {text: foo}
+		`,
+		"slices/mydir/mypkg3.yaml": `
+			package: mypkg3
+			slices:
+				myslice:
+					contents:
+						/text: {prefer: mypkg1}
+		`,
+	},
+	relerror: `slice mypkg3_myslice creates an invalid prefer ordering for path /text`,
+}, {
+	summary: "Path has a disconnected 'prefer' graph",
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice:
+					contents:
+						/path: {prefer: mypkg3}
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+			slices:
+				myslice:
+					contents:
+						/path: {prefer: mypkg4}
+		`,
+		"slices/mydir/mypkg3.yaml": `
+			package: mypkg3
+			slices:
+				myslice:
+					contents:
+						/path:
+		`,
+		"slices/mydir/mypkg4.yaml": `
+			package: mypkg4
+			slices:
+				myslice:
+					contents:
+						/path:
+		`,
+	},
+	relerror: `slice mypkg4_myslice creates an invalid prefer ordering for path /path`,
+}, {
+	summary: "Path has more than one 'prefer' chain",
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice:
+					contents:
+						/path: {prefer: mypkg3}
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+			slices:
+				myslice:
+					contents:
+						/path: {prefer: mypkg3}
+		`,
+		"slices/mydir/mypkg3.yaml": `
+			package: mypkg3
+			slices:
+				myslice:
+					contents:
+						/path:
+		`,
+	},
+	relerror: `slices mypkg2_myslice and mypkg1_myslice create an invalid prefer ordering for path /path`,
+}, {
+	summary: "Glob paths can conflict with 'prefer' chain",
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice:
+					contents:
+						/**:
+						/path: {prefer: mypkg2}
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+			slices:
+				myslice:
+					contents:
+						/path:
+		`,
+	},
+	relerror: `slices mypkg1_myslice and mypkg2_myslice conflict on /\*\* and /path`,
 }}
 
 var defaultChiselYaml = `
@@ -2063,6 +2336,9 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 		if _, ok := test.input["chisel.yaml"]; !ok {
 			test.input["chisel.yaml"] = string(defaultChiselYaml)
 		}
+		if test.pathOrdering == nil {
+			test.pathOrdering = make(map[string][]string)
+		}
 
 		dir := c.MkDir()
 		for path, data := range test.input {
@@ -2087,6 +2363,7 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 		release.Path = ""
 
 		if test.release != nil {
+			test.release.SetPathOrdering(test.pathOrdering)
 			c.Assert(release, DeepEquals, test.release)
 		}
 
@@ -2101,6 +2378,7 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 			c.Assert(selection.Release, Equals, release)
 			selection.Release = nil
 			if test.selection != nil {
+				selection.ClearCache()
 				c.Assert(selection, DeepEquals, test.selection)
 			}
 		}

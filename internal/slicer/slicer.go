@@ -111,6 +111,9 @@ func Run(options *RunOptions) error {
 			if len(pathInfo.Arch) > 0 && !slices.Contains(pathInfo.Arch, arch) {
 				continue
 			}
+			if !options.Selection.SelectPackage(targetPath, slice.Package) {
+				continue
+			}
 
 			if pathInfo.Kind == setup.CopyPath || pathInfo.Kind == setup.GlobPath {
 				sourcePath := pathInfo.Info
@@ -252,6 +255,9 @@ func Run(options *RunOptions) error {
 			}
 			if pathInfo.Kind == setup.CopyPath || pathInfo.Kind == setup.GlobPath ||
 				pathInfo.Kind == setup.GeneratePath {
+				continue
+			}
+			if !options.Selection.SelectPackage(relPath, slice.Package) {
 				continue
 			}
 			relPaths[relPath] = append(relPaths[relPath], slice)
