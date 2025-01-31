@@ -203,7 +203,7 @@ func (r *Release) validate() error {
 	// cannot validate that they are the same without downloading the package.
 	globs := make(map[string]*Slice)
 	paths := make(map[string]*Slice)
-	// nodes is used for bookkeeping to find the slice for a package without
+	// nodes is used for bookkeeping to find the slice for a path without
 	// having to do further processing.
 	nodes := make(map[string]*Slice)
 	successors := make(map[string][]string)
