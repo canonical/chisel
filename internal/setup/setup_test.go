@@ -2189,7 +2189,7 @@ var setupTests = []setupTest{{
 	},
 	relerror: `slice mypkg1_myslice path /path has a 'prefer' cycle: mypkg1, mypkg2, mypkg3`,
 }, {
-	summary: "Path has a invalid 'prefer' graph with two nodes without prefers",
+	summary: "Cannot have two nodes without 'prefer' even if they provide the same content",
 	input: map[string]string{
 		"slices/mydir/mypkg1.yaml": `
 			package: mypkg1
@@ -2293,6 +2293,35 @@ var setupTests = []setupTest{{
 		`,
 	},
 	relerror: `slices mypkg1_myslice and mypkg2_myslice conflict on /\*\* and /path`,
+}, {
+	summary: "Slices of same package cannot have different 'prefer'",
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice1:
+					contents:
+						/path: {prefer: mypkg2}
+				myslice2:
+					contents:
+						/path: {prefer: mypkg3}
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+			slices:
+				myslice:
+					contents:
+						/path:
+		`,
+		"slices/mydir/mypkg3.yaml": `
+			package: mypkg3
+			slices:
+				myslice:
+					contents:
+						/path:
+		`,
+	},
+	relerror: `slices mypkg1_myslice1 and mypkg1_myslice2 conflict on /path`,
 }}
 
 var defaultChiselYaml = `
