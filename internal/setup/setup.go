@@ -174,11 +174,17 @@ func ReadRelease(dir string) (*Release, error) {
 	return release, nil
 }
 
-func reportConflict(old, new *Slice, path string) error {
-	if old.Package > new.Package || old.Package == new.Package && old.Name > new.Name {
-		old, new = new, old
+func checkConflict(path string, old, new *Slice) error {
+	oldInfo := old.Contents[path]
+	newInfo := new.Contents[path]
+	if oldInfo.Prefer != newInfo.Prefer || !newInfo.SameContent(&oldInfo) ||
+		((newInfo.Kind == CopyPath || newInfo.Kind == GlobPath) && new.Package != old.Package) {
+		if old.Package > new.Package || old.Package == new.Package && old.Name > new.Name {
+			old, new = new, old
+		}
+		return fmt.Errorf("slices %s and %s conflict on %s", old, new, path)
 	}
-	return fmt.Errorf("slices %s and %s conflict on %s", old, new, path)
+	return nil
 }
 
 func (r *Release) validate() error {
@@ -254,10 +260,9 @@ func (r *Release) validate() error {
 					// If the package was already visited we only need to check
 					// that the new path provides the same content as the
 					// recorded one and they have the same prefer relationship.
-					prevSamePkgInfo := prevSamePkg.Contents[newPath]
-					if prevSamePkgInfo.Prefer != newInfo.Prefer || !newInfo.SameContent(&prevSamePkgInfo) ||
-						((newInfo.Kind == CopyPath || newInfo.Kind == GlobPath) && new.Package != prevSamePkg.Package) {
-						return reportConflict(prevSamePkg, new, newPath)
+					err := checkConflict(newPath, prevSamePkg, new)
+					if err != nil {
+						return err
 					}
 					continue
 				}
@@ -294,10 +299,9 @@ func (r *Release) validate() error {
 						// must be disconnected.
 						hasPrefers[newPath] = no
 					}
-					oldInfo := old.Contents[newPath]
-					if oldInfo.Prefer != newInfo.Prefer || !newInfo.SameContent(&oldInfo) ||
-						((newInfo.Kind == CopyPath || newInfo.Kind == GlobPath) && new.Package != old.Package) {
-						return reportConflict(old, new, newPath)
+					err := checkConflict(newPath, old, new)
+					if err != nil {
+						return err
 					}
 				}
 			}
