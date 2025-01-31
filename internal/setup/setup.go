@@ -585,6 +585,6 @@ func preferKey(path, pkg string) string {
 }
 
 func parsePreferKey(key string) (path string, pkg string) {
-	split := strings.Split(key, "|")
-	return split[0], split[1]
+	i := strings.LastIndex(key, "|")
+	return key[:i], key[i+1:]
 }
