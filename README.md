@@ -12,13 +12,6 @@ loosely coupled sets of files, based on the package’s metadata and content.
 Slices are basically subsets of the Debian packages, with their own content and
 set of dependencies to other internal and external slices.
 
-## Chisel repositories
-
-- [chisel](https://github.com/canonical/chisel) - main repository of the project
-- [chisel-docs](https://github.com/canonical/chisel-docs) - documentation repository
-- [chisel-releases](https://github.com/canonical/chisel-releases) - collection of package slice definitions
-
-
 ## How Chisel works
 
 <center>
@@ -333,6 +326,12 @@ have additional information for identifying the kind of content to expect:
 - [ ] Use a fake server for the archive tests
 - [ ] Functional tests
 
+
+## Chisel repositories
+
+- [chisel](https://github.com/canonical/chisel) - main repository of the project
+- [chisel-docs](https://github.com/canonical/chisel-docs) - documentation repository
+- [chisel-releases](https://github.com/canonical/chisel-releases) - collection of slice definitions
 
 ## FAQ
 
