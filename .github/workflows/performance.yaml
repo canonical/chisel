@@ -27,7 +27,7 @@ jobs:
         run: |
           go build -o ${{ matrix.version.name }} ./cmd/chisel
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.version.name }}
           path: ${{ matrix.version.name }}
@@ -41,12 +41,12 @@ jobs:
       pull-requests: write
     steps:
       - name: Download base
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: base
 
       - name: Download head
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: head
 
