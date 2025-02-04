@@ -36,7 +36,7 @@ jobs:
   benchmark-info:
     runs-on: ubuntu-22.04
     needs: build
-    name: Benchmark chisel info (24.04)
+    name: Benchmark chisel info (chisel-releases 24.04)
     permissions:
       pull-requests: write
     steps:
