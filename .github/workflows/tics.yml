@@ -1,0 +1,111 @@
+name: TiCS
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  # Running on pull_request_target instead of pull_request because this workflow
+  # uses secrets, and thus we need to ensure it runs under this project's code base.
+  pull_request_target:
+    branches: [main]
+  schedule:
+    - cron: '0 10 * * *'
+
+jobs:
+  set-project:
+    # This is needed because pull_request_target events will run workflows in 
+    # the context of the base repository (the repository receiving the pull request).
+    # 
+    # This means that, for such events, we need to explicitly tell the job to
+    # "action/checkout" the forked repository/ref (aka source of the PR).
+    name: Set project environment
+    runs-on: ubuntu-latest
+    outputs:
+      ref: ${{ steps.get-ref.outputs.ref }}
+      repo: ${{ steps.get-repo.outputs.repo }}
+    steps:
+      - id: get-ref
+        run: echo "ref=${{ github.event_name == 'pull_request_target' && github.head_ref || '' }}" >> $GITHUB_OUTPUT
+
+      - id: get-repo
+        run: echo "repo=${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name || '' }}" >> $GITHUB_OUTPUT
+
+  tics-static-code-analysis:
+    runs-on: ubuntu-24.04
+    name: TiCS Static Code Analysis
+    needs: [set-project]
+    permissions:
+      pull-requests: write
+    env:
+      TICS_FILELIST: tics-filelist
+      TICSPROJECT: chisel
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.set-project.outputs.ref }}
+          repository: ${{ needs.set-project.outputs.repo }}
+
+      - name: Check changed paths in PR
+        id: changed-paths
+        if: github.event_name == 'pull_request_target'
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            any:
+              - "**/*"
+          list-files: csv
+
+      - id: get-filelist
+        name: List of files to analyze
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request_target" ]]
+          then
+              echo "${{ steps.changed-paths.outputs.any_files }}" | tr "," "\n" > ${TICS_FILELIST}
+          else
+              echo "." > ${TICS_FILELIST}
+          fi
+
+      - uses: actions/setup-go@v4
+        with:
+          go-version-file: 'go.mod'
+      
+      - name: Install dependencies
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@v0.5.1
+          go install github.com/axw/gocov/gocov@v1.1.0
+          go install github.com/AlekSi/gocov-xml@v1.1.0
+
+      # We could store a report from the "tests" run, but this is cheap to do and keeps this isolated.
+      - name: Test and generate coverage report
+        run: |
+          go test -coverprofile=coverage.out ./...
+          gocov convert coverage.out > coverage.json
+          # The coverage.xml file needs to be in a .coverage folder.
+          mkdir .coverage
+          gocov-xml < coverage.json > .coverage/coverage.xml
+
+      - name: Run TiCS client analysis
+        uses: tiobe/tics-github-action@v3
+        if: github.event_name == 'pull_request_target'
+        with:
+          mode: 'client'
+          project: ${{ env.TICSPROJECT }}
+          filelist: ${{ env.TICS_FILELIST }}
+          viewerUrl: 'https://canonical.tiobe.com/tiobeweb/TICS/api/cfg?name=default'
+          displayUrl: 'https://canonical.tiobe.com/tiobeweb/TICS'
+          ticsAuthToken: ${{ secrets.TICSAUTHTOKEN }}
+          installTics: true
+
+      - name: Run TiCS server analysis
+        uses: tiobe/tics-github-action@v3
+        if: github.event_name != 'pull_request_target'
+        with:
+          mode: 'qserver'
+          codetype: 'PRODUCTION'
+          project: ${{ env.TICSPROJECT }}
+          branchdir: .
+          filelist: ${{ env.TICS_FILELIST }}
+          viewerUrl: 'https://canonical.tiobe.com/tiobeweb/TICS/api/cfg?name=default'
+          displayUrl: 'https://canonical.tiobe.com/tiobeweb/TICS'
+          ticsAuthToken: ${{ secrets.TICSAUTHTOKEN }}
+          installTics: true
