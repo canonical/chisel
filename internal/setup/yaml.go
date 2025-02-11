@@ -484,6 +484,7 @@ func pathInfoToYAML(pi *PathInfo) (*yamlPath, error) {
 		Until:    pi.Until,
 		Arch:     yamlArch{List: pi.Arch},
 		Generate: pi.Generate,
+		Prefer:   pi.Prefer,
 	}
 	switch pi.Kind {
 	case DirPath:
