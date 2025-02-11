@@ -2021,6 +2021,42 @@ var setupTests = []setupTest{{
 	},
 	relerror: `chisel.yaml: archive "ubuntu" defined twice`,
 }, {
+	summary: "Cannot use prefer with generate",
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice1:
+					contents:
+						/**: {generate: manifest, prefer: mypkg2}
+		`,
+	},
+	relerror: `slice mypkg1_myslice1 path /\*\* has invalid generate options`,
+}, {
+	summary: "Cannot use prefer with wildcard",
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice1:
+					contents:
+						/**: {prefer: mypkg2}
+		`,
+	},
+	relerror: `slice mypkg1_myslice1 path /\*\* has invalid wildcard options`,
+}, {
+	summary: "Cannot use prefer its own package",
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice1:
+					contents:
+						/file: {prefer: mypkg1}
+		`,
+	},
+	relerror: "slice mypkg1_myslice1 cannot 'prefer' its own package for path /file",
+}, {
 	summary: "Path conflicts with 'prefer'",
 	input: map[string]string{
 		"slices/mydir/mypkg1.yaml": `
