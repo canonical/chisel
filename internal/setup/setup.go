@@ -1,10 +1,10 @@
 package setup
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	"golang.org/x/crypto/openpgp/packet"
@@ -19,12 +19,6 @@ type Release struct {
 	Path     string
 	Packages map[string]*Package
 	Archives map[string]*Archive
-
-	// pathOrdering stores the sorted packages if there is a 'prefer'
-	// relationship. Otherwise, it will be nil.
-	// Given a selection of packages, the path should be extracted from the one
-	// that is found first on the list.
-	pathOrdering map[string][]string
 }
 
 // Archive is the location from which binary packages are obtained.
@@ -124,35 +118,8 @@ func (s *Slice) String() string { return s.Package + "_" + s.Name }
 // the real information coming from packages is still unknown, so referenced
 // paths could potentially be missing, for example.
 type Selection struct {
-	Release             *Release
-	Slices              []*Slice
-	cachedSelectPackage map[string]string
-}
-
-// SelectPackage returns true if path should be extracted from pkg.
-func (s *Selection) SelectPackage(path, pkg string) bool {
-	// If the path has no prefer relationships then it is always selected.
-	ordering, ok := s.Release.pathOrdering[path]
-	if !ok {
-		return true
-	}
-
-	if cached, ok := s.cachedSelectPackage[path]; ok {
-		return cached == pkg
-	}
-
-	var selected string
-	for _, pkg := range ordering {
-		i := slices.IndexFunc(s.Slices, func(s *Slice) bool {
-			return s.Package == pkg
-		})
-		if i != -1 {
-			selected = s.Slices[i].Package
-			break
-		}
-	}
-	s.cachedSelectPackage[path] = selected
-	return selected == pkg
+	Release *Release
+	Slices  []*Slice
 }
 
 func ReadRelease(dir string) (*Release, error) {
@@ -161,6 +128,11 @@ func ReadRelease(dir string) (*Release, error) {
 		logDir = filepath.Base(dir)
 	}
 	logf("Processing %s release...", logDir)
+
+	release := &Release{
+		Path:     dir,
+		Packages: make(map[string]*Package),
+	}
 
 	release, err := readRelease(dir)
 	if err != nil {
@@ -174,20 +146,12 @@ func ReadRelease(dir string) (*Release, error) {
 	return release, nil
 }
 
-func checkConflict(path string, old, new *Slice) error {
-	oldInfo := old.Contents[path]
-	newInfo := new.Contents[path]
-	if oldInfo.Prefer != newInfo.Prefer || !newInfo.SameContent(&oldInfo) ||
-		((newInfo.Kind == CopyPath || newInfo.Kind == GlobPath) && new.Package != old.Package) {
-		if old.Package > new.Package || old.Package == new.Package && old.Name > new.Name {
-			old, new = new, old
-		}
-		return fmt.Errorf("slices %s and %s conflict on %s", old, new, path)
-	}
-	return nil
-}
-
 func (r *Release) validate() error {
+	prefers, err := r.prefers()
+	if err != nil {
+		return err
+	}
+
 	keys := []SliceKey(nil)
 
 	// Check for info conflicts and prepare for following checks. A conflict
@@ -201,165 +165,43 @@ func (r *Release) validate() error {
 	// The above also means that generated content (e.g. text files, directories
 	// with make:true) will always conflict with extracted content, because we
 	// cannot validate that they are the same without downloading the package.
-	globs := make(map[string]*Slice)
 	paths := make(map[string]*Slice)
-	// nodes is used for bookkeeping to find the slice for a path without
-	// having to do further processing.
-	nodes := make(map[string]*Slice)
-	successors := make(map[string][]string)
-	const (
-		// no means none of the nodes have prefers.
-		no int = 0
-		// yes means all the nodes but one (the tail) have prefers. We have
-		// already found the tail.
-		yes int = 1
-		// maybeTail means we have found a single node with no prefers, it
-		// could either be the tail or belong to a graph with no prefers.
-		maybeTail int = 2
-		// yesMissingTail means all the existing nodes have prefers and we
-		// are yet to find a single node without prefers (the tail).
-		yesMissingTail int = 3
-	)
-	hasPrefers := make(map[string]int)
-
-	// Iterate on a stable package order.
-	var pkgNames []string
+	globs := make(map[string]*Slice)
 	for _, pkg := range r.Packages {
-		pkgNames = append(pkgNames, pkg.Name)
-	}
-	slices.Sort(pkgNames)
-	for _, pkgName := range pkgNames {
-		pkg := r.Packages[pkgName]
 		for _, new := range pkg.Slices {
 			keys = append(keys, SliceKey{pkg.Name, new.Name})
 			for newPath, newInfo := range new.Contents {
-				old, ok := paths[newPath]
-				if !ok {
+				if old, ok := paths[newPath]; ok {
+					if new.Package != old.Package {
+						if p, err := preferredPathPackage(newPath, new.Package, old.Package, prefers); err == nil {
+							if p == new.Package {
+								paths[newPath] = new
+							}
+							continue
+						} else if err != preferNone {
+							return err
+						}
+					}
+
+					oldInfo := old.Contents[newPath]
+					if !newInfo.SameContent(&oldInfo) || (newInfo.Kind == CopyPath || newInfo.Kind == GlobPath) && new.Package != old.Package {
+						if old.Package > new.Package || old.Package == new.Package && old.Name > new.Name {
+							old, new = new, old
+						}
+						return fmt.Errorf("slices %s and %s conflict on %s", old, new, newPath)
+					}
+					// Note: Because for conflict resolution we only check that
+					// the created file would be the same and we know newInfo and
+					// oldInfo produce the same one, we do not have to record
+					// newInfo.
+				} else {
 					paths[newPath] = new
 					if newInfo.Kind == GeneratePath || newInfo.Kind == GlobPath {
 						globs[newPath] = new
 					}
-					if newInfo.Prefer != "" {
-						if _, ok := r.Packages[newInfo.Prefer]; !ok {
-							return fmt.Errorf("slice %s path %s 'prefer' refers to undefined package %q",
-								new, newPath, newInfo.Prefer)
-						}
-						key := preferKey(newPath, new.Package)
-						successors[key] = append(successors[key], preferKey(newPath, newInfo.Prefer))
-						nodes[key] = new
-						hasPrefers[newPath] = yesMissingTail
-					} else {
-						nodes[preferKey(newPath, new.Package)] = new
-						hasPrefers[newPath] = maybeTail
-					}
-					continue
-				}
-
-				prevSamePkg, ok := nodes[preferKey(newPath, new.Package)]
-				if ok {
-					// If the package was already visited we only need to check
-					// that the new path provides the same content as the
-					// recorded one and they have the same prefer relationship.
-					err := checkConflict(newPath, prevSamePkg, new)
-					if err != nil {
-						return err
-					}
-					continue
-				}
-
-				if newInfo.Prefer != "" {
-					if _, ok := r.Packages[newInfo.Prefer]; !ok {
-						return fmt.Errorf("slice %s path %s 'prefer' refers to undefined package %q",
-							new, newPath, newInfo.Prefer)
-					}
-					switch hasPrefers[newPath] {
-					case no:
-						return fmt.Errorf("slice %s creates an invalid prefer ordering for path %s",
-							new, newPath)
-					case yesMissingTail:
-						// No action needed.
-					default:
-						hasPrefers[newPath] = yes
-					}
-					key := preferKey(newPath, new.Package)
-					successors[key] = append(successors[key], preferKey(newPath, newInfo.Prefer))
-					nodes[key] = new
-				} else {
-					switch hasPrefers[newPath] {
-					case yes:
-						return fmt.Errorf("slice %s creates an invalid prefer ordering for path %s",
-							new, newPath)
-					case yesMissingTail:
-						nodes[preferKey(newPath, new.Package)] = new
-						hasPrefers[newPath] = yes
-						continue
-					default:
-						// Since there are already two or more **packages** for
-						// this path with no 'prefer' specified, the graph
-						// must be disconnected.
-						hasPrefers[newPath] = no
-					}
-					err := checkConflict(newPath, old, new)
-					if err != nil {
-						return err
-					}
 				}
 			}
 		}
-	}
-
-	// Note: Disconnected graphs have already been filtered out before
-	// tarjanSort. If a graph is disconnected it has at least two nodes
-	// with no prefers which results in an error above.
-	ts := tarjanSort(successors)
-	for i, names := range ts {
-		if len(names) > 1 {
-			slices.Sort(names)
-			var cyclePkgs []string
-			var path string
-			for _, name := range names {
-				p, pkg := parsePreferKey(name)
-				// All paths are the same.
-				path = p
-				cyclePkgs = append(cyclePkgs, pkg)
-			}
-			// Lookup can never fail by construction.
-			s, _ := nodes[preferKey(path, cyclePkgs[0])]
-			return fmt.Errorf("slice %s path %s has a 'prefer' cycle: %s",
-				s, path, strings.Join(cyclePkgs, ", "))
-		}
-		current := names[0]
-		path, pkg := parsePreferKey(current)
-		if hasPrefers[path] == no {
-			continue
-		}
-		if i < len(ts)-1 {
-			predecessor := ts[i+1][0]
-			predPath, _ := parsePreferKey(predecessor)
-			if predPath == path && slices.Index(successors[predecessor], current) == -1 {
-				// If the previous node does not point to the current one it means
-				// we have a Y-shaped graph.
-				new, old := nodes[current], nodes[predecessor]
-				if old.Package > new.Package || old.Package == new.Package && old.Name > new.Name {
-					old, new = new, old
-				}
-				return fmt.Errorf("slices %s and %s create an invalid prefer ordering for path %s",
-					new, old, path)
-			}
-		}
-		s, hasPath := nodes[current]
-		if hasPath {
-			_, ok := s.Contents[path]
-			hasPath = ok
-		}
-		if !hasPath {
-			// If the current node is in the list and it doesn't have the path,
-			// it has a predecessor.
-			predSlice := nodes[ts[i+1][0]]
-			return fmt.Errorf(`slice %s path %s has invalid 'prefer': "%s": package does not have path %s`,
-				predSlice, path, pkg, path)
-		}
-		r.pathOrdering[path] = append(r.pathOrdering[path], pkg)
 	}
 
 	// Check for glob and generate conflicts.
@@ -367,32 +209,17 @@ func (r *Release) validate() error {
 		oldInfo := old.Contents[oldPath]
 		for newPath, new := range paths {
 			if oldPath == newPath {
-				// Identical globs have been filtered earlier. This must be the
+				// Identical paths have been filtered earlier. This must be the
 				// exact same entry.
 				continue
 			}
-			if !strdist.GlobPath(newPath, oldPath) {
-				continue
-			}
-			toCheck := []*Slice{new}
-			if hasPrefers[newPath] == yes {
-				toCheck = []*Slice{}
-				for _, pkg := range r.pathOrdering[newPath] {
-					// We have already checked above that the node exists
-					// when verifying the ordering.
-					s, _ := nodes[preferKey(newPath, pkg)]
-					toCheck = append(toCheck, s)
+			newInfo := new.Contents[newPath]
+			if oldInfo.Kind == GlobPath && (newInfo.Kind == GlobPath || newInfo.Kind == CopyPath) {
+				if new.Package == old.Package {
+					continue
 				}
 			}
-			for _, new := range toCheck {
-				// It is okay to check only one slice per packages because the
-				// content has been validated to be the same earlier.
-				newInfo := new.Contents[newPath]
-				if oldInfo.Kind == GlobPath && (newInfo.Kind == GlobPath || newInfo.Kind == CopyPath) {
-					if new.Package == old.Package {
-						continue
-					}
-				}
+			if strdist.GlobPath(newPath, oldPath) {
 				if (old.Package > new.Package) || (old.Package == new.Package && old.Name > new.Name) ||
 					(old.Package == new.Package && old.Name == new.Name && oldPath > newPath) {
 					old, new = new, old
@@ -404,7 +231,7 @@ func (r *Release) validate() error {
 	}
 
 	// Check for cycles.
-	_, err := order(r.Packages, keys)
+	_, err = order(r.Packages, keys)
 	if err != nil {
 		return err
 	}
@@ -554,9 +381,13 @@ func stripBase(baseDir, path string) string {
 func Select(release *Release, slices []SliceKey) (*Selection, error) {
 	logf("Selecting slices...")
 
+	prefers, err := release.prefers()
+	if err != nil {
+		return nil, err
+	}
+
 	selection := &Selection{
-		Release:             release,
-		cachedSelectPackage: make(map[string]string),
+		Release: release,
 	}
 
 	sorted, err := order(release.Packages, slices)
@@ -568,8 +399,31 @@ func Select(release *Release, slices []SliceKey) (*Selection, error) {
 		selection.Slices[i] = release.Packages[key.Package].Slices[key.Slice]
 	}
 
+	paths := make(map[string]*Slice)
 	for _, new := range selection.Slices {
 		for newPath, newInfo := range new.Contents {
+			if old, ok := paths[newPath]; ok {
+				if new.Package != old.Package {
+					if p, err := preferredPathPackage(newPath, new.Package, old.Package, prefers); err == nil {
+						if p == new.Package {
+							paths[newPath] = new
+						}
+						continue
+					} else if err != preferNone {
+						return nil, err
+					}
+				}
+
+				oldInfo := old.Contents[newPath]
+				if !newInfo.SameContent(&oldInfo) || (newInfo.Kind == CopyPath || newInfo.Kind == GlobPath) && new.Package != old.Package {
+					if old.Package > new.Package || old.Package == new.Package && old.Name > new.Name {
+						old, new = new, old
+					}
+					return nil, fmt.Errorf("slices %s and %s conflict on %s", old, new, newPath)
+				}
+			} else {
+				paths[newPath] = new
+			}
 			// An invalid "generate" value should only throw an error if that
 			// particular slice is selected. Hence, the check is here.
 			switch newInfo.Generate {
@@ -584,11 +438,102 @@ func Select(release *Release, slices []SliceKey) (*Selection, error) {
 	return selection, nil
 }
 
-func preferKey(path, pkg string) string {
-	return path + "|" + pkg
+const (
+	preferSource = 1
+	preferTarget = 2
+)
+
+type preferKey struct {
+	side int
+	path string
+	pkg  string
 }
 
-func parsePreferKey(key string) (path string, pkg string) {
-	i := strings.LastIndex(key, "|")
-	return key[:i], key[i+1:]
+func (r *Release) prefers() (map[preferKey]string, error) {
+	prefers := make(map[preferKey]string)
+	for _, pkg := range r.Packages {
+		for _, slice := range pkg.Slices {
+			for path, info := range slice.Contents {
+				if info.Prefer != "" {
+					tkey := preferKey{preferTarget, path, pkg.Name}
+					skey := preferKey{preferSource, path, info.Prefer}
+					if target, ok := prefers[tkey]; ok {
+						if target != info.Prefer {
+							pkg1, pkg2 := sortPair(target, info.Prefer)
+							return nil, fmt.Errorf("package %q has conflicting prefers for %s: %s != %s",
+								pkg.Name, path, pkg1, pkg2)
+						}
+					} else if source, ok := prefers[skey]; ok {
+						if source != pkg.Name {
+							pkg1, pkg2 := sortPair(source, pkg.Name)
+							return nil, fmt.Errorf("packages %q and %q cannot both prefer %q for %s",
+								pkg1, pkg2, info.Prefer, path)
+						}
+					} else {
+						prefers[tkey] = info.Prefer
+						prefers[skey] = pkg.Name
+						// Sample package that requires this path to be in a prefer relationship.
+						prefers[preferKey{preferSource, path, ""}] = pkg.Name
+					}
+				}
+			}
+		}
+	}
+	return prefers, nil
+}
+
+func preferredPathPackage(path, pkg1, pkg2 string, prefers map[preferKey]string) (choice string, err error) {
+	pkg1, pkg2 = sortPair(pkg1, pkg2)
+	prefer1, err := findPrefer(path, pkg1, pkg2, prefers)
+	if err != nil {
+		return "", err
+	}
+	prefer2, err := findPrefer(path, pkg2, pkg1, prefers)
+	if err != nil {
+		return "", err
+	}
+	if prefer1 && prefer2 {
+		return "", fmt.Errorf("package %q is part of a prefer loop on %s", pkg1, path)
+	} else if prefer1 {
+		return pkg1, nil
+	} else if prefer2 {
+		return pkg2, nil
+	}
+	sample, enforce := prefers[preferKey{preferSource, path, ""}]
+	if enforce {
+		_, hasTarget := prefers[preferKey{preferTarget, path, pkg1}]
+		_, hasSource := prefers[preferKey{preferSource, path, pkg1}]
+		conflict := pkg1
+		if hasTarget || hasSource {
+			conflict = pkg2
+		}
+		return "", fmt.Errorf("package %q and %q conflict on %s without prefer relationship", sample, conflict, path)
+	}
+	return "", preferNone
+}
+
+var preferNone = errors.New("no prefer relationship")
+
+func findPrefer(path, pkg, prefer string, prefers map[preferKey]string) (found bool, err error) {
+	// This logic is optimized for the happy case, which is
+	// always the case unless the release is broken. Note that
+	// the pkg reported in the error is the one inside the loop,
+	// not necessarily the input parameter.
+	for i := 0; i < len(prefers); i++ {
+		pkg = prefers[preferKey{preferTarget, path, pkg}]
+		if pkg == "" {
+			return false, nil
+		}
+		if pkg == prefer {
+			return true, nil
+		}
+	}
+	return false, fmt.Errorf("package %q is part of a prefer loop on %s", pkg, path)
+}
+
+func sortPair(name1, name2 string) (sorted1, sorted2 string) {
+	if name1 < name2 {
+		return name1, name2
+	}
+	return name2, name1
 }

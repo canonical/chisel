@@ -151,10 +151,9 @@ type yamlPubKey struct {
 
 func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 	release := &Release{
-		Path:         baseDir,
-		Packages:     make(map[string]*Package),
-		Archives:     make(map[string]*Archive),
-		pathOrdering: make(map[string][]string),
+		Path:     baseDir,
+		Packages: make(map[string]*Package),
+		Archives: make(map[string]*Archive),
 	}
 
 	fileName := stripBase(baseDir, filePath)
@@ -425,9 +424,9 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 						return nil, fmt.Errorf("slice %s_%s has invalid 'arch' for path %s: %q", pkgName, sliceName, contPath, s)
 					}
 				}
-				if prefer == pkgName {
-					return nil, fmt.Errorf("slice %s_%s cannot 'prefer' its own package for path %s", pkgName, sliceName, contPath)
-				}
+			}
+			if prefer == pkgName {
+				return nil, fmt.Errorf("slice %s_%s cannot 'prefer' its own package for path %s", pkgName, sliceName, contPath)
 			}
 			if len(kinds) == 0 {
 				kinds = append(kinds, CopyPath)

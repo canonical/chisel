@@ -2392,7 +2392,6 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 		release.Path = ""
 
 		if test.release != nil {
-			test.release.SetPathOrdering(test.pathOrdering)
 			c.Assert(release, DeepEquals, test.release)
 		}
 
@@ -2407,7 +2406,6 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 			c.Assert(selection.Release, Equals, release)
 			selection.Release = nil
 			if test.selection != nil {
-				selection.ClearCache()
 				c.Assert(selection, DeepEquals, test.selection)
 			}
 		}
