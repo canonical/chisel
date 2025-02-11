@@ -65,6 +65,7 @@ type yamlPath struct {
 	Until    PathUntil    `yaml:"until,omitempty"`
 	Arch     yamlArch     `yaml:"arch,omitempty"`
 	Generate GenerateKind `yaml:"generate,omitempty"`
+	Prefer   string       `yaml:"prefer,omitempty"`
 }
 
 func (yp *yamlPath) MarshalYAML() (interface{}, error) {
@@ -363,10 +364,11 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 			var until PathUntil
 			var arch []string
 			var generate GenerateKind
+			var prefer string
 			if yamlPath != nil && yamlPath.Generate != "" {
 				zeroPathGenerate := zeroPath
 				zeroPathGenerate.Generate = yamlPath.Generate
-				if !yamlPath.SameContent(&zeroPathGenerate) || yamlPath.Until != UntilNone {
+				if !yamlPath.SameContent(&zeroPathGenerate) || yamlPath.Prefer != "" || yamlPath.Until != UntilNone {
 					return nil, fmt.Errorf("slice %s_%s path %s has invalid generate options",
 						pkgName, sliceName, contPath)
 				}
@@ -376,7 +378,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 				kinds = append(kinds, GeneratePath)
 			} else if strings.ContainsAny(contPath, "*?") {
 				if yamlPath != nil {
-					if !yamlPath.SameContent(&zeroPath) {
+					if !yamlPath.SameContent(&zeroPath) || yamlPath.Prefer != "" {
 						return nil, fmt.Errorf("slice %s_%s path %s has invalid wildcard options",
 							pkgName, sliceName, contPath)
 					}
@@ -387,6 +389,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 				mode = uint(yamlPath.Mode)
 				mutable = yamlPath.Mutable
 				generate = yamlPath.Generate
+				prefer = yamlPath.Prefer
 				if yamlPath.Dir {
 					if !strings.HasSuffix(contPath, "/") {
 						return nil, fmt.Errorf("slice %s_%s path %s must end in / for 'make' to be valid",
@@ -422,6 +425,9 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 					}
 				}
 			}
+			if prefer == pkgName {
+				return nil, fmt.Errorf("slice %s_%s cannot 'prefer' its own package for path %s", pkgName, sliceName, contPath)
+			}
 			if len(kinds) == 0 {
 				kinds = append(kinds, CopyPath)
 			}
@@ -443,6 +449,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 				Until:    until,
 				Arch:     arch,
 				Generate: generate,
+				Prefer:   prefer,
 			}
 		}
 
@@ -477,6 +484,7 @@ func pathInfoToYAML(pi *PathInfo) (*yamlPath, error) {
 		Until:    pi.Until,
 		Arch:     yamlArch{List: pi.Arch},
 		Generate: pi.Generate,
+		Prefer:   pi.Prefer,
 	}
 	switch pi.Kind {
 	case DirPath:

@@ -1,6 +1,7 @@
 package setup
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -89,6 +90,7 @@ type PathInfo struct {
 	Until    PathUntil
 	Arch     []string
 	Generate GenerateKind
+	Prefer   string
 }
 
 // SameContent returns whether the path has the same content properties as some
@@ -127,11 +129,6 @@ func ReadRelease(dir string) (*Release, error) {
 	}
 	logf("Processing %s release...", logDir)
 
-	release := &Release{
-		Path:     dir,
-		Packages: make(map[string]*Package),
-	}
-
 	release, err := readRelease(dir)
 	if err != nil {
 		return nil, err
@@ -145,6 +142,11 @@ func ReadRelease(dir string) (*Release, error) {
 }
 
 func (r *Release) validate() error {
+	prefers, err := r.prefers()
+	if err != nil {
+		return err
+	}
+
 	keys := []SliceKey(nil)
 
 	// Check for info conflicts and prepare for following checks. A conflict
@@ -165,6 +167,17 @@ func (r *Release) validate() error {
 			keys = append(keys, SliceKey{pkg.Name, new.Name})
 			for newPath, newInfo := range new.Contents {
 				if old, ok := paths[newPath]; ok {
+					if new.Package != old.Package {
+						if p, err := preferredPathPackage(newPath, new.Package, old.Package, prefers); err == nil {
+							if p == new.Package {
+								paths[newPath] = new
+							}
+							continue
+						} else if err != preferNone {
+							return err
+						}
+					}
+
 					oldInfo := old.Contents[newPath]
 					if !newInfo.SameContent(&oldInfo) || (newInfo.Kind == CopyPath || newInfo.Kind == GlobPath) && new.Package != old.Package {
 						if old.Package > new.Package || old.Package == new.Package && old.Name > new.Name {
@@ -213,7 +226,7 @@ func (r *Release) validate() error {
 	}
 
 	// Check for cycles.
-	_, err := order(r.Packages, keys)
+	_, err = order(r.Packages, keys)
 	if err != nil {
 		return err
 	}
@@ -376,20 +389,8 @@ func Select(release *Release, slices []SliceKey) (*Selection, error) {
 		selection.Slices[i] = release.Packages[key.Package].Slices[key.Slice]
 	}
 
-	paths := make(map[string]*Slice)
 	for _, new := range selection.Slices {
 		for newPath, newInfo := range new.Contents {
-			if old, ok := paths[newPath]; ok {
-				oldInfo := old.Contents[newPath]
-				if !newInfo.SameContent(&oldInfo) || (newInfo.Kind == CopyPath || newInfo.Kind == GlobPath) && new.Package != old.Package {
-					if old.Package > new.Package || old.Package == new.Package && old.Name > new.Name {
-						old, new = new, old
-					}
-					return nil, fmt.Errorf("slices %s and %s conflict on %s", old, new, newPath)
-				}
-			} else {
-				paths[newPath] = new
-			}
 			// An invalid "generate" value should only throw an error if that
 			// particular slice is selected. Hence, the check is here.
 			switch newInfo.Generate {
@@ -402,4 +403,109 @@ func Select(release *Release, slices []SliceKey) (*Selection, error) {
 	}
 
 	return selection, nil
+}
+
+const (
+	preferSource = 1
+	preferTarget = 2
+)
+
+type preferKey struct {
+	side int
+	path string
+	pkg  string
+}
+
+func (r *Release) prefers() (map[preferKey]string, error) {
+	prefers := make(map[preferKey]string)
+	for _, pkg := range r.Packages {
+		for _, slice := range pkg.Slices {
+			for path, info := range slice.Contents {
+				if info.Prefer != "" {
+					if _, ok := r.Packages[info.Prefer]; !ok {
+						return nil, fmt.Errorf("slice %s path %s 'prefer' refers to undefined package %q", slice, path, info.Prefer)
+					}
+					tkey := preferKey{preferTarget, path, pkg.Name}
+					skey := preferKey{preferSource, path, info.Prefer}
+					if target, ok := prefers[tkey]; ok {
+						if target != info.Prefer {
+							pkg1, pkg2 := sortPair(target, info.Prefer)
+							return nil, fmt.Errorf("package %q has conflicting prefers for %s: %s != %s",
+								pkg.Name, path, pkg1, pkg2)
+						}
+					} else if source, ok := prefers[skey]; ok {
+						if source != pkg.Name {
+							pkg1, pkg2 := sortPair(source, pkg.Name)
+							return nil, fmt.Errorf("packages %q and %q cannot both prefer %q for %s",
+								pkg1, pkg2, info.Prefer, path)
+						}
+					} else {
+						prefers[tkey] = info.Prefer
+						prefers[skey] = pkg.Name
+						// Sample package that requires this path to be in a prefer relationship.
+						prefers[preferKey{preferSource, path, ""}] = pkg.Name
+					}
+				}
+			}
+		}
+	}
+	return prefers, nil
+}
+
+func preferredPathPackage(path, pkg1, pkg2 string, prefers map[preferKey]string) (choice string, err error) {
+	pkg1, pkg2 = sortPair(pkg1, pkg2)
+	prefer1, err := findPrefer(path, pkg1, pkg2, prefers)
+	if err != nil {
+		return "", err
+	}
+	prefer2, err := findPrefer(path, pkg2, pkg1, prefers)
+	if err != nil {
+		return "", err
+	}
+	if prefer1 && prefer2 {
+		return "", fmt.Errorf("package %q is part of a prefer loop on %s", pkg1, path)
+	} else if prefer1 {
+		return pkg1, nil
+	} else if prefer2 {
+		return pkg2, nil
+	}
+	sample, enforce := prefers[preferKey{preferSource, path, ""}]
+	if enforce {
+		conflict := pkg1
+		if conflict == sample {
+			conflict = pkg2
+		}
+		pkg1, pkg2 = sortPair(conflict, sample)
+		return "", fmt.Errorf("package %q and %q conflict on %s without prefer relationship", pkg1, pkg2, path)
+	}
+	return "", preferNone
+}
+
+var preferNone = errors.New("no prefer relationship")
+
+func findPrefer(path, pkg, prefer string, prefers map[preferKey]string) (found bool, err error) {
+	if len(prefers) == 0 {
+		return false, nil
+	}
+	// This logic is optimized for the happy case, which is
+	// always the case unless the release is broken. Note that
+	// the pkg reported in the error is the one inside the loop,
+	// not necessarily the input parameter.
+	for i := 0; i < len(prefers); i++ {
+		pkg = prefers[preferKey{preferTarget, path, pkg}]
+		if pkg == "" {
+			return false, nil
+		}
+		if pkg == prefer {
+			return true, nil
+		}
+	}
+	return false, fmt.Errorf("package %q is part of a prefer loop on %s", pkg, path)
+}
+
+func sortPair(name1, name2 string) (sorted1, sorted2 string) {
+	if name1 < name2 {
+		return name1, name2
+	}
+	return name2, name1
 }
