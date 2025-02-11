@@ -2216,6 +2216,32 @@ var setupTests = []setupTest{{
 	},
 	relerror: `package "mypkg[1-3]" is part of a prefer loop on /path`,
 }, {
+	summary: "Path has 'prefer' cycle and not all nodes are part of the cycle",
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice:
+					contents:
+						/path: {prefer: mypkg2}
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+			slices:
+				myslice:
+					contents:
+						/path: {prefer: mypkg3}
+		`,
+		"slices/mydir/mypkg3.yaml": `
+			package: mypkg3
+			slices:
+				myslice:
+					contents:
+						/path: {prefer: mypkg2}
+		`,
+	},
+	relerror: `packages "mypkg1" and "mypkg3" cannot both prefer "mypkg2" for /path`,
+}, {
 	summary: "Cannot have two nodes without 'prefer' even if they provide the same content",
 	input: map[string]string{
 		"slices/mydir/mypkg1.yaml": `
