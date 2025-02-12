@@ -151,9 +151,10 @@ type yamlPubKey struct {
 
 func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 	release := &Release{
-		Path:     baseDir,
-		Packages: make(map[string]*Package),
-		Archives: make(map[string]*Archive),
+		Path:         baseDir,
+		Packages:     make(map[string]*Package),
+		Archives:     make(map[string]*Archive),
+		pathOrdering: make(map[string][]string),
 	}
 
 	fileName := stripBase(baseDir, filePath)

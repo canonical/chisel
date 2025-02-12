@@ -19,13 +19,14 @@ var (
 )
 
 type setupTest struct {
-	summary   string
-	input     map[string]string
-	release   *setup.Release
-	relerror  string
-	selslices []setup.SliceKey
-	selection *setup.Selection
-	selerror  string
+	summary      string
+	input        map[string]string
+	release      *setup.Release
+	relerror     string
+	pathOrdering map[string][]string
+	selslices    []setup.SliceKey
+	selection    *setup.Selection
+	selerror     string
 }
 
 var setupTests = []setupTest{{
@@ -2147,6 +2148,10 @@ var setupTests = []setupTest{{
 			},
 		},
 	},
+	pathOrdering: map[string][]string{
+		"/path": {"mypkg3", "mypkg2", "mypkg1"},
+		"/link": {"mypkg1", "mypkg2"},
+	},
 }, {
 	summary: "Cannot specify same package in 'prefer'",
 	input: map[string]string{
@@ -2172,24 +2177,21 @@ var setupTests = []setupTest{{
 	},
 	relerror: `slice mypkg_myslice path /path 'prefer' refers to undefined package "non-existent"`,
 }, {
-	/*
-		TODO: handle this case:
-				summary: "Path prefers package, but package does not have path",
-				input: map[string]string{
-					"slices/mydir/mypkg1.yaml": `
-						package: mypkg1
-						slices:
-							myslice:
-								contents:
-									/path: {prefer: mypkg2}
-					`,
-					"slices/mydir/mypkg2.yaml": `
-						package: mypkg2
-					`,
-				},
-				relerror: `slice mypkg1_myslice path /path has invalid 'prefer' "mypkg2": package does not have path /path`,
-			}, {
-	*/
+	summary: "Path prefers package, but package does not have path",
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice:
+					contents:
+						/path: {prefer: mypkg2}
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+		`,
+	},
+	relerror: `slice mypkg1_myslice path /path 'prefer' refers to invalid package "mypkg2": package does not have path /path`,
+}, {
 	summary: "Path has 'prefer' cycle",
 	input: map[string]string{
 		"slices/mydir/mypkg1.yaml": `
@@ -2327,29 +2329,26 @@ var setupTests = []setupTest{{
 	},
 	relerror: `packages "mypkg1" and "mypkg2" cannot both prefer "mypkg3" for /path`,
 }, {
-	/*
-		TODO: handle this case:
-				summary: "Glob paths can conflict with 'prefer' chain",
-				input: map[string]string{
-					"slices/mydir/mypkg1.yaml": `
-						package: mypkg1
-						slices:
-							myslice:
-								contents:
-									/**:
-									/path: {prefer: mypkg2}
-					`,
-					"slices/mydir/mypkg2.yaml": `
-						package: mypkg2
-						slices:
-							myslice:
-								contents:
-									/path:
-					`,
-				},
-				relerror: `slices mypkg1_myslice and mypkg2_myslice conflict on /\*\* and /path`,
-			}, {
-	*/
+	summary: "Glob paths can conflict with 'prefer' chain",
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice:
+					contents:
+						/**:
+						/path: {prefer: mypkg2}
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+			slices:
+				myslice:
+					contents:
+						/path:
+		`,
+	},
+	relerror: `slices mypkg1_myslice and mypkg2_myslice conflict on /\*\* and /path`,
+}, {
 	summary: "Slices of same package cannot have different 'prefer'",
 	input: map[string]string{
 		"slices/mydir/mypkg1.yaml": `
@@ -2421,6 +2420,9 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 		if _, ok := test.input["chisel.yaml"]; !ok {
 			test.input["chisel.yaml"] = string(defaultChiselYaml)
 		}
+		if test.pathOrdering == nil {
+			test.pathOrdering = make(map[string][]string)
+		}
 
 		dir := c.MkDir()
 		for path, data := range test.input {
@@ -2445,6 +2447,7 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 		release.Path = ""
 
 		if test.release != nil {
+			test.release.SetPathOrdering(test.pathOrdering)
 			c.Assert(release, DeepEquals, test.release)
 		}
 
@@ -2459,6 +2462,7 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 			c.Assert(selection.Release, Equals, release)
 			selection.Release = nil
 			if test.selection != nil {
+				selection.ClearCache()
 				c.Assert(selection, DeepEquals, test.selection)
 			}
 		}
