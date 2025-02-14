@@ -288,7 +288,7 @@ var createTests = []createTest{{
 		Link: "/etc/group",
 		Mode: 0666,
 	},
-	error: `invalid hardlink /root/system-file target: /etc/group is outside the root /root`,
+	error: `invalid hardlink /root/system-file target: /etc/group is outside of root /root`,
 }}
 
 func (s *S) TestCreate(c *C) {

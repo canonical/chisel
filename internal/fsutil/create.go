@@ -71,7 +71,7 @@ func Create(options *CreateOptions) (*Entry, error) {
 			o.Link = filepath.Clean(o.Link)
 			if filepath.IsAbs(o.Link) {
 				if !strings.HasPrefix(o.Link, o.Root) {
-					return nil, fmt.Errorf("invalid hardlink %s target: %s is outside the root %s", o.Path, o.Link, o.Root)
+					return nil, fmt.Errorf("invalid hardlink %s target: %s is outside of root %s", o.Path, o.Link, o.Root)
 				}
 			}
 			err = createHardLink(o)
