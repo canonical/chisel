@@ -279,7 +279,7 @@ var createTests = []createTest{{
 		Mode: 0666,
 		Data: bytes.NewBufferString("hijacking system file"),
 	},
-	error: `cannot create path /file outside of root /root`,
+	error: `cannot create path /file outside of root /root/`,
 }, {
 	summary: "Hardlink cannot escape Root",
 	options: fsutil.CreateOptions{
@@ -288,7 +288,16 @@ var createTests = []createTest{{
 		Link: "/etc/group",
 		Mode: 0666,
 	},
-	error: `invalid hardlink /root/system-file target: /etc/group is outside of root /root`,
+	error: `invalid hardlink /root/system-file target: /etc/group is outside of root /root/`,
+}, {
+	summary: "Root is correctly used as prefix",
+	options: fsutil.CreateOptions{
+		Root: "/foo",
+		Path: "/system-file",
+		Link: "/foobar",
+		Mode: 0666,
+	},
+	error: `invalid hardlink /foo/system-file target: /foobar is outside of root /foo/`,
 }}
 
 func (s *S) TestCreate(c *C) {
@@ -401,7 +410,7 @@ var createWriterTests = []createWriterTest{{
 		Mode:        0644,
 		MakeParents: true,
 	},
-	error: `cannot create path /file outside of root /root`,
+	error: `cannot create path /file outside of root /root/`,
 }}
 
 func (s *S) TestCreateWriter(c *C) {

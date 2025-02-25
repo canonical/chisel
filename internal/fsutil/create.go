@@ -52,6 +52,9 @@ func Create(options *CreateOptions) (*Entry, error) {
 	if o.Root == "" {
 		o.Root = "/"
 	}
+	if o.Root != "/" {
+		o.Root = filepath.Clean(o.Root) + "/"
+	}
 	o.Path = filepath.Clean(filepath.Join(o.Root, o.Path))
 	if !strings.HasPrefix(o.Path, o.Root) {
 		return nil, fmt.Errorf("cannot create path %s outside of root %s", o.Path, o.Root)
@@ -131,6 +134,9 @@ func CreateWriter(options *CreateOptions) (io.WriteCloser, *Entry, error) {
 
 	if o.Root == "" {
 		o.Root = "/"
+	}
+	if o.Root != "/" {
+		o.Root = filepath.Clean(o.Root) + "/"
 	}
 	o.Path = filepath.Clean(filepath.Join(o.Root, o.Path))
 	if !strings.HasPrefix(o.Path, o.Root) {
