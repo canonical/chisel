@@ -1,4 +1,4 @@
-package manifest_test
+package manifestutil_test
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ import (
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/chisel/internal/archive"
-	imanifest "github.com/canonical/chisel/internal/manifest"
+	"github.com/canonical/chisel/internal/manifestutil"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/testutil"
 	"github.com/canonical/chisel/pkg/manifest"
@@ -87,7 +87,7 @@ func (s *S) TestFindPaths(c *C) {
 	for _, test := range findPathsTests {
 		c.Logf("Summary: %s", test.summary)
 
-		manifestSlices := imanifest.FindPaths(test.slices)
+		manifestSlices := manifestutil.FindPaths(test.slices)
 
 		slicesByName := map[string]*setup.Slice{}
 		for _, slice := range test.slices {
@@ -117,7 +117,7 @@ var slice2 = &setup.Slice{
 
 var generateManifestTests = []struct {
 	summary     string
-	report      *imanifest.Report
+	report      *manifestutil.Report
 	packageInfo []*archive.PackageInfo
 	selection   []*setup.Slice
 	expected    *testutil.ManifestContents
@@ -125,9 +125,9 @@ var generateManifestTests = []struct {
 }{{
 	summary:   "Basic",
 	selection: []*setup.Slice{slice1, slice2},
-	report: &imanifest.Report{
+	report: &manifestutil.Report{
 		Root: "/",
-		Entries: map[string]imanifest.ReportEntry{
+		Entries: map[string]manifestutil.ReportEntry{
 			"/file": {
 				Path:        "/file",
 				Mode:        0456,
@@ -207,9 +207,9 @@ var generateManifestTests = []struct {
 	},
 }, {
 	summary: "Missing slice",
-	report: &imanifest.Report{
+	report: &manifestutil.Report{
 		Root: "/",
-		Entries: map[string]imanifest.ReportEntry{
+		Entries: map[string]manifestutil.ReportEntry{
 			"/file": {
 				Path:        "/file",
 				Mode:        0456,
@@ -224,9 +224,9 @@ var generateManifestTests = []struct {
 	error:     `internal error: invalid manifest: path "/file" refers to missing slice package1_slice1`,
 }, {
 	summary: "Missing package",
-	report: &imanifest.Report{
+	report: &manifestutil.Report{
 		Root: "/",
-		Entries: map[string]imanifest.ReportEntry{
+		Entries: map[string]manifestutil.ReportEntry{
 			"/file": {
 				Path:        "/file",
 				Mode:        0456,
@@ -241,9 +241,9 @@ var generateManifestTests = []struct {
 	error:       `internal error: invalid manifest: slice package1_slice1 refers to missing package "package1"`,
 }, {
 	summary: "Invalid path: link set for regular file",
-	report: &imanifest.Report{
+	report: &manifestutil.Report{
 		Root: "/",
-		Entries: map[string]imanifest.ReportEntry{
+		Entries: map[string]manifestutil.ReportEntry{
 			"/file": {
 				Path:   "/file",
 				Mode:   0456,
@@ -255,9 +255,9 @@ var generateManifestTests = []struct {
 	error: `internal error: invalid manifest: path "/file" has invalid options: link set for regular file`,
 }, {
 	summary: "Invalid path: slices is empty",
-	report: &imanifest.Report{
+	report: &manifestutil.Report{
 		Root: "/",
-		Entries: map[string]imanifest.ReportEntry{
+		Entries: map[string]manifestutil.ReportEntry{
 			"/file": {
 				Path: "/file",
 				Mode: 0456,
@@ -267,9 +267,9 @@ var generateManifestTests = []struct {
 	error: `internal error: invalid manifest: path "/file" has invalid options: slices is empty`,
 }, {
 	summary: "Invalid path: link set for symlink",
-	report: &imanifest.Report{
+	report: &manifestutil.Report{
 		Root: "/",
-		Entries: map[string]imanifest.ReportEntry{
+		Entries: map[string]manifestutil.ReportEntry{
 			"/link": {
 				Path:   "/link",
 				Mode:   0456 | fs.ModeSymlink,
@@ -280,9 +280,9 @@ var generateManifestTests = []struct {
 	error: `internal error: invalid manifest: path "/link" has invalid options: link not set for symlink`,
 }, {
 	summary: "Invalid path: sha256 set for symlink",
-	report: &imanifest.Report{
+	report: &manifestutil.Report{
 		Root: "/",
-		Entries: map[string]imanifest.ReportEntry{
+		Entries: map[string]manifestutil.ReportEntry{
 			"/link": {
 				Path:   "/link",
 				Mode:   0456 | fs.ModeSymlink,
@@ -295,9 +295,9 @@ var generateManifestTests = []struct {
 	error: `internal error: invalid manifest: path "/link" has invalid options: sha256 set for symlink`,
 }, {
 	summary: "Invalid path: final_sha256 set for symlink",
-	report: &imanifest.Report{
+	report: &manifestutil.Report{
 		Root: "/",
-		Entries: map[string]imanifest.ReportEntry{
+		Entries: map[string]manifestutil.ReportEntry{
 			"/link": {
 				Path:        "/link",
 				Mode:        0456 | fs.ModeSymlink,
@@ -310,9 +310,9 @@ var generateManifestTests = []struct {
 	error: `internal error: invalid manifest: path "/link" has invalid options: final_sha256 set for symlink`,
 }, {
 	summary: "Invalid path: size set for symlink",
-	report: &imanifest.Report{
+	report: &manifestutil.Report{
 		Root: "/",
-		Entries: map[string]imanifest.ReportEntry{
+		Entries: map[string]manifestutil.ReportEntry{
 			"/link": {
 				Path:   "/link",
 				Mode:   0456 | fs.ModeSymlink,
@@ -325,9 +325,9 @@ var generateManifestTests = []struct {
 	error: `internal error: invalid manifest: path "/link" has invalid options: size set for symlink`,
 }, {
 	summary: "Invalid path: link set for directory",
-	report: &imanifest.Report{
+	report: &manifestutil.Report{
 		Root: "/",
-		Entries: map[string]imanifest.ReportEntry{
+		Entries: map[string]manifestutil.ReportEntry{
 			"/dir": {
 				Path:   "/dir",
 				Mode:   0456 | fs.ModeDir,
@@ -339,9 +339,9 @@ var generateManifestTests = []struct {
 	error: `internal error: invalid manifest: path "/dir" has invalid options: link set for directory`,
 }, {
 	summary: "Invalid path: sha256 set for directory",
-	report: &imanifest.Report{
+	report: &manifestutil.Report{
 		Root: "/",
-		Entries: map[string]imanifest.ReportEntry{
+		Entries: map[string]manifestutil.ReportEntry{
 			"/dir": {
 				Path:   "/dir",
 				Mode:   0456 | fs.ModeDir,
@@ -353,9 +353,9 @@ var generateManifestTests = []struct {
 	error: `internal error: invalid manifest: path "/dir" has invalid options: sha256 set for directory`,
 }, {
 	summary: "Invalid path: final_sha256 set for directory",
-	report: &imanifest.Report{
+	report: &manifestutil.Report{
 		Root: "/",
-		Entries: map[string]imanifest.ReportEntry{
+		Entries: map[string]manifestutil.ReportEntry{
 			"/dir": {
 				Path:        "/dir",
 				Mode:        0456 | fs.ModeDir,
@@ -367,9 +367,9 @@ var generateManifestTests = []struct {
 	error: `internal error: invalid manifest: path "/dir" has invalid options: final_sha256 set for directory`,
 }, {
 	summary: "Invalid path: size set for directory",
-	report: &imanifest.Report{
+	report: &manifestutil.Report{
 		Root: "/",
-		Entries: map[string]imanifest.ReportEntry{
+		Entries: map[string]manifestutil.ReportEntry{
 			"/dir": {
 				Path:   "/dir",
 				Mode:   0456 | fs.ModeDir,
@@ -428,13 +428,13 @@ func (s *S) TestGenerateManifests(c *C) {
 			}}
 		}
 
-		options := &imanifest.WriteOptions{
+		options := &manifestutil.WriteOptions{
 			PackageInfo: test.packageInfo,
 			Selection:   test.selection,
 			Report:      test.report,
 		}
 		var buffer bytes.Buffer
-		err := imanifest.Write(options, &buffer)
+		err := manifestutil.Write(options, &buffer)
 		if test.error != "" {
 			c.Assert(err, ErrorMatches, test.error)
 			continue
@@ -450,13 +450,13 @@ func (s *S) TestGenerateManifests(c *C) {
 }
 
 func (s *S) TestGenerateNoManifests(c *C) {
-	report, err := imanifest.NewReport("/")
+	report, err := manifestutil.NewReport("/")
 	c.Assert(err, IsNil)
-	options := &imanifest.WriteOptions{
+	options := &manifestutil.WriteOptions{
 		Report: report,
 	}
 	var buffer bytes.Buffer
-	err = imanifest.Write(options, &buffer)
+	err = manifestutil.Write(options, &buffer)
 	c.Assert(err, IsNil)
 
 	var reader io.Reader = &buffer
