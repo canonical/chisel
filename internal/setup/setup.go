@@ -517,7 +517,6 @@ func (r *Release) prefers() (map[preferKey]string, error) {
 			}
 		}
 	}
-
 	return prefers, nil
 }
 
