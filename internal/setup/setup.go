@@ -521,8 +521,8 @@ func (r *Release) prefers() (map[preferKey]string, error) {
 }
 
 // preferredPathPackage returns pkg1 if one can reach pkg2 from pkg1 using
-// prefer relationship, and conversely for pkg2. If none are reachable or there
-// is a cycle, it returns an error.
+// prefer relationships, and conversely for pkg2. If none are reachable or
+// there is a cycle, it returns an error.
 func preferredPathPackage(path, pkg1, pkg2 string, prefers map[preferKey]string) (choice string, err error) {
 	pkg1, pkg2 = sortPair(pkg1, pkg2)
 	prefer1, err := findPrefer(path, pkg1, pkg2, prefers)
