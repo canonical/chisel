@@ -19,14 +19,14 @@ var (
 )
 
 type setupTest struct {
-	summary      string
-	input        map[string]string
-	release      *setup.Release
-	relerror     string
-	pathOrdering map[string][]string
-	selslices    []setup.SliceKey
-	selection    *setup.Selection
-	selerror     string
+	summary   string
+	input     map[string]string
+	release   *setup.Release
+	relerror  string
+	prefers   map[string]string
+	selslices []setup.SliceKey
+	selection *setup.Selection
+	selerror  string
 }
 
 var setupTests = []setupTest{{
@@ -2059,6 +2059,12 @@ var setupTests = []setupTest{{
 	relerror: "slice mypkg1_myslice1 cannot 'prefer' its own package for path /file",
 }, {
 	summary: "Path conflicts with 'prefer'",
+	selslices: []setup.SliceKey{
+		{"mypkg1", "myslice1"},
+		{"mypkg1", "myslice2"},
+		{"mypkg2", "myslice1"},
+		{"mypkg3", "myslice1"},
+	},
 	input: map[string]string{
 		"slices/mydir/mypkg1.yaml": `
 			package: mypkg1
@@ -2148,9 +2154,9 @@ var setupTests = []setupTest{{
 			},
 		},
 	},
-	pathOrdering: map[string][]string{
-		"/path": {"mypkg3", "mypkg2", "mypkg1"},
-		"/link": {"mypkg1", "mypkg2"},
+	prefers: map[string]string{
+		"/path": "mypkg3",
+		"/link": "mypkg1",
 	},
 }, {
 	summary: "Cannot specify same package in 'prefer'",
@@ -2420,8 +2426,8 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 		if _, ok := test.input["chisel.yaml"]; !ok {
 			test.input["chisel.yaml"] = string(defaultChiselYaml)
 		}
-		if test.pathOrdering == nil {
-			test.pathOrdering = make(map[string][]string)
+		if test.prefers == nil {
+			test.prefers = make(map[string]string)
 		}
 
 		dir := c.MkDir()
@@ -2447,7 +2453,6 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 		release.Path = ""
 
 		if test.release != nil {
-			test.release.SetPathOrdering(test.pathOrdering)
 			c.Assert(release, DeepEquals, test.release)
 		}
 
@@ -2460,9 +2465,15 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 				c.Assert(err, IsNil)
 			}
 			c.Assert(selection.Release, Equals, release)
+			rawPrefers, err := selection.Prefers()
+			c.Assert(err, IsNil)
+			prefers := make(map[string]string)
+			for path, pkg := range rawPrefers {
+				prefers[path] = pkg.Name
+			}
+			c.Assert(prefers, DeepEquals, test.prefers)
 			selection.Release = nil
 			if test.selection != nil {
-				selection.ClearCache()
 				c.Assert(selection, DeepEquals, test.selection)
 			}
 		}
