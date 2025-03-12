@@ -62,12 +62,16 @@ var checkReleaseArchivesTests = []checkReleaseArchivesTest{{
 			slices:
 				myslice:
 					contents:
+						/mode/a-foo:
+						/link/a-bar:
 		`,
 		"slices/mydir/pkg-b.yaml": `
 			package: pkg-b
 			slices:
 				myslice:
 					contents:
+						/mode/b-foo:
+						/link/b-bar:
 		`,
 	},
 	pkgs: []*testutil.TestPackage{{
@@ -109,6 +113,43 @@ var checkReleaseArchivesTests = []checkReleaseArchivesTest{{
 	`,
 	err: "issues found in the release archives",
 }, {
+	summary: "No conflict if parent is not extracted",
+	release: map[string]string{
+		"chisel.yaml": makeChiselYaml([]string{"ubuntu"}),
+		"slices/mydir/pkg-a.yaml": `
+			package: pkg-a
+			slices:
+				myslice:
+					contents:
+						/foo:
+						/modefoo:
+						/linkfoo:
+		`,
+		"slices/mydir/pkg-b.yaml": `
+			package: pkg-b
+			slices:
+				myslice:
+					contents:
+						/bar:
+						/modebar:
+						/linkbar:
+		`,
+	},
+	pkgs: []*testutil.TestPackage{{
+		Name: "pkg-a",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./mode/"),
+			testutil.Lnk(0777, "./link", "/other"),
+		}),
+	}, {
+		Name: "pkg-b",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0756, "./mode/"),
+			testutil.Dir(0777, "./link"),
+		}),
+	}},
+	stdout: "",
+}, {
 	summary: "Multiple archives",
 	release: map[string]string{
 		"chisel.yaml": makeChiselYaml([]string{"archive1", "archive2"}),
@@ -117,12 +158,14 @@ var checkReleaseArchivesTests = []checkReleaseArchivesTest{{
 			slices:
 				myslice:
 					contents:
+						/dir/foo:
 		`,
 		"slices/mydir/pkg-b.yaml": `
 			package: pkg-b
 			slices:
 				myslice:
 					contents:
+						/dir/bar:
 		`,
 	},
 	pkgs: []*testutil.TestPackage{{
@@ -165,12 +208,14 @@ var checkReleaseArchivesTests = []checkReleaseArchivesTest{{
 			slices:
 				myslice:
 					contents:
+						/dir/foo:
 		`,
 		"slices/mydir/pkg-b.yaml": `
 			package: pkg-b
 			slices:
 				myslice:
 					contents:
+						/dir/bar:
 		`,
 	},
 	arch: "arm64",
@@ -202,7 +247,7 @@ var checkReleaseArchivesTests = []checkReleaseArchivesTest{{
 	`,
 	err: "issues found in the release archives",
 }, {
-	summary: "Path conflict handled in slice definitions",
+	summary: "No path conflict with only a single parent package",
 	release: map[string]string{
 		"chisel.yaml": makeChiselYaml([]string{"ubuntu"}),
 		"slices/mydir/pkg-a.yaml": `
@@ -211,12 +256,14 @@ var checkReleaseArchivesTests = []checkReleaseArchivesTest{{
 				myslice:
 					contents:
 						/mode:
+						/mode/foo:
 		`,
 		"slices/mydir/pkg-b.yaml": `
 			package: pkg-b
 			slices:
 				myslice:
 					contents:
+						/mode/bar:
 		`,
 	},
 	pkgs: []*testutil.TestPackage{{
@@ -232,7 +279,7 @@ var checkReleaseArchivesTests = []checkReleaseArchivesTest{{
 	}},
 	stdout: "",
 }, {
-	summary: "Path conflict with one explicit package",
+	summary: "Path conflict with multiple parent packages",
 	release: map[string]string{
 		"chisel.yaml": makeChiselYaml([]string{"ubuntu"}),
 		"slices/mydir/pkg-a.yaml": `
@@ -247,12 +294,14 @@ var checkReleaseArchivesTests = []checkReleaseArchivesTest{{
 			slices:
 				myslice:
 					contents:
+						/mode/foo:
 		`,
 		"slices/mydir/pkg-c.yaml": `
 			package: pkg-c
 			slices:
 				myslice:
 					contents:
+						/mode/bar:
 		`,
 	},
 	pkgs: []*testutil.TestPackage{{
@@ -288,7 +337,7 @@ var checkReleaseArchivesTests = []checkReleaseArchivesTest{{
 	// agree on the mode.
 	err: "issues found in the release archives",
 }, {
-	summary: "All slices in a package have to list the path",
+	summary: "Mode path conflict handled in the slice definition",
 	release: map[string]string{
 		"chisel.yaml": makeChiselYaml([]string{"ubuntu"}),
 		"slices/mydir/pkg-a.yaml": `
@@ -296,15 +345,16 @@ var checkReleaseArchivesTests = []checkReleaseArchivesTest{{
 			slices:
 				myslice:
 					contents:
-						/mode:
-				myotherslice:
-					contents:
+						/mode/: {make: true, mode: 0777}
+						/mode/foo:
 		`,
 		"slices/mydir/pkg-b.yaml": `
 			package: pkg-b
 			slices:
 				myslice:
 					contents:
+						/mode/: {make: true, mode: 0777}
+						/mode/bar:
 		`,
 	},
 	pkgs: []*testutil.TestPackage{{
@@ -318,22 +368,9 @@ var checkReleaseArchivesTests = []checkReleaseArchivesTest{{
 			testutil.Dir(0766, "./mode/"),
 		}),
 	}},
-	stdout: `
-		- issue: path-conflict
-		  path: /mode
-		  observations:
-			- archive: ubuntu
-			  packages: [pkg-a]
-			  kind: dir
-			  mode: 0755
-			- archive: ubuntu
-			  packages: [pkg-b]
-			  kind: dir
-			  mode: 0766
-	`,
-	err: "issues found in the release archives",
+	stdout: "",
 }, {
-	summary: "Path listed in immediate essential",
+	summary: "Symlink path conflict handled in the slice definition",
 	release: map[string]string{
 		"chisel.yaml": makeChiselYaml([]string{"ubuntu"}),
 		"slices/mydir/pkg-a.yaml": `
@@ -341,23 +378,58 @@ var checkReleaseArchivesTests = []checkReleaseArchivesTest{{
 			slices:
 				myslice:
 					contents:
-						/mode:
+						/link: {symlink: /same}
+						/link/foo:
 		`,
 		"slices/mydir/pkg-b.yaml": `
 			package: pkg-b
-			essential:
-				- pkg-a_myslice
 			slices:
 				myslice:
 					contents:
+						/link: {symlink: /same}
+						/link/bar:
+		`,
+	},
+	pkgs: []*testutil.TestPackage{{
+		Name: "pkg-a",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Lnk(0777, "./link", "./one"),
+		}),
+	}, {
+		Name: "pkg-b",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Lnk(0777, "./link", "./two"),
+		}),
+	}},
+	stdout: "",
+}, {
+	summary: "Essentials cannot be used for path conflicts",
+	release: map[string]string{
+		"chisel.yaml": makeChiselYaml([]string{"ubuntu"}),
+		"slices/mydir/pkg-a.yaml": `
+			package: pkg-a
+			slices:
+				myslice:
+					contents:
+						/mode/:
+		`,
+		"slices/mydir/pkg-b.yaml": `
+			package: pkg-b
+			slices:
+				myslice:
+					essential:
+						- pkg-a_myslice
+					contents:
+						/mode/foo:
 		`,
 		"slices/mydir/pkg-c.yaml": `
 			package: pkg-c
-			essential:
-				- pkg-a_myslice
 			slices:
 				myslice:
+					essential:
+						- pkg-a_myslice
 					contents:
+						/mode/bar:
 		`,
 	},
 	pkgs: []*testutil.TestPackage{{
@@ -373,10 +445,27 @@ var checkReleaseArchivesTests = []checkReleaseArchivesTest{{
 	}, {
 		Name: "pkg-c",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Dir(0755, "./mode/"),
+			testutil.Dir(0777, "./mode/"),
 		}),
 	}},
-	stdout: "",
+	stdout: `
+		- issue: path-conflict
+		  path: /mode
+		  observations:
+			- archive: ubuntu
+			  packages: [pkg-a]
+			  kind: dir
+			  mode: 0755
+			- archive: ubuntu
+			  packages: [pkg-b]
+			  kind: dir
+			  mode: 0766
+			- archive: ubuntu
+			  packages: [pkg-c]
+			  kind: dir
+			  mode: 0777
+	`,
+	err: "issues found in the release archives",
 }}
 
 func (s *ChiselSuite) TestRun(c *C) {

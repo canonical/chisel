@@ -207,46 +207,49 @@ func computePathObservations(release *setup.Release, archives map[string]archive
 	return pathObs, nil
 }
 
-// isPathExplicit returns true if the path is listed in all slices of the
-// package or in their "immediate" essentials, there is no recursion.
-func isPathExplicit(release *setup.Release, pkgName string, path string) bool {
-	for _, slice := range release.Packages[pkgName].Slices {
-		if _, ok := slice.Contents[path]; !ok {
-			index := slices.IndexFunc(slice.Essential, func(sk setup.SliceKey) bool {
-				_, ok := release.Packages[sk.Package].Slices[sk.Slice].Contents[path]
-				return ok
-			})
-			if index == -1 {
-				return false
-			}
-		}
-	}
-	return true
-}
-
 func hasPathConflict(release *setup.Release, path string, observations []pathObservation) bool {
 	if len(observations) < 2 {
 		return false
 	}
 
-	var notExplicit []pathObservation
+	// Only when a package declares a path that will extract the parent
+	// directory we could have a conflict.
+	// If the observation path itself is listed, it was already handled it
+	// during the release validation.
+	var mightConflict []pathObservation
 	for _, observation := range observations {
 		for _, pkgName := range observation.Packages {
-			if !isPathExplicit(release, pkgName, path) {
-				notExplicit = append(notExplicit, observation)
+			for _, slice := range release.Packages[pkgName].Slices {
+				// Symlinks do not containg trailing slash but folders do,
+				// check for both.
+				_, ok1 := slice.Contents[path]
+				_, ok2 := slice.Contents[path+"/"]
+				isPathListed := ok1 || ok2
+				if !isPathListed && extractsParentPath(slice, path) {
+					mightConflict = append(mightConflict, observation)
+				}
 			}
 		}
 	}
 
-	if len(notExplicit) == 0 {
+	if len(mightConflict) == 0 {
 		return false
 	}
 
-	base := notExplicit[0]
-	for _, observation := range notExplicit[1:] {
+	base := mightConflict[0]
+	for _, observation := range mightConflict[1:] {
 		if observation.Kind != base.Kind ||
 			observation.Mode != base.Mode ||
 			observation.Link != base.Link {
+			return true
+		}
+	}
+	return false
+}
+
+func extractsParentPath(slice *setup.Slice, parent string) bool {
+	for path := range slice.Contents {
+		if strings.HasPrefix(path, parent+"/") {
 			return true
 		}
 	}
