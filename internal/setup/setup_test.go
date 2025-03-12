@@ -2159,6 +2159,45 @@ var setupTests = []setupTest{{
 		"/link": "mypkg1",
 	},
 }, {
+	summary: "Path conflicts with 'prefer' depends on selection",
+	selslices: []setup.SliceKey{
+		{"mypkg1", "myslice1"},
+		{"mypkg1", "myslice2"},
+		{"mypkg2", "myslice1"},
+	},
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice1:
+					contents:
+						/path: {prefer: mypkg2}
+						/link: {symlink: /file1}
+				myslice2:
+					contents:
+						/path: {prefer: mypkg2}
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+			slices:
+				myslice1:
+					contents:
+						/path: {prefer: mypkg3}
+						/link: {symlink: /file2, prefer: mypkg1}
+		`,
+		"slices/mydir/mypkg3.yaml": `
+			package: mypkg3
+			slices:
+				myslice1:
+					contents:
+						/path:
+		`,
+	},
+	prefers: map[string]string{
+		"/path": "mypkg2",
+		"/link": "mypkg1",
+	},
+}, {
 	summary: "Cannot specify same package in 'prefer'",
 	input: map[string]string{
 		"slices/mydir/mypkg.yaml": `

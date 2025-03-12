@@ -122,9 +122,9 @@ type Selection struct {
 	Slices  []*Slice
 }
 
-// Perfers takes into account the prefer relationships and returns a map from
-// path to the package where it should be extracted from. If there is no
-// relationship for a given path then it will not be present on the map.
+// Perfers uses the prefer relationships and returns a map from each path to
+// the package where it should be extracted from. If there is no relationship
+// for a given path then it will not be present on the map.
 func (s *Selection) Prefers() (map[string]*Package, error) {
 	prefers, err := s.Release.prefers()
 	if err != nil {
@@ -246,6 +246,7 @@ func (r *Release) validate() error {
 	// the path.
 	for skey, source := range prefers {
 		if skey.side != preferSource || skey.pkg == "" {
+			// preferTarget packages have the path by construction.
 			continue
 		}
 		if _, ok := pathToSlice[preferKey{path: skey.path, pkg: skey.pkg}]; !ok {
@@ -268,7 +269,8 @@ func (r *Release) validate() error {
 			}
 			toCheck := []*Slice{}
 			pkg := new.Package
-			// Add all packages in the prefer relationship.
+			// Add all packages in the prefer relationship. If there is no
+			// relationship only the current package gets added.
 			for pkg != "" {
 				slice, _ := pathToSlice[preferKey{path: newPath, pkg: pkg}]
 				toCheck = append(toCheck, slice)
@@ -521,8 +523,10 @@ func (r *Release) prefers() (map[preferKey]string, error) {
 }
 
 // preferredPathPackage returns pkg1 if one can reach pkg2 from pkg1 using
-// prefer relationships, and conversely for pkg2. If none are reachable or
-// there is a cycle, it returns an error.
+// prefer relationships, and conversely for pkg2. If none are reachable it
+// returns the preferNone error.
+//
+// If there is a cycle, an error is returned.
 func preferredPathPackage(path, pkg1, pkg2 string, prefers map[preferKey]string) (choice string, err error) {
 	pkg1, pkg2 = sortPair(pkg1, pkg2)
 	prefer1, err := findPrefer(path, pkg1, pkg2, prefers)
