@@ -49,18 +49,11 @@ func Create(options *CreateOptions) (*Entry, error) {
 	optsCopy.Data = rp
 	o := &optsCopy
 
-	if o.Root == "" {
-		o.Root = "/"
-	}
-	if o.Root != "/" {
-		o.Root = filepath.Clean(o.Root) + "/"
-	}
-	o.Path = filepath.Clean(filepath.Join(o.Root, o.Path))
-	if !strings.HasPrefix(o.Path, o.Root) {
-		return nil, fmt.Errorf("cannot create path %s outside of root %s", o.Path, o.Root)
+	err := setValidPath(o)
+	if err != nil {
+		return nil, err
 	}
 
-	var err error
 	var hash string
 	if o.MakeParents {
 		if err := os.MkdirAll(filepath.Dir(o.Path), 0755); err != nil {
@@ -132,16 +125,11 @@ func CreateWriter(options *CreateOptions) (io.WriteCloser, *Entry, error) {
 	optsCopy := *options
 	o := &optsCopy
 
-	if o.Root == "" {
-		o.Root = "/"
+	err := setValidPath(o)
+	if err != nil {
+		return nil, nil, err
 	}
-	if o.Root != "/" {
-		o.Root = filepath.Clean(o.Root) + "/"
-	}
-	o.Path = filepath.Clean(filepath.Join(o.Root, o.Path))
-	if !strings.HasPrefix(o.Path, o.Root) {
-		return nil, nil, fmt.Errorf("cannot create path %s outside of root %s", o.Path, o.Root)
-	}
+
 	if !o.Mode.IsRegular() {
 		return nil, nil, fmt.Errorf("unsupported file type: %s", o.Path)
 	}
@@ -231,6 +219,20 @@ func createHardLink(o *CreateOptions) error {
 		}
 	}
 	return err
+}
+
+func setValidPath(o *CreateOptions) error {
+	if o.Root == "" {
+		o.Root = "/"
+	}
+	if o.Root != "/" {
+		o.Root = filepath.Clean(o.Root) + "/"
+	}
+	o.Path = filepath.Clean(filepath.Join(o.Root, o.Path))
+	if !strings.HasPrefix(o.Path, o.Root) {
+		return fmt.Errorf("cannot create path %s outside of root %s", o.Path, o.Root)
+	}
+	return nil
 }
 
 // readerProxy implements the io.Reader interface proxying the calls to its
