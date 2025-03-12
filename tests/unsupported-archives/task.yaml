@@ -1,9 +1,10 @@
 summary: Chisel can fetch packages from unsupported releases
 
+variants:
+  - mantic
+
 environment:
   ROOTFS: rootfs
-  OS: ubuntu
-  RELEASE: "23.10"
 
 execute: |
   mkdir "${ROOTFS}"

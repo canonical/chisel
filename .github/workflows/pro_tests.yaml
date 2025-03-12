@@ -86,4 +86,4 @@ jobs:
           PRO_TOKEN: ${{ secrets.PRO_TOKEN }}
         run: |
           (cd _spread/cmd/spread && go build)
-          _spread/cmd/spread/spread -v tests/specific/pro-archives
+          _spread/cmd/spread/spread -v tests/pro-archives
