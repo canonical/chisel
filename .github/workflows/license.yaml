@@ -15,4 +15,4 @@ jobs:
 
       - name: Run license check
         run: |
-          ./github/scripts/external-packages-license-check.sh
+          ./.github/scripts/external-packages-license-check.sh
