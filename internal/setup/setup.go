@@ -186,7 +186,6 @@ func (r *Release) validate() error {
 	}
 
 	keys := []SliceKey(nil)
-	pathToSlice := make(map[preferKey]*Slice)
 
 	// Check for info conflicts and prepare for following checks. A conflict
 	// means that two slices attempt to extract different files or directories
@@ -199,45 +198,33 @@ func (r *Release) validate() error {
 	// The above also means that generated content (e.g. text files, directories
 	// with make:true) will always conflict with extracted content, because we
 	// cannot validate that they are the same without downloading the package.
-	paths := make(map[string]*Slice)
-	globs := make(map[string]*Slice)
+	paths := make(map[string][]*Slice)
 	for _, pkg := range r.Packages {
 		for _, new := range pkg.Slices {
 			keys = append(keys, SliceKey{pkg.Name, new.Name})
 			for newPath, newInfo := range new.Contents {
-				if _, hasPrefers := prefers[preferKey{preferSource, newPath, ""}]; hasPrefers {
-					// If this is part of a prefer chain, store a sample slice that
-					// contains the path.
-					pathToSlice[preferKey{path: newPath, pkg: pkg.Name}] = new
-				}
-				if old, ok := paths[newPath]; ok {
-					if new.Package != old.Package {
-						if p, err := preferredPathPackage(newPath, new.Package, old.Package, prefers); err == nil {
-							if p == new.Package {
-								paths[newPath] = new
+				if oldSlices, ok := paths[newPath]; ok {
+					for _, old := range oldSlices {
+						if new.Package != old.Package {
+							_, err := preferredPathPackage(newPath, new.Package, old.Package, prefers)
+							if err == nil {
+								continue
+							} else if err != preferNone {
+								return err
 							}
-							continue
-						} else if err != preferNone {
-							return err
 						}
-					}
 
-					oldInfo := old.Contents[newPath]
-					if !newInfo.SameContent(&oldInfo) || (newInfo.Kind == CopyPath || newInfo.Kind == GlobPath) && new.Package != old.Package {
-						if old.Package > new.Package || old.Package == new.Package && old.Name > new.Name {
-							old, new = new, old
+						oldInfo := old.Contents[newPath]
+						if !newInfo.SameContent(&oldInfo) || (newInfo.Kind == CopyPath || newInfo.Kind == GlobPath) && new.Package != old.Package {
+							if old.Package > new.Package || old.Package == new.Package && old.Name > new.Name {
+								old, new = new, old
+							}
+							return fmt.Errorf("slices %s and %s conflict on %s", old, new, newPath)
 						}
-						return fmt.Errorf("slices %s and %s conflict on %s", old, new, newPath)
 					}
-					// Note: Because for conflict resolution we only check that
-					// the created file would be the same and we know newInfo and
-					// oldInfo produce the same one, we do not have to record
-					// newInfo.
+					paths[newPath] = append(paths[newPath], new)
 				} else {
-					paths[newPath] = new
-					if newInfo.Kind == GeneratePath || newInfo.Kind == GlobPath {
-						globs[newPath] = new
-					}
+					paths[newPath] = append(paths[newPath], new)
 				}
 			}
 		}
@@ -249,52 +236,51 @@ func (r *Release) validate() error {
 		if skey.side == preferSource && skey.pkg != "" {
 			// Process only the preferSource to traverse the graph only once
 			// and avoid repeated work.
-			if _, ok := pathToSlice[preferKey{path: skey.path, pkg: skey.pkg}]; !ok {
-				sourceSlice := pathToSlice[preferKey{path: skey.path, pkg: source}]
+
+			found := false
+			var sourceSlice *Slice
+			for _, slice := range paths[skey.path] {
+				if slice.Package == skey.pkg {
+					found = true
+				}
+				if slice.Package == source {
+					sourceSlice = slice
+				}
+			}
+			if !found {
 				return fmt.Errorf("slice %s prefers package %q which does not contain path %s", sourceSlice, skey.pkg, skey.path)
 			}
 		}
 	}
 
 	// Check for glob and generate conflicts.
-	for oldPath, old := range globs {
-		oldInfo := old.Contents[oldPath]
-		for newPath, new := range paths {
-			if oldPath == newPath {
-				// Identical globs have been filtered earlier. This must be the
-				// exact same entry.
-				continue
+	for oldPath, oldSlices := range paths {
+		for _, old := range oldSlices {
+			oldInfo := old.Contents[oldPath]
+			if oldInfo.Kind != GeneratePath && oldInfo.Kind != GlobPath {
+				break
 			}
-			if !strdist.GlobPath(newPath, oldPath) {
-				continue
-			}
-			toCheck := []*Slice{new}
-			pkg := new.Package
-			// Add all packages in the prefer relationship. If there is no
-			// relationship only the current package gets added.
-			for {
-				pkg = prefers[preferKey{preferSource, newPath, pkg}]
-				if pkg == "" {
-					break
+			for newPath, newSlices := range paths {
+				if oldPath == newPath {
+					// Identical paths have been filtered earlier.
+					continue
 				}
-				slice := pathToSlice[preferKey{path: newPath, pkg: pkg}]
-				toCheck = append(toCheck, slice)
-			}
-			for _, new := range toCheck {
-				// It is okay to check only one slice per package because the
-				// content has been validated to be the same earlier.
-				newInfo := new.Contents[newPath]
-				if oldInfo.Kind == GlobPath && (newInfo.Kind == GlobPath || newInfo.Kind == CopyPath) {
-					if new.Package == old.Package {
-						continue
+				for _, new := range newSlices {
+					newInfo := new.Contents[newPath]
+					if oldInfo.Kind == GlobPath && (newInfo.Kind == GlobPath || newInfo.Kind == CopyPath) {
+						if new.Package == old.Package {
+							continue
+						}
+					}
+					if strdist.GlobPath(newPath, oldPath) {
+						if (old.Package > new.Package) || (old.Package == new.Package && old.Name > new.Name) ||
+							(old.Package == new.Package && old.Name == new.Name && oldPath > newPath) {
+							old, new = new, old
+							oldPath, newPath = newPath, oldPath
+						}
+						return fmt.Errorf("slices %s and %s conflict on %s and %s", old, new, oldPath, newPath)
 					}
 				}
-				if (old.Package > new.Package) || (old.Package == new.Package && old.Name > new.Name) ||
-					(old.Package == new.Package && old.Name == new.Name && oldPath > newPath) {
-					old, new = new, old
-					oldPath, newPath = newPath, oldPath
-				}
-				return fmt.Errorf("slices %s and %s conflict on %s and %s", old, new, oldPath, newPath)
 			}
 		}
 	}

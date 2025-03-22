@@ -256,6 +256,13 @@ var scriptsTests = []scriptsTest{{
 		return nil
 	},
 	error: `no write: /foo/file2.txt`,
+}, {
+	summary: "Top level for loop is allowed",
+	script: `
+		for x in []:
+		    pass
+	`,
+	result: map[string]string{},
 }}
 
 func (s *S) TestScripts(c *C) {

@@ -24,7 +24,8 @@ type RunOptions struct {
 func Run(opts *RunOptions) error {
 	thread := &starlark.Thread{Name: opts.Label}
 	fileOptions := &syntax.FileOptions{
-		GlobalReassign: true,
+		TopLevelControl: true,
+		GlobalReassign:  true,
 	}
 	globals, err := starlark.ExecFileOptions(fileOptions, thread, opts.Label, opts.Script, opts.Namespace)
 	_ = globals
