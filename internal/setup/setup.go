@@ -207,7 +207,7 @@ func (r *Release) validate() error {
 		for _, new := range pkg.Slices {
 			keys = append(keys, SliceKey{pkg.Name, new.Name})
 			for newPath, newInfo := range new.Contents {
-				if _, ok := prefers[preferKey{preferSource, newPath, ""}]; ok {
+				if _, hasPrefers := prefers[preferKey{preferSource, newPath, ""}]; hasPrefers {
 					// If this is part of a prefer chain, store a sample slice that
 					// contains the path.
 					pathToSlice[preferKey{path: newPath, pkg: pkg.Name}] = new
