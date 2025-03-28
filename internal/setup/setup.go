@@ -254,7 +254,7 @@ func (r *Release) validate() error {
 		}
 		if _, ok := pathToSlice[preferKey{path: skey.path, pkg: skey.pkg}]; !ok {
 			sourceSlice := pathToSlice[preferKey{path: skey.path, pkg: source}]
-			return fmt.Errorf("slice %s path %s 'prefer' refers to invalid package %q: package does not have path %s", sourceSlice, skey.path, skey.pkg, skey.path)
+			return fmt.Errorf("slice %s prefers package %q which does not contain path %s", sourceSlice, skey.pkg, skey.path)
 		}
 	}
 
