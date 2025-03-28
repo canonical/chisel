@@ -95,6 +95,11 @@ func Run(options *RunOptions) error {
 		return err
 	}
 
+	prefers, err := options.Selection.Prefers()
+	if err != nil {
+		return err
+	}
+
 	// Build information to process the selection.
 	extract := make(map[string]map[string][]deb.ExtractInfo)
 	for _, slice := range options.Selection.Slices {
@@ -109,6 +114,9 @@ func Run(options *RunOptions) error {
 				continue
 			}
 			if len(pathInfo.Arch) > 0 && !slices.Contains(pathInfo.Arch, arch) {
+				continue
+			}
+			if preferredPkg, ok := prefers[targetPath]; ok && preferredPkg.Name != slice.Package {
 				continue
 			}
 
@@ -252,6 +260,9 @@ func Run(options *RunOptions) error {
 			}
 			if pathInfo.Kind == setup.CopyPath || pathInfo.Kind == setup.GlobPath ||
 				pathInfo.Kind == setup.GeneratePath {
+				continue
+			}
+			if preferredPkg, ok := prefers[relPath]; ok && preferredPkg.Name != slice.Package {
 				continue
 			}
 			relPaths[relPath] = append(relPaths[relPath], slice)
