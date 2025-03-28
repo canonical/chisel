@@ -207,8 +207,11 @@ func (r *Release) validate() error {
 		for _, new := range pkg.Slices {
 			keys = append(keys, SliceKey{pkg.Name, new.Name})
 			for newPath, newInfo := range new.Contents {
-				// Store a sample slice that contains the path.
-				pathToSlice[preferKey{path: newPath, pkg: pkg.Name}] = new
+				if _, ok := prefers[preferKey{preferSource, newPath, ""}]; ok {
+					// If this is part of a prefer chain, store a sample slice that
+					// contains the path.
+					pathToSlice[preferKey{path: newPath, pkg: pkg.Name}] = new
+				}
 				if old, ok := paths[newPath]; ok {
 					if new.Package != old.Package {
 						if p, err := preferredPathPackage(newPath, new.Package, old.Package, prefers); err == nil {
@@ -267,14 +270,17 @@ func (r *Release) validate() error {
 			if !strdist.GlobPath(newPath, oldPath) {
 				continue
 			}
-			toCheck := []*Slice{}
+			toCheck := []*Slice{new}
 			pkg := new.Package
 			// Add all packages in the prefer relationship. If there is no
 			// relationship only the current package gets added.
-			for pkg != "" {
-				slice, _ := pathToSlice[preferKey{path: newPath, pkg: pkg}]
-				toCheck = append(toCheck, slice)
+			for {
 				pkg = prefers[preferKey{preferTarget, newPath, pkg}]
+				if pkg == "" {
+					break
+				}
+				slice := pathToSlice[preferKey{path: newPath, pkg: pkg}]
+				toCheck = append(toCheck, slice)
 			}
 			for _, new := range toCheck {
 				// It is okay to check only one slice per package because the
