@@ -67,7 +67,7 @@ func (cmd *infoCmd) Execute(args []string) error {
 		for i := range notFound {
 			notFound[i] = strconv.Quote(notFound[i])
 		}
-		return fmt.Errorf("no slice definitions found for: " + strings.Join(notFound, ", "))
+		return fmt.Errorf("no slice definitions found for: %s", strings.Join(notFound, ", "))
 	}
 
 	return nil
