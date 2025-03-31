@@ -9,6 +9,7 @@ import (
 
 	"go.starlark.net/resolve"
 	"go.starlark.net/starlark"
+	"go.starlark.net/syntax"
 
 	"github.com/canonical/chisel/internal/fsutil"
 )
@@ -27,7 +28,8 @@ type RunOptions struct {
 
 func Run(opts *RunOptions) error {
 	thread := &starlark.Thread{Name: opts.Label}
-	globals, err := starlark.ExecFile(thread, opts.Label, opts.Script, opts.Namespace)
+	fileOptions := &syntax.FileOptions{}
+	globals, err := starlark.ExecFileOptions(fileOptions, thread, opts.Label, opts.Script, opts.Namespace)
 	_ = globals
 	return err
 }
