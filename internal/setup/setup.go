@@ -273,7 +273,7 @@ func (r *Release) validate() error {
 			// Add all packages in the prefer relationship. If there is no
 			// relationship only the current package gets added.
 			for {
-				pkg = prefers[preferKey{preferTarget, newPath, pkg}]
+				pkg = prefers[preferKey{preferSource, newPath, pkg}]
 				if pkg == "" {
 					break
 				}

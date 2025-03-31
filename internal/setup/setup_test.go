@@ -2379,9 +2379,12 @@ var setupTests = []setupTest{{
 		"slices/mydir/mypkg1.yaml": `
 			package: mypkg1
 			slices:
-				myslice:
+				myslice1:
 					contents:
 						/**:
+						/path: {prefer: mypkg2}
+				myslice2:
+					contents:
 						/path: {prefer: mypkg2}
 		`,
 		"slices/mydir/mypkg2.yaml": `
@@ -2392,7 +2395,34 @@ var setupTests = []setupTest{{
 						/path:
 		`,
 	},
-	relerror: `slices mypkg1_myslice and mypkg2_myslice conflict on /\*\* and /path`,
+	// This test and the following one together ensure that both mypkg2_myslice
+	// and mypkg1_myslice2 are checked against the glob.
+	relerror: `slices mypkg1_myslice1 and mypkg2_myslice conflict on /\*\* and /path`,
+}, {
+	summary: "Glob paths can conflict with 'prefer' chain (reverse dependency)",
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice1:
+					contents:
+						/**:
+						/path:
+				myslice2:
+					contents:
+						/path:
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+			slices:
+				myslice:
+					contents:
+						/path: {prefer: mypkg1}
+		`,
+	},
+	// This test and the previous one together ensure that both mypkg2_myslice
+	// and mypkg1_myslice2 are checked against the glob.
+	relerror: `slices mypkg1_myslice1 and mypkg2_myslice conflict on /\*\* and /path`,
 }, {
 	summary: "Slices of same package cannot have different 'prefer'",
 	input: map[string]string{
