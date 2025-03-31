@@ -178,6 +178,7 @@ func (c *ContentValue) Write(thread *starlark.Thread, fn *starlark.Builtin, args
 	// No mode parameter for now as slices are supposed to list files
 	// explicitly instead.
 	entry, err := fsutil.Create(&fsutil.CreateOptions{
+		Root: "/",
 		Path: fpath,
 		Data: bytes.NewReader(fdata),
 		Mode: 0644,
