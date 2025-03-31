@@ -154,9 +154,7 @@ func (s *Selection) Prefers() (map[string]*Package, error) {
 				// preferNone.
 				return nil, err
 			}
-			if preferred == old.Name {
-				pathPreferredPkg[path] = s.Release.Packages[slice.Package]
-			}
+			pathPreferredPkg[path] = s.Release.Packages[preferred]
 		}
 	}
 	return pathPreferredPkg, nil
@@ -528,27 +526,27 @@ func (r *Release) prefers() (map[preferKey]string, error) {
 	return prefers, nil
 }
 
-// preferredPathPackage returns pkg1 if one can reach pkg2 from pkg1 using
+// preferredPathPackage returns pkg1 if it can be reached from pkg2 following
 // prefer relationships, and conversely for pkg2. If none are reachable it
 // returns the preferNone error.
 //
 // If there is a cycle, an error is returned.
 func preferredPathPackage(path, pkg1, pkg2 string, prefers map[preferKey]string) (choice string, err error) {
 	pkg1, pkg2 = sortPair(pkg1, pkg2)
-	prefer1, err := findPrefer(path, pkg1, pkg2, prefers)
+	preferred1, err := findPrefer(path, pkg2, pkg1, prefers)
 	if err != nil {
 		return "", err
 	}
-	prefer2, err := findPrefer(path, pkg2, pkg1, prefers)
+	preferred2, err := findPrefer(path, pkg1, pkg2, prefers)
 	if err != nil {
 		return "", err
 	}
-	if prefer1 && prefer2 {
+	if preferred1 && preferred2 {
 		return "", fmt.Errorf("package %q is part of a prefer loop on %s", pkg1, path)
-	} else if prefer1 {
-		return pkg1, nil
-	} else if prefer2 {
+	} else if preferred2 {
 		return pkg2, nil
+	} else if preferred1 {
+		return pkg1, nil
 	}
 	sample, enforce := prefers[preferKey{preferSource, path, ""}]
 	if enforce {
