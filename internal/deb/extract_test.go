@@ -458,6 +458,34 @@ var extractTests = []extractTest{{
 		"/dir/": "dir 0777",
 	},
 	notCreated: []string{},
+}, {
+	summary: "Hardlink cannot escape target directory",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		testutil.Dir(0755, "./"),
+		testutil.Hrd(0644, "./hardlink", "/etc/group"),
+	}),
+	options: deb.ExtractOptions{
+		Extract: map[string][]deb.ExtractInfo{
+			"/**": []deb.ExtractInfo{{
+				Path: "/**",
+			}},
+		},
+	},
+	error: `cannot extract from package "test-package": invalid link target /etc/group`,
+}, {
+	summary: "Cannot extract outside of target directory",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		testutil.Dir(0755, "./"),
+		testutil.Reg(0644, "./../file", "hijacking system file"),
+	}),
+	options: deb.ExtractOptions{
+		Extract: map[string][]deb.ExtractInfo{
+			"/**": []deb.ExtractInfo{{
+				Path: "/**",
+			}},
+		},
+	},
+	error: `cannot extract from package "test-package": cannot create path /[a-z0-9\-\/]*/file outside of root /[a-z0-9\-\/]*`,
 }}
 
 func (s *S) TestExtract(c *C) {
