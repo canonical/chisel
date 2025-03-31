@@ -42,27 +42,23 @@ type Entry struct {
 //
 // Create can return errors from the os package.
 func Create(options *CreateOptions) (*Entry, error) {
+	o, err := getValidOptions(options)
+	if err != nil {
+		return nil, err
+	}
+
 	rp := &readerProxy{inner: options.Data, h: sha256.New()}
 	// Use the proxy instead of the raw Reader.
-	optsCopy := *options
-	optsCopy.Data = rp
-	o := &optsCopy
+	o.Data = rp
 
-	if o.Root == "" {
-		return nil, fmt.Errorf("internal error: CreateOptions.Root is unset")
-	}
-	if o.Root != "/" {
-		o.Root = filepath.Clean(o.Root) + "/"
-	}
 	path, err := absPath(o.Root, o.Path)
 	if err != nil {
 		return nil, err
 	}
-	o.Path = path
 
 	var hash string
 	if o.MakeParents {
-		if err := os.MkdirAll(filepath.Dir(o.Path), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 			return nil, err
 		}
 	}
@@ -73,7 +69,7 @@ func Create(options *CreateOptions) (*Entry, error) {
 			o.Link = filepath.Clean(o.Link)
 			if filepath.IsAbs(o.Link) {
 				if !strings.HasPrefix(filepath.Clean(o.Link), o.Root) {
-					return nil, fmt.Errorf("invalid hardlink %s target: %s is outside of root %s", o.Path, o.Link, o.Root)
+					return nil, fmt.Errorf("invalid hardlink %s target: %s is outside of root %s", path, o.Link, o.Root)
 				}
 			}
 			err = createHardLink(o)
@@ -86,14 +82,14 @@ func Create(options *CreateOptions) (*Entry, error) {
 	case fs.ModeSymlink:
 		err = createSymlink(o)
 	default:
-		err = fmt.Errorf("unsupported file type: %s", o.Path)
+		err = fmt.Errorf("unsupported file type: %s", path)
 	}
 	if err != nil {
 		return nil, err
 	}
 
 	// Entry should describe the created file, not the target the link points to.
-	s, err := os.Lstat(o.Path)
+	s, err := os.Lstat(path)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +103,7 @@ func Create(options *CreateOptions) (*Entry, error) {
 			mode = mode &^ fs.ModeSymlink
 		}
 	} else if o.OverrideMode && mode != o.Mode {
-		err := os.Chmod(o.Path, o.Mode)
+		err := os.Chmod(path, o.Mode)
 		if err != nil {
 			return nil, err
 		}
@@ -115,7 +111,7 @@ func Create(options *CreateOptions) (*Entry, error) {
 	}
 
 	entry := &Entry{
-		Path:   o.Path,
+		Path:   path,
 		Mode:   mode,
 		SHA256: hash,
 		Size:   rp.size,
@@ -128,23 +124,18 @@ func Create(options *CreateOptions) (*Entry, error) {
 // information recorded in Entry. The Hash and Size attributes are set on
 // calling Close() on the Writer.
 func CreateWriter(options *CreateOptions) (io.WriteCloser, *Entry, error) {
-	optsCopy := *options
-	o := &optsCopy
+	o, err := getValidOptions(options)
+	if err != nil {
+		return nil, nil, err
+	}
 
-	if o.Root == "" {
-		return nil, nil, fmt.Errorf("internal error: CreateOptions.Root is unset")
-	}
-	if o.Root != "/" {
-		o.Root = filepath.Clean(o.Root) + "/"
-	}
 	path, err := absPath(o.Root, o.Path)
 	if err != nil {
 		return nil, nil, err
 	}
-	o.Path = path
 
 	if !o.Mode.IsRegular() {
-		return nil, nil, fmt.Errorf("unsupported file type: %s", o.Path)
+		return nil, nil, fmt.Errorf("unsupported file type: %s", path)
 	}
 	if o.MakeParents {
 		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
@@ -152,12 +143,12 @@ func CreateWriter(options *CreateOptions) (io.WriteCloser, *Entry, error) {
 		}
 	}
 
-	file, err := os.OpenFile(o.Path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, o.Mode)
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, o.Mode)
 	if err != nil {
 		return nil, nil, err
 	}
 	entry := &Entry{
-		Path: o.Path,
+		Path: path,
 		Mode: o.Mode,
 	}
 	wp := &writerProxy{
@@ -171,7 +162,11 @@ func CreateWriter(options *CreateOptions) (io.WriteCloser, *Entry, error) {
 
 func createDir(o *CreateOptions) error {
 	debugf("Creating directory: %s (mode %#o)", o.Path, o.Mode)
-	err := os.Mkdir(o.Path, o.Mode)
+	path, err := absPath(o.Root, o.Path)
+	if err != nil {
+		return err
+	}
+	err = os.Mkdir(path, o.Mode)
 	if os.IsExist(err) {
 		return nil
 	}
@@ -180,7 +175,11 @@ func createDir(o *CreateOptions) error {
 
 func createFile(o *CreateOptions) error {
 	debugf("Writing file: %s (mode %#o)", o.Path, o.Mode)
-	file, err := os.OpenFile(o.Path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, o.Mode)
+	path, err := absPath(o.Root, o.Path)
+	if err != nil {
+		return err
+	}
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, o.Mode)
 	if err != nil {
 		return err
 	}
@@ -194,10 +193,14 @@ func createFile(o *CreateOptions) error {
 
 func createSymlink(o *CreateOptions) error {
 	debugf("Creating symlink: %s => %s", o.Path, o.Link)
-	fileinfo, err := os.Lstat(o.Path)
+	path, err := absPath(o.Root, o.Path)
+	if err != nil {
+		return err
+	}
+	fileinfo, err := os.Lstat(path)
 	if err == nil {
 		if (fileinfo.Mode() & os.ModeSymlink) != 0 {
-			link, err := os.Readlink(o.Path)
+			link, err := os.Readlink(path)
 			if err != nil {
 				return err
 			}
@@ -205,25 +208,29 @@ func createSymlink(o *CreateOptions) error {
 				return nil
 			}
 		}
-		err = os.Remove(o.Path)
+		err = os.Remove(path)
 		if err != nil {
 			return err
 		}
 	} else if !os.IsNotExist(err) {
 		return err
 	}
-	return os.Symlink(o.Link, o.Path)
+	return os.Symlink(o.Link, path)
 }
 
 func createHardLink(o *CreateOptions) error {
 	debugf("Creating hard link: %s => %s", o.Path, o.Link)
-	err := os.Link(o.Link, o.Path)
+	path, err := absPath(o.Root, o.Path)
+	if err != nil {
+		return err
+	}
+	err = os.Link(o.Link, path)
 	if err != nil && os.IsExist(err) {
 		linkInfo, serr := os.Lstat(o.Link)
 		if serr != nil {
 			return serr
 		}
-		pathInfo, serr := os.Lstat(o.Path)
+		pathInfo, serr := os.Lstat(path)
 		if serr != nil {
 			return serr
 		}
@@ -232,6 +239,18 @@ func createHardLink(o *CreateOptions) error {
 		}
 	}
 	return err
+}
+
+func getValidOptions(options *CreateOptions) (*CreateOptions, error) {
+	optsCopy := *options
+	o := &optsCopy
+	if o.Root == "" {
+		return nil, fmt.Errorf("internal error: CreateOptions.Root is unset")
+	}
+	if o.Root != "/" {
+		o.Root = filepath.Clean(o.Root) + "/"
+	}
+	return o, nil
 }
 
 // absPath requires root to be a clean path that ends in "/".
