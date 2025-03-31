@@ -466,7 +466,7 @@ func (s *S) TestCreateWriter(c *C) {
 func (s *S) TestCreateEmptyRoot(c *C) {
 	options := &fsutil.CreateOptions{Root: ""}
 	_, err := fsutil.Create(options)
-	c.Assert(err, ErrorMatches, "root cannot be empty")
+	c.Assert(err, ErrorMatches, "internal error: CreateOptions.Root is unset")
 	_, _, err = fsutil.CreateWriter(options)
-	c.Assert(err, ErrorMatches, "root cannot be empty")
+	c.Assert(err, ErrorMatches, "internal error: CreateOptions.Root is unset")
 }

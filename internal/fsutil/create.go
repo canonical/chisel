@@ -49,7 +49,7 @@ func Create(options *CreateOptions) (*Entry, error) {
 	o := &optsCopy
 
 	if o.Root == "" {
-		return nil, fmt.Errorf("root cannot be empty")
+		return nil, fmt.Errorf("internal error: CreateOptions.Root is unset")
 	}
 	if o.Root != "/" {
 		o.Root = filepath.Clean(o.Root) + "/"
@@ -132,7 +132,7 @@ func CreateWriter(options *CreateOptions) (io.WriteCloser, *Entry, error) {
 	o := &optsCopy
 
 	if o.Root == "" {
-		return nil, nil, fmt.Errorf("root cannot be empty")
+		return nil, nil, fmt.Errorf("internal error: CreateOptions.Root is unset")
 	}
 	if o.Root != "/" {
 		o.Root = filepath.Clean(o.Root) + "/"
