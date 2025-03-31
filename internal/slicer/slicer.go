@@ -276,8 +276,7 @@ func Run(options *RunOptions) error {
 			mutable: pathInfo.Mutable,
 		}
 		addKnownPath(knownPaths, relPath, data)
-		targetPath := filepath.Join(targetDir, relPath)
-		entry, err := createFile(targetPath, pathInfo)
+		entry, err := createFile(targetDir, relPath, pathInfo)
 		if err != nil {
 			return err
 		}
@@ -334,9 +333,9 @@ func generateManifests(targetDir string, selection *setup.Selection,
 	var writers []io.Writer
 	for relPath, slices := range manifestSlices {
 		logf("Generating manifest at %s...", relPath)
-		absPath := filepath.Join(targetDir, relPath)
 		createOptions := &fsutil.CreateOptions{
-			Path:        absPath,
+			Root:        targetDir,
+			Path:        relPath,
 			Mode:        manifestMode,
 			MakeParents: true,
 		}
@@ -426,7 +425,7 @@ func addKnownPath(knownPaths map[string]pathData, path string, data pathData) {
 	}
 }
 
-func createFile(targetPath string, pathInfo setup.PathInfo) (*fsutil.Entry, error) {
+func createFile(targetDir, relPath string, pathInfo setup.PathInfo) (*fsutil.Entry, error) {
 	targetMode := pathInfo.Mode
 	if targetMode == 0 {
 		if pathInfo.Kind == setup.DirPath {
@@ -454,7 +453,8 @@ func createFile(targetPath string, pathInfo setup.PathInfo) (*fsutil.Entry, erro
 	}
 
 	return fsutil.Create(&fsutil.CreateOptions{
-		Path:        targetPath,
+		Root:        targetDir,
+		Path:        relPath,
 		Mode:        tarHeader.FileInfo().Mode(),
 		Data:        fileContent,
 		Link:        linkTarget,

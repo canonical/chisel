@@ -13,7 +13,6 @@ import (
 )
 
 type CreateOptions struct {
-	// Root defaults to "/" if empty.
 	Root string
 	// Path is relative to Root.
 	Path string
@@ -49,10 +48,17 @@ func Create(options *CreateOptions) (*Entry, error) {
 	optsCopy.Data = rp
 	o := &optsCopy
 
-	err := setValidPath(o)
+	if o.Root == "" {
+		return nil, fmt.Errorf("root cannot be empty")
+	}
+	if o.Root != "/" {
+		o.Root = filepath.Clean(o.Root) + "/"
+	}
+	path, err := absPath(o.Root, o.Path)
 	if err != nil {
 		return nil, err
 	}
+	o.Path = path
 
 	var hash string
 	if o.MakeParents {
@@ -66,7 +72,7 @@ func Create(options *CreateOptions) (*Entry, error) {
 		if o.Link != "" {
 			o.Link = filepath.Clean(o.Link)
 			if filepath.IsAbs(o.Link) {
-				if !strings.HasPrefix(o.Link, o.Root) {
+				if !strings.HasPrefix(filepath.Clean(o.Link), o.Root) {
 					return nil, fmt.Errorf("invalid hardlink %s target: %s is outside of root %s", o.Path, o.Link, o.Root)
 				}
 			}
@@ -125,16 +131,23 @@ func CreateWriter(options *CreateOptions) (io.WriteCloser, *Entry, error) {
 	optsCopy := *options
 	o := &optsCopy
 
-	err := setValidPath(o)
+	if o.Root == "" {
+		return nil, nil, fmt.Errorf("root cannot be empty")
+	}
+	if o.Root != "/" {
+		o.Root = filepath.Clean(o.Root) + "/"
+	}
+	path, err := absPath(o.Root, o.Path)
 	if err != nil {
 		return nil, nil, err
 	}
+	o.Path = path
 
 	if !o.Mode.IsRegular() {
 		return nil, nil, fmt.Errorf("unsupported file type: %s", o.Path)
 	}
 	if o.MakeParents {
-		if err := os.MkdirAll(filepath.Dir(o.Path), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 			return nil, nil, err
 		}
 	}
@@ -221,18 +234,13 @@ func createHardLink(o *CreateOptions) error {
 	return err
 }
 
-func setValidPath(o *CreateOptions) error {
-	if o.Root == "" {
-		o.Root = "/"
+// absPath requires root to be a clean path that ends in "/".
+func absPath(root, relPath string) (string, error) {
+	path := filepath.Clean(filepath.Join(root, relPath))
+	if !strings.HasPrefix(path, root) {
+		return "", fmt.Errorf("cannot create path %s outside of root %s", path, root)
 	}
-	if o.Root != "/" {
-		o.Root = filepath.Clean(o.Root) + "/"
-	}
-	o.Path = filepath.Clean(filepath.Join(o.Root, o.Path))
-	if !strings.HasPrefix(o.Path, o.Root) {
-		return fmt.Errorf("cannot create path %s outside of root %s", o.Path, o.Root)
-	}
-	return nil
+	return path, nil
 }
 
 // readerProxy implements the io.Reader interface proxying the calls to its

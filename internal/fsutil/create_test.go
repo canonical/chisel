@@ -462,3 +462,11 @@ func (s *S) TestCreateWriter(c *C) {
 		c.Assert(testutil.TreeDumpEntry(entry), DeepEquals, test.result[slashPath])
 	}
 }
+
+func (s *S) TestCreateEmptyRoot(c *C) {
+	options := &fsutil.CreateOptions{Root: ""}
+	_, err := fsutil.Create(options)
+	c.Assert(err, ErrorMatches, "root cannot be empty")
+	_, _, err = fsutil.CreateWriter(options)
+	c.Assert(err, ErrorMatches, "root cannot be empty")
+}
