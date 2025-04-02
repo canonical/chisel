@@ -1744,6 +1744,46 @@ var slicerTests = []slicerTest{{
 		"/hardlink": "file 0644 2c26b46b <1> {test-package_myslice}",
 	},
 }, {
+	summary: "Hard links cannot escape the target directory",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	pkgs: []*testutil.TestPackage{{
+		Name: "test-package",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			testutil.Hrd(0644, "./hardlink", "/etc/group"),
+		}),
+	}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/hardlink:
+		`,
+	},
+	error: `cannot extract from package "test-package": invalid link target /etc/group`,
+}, {
+	summary: "Cannot extract outside of target directory",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	pkgs: []*testutil.TestPackage{{
+		Name: "test-package",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			testutil.Reg(0644, "./../file", "hijacking system file"),
+		}),
+	}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/**:
+		`,
+	},
+	error: `cannot extract from package "test-package": cannot create path /[a-z0-9\-\/]*/file outside of root /[a-z0-9\-\/]*`,
+}, {
 	summary: "Extract conflicting paths with prefer from proper package",
 	slices: []setup.SliceKey{
 		{"test-package1", "myslice"},
