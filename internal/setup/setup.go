@@ -246,13 +246,13 @@ func (r *Release) validate() error {
 	// Check for invalid prefer relationships where the package does not have
 	// the path.
 	for skey, source := range prefers {
-		if skey.side != preferSource || skey.pkg == "" {
-			// preferTarget packages have the path by construction.
-			continue
-		}
-		if _, ok := pathToSlice[preferKey{path: skey.path, pkg: skey.pkg}]; !ok {
-			sourceSlice := pathToSlice[preferKey{path: skey.path, pkg: source}]
-			return fmt.Errorf("slice %s prefers package %q which does not contain path %s", sourceSlice, skey.pkg, skey.path)
+		if skey.side == preferSource && skey.pkg != "" {
+			// Process only the preferSource to traverse the graph only once
+			// and avoid repeated work.
+			if _, ok := pathToSlice[preferKey{path: skey.path, pkg: skey.pkg}]; !ok {
+				sourceSlice := pathToSlice[preferKey{path: skey.path, pkg: source}]
+				return fmt.Errorf("slice %s prefers package %q which does not contain path %s", sourceSlice, skey.pkg, skey.path)
+			}
 		}
 	}
 
