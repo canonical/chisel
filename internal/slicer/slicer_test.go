@@ -1783,6 +1783,67 @@ var slicerTests = []slicerTest{{
 		`,
 	},
 	error: `cannot extract from package "test-package": cannot create path /[a-z0-9\-\/]*/file outside of root /[a-z0-9\-\/]*`,
+}, {
+	summary: "Extract conflicting paths with prefer from proper package",
+	slices: []setup.SliceKey{
+		{"test-package1", "myslice"},
+		{"test-package2", "myslice"},
+	},
+	pkgs: []*testutil.TestPackage{{
+		Name: "test-package1",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			testutil.Reg(0644, "./file", "foo"),
+		}),
+	}, {
+		Name: "test-package2",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			testutil.Reg(0644, "./file", "bar"),
+		}),
+	}, {
+		Name: "test-package3",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+		}),
+	}},
+	release: map[string]string{
+		"slices/mydir/test-package1.yaml": `
+			package: test-package1
+			slices:
+				myslice:
+					contents:
+						/file: {prefer: test-package2}
+						/link: {symlink: /file1}
+						/text: {text: foo, prefer: test-package3}
+		`,
+		"slices/mydir/test-package2.yaml": `
+			package: test-package2
+			slices:
+				myslice:
+					contents:
+						/file:
+						/link: {symlink: /file2, prefer: test-package3}
+		`,
+		"slices/mydir/test-package3.yaml": `
+			package: test-package3
+			slices:
+				myslice:
+					contents:
+						/link: {symlink: /file2, prefer: test-package1}
+						/text: {text: bar}
+		`,
+	},
+	filesystem: map[string]string{
+		"/file": "file 0644 fcde2b2e",
+		"/link": "symlink /file1",
+		"/text": "file 0644 2c26b46b",
+	},
+	manifestPaths: map[string]string{
+		"/file": "file 0644 fcde2b2e {test-package2_myslice}",
+		"/link": "symlink /file1 {test-package1_myslice}",
+		"/text": "file 0644 2c26b46b {test-package1_myslice}",
+	},
 }}
 
 var defaultChiselYaml = `
