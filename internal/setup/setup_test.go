@@ -2382,7 +2382,6 @@ var setupTests = []setupTest{{
 				myslice1:
 					contents:
 						/**:
-						/path: {prefer: mypkg2}
 				myslice2:
 					contents:
 						/path: {prefer: mypkg2}
@@ -2407,7 +2406,6 @@ var setupTests = []setupTest{{
 				myslice1:
 					contents:
 						/**:
-						/path:
 				myslice2:
 					contents:
 						/path:
