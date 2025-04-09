@@ -23,7 +23,7 @@ import (
 )
 
 type httpSuite struct {
-	logf      func(string, ...interface{})
+	logf      func(string, ...any)
 	base      string
 	request   *http.Request
 	requests  []*http.Request
