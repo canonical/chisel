@@ -16,6 +16,7 @@ package testutil_test
 
 import (
 	"reflect"
+	"slices"
 	"testing"
 
 	"gopkg.in/check.v1"
@@ -44,7 +45,7 @@ func testCheck(c *check.C, checker check.Checker, result bool, error string, par
 	if len(params) != len(info.Params) {
 		c.Fatalf("unexpected param count in test; expected %d got %d", len(info.Params), len(params))
 	}
-	names := append([]string{}, info.Params...)
+	names := slices.Clone(info.Params)
 	resultActual, errorActual := checker.Check(params, names)
 	if resultActual != result || errorActual != error {
 		c.Fatalf("%s.Check(%#v) returned (%#v, %#v) rather than (%#v, %#v)",

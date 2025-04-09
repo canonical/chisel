@@ -22,6 +22,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 
@@ -147,7 +148,7 @@ func (cmd *FakeCmd) Restore() {
 	entries := strings.Split(os.Getenv("PATH"), ":")
 	for i, entry := range entries {
 		if entry == cmd.binDir {
-			entries = append(entries[:i], entries[i+1:]...)
+			entries = slices.Delete(entries, i, i+1)
 			break
 		}
 	}

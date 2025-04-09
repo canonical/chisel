@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"golang.org/x/crypto/openpgp/packet"
@@ -269,7 +270,7 @@ func order(pkgs map[string]*Package, keys []SliceKey) ([]SliceKey, error) {
 
 	// Collect all relevant package slices.
 	successors := map[string][]string{}
-	pending := append([]SliceKey(nil), keys...)
+	pending := slices.Clone(keys)
 
 	seen := make(map[SliceKey]bool)
 	for i := range pending {

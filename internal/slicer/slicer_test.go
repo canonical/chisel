@@ -1446,7 +1446,7 @@ var slicerTests = []slicerTest{{
 				break
 			}
 		}
-		opts.Selection.Slices = append(opts.Selection.Slices[:index], opts.Selection.Slices[index+1:]...)
+		opts.Selection.Slices = slices.Delete(opts.Selection.Slices, index, index+1)
 	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
