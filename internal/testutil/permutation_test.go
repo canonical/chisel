@@ -43,7 +43,7 @@ func (*permutationSuite) TestPermutations(c *C) {
 func (*permutationSuite) TestFuzzPermutations(c *C) {
 	for sLen := 0; sLen <= 10; sLen++ {
 		s := make([]byte, sLen)
-		for i := 0; i < sLen; i++ {
+		for i := range sLen {
 			s[i] = byte(i)
 		}
 		permutations := testutil.Permutations(s)

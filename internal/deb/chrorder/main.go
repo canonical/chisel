@@ -59,9 +59,9 @@ func main() {
 	fmt.Fprintf(out, "package %v\n", pkgName)
 	fmt.Fprintf(out, "\n")
 	fmt.Fprintln(out, "var chOrder = [...]int{")
-	for i := 0; i < 16; i++ {
+	for i := range 16 {
 		fmt.Fprintf(out, "\t")
-		for j := 0; j < 16; j++ {
+		for j := range 16 {
 			if j != 0 {
 				fmt.Fprintf(out, " ")
 			}

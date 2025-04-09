@@ -18,7 +18,7 @@ func (s *S) TestFetch(c *C) {
 		CacheDir: c.MkDir(),
 	}
 
-	for fetch := 0; fetch < 3; fetch++ {
+	for fetch := range 3 {
 		release, err := setup.FetchRelease(options)
 		c.Assert(err, IsNil)
 

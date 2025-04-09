@@ -272,7 +272,7 @@ func order(pkgs map[string]*Package, keys []SliceKey) ([]SliceKey, error) {
 	pending := append([]SliceKey(nil), keys...)
 
 	seen := make(map[SliceKey]bool)
-	for i := 0; i < len(pending); i++ {
+	for i := range pending {
 		key := pending[i]
 		if seen[key] {
 			continue
@@ -491,7 +491,7 @@ func findPrefer(path, pkg, prefer string, prefers map[preferKey]string) (found b
 	// always the case unless the release is broken. Note that
 	// the pkg reported in the error is the one inside the loop,
 	// not necessarily the input parameter.
-	for i := 0; i < len(prefers); i++ {
+	for range len(prefers) {
 		pkg = prefers[preferKey{preferTarget, path, pkg}]
 		if pkg == "" {
 			return false, nil
