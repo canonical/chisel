@@ -1,0 +1,6 @@
+summary: Real archives tests
+# Do not change to newer releases as "fips" may not be available there.
+systems: [ubuntu-20.04]
+
+execute: |
+  go test /chisel/internal/archive/ --real-archive

@@ -29,8 +29,8 @@ backends:
       docker pull $image
       docker run -e usr=$SPREAD_SYSTEM_USERNAME -e pass=$SPREAD_SYSTEM_PASSWORD --name $SPREAD_SYSTEM -d $image sh -c '
         set -x
-        apt update
-        apt install -y openssh-server sudo zstd jq
+        apt-get update
+        apt-get install -y openssh-server sudo zstd jq
         mkdir /run/sshd
         useradd -rm -d /home/ubuntu -s /bin/bash -g root -G sudo -u 1000 ubuntu
         echo "$usr:$pass" | chpasswd
@@ -44,16 +44,29 @@ backends:
       - ubuntu-24.04:
           username: ubuntu
           password: ubuntu
+      - ubuntu-20.04:
+          username: ubuntu
+          password: ubuntu
 
 prepare: |
-  apt install -y golang git
-  go build -buildvcs=false ./cmd/chisel/
-  mv chisel /usr/local/bin
+  apt-get install -y golang-1.22-go git
+  # Do not depend on the version shipped by the distro, use it only to
+  # bootstrap.
+  /usr/lib/go-1.22/bin/go install golang.org/dl/go1.23.0@latest
+  $HOME/go/bin/go1.23.0 download
+  ln -s -f $HOME/go/bin/go1.23.0 /usr/local/bin/go
 
 suites:
-  tests/:
-    summary: Tests common scenarios
+  tests/end-to-end/:
+    summary: Tests common scenarios using the binary
+    systems: [ubuntu-24.04]
+    prepare: |
+      cd /chisel
+      go build -buildvcs=false ./cmd/chisel/
+      mv chisel /usr/local/bin
     environment:
-        RELEASE/jammy: 22.04
         RELEASE/focal: 20.04
+        RELEASE/jammy: 22.04
         RELEASE/noble: 24.04
+  tests/internal/:
+    summary: Run internal tests against specific images
