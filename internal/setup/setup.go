@@ -176,10 +176,6 @@ func (r *Release) validate() error {
 							}
 						}
 
-						// TODO: possible optimization. When there is no prefer
-						// it is enough to check one element of oldSlices for
-						// conflicts becase we have validated that all of them
-						// produce the same file.
 						oldInfo := old.Contents[newPath]
 						if !newInfo.SameContent(&oldInfo) || (newInfo.Kind == CopyPath || newInfo.Kind == GlobPath) && new.Package != old.Package {
 							if old.Package > new.Package || old.Package == new.Package && old.Name > new.Name {
@@ -201,8 +197,11 @@ func (r *Release) validate() error {
 		for _, old := range oldSlices {
 			oldInfo := old.Contents[oldPath]
 			if oldInfo.Kind != GeneratePath && oldInfo.Kind != GlobPath {
-				continue
+				break
 			}
+			// TODO: possible optimization. It is enough to check only one
+			// element of oldSlices for conflicts because we have validated
+			// previously that all of them produce the same content.
 			for newPath, newSlices := range paths {
 				if oldPath == newPath {
 					// Identical paths have been filtered earlier.
