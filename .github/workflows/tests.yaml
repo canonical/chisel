@@ -45,10 +45,17 @@ jobs:
           path: ./*.html
 
   real-archive-tests:
-    # Do not change to newer releases as "fips" may not be available there.
-    runs-on: ubuntu-20.04
     name: Real Archive Tests
+    runs-on: ubuntu-22.04
+    container:
+      # Do not change to newer releases as "fips" may not be available there.
+      image: ubuntu:20.04
     steps:
+      - name: Install git (needed for Go setup)
+        run: |
+          set -x
+          apt-get update && apt-get install -y git
+
       - uses: actions/checkout@v3
 
       - uses: actions/setup-go@v3
