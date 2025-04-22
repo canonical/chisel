@@ -199,19 +199,12 @@ func (r *Release) validate() error {
 			if oldInfo.Kind != GeneratePath && oldInfo.Kind != GlobPath {
 				break
 			}
-			// TODO: possible optimization. It is enough to check only one
-			// element of oldSlices for conflicts because we have validated
-			// previously that all of them produce the same content.
 			for newPath, newSlices := range paths {
 				if oldPath == newPath {
 					// Identical paths have been filtered earlier.
 					continue
 				}
 				for _, new := range newSlices {
-					// TODO: possible optimization. When there is no prefer it is
-					// enough to check one element of newSlices for conflicts
-					// becase we have validated that all of them produce the same
-					// file.
 					newInfo := new.Contents[newPath]
 					if oldInfo.Kind == GlobPath && (newInfo.Kind == GlobPath || newInfo.Kind == CopyPath) {
 						if new.Package == old.Package {
