@@ -161,7 +161,6 @@ func (r *Release) validate() error {
 	// with make:true) will always conflict with extracted content, because we
 	// cannot validate that they are the same without downloading the package.
 	paths := make(map[string][]*Slice)
-	globs := make(map[string]*Slice)
 	for _, pkg := range r.Packages {
 		for _, new := range pkg.Slices {
 			keys = append(keys, SliceKey{pkg.Name, new.Name})
@@ -192,40 +191,42 @@ func (r *Release) validate() error {
 					paths[newPath] = append(paths[newPath], new)
 				} else {
 					paths[newPath] = append(paths[newPath], new)
-					if newInfo.Kind == GeneratePath || newInfo.Kind == GlobPath {
-						globs[newPath] = new
-					}
 				}
 			}
 		}
 	}
 
 	// Check for glob and generate conflicts.
-	for oldPath, old := range globs {
-		oldInfo := old.Contents[oldPath]
-		for newPath, newSlices := range paths {
-			if oldPath == newPath {
-				// Identical paths have been filtered earlier.
+	for oldPath, oldSlices := range paths {
+		for _, old := range oldSlices {
+			oldInfo := old.Contents[oldPath]
+			if oldInfo.Kind != GeneratePath && oldInfo.Kind != GlobPath {
 				continue
 			}
-			for _, new := range newSlices {
-				// TODO: possible optimization. When there is no prefer it is
-				// enough to check one element of newSlices for conflicts
-				// becase we have validated that all of them produce the same
-				// file.
-				newInfo := new.Contents[newPath]
-				if oldInfo.Kind == GlobPath && (newInfo.Kind == GlobPath || newInfo.Kind == CopyPath) {
-					if new.Package == old.Package {
-						continue
-					}
+			for newPath, newSlices := range paths {
+				if oldPath == newPath {
+					// Identical paths have been filtered earlier.
+					continue
 				}
-				if strdist.GlobPath(newPath, oldPath) {
-					if (old.Package > new.Package) || (old.Package == new.Package && old.Name > new.Name) ||
-						(old.Package == new.Package && old.Name == new.Name && oldPath > newPath) {
-						old, new = new, old
-						oldPath, newPath = newPath, oldPath
+				for _, new := range newSlices {
+					// TODO: possible optimization. When there is no prefer it is
+					// enough to check one element of newSlices for conflicts
+					// becase we have validated that all of them produce the same
+					// file.
+					newInfo := new.Contents[newPath]
+					if oldInfo.Kind == GlobPath && (newInfo.Kind == GlobPath || newInfo.Kind == CopyPath) {
+						if new.Package == old.Package {
+							continue
+						}
 					}
-					return fmt.Errorf("slices %s and %s conflict on %s and %s", old, new, oldPath, newPath)
+					if strdist.GlobPath(newPath, oldPath) {
+						if (old.Package > new.Package) || (old.Package == new.Package && old.Name > new.Name) ||
+							(old.Package == new.Package && old.Name == new.Name && oldPath > newPath) {
+							old, new = new, old
+							oldPath, newPath = newPath, oldPath
+						}
+						return fmt.Errorf("slices %s and %s conflict on %s and %s", old, new, oldPath, newPath)
+					}
 				}
 			}
 		}
