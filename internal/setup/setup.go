@@ -160,67 +160,66 @@ func (r *Release) validate() error {
 	// The above also means that generated content (e.g. text files, directories
 	// with make:true) will always conflict with extracted content, because we
 	// cannot validate that they are the same without downloading the package.
-	paths := make(map[string]*Slice)
-	globs := make(map[string]*Slice)
+	paths := make(map[string][]*Slice)
 	for _, pkg := range r.Packages {
 		for _, new := range pkg.Slices {
 			keys = append(keys, SliceKey{pkg.Name, new.Name})
 			for newPath, newInfo := range new.Contents {
-				if old, ok := paths[newPath]; ok {
-					if new.Package != old.Package {
-						if p, err := preferredPathPackage(newPath, new.Package, old.Package, prefers); err == nil {
-							if p == new.Package {
-								paths[newPath] = new
+				if oldSlices, ok := paths[newPath]; ok {
+					for _, old := range oldSlices {
+						if new.Package != old.Package {
+							_, err := preferredPathPackage(newPath, new.Package, old.Package, prefers)
+							if err == nil {
+								continue
+							} else if err != preferNone {
+								return err
 							}
-							continue
-						} else if err != preferNone {
-							return err
 						}
-					}
 
-					oldInfo := old.Contents[newPath]
-					if !newInfo.SameContent(&oldInfo) || (newInfo.Kind == CopyPath || newInfo.Kind == GlobPath) && new.Package != old.Package {
-						if old.Package > new.Package || old.Package == new.Package && old.Name > new.Name {
-							old, new = new, old
+						oldInfo := old.Contents[newPath]
+						if !newInfo.SameContent(&oldInfo) || (newInfo.Kind == CopyPath || newInfo.Kind == GlobPath) && new.Package != old.Package {
+							if old.Package > new.Package || old.Package == new.Package && old.Name > new.Name {
+								old, new = new, old
+							}
+							return fmt.Errorf("slices %s and %s conflict on %s", old, new, newPath)
 						}
-						return fmt.Errorf("slices %s and %s conflict on %s", old, new, newPath)
 					}
-					// Note: Because for conflict resolution we only check that
-					// the created file would be the same and we know newInfo and
-					// oldInfo produce the same one, we do not have to record
-					// newInfo.
+					paths[newPath] = append(paths[newPath], new)
 				} else {
-					paths[newPath] = new
-					if newInfo.Kind == GeneratePath || newInfo.Kind == GlobPath {
-						globs[newPath] = new
-					}
+					paths[newPath] = append(paths[newPath], new)
 				}
 			}
 		}
 	}
 
 	// Check for glob and generate conflicts.
-	for oldPath, old := range globs {
-		oldInfo := old.Contents[oldPath]
-		for newPath, new := range paths {
-			if oldPath == newPath {
-				// Identical paths have been filtered earlier. This must be the
-				// exact same entry.
-				continue
+	for oldPath, oldSlices := range paths {
+		for _, old := range oldSlices {
+			oldInfo := old.Contents[oldPath]
+			if oldInfo.Kind != GeneratePath && oldInfo.Kind != GlobPath {
+				break
 			}
-			newInfo := new.Contents[newPath]
-			if oldInfo.Kind == GlobPath && (newInfo.Kind == GlobPath || newInfo.Kind == CopyPath) {
-				if new.Package == old.Package {
+			for newPath, newSlices := range paths {
+				if oldPath == newPath {
+					// Identical paths have been filtered earlier.
 					continue
 				}
-			}
-			if strdist.GlobPath(newPath, oldPath) {
-				if (old.Package > new.Package) || (old.Package == new.Package && old.Name > new.Name) ||
-					(old.Package == new.Package && old.Name == new.Name && oldPath > newPath) {
-					old, new = new, old
-					oldPath, newPath = newPath, oldPath
+				for _, new := range newSlices {
+					newInfo := new.Contents[newPath]
+					if oldInfo.Kind == GlobPath && (newInfo.Kind == GlobPath || newInfo.Kind == CopyPath) {
+						if new.Package == old.Package {
+							continue
+						}
+					}
+					if strdist.GlobPath(newPath, oldPath) {
+						if (old.Package > new.Package) || (old.Package == new.Package && old.Name > new.Name) ||
+							(old.Package == new.Package && old.Name == new.Name && oldPath > newPath) {
+							old, new = new, old
+							oldPath, newPath = newPath, oldPath
+						}
+						return fmt.Errorf("slices %s and %s conflict on %s and %s", old, new, oldPath, newPath)
+					}
 				}
-				return fmt.Errorf("slices %s and %s conflict on %s and %s", old, new, oldPath, newPath)
 			}
 		}
 	}
