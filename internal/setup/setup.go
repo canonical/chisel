@@ -238,17 +238,14 @@ func (r *Release) validate() error {
 			// and avoid repeated work.
 
 			found := false
-			var sourceSlice *Slice
 			for _, slice := range paths[skey.path] {
 				if slice.Package == skey.pkg {
 					found = true
-				}
-				if slice.Package == source {
-					sourceSlice = slice
+					break
 				}
 			}
 			if !found {
-				return fmt.Errorf("slice %s prefers package %q which does not contain path %s", sourceSlice, skey.pkg, skey.path)
+				return fmt.Errorf("package %s prefers package %q which does not contain path %s", source, skey.pkg, skey.path)
 			}
 		}
 	}
