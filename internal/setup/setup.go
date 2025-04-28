@@ -519,20 +519,20 @@ func (r *Release) prefers() (map[preferKey]string, error) {
 // If there is a cycle, an error is returned.
 func preferredPathPackage(path, pkg1, pkg2 string, prefers map[preferKey]string) (choice string, err error) {
 	pkg1, pkg2 = sortPair(pkg1, pkg2)
-	preferred1, err := findPrefer(path, pkg2, pkg1, prefers)
+	prefer1, err := findPrefer(path, pkg2, pkg1, prefers)
 	if err != nil {
 		return "", err
 	}
-	preferred2, err := findPrefer(path, pkg1, pkg2, prefers)
+	prefer2, err := findPrefer(path, pkg1, pkg2, prefers)
 	if err != nil {
 		return "", err
 	}
-	if preferred1 && preferred2 {
+	if prefer1 && prefer2 {
 		return "", fmt.Errorf("package %q is part of a prefer loop on %s", pkg1, path)
-	} else if preferred2 {
-		return pkg2, nil
-	} else if preferred1 {
+	} else if prefer1 {
 		return pkg1, nil
+	} else if prefer2 {
+		return pkg2, nil
 	}
 	sample, enforce := prefers[preferKey{preferSource, path, ""}]
 	if enforce {
