@@ -23,6 +23,7 @@ type setupTest struct {
 	input     map[string]string
 	release   *setup.Release
 	relerror  string
+	prefers   map[string]string
 	selslices []setup.SliceKey
 	selection *setup.Selection
 	selerror  string
@@ -2058,6 +2059,12 @@ var setupTests = []setupTest{{
 	relerror: "slice mypkg1_myslice1 cannot 'prefer' its own package for path /file",
 }, {
 	summary: "Path conflicts with 'prefer'",
+	selslices: []setup.SliceKey{
+		{"mypkg1", "myslice1"},
+		{"mypkg1", "myslice2"},
+		{"mypkg2", "myslice1"},
+		{"mypkg3", "myslice1"},
+	},
 	input: map[string]string{
 		"slices/mydir/mypkg1.yaml": `
 			package: mypkg1
@@ -2147,6 +2154,49 @@ var setupTests = []setupTest{{
 			},
 		},
 	},
+	prefers: map[string]string{
+		"/path": "mypkg3",
+		"/link": "mypkg1",
+	},
+}, {
+	summary: "Path conflicts with 'prefer' depends on selection",
+	selslices: []setup.SliceKey{
+		{"mypkg1", "myslice1"},
+		{"mypkg1", "myslice2"},
+		{"mypkg2", "myslice1"},
+	},
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice1:
+					contents:
+						/path: {prefer: mypkg2}
+						/link: {symlink: /file1}
+				myslice2:
+					contents:
+						/path: {prefer: mypkg2}
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+			slices:
+				myslice1:
+					contents:
+						/path: {prefer: mypkg3}
+						/link: {symlink: /file2, prefer: mypkg1}
+		`,
+		"slices/mydir/mypkg3.yaml": `
+			package: mypkg3
+			slices:
+				myslice1:
+					contents:
+						/path:
+		`,
+	},
+	prefers: map[string]string{
+		"/path": "mypkg2",
+		"/link": "mypkg1",
+	},
 }, {
 	summary: "Cannot specify same package in 'prefer'",
 	input: map[string]string{
@@ -2172,24 +2222,21 @@ var setupTests = []setupTest{{
 	},
 	relerror: `slice mypkg_myslice path /path 'prefer' refers to undefined package "non-existent"`,
 }, {
-	/*
-		TODO: handle this case:
-				summary: "Path prefers package, but package does not have path",
-				input: map[string]string{
-					"slices/mydir/mypkg1.yaml": `
-						package: mypkg1
-						slices:
-							myslice:
-								contents:
-									/path: {prefer: mypkg2}
-					`,
-					"slices/mydir/mypkg2.yaml": `
-						package: mypkg2
-					`,
-				},
-				relerror: `slice mypkg1_myslice path /path has invalid 'prefer' "mypkg2": package does not have path /path`,
-			}, {
-	*/
+	summary: "Path prefers package, but package does not have path",
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice:
+					contents:
+						/path: {prefer: mypkg2}
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+		`,
+	},
+	relerror: `package mypkg1 prefers package "mypkg2" which does not contain path /path`,
+}, {
 	summary: "Path has 'prefer' cycle",
 	input: map[string]string{
 		"slices/mydir/mypkg1.yaml": `
@@ -2327,29 +2374,54 @@ var setupTests = []setupTest{{
 	},
 	relerror: `packages "mypkg1" and "mypkg2" cannot both prefer "mypkg3" for /path`,
 }, {
-	/*
-		TODO: handle this case:
-				summary: "Glob paths can conflict with 'prefer' chain",
-				input: map[string]string{
-					"slices/mydir/mypkg1.yaml": `
-						package: mypkg1
-						slices:
-							myslice:
-								contents:
-									/**:
-									/path: {prefer: mypkg2}
-					`,
-					"slices/mydir/mypkg2.yaml": `
-						package: mypkg2
-						slices:
-							myslice:
-								contents:
-									/path:
-					`,
-				},
-				relerror: `slices mypkg1_myslice and mypkg2_myslice conflict on /\*\* and /path`,
-			}, {
-	*/
+	summary: "Glob paths can conflict with 'prefer' chain",
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice1:
+					contents:
+						/**:
+				myslice2:
+					contents:
+						/path: {prefer: mypkg2}
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+			slices:
+				myslice:
+					contents:
+						/path:
+		`,
+	},
+	// This test and the following one together ensure that both mypkg2_myslice
+	// and mypkg1_myslice2 are checked against the glob.
+	relerror: `slices mypkg1_myslice1 and mypkg2_myslice conflict on /\*\* and /path`,
+}, {
+	summary: "Glob paths can conflict with 'prefer' chain (reverse dependency)",
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice1:
+					contents:
+						/**:
+				myslice2:
+					contents:
+						/path:
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+			slices:
+				myslice:
+					contents:
+						/path: {prefer: mypkg1}
+		`,
+	},
+	// This test and the previous one together ensure that both mypkg2_myslice
+	// and mypkg1_myslice2 are checked against the glob.
+	relerror: `slices mypkg1_myslice1 and mypkg2_myslice conflict on /\*\* and /path`,
+}, {
 	summary: "Slices of same package cannot have different 'prefer'",
 	input: map[string]string{
 		"slices/mydir/mypkg1.yaml": `
@@ -2421,6 +2493,9 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 		if _, ok := test.input["chisel.yaml"]; !ok {
 			test.input["chisel.yaml"] = string(defaultChiselYaml)
 		}
+		if test.prefers == nil {
+			test.prefers = make(map[string]string)
+		}
 
 		dir := c.MkDir()
 		for path, data := range test.input {
@@ -2457,6 +2532,13 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 				c.Assert(err, IsNil)
 			}
 			c.Assert(selection.Release, Equals, release)
+			rawPrefers, err := selection.Prefers()
+			c.Assert(err, IsNil)
+			prefers := make(map[string]string)
+			for path, pkg := range rawPrefers {
+				prefers[path] = pkg.Name
+			}
+			c.Assert(prefers, DeepEquals, test.prefers)
 			selection.Release = nil
 			if test.selection != nil {
 				c.Assert(selection, DeepEquals, test.selection)

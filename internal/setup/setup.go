@@ -122,6 +122,44 @@ type Selection struct {
 	Slices  []*Slice
 }
 
+// Perfers uses the prefer relationships and returns a map from each path to
+// the package where it should be extracted from. If there is no relationship
+// for a given path then it will not be present on the map.
+func (s *Selection) Prefers() (map[string]*Package, error) {
+	prefers, err := s.Release.prefers()
+	if err != nil {
+		return nil, err
+	}
+
+	pathPreferredPkg := make(map[string]*Package)
+	for _, slice := range s.Slices {
+		for path := range slice.Contents {
+			_, hasPrefers := prefers[preferKey{preferSource, path, ""}]
+			if !hasPrefers {
+				continue
+			}
+			old, ok := pathPreferredPkg[path]
+			if !ok {
+				pathPreferredPkg[path] = s.Release.Packages[slice.Package]
+				continue
+			}
+			if old.Name == slice.Package {
+				// Skip if the package was already recorded.
+				continue
+			}
+			preferred, err := preferredPathPackage(path, old.Name, slice.Package, prefers)
+			if err != nil {
+				// Note: we have checked above that the path has prefers and
+				// they are different packages so the error cannot be
+				// preferNone.
+				return nil, err
+			}
+			pathPreferredPkg[path] = s.Release.Packages[preferred]
+		}
+	}
+	return pathPreferredPkg, nil
+}
+
 func ReadRelease(dir string) (*Release, error) {
 	logDir := dir
 	if strings.Contains(dir, "/.cache/") {
@@ -188,6 +226,26 @@ func (r *Release) validate() error {
 				} else {
 					paths[newPath] = append(paths[newPath], new)
 				}
+			}
+		}
+	}
+
+	// Check for invalid prefer relationships where the package does not have
+	// the path.
+	for skey, source := range prefers {
+		if skey.side == preferSource && skey.pkg != "" {
+			// Process only the preferSource to traverse the graph only once
+			// and avoid repeated work.
+
+			found := false
+			for _, slice := range paths[skey.path] {
+				if slice.Package == skey.pkg {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return fmt.Errorf("package %s prefers package %q which does not contain path %s", source, skey.pkg, skey.path)
 			}
 		}
 	}
@@ -451,13 +509,18 @@ func (r *Release) prefers() (map[preferKey]string, error) {
 	return prefers, nil
 }
 
+// preferredPathPackage returns pkg1 if it can be reached from pkg2 following
+// prefer relationships, and conversely for pkg2. If none are reachable it
+// returns the preferNone error.
+//
+// If there is a cycle, an error is returned.
 func preferredPathPackage(path, pkg1, pkg2 string, prefers map[preferKey]string) (choice string, err error) {
 	pkg1, pkg2 = sortPair(pkg1, pkg2)
-	prefer1, err := findPrefer(path, pkg1, pkg2, prefers)
+	prefer1, err := findPrefer(path, pkg2, pkg1, prefers)
 	if err != nil {
 		return "", err
 	}
-	prefer2, err := findPrefer(path, pkg2, pkg1, prefers)
+	prefer2, err := findPrefer(path, pkg1, pkg2, prefers)
 	if err != nil {
 		return "", err
 	}
