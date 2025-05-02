@@ -1,0 +1,22 @@
+name: License check
+
+on:
+  workflow_dispatch:
+  push:
+  pull_request:
+    branches: [main]
+
+jobs:
+  external-packages:
+    runs-on: ubuntu-22.04
+    name: External packages license check
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-go@v3
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Run license check
+        run: |
+          go run .github/scripts/external-packages-license-check.go

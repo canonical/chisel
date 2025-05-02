@@ -15,10 +15,11 @@ import (
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/chisel/internal/archive"
-	"github.com/canonical/chisel/internal/manifest"
+	"github.com/canonical/chisel/internal/manifestutil"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/slicer"
 	"github.com/canonical/chisel/internal/testutil"
+	"github.com/canonical/chisel/public/manifest"
 )
 
 var (
@@ -1742,6 +1743,107 @@ var slicerTests = []slicerTest{{
 		"/file":     "file 0644 2c26b46b <1> {test-package_myslice}",
 		"/hardlink": "file 0644 2c26b46b <1> {test-package_myslice}",
 	},
+}, {
+	summary: "Hard links cannot escape the target directory",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	pkgs: []*testutil.TestPackage{{
+		Name: "test-package",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			testutil.Hrd(0644, "./hardlink", "/etc/group"),
+		}),
+	}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/hardlink:
+		`,
+	},
+	error: `cannot extract from package "test-package": invalid link target /etc/group`,
+}, {
+	summary: "Cannot extract outside of target directory",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	pkgs: []*testutil.TestPackage{{
+		Name: "test-package",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			testutil.Reg(0644, "./../file", "hijacking system file"),
+		}),
+	}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/**:
+		`,
+	},
+	error: `cannot extract from package "test-package": cannot create path /[a-z0-9\-\/]*/file outside of root /[a-z0-9\-\/]*`,
+}, {
+	summary: "Extract conflicting paths with prefer from proper package",
+	slices: []setup.SliceKey{
+		{"test-package1", "myslice"},
+		{"test-package2", "myslice"},
+	},
+	pkgs: []*testutil.TestPackage{{
+		Name: "test-package1",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			testutil.Reg(0644, "./file", "foo"),
+		}),
+	}, {
+		Name: "test-package2",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			testutil.Reg(0644, "./file", "bar"),
+		}),
+	}, {
+		Name: "test-package3",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+		}),
+	}},
+	release: map[string]string{
+		"slices/mydir/test-package1.yaml": `
+			package: test-package1
+			slices:
+				myslice:
+					contents:
+						/file: {prefer: test-package2}
+						/link: {symlink: /file1}
+						/text: {text: foo, prefer: test-package3}
+		`,
+		"slices/mydir/test-package2.yaml": `
+			package: test-package2
+			slices:
+				myslice:
+					contents:
+						/file:
+						/link: {symlink: /file2, prefer: test-package3}
+		`,
+		"slices/mydir/test-package3.yaml": `
+			package: test-package3
+			slices:
+				myslice:
+					contents:
+						/link: {symlink: /file2, prefer: test-package1}
+						/text: {text: bar}
+		`,
+	},
+	filesystem: map[string]string{
+		"/file": "file 0644 fcde2b2e",
+		"/link": "symlink /file1",
+		"/text": "file 0644 2c26b46b",
+	},
+	manifestPaths: map[string]string{
+		"/file": "file 0644 fcde2b2e {test-package2_myslice}",
+		"/link": "symlink /file1 {test-package1_myslice}",
+		"/text": "file 0644 2c26b46b {test-package1_myslice}",
+	},
 }}
 
 var defaultChiselYaml = `
@@ -1988,7 +2090,7 @@ func readManifest(c *C, targetDir, manifestPath string) *manifest.Manifest {
 	defer r.Close()
 	mfest, err := manifest.Read(r)
 	c.Assert(err, IsNil)
-	err = manifest.Validate(mfest)
+	err = manifestutil.Validate(mfest)
 	c.Assert(err, IsNil)
 
 	// Assert that the mode of the manifest.wall file matches the one recorded

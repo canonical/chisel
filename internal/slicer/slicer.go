@@ -18,7 +18,7 @@ import (
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/deb"
 	"github.com/canonical/chisel/internal/fsutil"
-	"github.com/canonical/chisel/internal/manifest"
+	"github.com/canonical/chisel/internal/manifestutil"
 	"github.com/canonical/chisel/internal/scripts"
 	"github.com/canonical/chisel/internal/setup"
 )
@@ -95,6 +95,11 @@ func Run(options *RunOptions) error {
 		return err
 	}
 
+	prefers, err := options.Selection.Prefers()
+	if err != nil {
+		return err
+	}
+
 	// Build information to process the selection.
 	extract := make(map[string]map[string][]deb.ExtractInfo)
 	for _, slice := range options.Selection.Slices {
@@ -109,6 +114,9 @@ func Run(options *RunOptions) error {
 				continue
 			}
 			if len(pathInfo.Arch) > 0 && !slices.Contains(pathInfo.Arch, arch) {
+				continue
+			}
+			if preferredPkg, ok := prefers[targetPath]; ok && preferredPkg.Name != slice.Package {
 				continue
 			}
 
@@ -157,7 +165,7 @@ func Run(options *RunOptions) error {
 	// listed as until: mutate in all the slices that reference them.
 	knownPaths := map[string]pathData{}
 	addKnownPath(knownPaths, "/", pathData{})
-	report, err := manifest.NewReport(targetDir)
+	report, err := manifestutil.NewReport(targetDir)
 	if err != nil {
 		return fmt.Errorf("internal error: cannot create report: %w", err)
 	}
@@ -254,6 +262,9 @@ func Run(options *RunOptions) error {
 				pathInfo.Kind == setup.GeneratePath {
 				continue
 			}
+			if preferredPkg, ok := prefers[relPath]; ok && preferredPkg.Name != slice.Package {
+				continue
+			}
 			relPaths[relPath] = append(relPaths[relPath], slice)
 		}
 	}
@@ -276,8 +287,7 @@ func Run(options *RunOptions) error {
 			mutable: pathInfo.Mutable,
 		}
 		addKnownPath(knownPaths, relPath, data)
-		targetPath := filepath.Join(targetDir, relPath)
-		entry, err := createFile(targetPath, pathInfo)
+		entry, err := createFile(targetDir, relPath, pathInfo)
 		if err != nil {
 			return err
 		}
@@ -325,8 +335,8 @@ func Run(options *RunOptions) error {
 }
 
 func generateManifests(targetDir string, selection *setup.Selection,
-	report *manifest.Report, pkgInfos []*archive.PackageInfo) error {
-	manifestSlices := manifest.FindPaths(selection.Slices)
+	report *manifestutil.Report, pkgInfos []*archive.PackageInfo) error {
+	manifestSlices := manifestutil.FindPaths(selection.Slices)
 	if len(manifestSlices) == 0 {
 		// Nothing to do.
 		return nil
@@ -334,9 +344,9 @@ func generateManifests(targetDir string, selection *setup.Selection,
 	var writers []io.Writer
 	for relPath, slices := range manifestSlices {
 		logf("Generating manifest at %s...", relPath)
-		absPath := filepath.Join(targetDir, relPath)
 		createOptions := &fsutil.CreateOptions{
-			Path:        absPath,
+			Root:        targetDir,
+			Path:        relPath,
 			Mode:        manifestMode,
 			MakeParents: true,
 		}
@@ -358,12 +368,12 @@ func generateManifests(targetDir string, selection *setup.Selection,
 		return err
 	}
 	defer w.Close()
-	writeOptions := &manifest.WriteOptions{
+	writeOptions := &manifestutil.WriteOptions{
 		PackageInfo: pkgInfos,
 		Selection:   selection.Slices,
 		Report:      report,
 	}
-	err = manifest.Write(writeOptions, w)
+	err = manifestutil.Write(writeOptions, w)
 	return err
 }
 
@@ -426,7 +436,7 @@ func addKnownPath(knownPaths map[string]pathData, path string, data pathData) {
 	}
 }
 
-func createFile(targetPath string, pathInfo setup.PathInfo) (*fsutil.Entry, error) {
+func createFile(targetDir, relPath string, pathInfo setup.PathInfo) (*fsutil.Entry, error) {
 	targetMode := pathInfo.Mode
 	if targetMode == 0 {
 		if pathInfo.Kind == setup.DirPath {
@@ -454,7 +464,8 @@ func createFile(targetPath string, pathInfo setup.PathInfo) (*fsutil.Entry, erro
 	}
 
 	return fsutil.Create(&fsutil.CreateOptions{
-		Path:        targetPath,
+		Root:        targetDir,
+		Path:        relPath,
 		Mode:        tarHeader.FileInfo().Mode(),
 		Data:        fileContent,
 		Link:        linkTarget,

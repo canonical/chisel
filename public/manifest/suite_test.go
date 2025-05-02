@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 package manifest_test
 
 import (
@@ -5,7 +7,7 @@ import (
 
 	. "gopkg.in/check.v1"
 
-	"github.com/canonical/chisel/internal/slicer"
+	"github.com/canonical/chisel/public/manifest"
 )
 
 func Test(t *testing.T) { TestingT(t) }
@@ -15,11 +17,11 @@ type S struct{}
 var _ = Suite(&S{})
 
 func (s *S) SetUpTest(c *C) {
-	slicer.SetDebug(true)
-	slicer.SetLogger(c)
+	manifest.SetDebug(true)
+	manifest.SetLogger(c)
 }
 
 func (s *S) TearDownTest(c *C) {
-	slicer.SetDebug(false)
-	slicer.SetLogger(nil)
+	manifest.SetDebug(false)
+	manifest.SetLogger(nil)
 }

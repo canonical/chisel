@@ -1,4 +1,4 @@
-package jsonwall
+package manifestutil
 
 import (
 	"fmt"
