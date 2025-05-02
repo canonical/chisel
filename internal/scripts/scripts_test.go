@@ -320,3 +320,9 @@ func (s *S) TestContentRelative(c *C) {
 	_, err := content.RealPath("/bar", scripts.CheckNone)
 	c.Assert(err, ErrorMatches, "internal error: content defined with relative root: foo")
 }
+
+func (s *S) TestRootSingleSlash(c *C) {
+	content := scripts.ContentValue{RootDir: "/"}
+	_, err := content.RealPath("/etc/foo/bar", scripts.CheckNone)
+	c.Assert(err, IsNil)
+}

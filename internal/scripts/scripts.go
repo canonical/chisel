@@ -119,13 +119,17 @@ func (c *ContentValue) RealPath(path string, what Check) (string, error) {
 		}
 	}
 	rpath := filepath.Join(c.RootDir, path)
-	if !filepath.IsAbs(rpath) || rpath != c.RootDir && !strings.HasPrefix(rpath, c.RootDir+string(filepath.Separator)) {
+	slashRoot := c.RootDir
+	if slashRoot != string(filepath.Separator) {
+		slashRoot += string(filepath.Separator)
+	}
+	if !filepath.IsAbs(rpath) || rpath != c.RootDir && !strings.HasPrefix(rpath, slashRoot) {
 		return "", fmt.Errorf("invalid content path: %s", path)
 	}
 	if lname, err := os.Readlink(rpath); err == nil {
 		lpath := filepath.Join(filepath.Dir(rpath), lname)
 		lrel, err := filepath.Rel(c.RootDir, lpath)
-		if err != nil || !filepath.IsAbs(lpath) || lpath != c.RootDir && !strings.HasPrefix(lpath, c.RootDir+string(filepath.Separator)) {
+		if err != nil || !filepath.IsAbs(lpath) || lpath != c.RootDir && !strings.HasPrefix(lpath, slashRoot) {
 			return "", fmt.Errorf("invalid content symlink: %s", path)
 		}
 		_, err = c.RealPath("/"+lrel, what)
