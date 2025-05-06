@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -348,16 +349,10 @@ func (index *ubuntuIndex) supportsArch(arch string) bool {
 
 func (index *ubuntuIndex) checkComponents(components []string) error {
 	releaseComponents := strings.Fields(index.release.Get("Components"))
-	for _, c1 := range components {
-		found := false
-		for _, c2 := range releaseComponents {
-			if c1 == c2 {
-				found = true
-				break
-			}
-		}
+	for _, c := range components {
+		found := slices.Contains(releaseComponents, c)
 		if !found {
-			return fmt.Errorf("archive has no component %q", c1)
+			return fmt.Errorf("archive has no component %q", c)
 		}
 	}
 	return nil
