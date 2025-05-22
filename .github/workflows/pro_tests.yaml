@@ -16,9 +16,17 @@ jobs:
   real-archive-tests:
     name: Real Archive Tests
     if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
-    # Do not change to newer releases as "fips" may not be available there.
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
+    container:
+      # Do not change to newer releases as "fips" may not be available there.
+      image: ubuntu:20.04
     steps:
+      - name: Install dependencies
+        run: |
+          set -x
+          # git is needed for Go setup.
+          apt-get update && apt-get install -y git sudo ubuntu-advantage-tools acl
+
       - uses: actions/checkout@v3
 
       - uses: actions/setup-go@v3
