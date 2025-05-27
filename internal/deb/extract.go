@@ -87,7 +87,7 @@ func Extract(pkgReader io.ReadSeeker, options *ExtractOptions) (err error) {
 }
 
 func extractData(pkgReader io.ReadSeeker, options *ExtractOptions) error {
-	dataReader, err := getDataReader(pkgReader)
+	dataReader, err := DataReader(pkgReader)
 	if err != nil {
 		return err
 	}
@@ -304,7 +304,7 @@ type extractHardLinkOptions struct {
 // extractHardLinks iterates through the tarball a second time to extract the
 // hard links that were not extracted in the first pass.
 func extractHardLinks(pkgReader io.ReadSeeker, opts *extractHardLinkOptions) error {
-	dataReader, err := getDataReader(pkgReader)
+	dataReader, err := DataReader(pkgReader)
 	if err != nil {
 		return err
 	}
@@ -379,7 +379,9 @@ func extractHardLinks(pkgReader io.ReadSeeker, opts *extractHardLinkOptions) err
 	return nil
 }
 
-func getDataReader(pkgReader io.ReadSeeker) (io.ReadCloser, error) {
+// DataReader takes a Reader for the ar file belonging to a Debian package and
+// returns a Reader to the inner tarball.
+func DataReader(pkgReader io.ReadSeeker) (io.ReadCloser, error) {
 	arReader := ar.NewReader(pkgReader)
 	var dataReader io.ReadCloser
 	for dataReader == nil {
