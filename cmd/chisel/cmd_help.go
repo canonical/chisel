@@ -127,6 +127,11 @@ func (cmd cmdHelp) Execute(args []string) error {
 	}
 
 	var subcmd = cmd.parser.Command
+	// This makes "chisel help foo" work the same as "chisel foo --help" when
+	// the subcommand is set below. The Active command at this point is `chisel
+	// help`, in the loop below we change it to be `chisel os.Args[1]
+	// os.Args[2] ...`.
+	cmd.parser.Command.Active = nil
 	for _, subname := range cmd.Positional.Subs {
 		subcmd = subcmd.Find(subname)
 		if subcmd == nil {
@@ -136,8 +141,11 @@ func (cmd cmdHelp) Execute(args []string) error {
 			}
 			return fmt.Errorf("unknown command %q, see '%s'.", subname, sug)
 		}
-		// this makes "chisel help foo" work the same as "chisel foo --help"
-		cmd.parser.Command.Active = subcmd
+		c := cmd.parser.Command
+		for c.Active != nil {
+			c = c.Active
+		}
+		c.Active = subcmd
 	}
 	if subcmd != cmd.parser.Command {
 		return &flags.Error{Type: flags.ErrHelp}
