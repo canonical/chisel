@@ -119,7 +119,7 @@ func (c *ContentValue) RealPath(path string, what Check) (string, error) {
 		}
 	}
 	rpath := filepath.Join(c.RootDir, path)
-	slashRoot := c.RootDir
+	slashRoot := filepath.Clean(c.RootDir)
 	if slashRoot != string(filepath.Separator) {
 		slashRoot += string(filepath.Separator)
 	}
