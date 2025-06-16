@@ -326,3 +326,9 @@ func (s *S) TestRootSingleSlash(c *C) {
 	_, err := content.RealPath("/etc/foo/bar", scripts.CheckNone)
 	c.Assert(err, IsNil)
 }
+
+func (s *S) TestNotCleanRoot(c *C) {
+	content := scripts.ContentValue{RootDir: "/foo/"}
+	_, err := content.RealPath("/foo/bar", scripts.CheckNone)
+	c.Assert(err, IsNil)
+}
