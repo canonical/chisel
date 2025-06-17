@@ -157,20 +157,60 @@ var scriptsTests = []scriptsTest{{
 		"foo": "whatever",
 	},
 	hackdir: func(c *C, dir string) {
-		fpath1 := filepath.Join(dir, "file1.txt")
-		fpath2 := filepath.Join(dir, "file2.txt")
-		c.Assert(os.Symlink("file2.txt", fpath1), IsNil)
+		fpath1 := filepath.Join(dir, "file1")
+		fpath2 := filepath.Join(dir, "file2")
+		c.Assert(os.Symlink("file2", fpath1), IsNil)
 		c.Assert(os.Symlink("/../../foo", fpath2), IsNil)
 	},
 	script: `
-		data = content.read("/file1.txt")
-		content.write("/result.txt", data)
+		data = content.read("/file1")
+		content.write("/result", data)
 	`,
 	result: map[string]string{
-		"/file1.txt":  "symlink file2.txt",
-		"/file2.txt":  "symlink /../../foo",
-		"/foo":        "file 0644 85738f8f",
-		"/result.txt": "file 0644 85738f8f",
+		"/file1":  "symlink file2",
+		"/file2":  "symlink /../../foo",
+		"/foo":    "file 0644 85738f8f",
+		"/result": "file 0644 85738f8f",
+	},
+}, {
+	summary: "Relative symlinks do not escape the root",
+	content: map[string]string{
+		"dir/foo": "whatever",
+	},
+	hackdir: func(c *C, dir string) {
+		fpath1 := filepath.Join(dir, "./dir/link")
+		c.Assert(os.Symlink("../../../../dir/foo", fpath1), IsNil)
+	},
+	script: `
+		data = content.read("/dir/link")
+		content.write("/result", data)
+	`,
+	result: map[string]string{
+		"/dir/":     "dir 0755",
+		"/dir/link": "symlink ../../../../dir/foo",
+		"/dir/foo":  "file 0644 85738f8f",
+		"/result":   "file 0644 85738f8f",
+	},
+}, {
+	summary: "Relative symlinks are relative to the location",
+	content: map[string]string{
+		"foo": "whatever",
+	},
+	hackdir: func(c *C, dir string) {
+		err := os.Mkdir(filepath.Join(dir, "/dir"), 0755)
+		c.Assert(err, IsNil)
+		fpath1 := filepath.Join(dir, "./dir/link")
+		c.Assert(os.Symlink("../foo", fpath1), IsNil)
+	},
+	script: `
+		data = content.read("/dir/link")
+		content.write("/result", data)
+	`,
+	result: map[string]string{
+		"/dir/":     "dir 0755",
+		"/dir/link": "symlink ../foo",
+		"/foo":      "file 0644 85738f8f",
+		"/result":   "file 0644 85738f8f",
 	},
 }, {
 	summary: "Path errors refer to the root",
