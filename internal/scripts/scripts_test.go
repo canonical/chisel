@@ -330,12 +330,14 @@ func (s *S) TestContentRelative(c *C) {
 
 func (s *S) TestRootSingleSlash(c *C) {
 	content := scripts.ContentValue{RootDir: "/"}
-	_, err := content.RealPath("/etc/foo/bar", scripts.CheckNone)
+	rpath, err := content.RealPath("/etc/foo/bar", scripts.CheckNone)
 	c.Assert(err, IsNil)
+	c.Assert(rpath, Equals, "/etc/foo/bar")
 }
 
 func (s *S) TestNotCleanRoot(c *C) {
-	content := scripts.ContentValue{RootDir: "/foo/"}
-	_, err := content.RealPath("/foo/bar", scripts.CheckNone)
+	content := scripts.ContentValue{RootDir: "/root/"}
+	rpath, err := content.RealPath("/foo/bar", scripts.CheckNone)
 	c.Assert(err, IsNil)
+	c.Assert(rpath, Equals, "/root/foo/bar")
 }
