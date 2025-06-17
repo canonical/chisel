@@ -144,29 +144,34 @@ var scriptsTests = []scriptsTest{{
 	`,
 	error: `content path must be absolute, got: foo/file1.txt`,
 }, {
-	summary: "Forbid leaving the content root",
+	summary: "Cannot leave the content root",
 	content: map[string]string{
-		"foo/file1.txt": `data1`,
+		"file1.txt": `data1`,
 	},
 	script: `
 		content.read("/foo/../../file1.txt")
 	`,
-	error: `invalid content path: /foo/../../file1.txt`,
 }, {
-	summary: "Forbid leaving the content via bad symlinks",
+	summary: "Symlinks do not escape the root",
 	content: map[string]string{
-		"foo/file3.txt": ``,
+		"foo": "whatever",
 	},
 	hackdir: func(c *C, dir string) {
-		fpath1 := filepath.Join(dir, "foo/file1.txt")
-		fpath2 := filepath.Join(dir, "foo/file2.txt")
+		fpath1 := filepath.Join(dir, "file1.txt")
+		fpath2 := filepath.Join(dir, "file2.txt")
 		c.Assert(os.Symlink("file2.txt", fpath1), IsNil)
-		c.Assert(os.Symlink("../../bar", fpath2), IsNil)
+		c.Assert(os.Symlink("/../../foo", fpath2), IsNil)
 	},
 	script: `
-		content.read("/foo/file1.txt")
+		data = content.read("/file1.txt")
+		content.write("/result.txt", data)
 	`,
-	error: `invalid content symlink: /foo/file2.txt`,
+	result: map[string]string{
+		"/file1.txt":  "symlink file2.txt",
+		"/file2.txt":  "symlink /../../foo",
+		"/foo":        "file 0644 85738f8f",
+		"/result.txt": "file 0644 85738f8f",
+	},
 }, {
 	summary: "Path errors refer to the root",
 	content: map[string]string{},
@@ -307,7 +312,9 @@ func (s *S) TestScripts(c *C) {
 			continue
 		}
 
-		c.Assert(testutil.TreeDump(rootDir), DeepEquals, test.result)
+		if test.result != nil {
+			c.Assert(testutil.TreeDump(rootDir), DeepEquals, test.result)
+		}
 
 		if test.mutated != nil {
 			c.Assert(mutatedFiles, DeepEquals, test.mutated)
