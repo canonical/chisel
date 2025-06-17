@@ -152,7 +152,7 @@ var scriptsTests = []scriptsTest{{
 		content.read("/foo/../../file1.txt")
 	`,
 }, {
-	summary: "Symlinks do not escape the root",
+	summary: "Absolute symlinks do not escape the root",
 	content: map[string]string{
 		"foo": "whatever",
 	},
