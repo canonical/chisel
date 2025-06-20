@@ -144,29 +144,74 @@ var scriptsTests = []scriptsTest{{
 	`,
 	error: `content path must be absolute, got: foo/file1.txt`,
 }, {
-	summary: "Forbid leaving the content root",
+	summary: "Cannot leave the content root",
 	content: map[string]string{
-		"foo/file1.txt": `data1`,
+		"file1.txt": `data1`,
 	},
 	script: `
 		content.read("/foo/../../file1.txt")
 	`,
-	error: `invalid content path: /foo/../../file1.txt`,
 }, {
-	summary: "Forbid leaving the content via bad symlinks",
+	summary: "Absolute symlinks do not escape the root",
 	content: map[string]string{
-		"foo/file3.txt": ``,
+		"foo": "whatever",
 	},
 	hackdir: func(c *C, dir string) {
-		fpath1 := filepath.Join(dir, "foo/file1.txt")
-		fpath2 := filepath.Join(dir, "foo/file2.txt")
-		c.Assert(os.Symlink("file2.txt", fpath1), IsNil)
-		c.Assert(os.Symlink("../../bar", fpath2), IsNil)
+		fpath1 := filepath.Join(dir, "file1")
+		fpath2 := filepath.Join(dir, "file2")
+		c.Assert(os.Symlink("file2", fpath1), IsNil)
+		c.Assert(os.Symlink("/../../foo", fpath2), IsNil)
 	},
 	script: `
-		content.read("/foo/file1.txt")
+		data = content.read("/file1")
+		content.write("/result", data)
 	`,
-	error: `invalid content symlink: /foo/file2.txt`,
+	result: map[string]string{
+		"/file1":  "symlink file2",
+		"/file2":  "symlink /../../foo",
+		"/foo":    "file 0644 85738f8f",
+		"/result": "file 0644 85738f8f",
+	},
+}, {
+	summary: "Relative symlinks do not escape the root",
+	content: map[string]string{
+		"dir/foo": "whatever",
+	},
+	hackdir: func(c *C, dir string) {
+		fpath1 := filepath.Join(dir, "./dir/link")
+		c.Assert(os.Symlink("../../../../dir/foo", fpath1), IsNil)
+	},
+	script: `
+		data = content.read("/dir/link")
+		content.write("/result", data)
+	`,
+	result: map[string]string{
+		"/dir/":     "dir 0755",
+		"/dir/link": "symlink ../../../../dir/foo",
+		"/dir/foo":  "file 0644 85738f8f",
+		"/result":   "file 0644 85738f8f",
+	},
+}, {
+	summary: "Relative symlinks are relative to the location",
+	content: map[string]string{
+		"foo": "whatever",
+	},
+	hackdir: func(c *C, dir string) {
+		err := os.Mkdir(filepath.Join(dir, "/dir"), 0755)
+		c.Assert(err, IsNil)
+		fpath1 := filepath.Join(dir, "./dir/link")
+		c.Assert(os.Symlink("../foo", fpath1), IsNil)
+	},
+	script: `
+		data = content.read("/dir/link")
+		content.write("/result", data)
+	`,
+	result: map[string]string{
+		"/dir/":     "dir 0755",
+		"/dir/link": "symlink ../foo",
+		"/foo":      "file 0644 85738f8f",
+		"/result":   "file 0644 85738f8f",
+	},
 }, {
 	summary: "Path errors refer to the root",
 	content: map[string]string{},
@@ -307,7 +352,9 @@ func (s *S) TestScripts(c *C) {
 			continue
 		}
 
-		c.Assert(testutil.TreeDump(rootDir), DeepEquals, test.result)
+		if test.result != nil {
+			c.Assert(testutil.TreeDump(rootDir), DeepEquals, test.result)
+		}
 
 		if test.mutated != nil {
 			c.Assert(mutatedFiles, DeepEquals, test.mutated)
@@ -319,4 +366,18 @@ func (s *S) TestContentRelative(c *C) {
 	content := scripts.ContentValue{RootDir: "foo"}
 	_, err := content.RealPath("/bar", scripts.CheckNone)
 	c.Assert(err, ErrorMatches, "internal error: content defined with relative root: foo")
+}
+
+func (s *S) TestRootSingleSlash(c *C) {
+	content := scripts.ContentValue{RootDir: "/"}
+	rpath, err := content.RealPath("/etc/foo/bar", scripts.CheckNone)
+	c.Assert(err, IsNil)
+	c.Assert(rpath, Equals, "/etc/foo/bar")
+}
+
+func (s *S) TestNotCleanRoot(c *C) {
+	content := scripts.ContentValue{RootDir: "/root/"}
+	rpath, err := content.RealPath("/foo/bar", scripts.CheckNone)
+	c.Assert(err, IsNil)
+	c.Assert(rpath, Equals, "/root/foo/bar")
 }
