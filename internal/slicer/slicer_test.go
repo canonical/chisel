@@ -1878,6 +1878,23 @@ func (s *S) TestRun(c *C) {
 		v2ArchiveTests = append(v2ArchiveTests, t)
 	}
 	runSlicerTests(c, v2ArchiveTests)
+
+	// Run tests for "v2" format.
+	v2FormatTests := make([]slicerTest, 0, len(slicerTests))
+	for _, t := range slicerTests {
+		m := make(map[string]string)
+		for k, v := range t.release {
+			if strings.Contains(v, "format: v1") &&
+				!strings.Contains(v, "v2-archives:") &&
+				!strings.Contains(v, "default: true") {
+				v = strings.Replace(v, "format: v1", "format: v2", -1)
+			}
+			m[k] = v
+		}
+		t.release = m
+		v2FormatTests = append(v2FormatTests, t)
+	}
+	runSlicerTests(c, v2FormatTests)
 }
 
 func runSlicerTests(c *C, tests []slicerTest) {

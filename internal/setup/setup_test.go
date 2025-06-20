@@ -2450,6 +2450,52 @@ var setupTests = []setupTest{{
 		`,
 	},
 	relerror: `package "mypkg1" has conflicting prefers for /path: mypkg2 != mypkg3`,
+}, {
+	summary: "Format v2 does not support default",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v2
+			archives:
+				ubuntu:
+					default: true
+					version: 20.04
+					components: [main]
+					suites: [focal]
+					priority: 10
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	relerror: `chisel.yaml: archive "ubuntu" has 'default' field which is deprecated since format v2`,
+}, {
+	summary: "Format v2 does not support v2-archives",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v2
+			v2-archives:
+				ubuntu:
+					default: true
+					version: 20.04
+					components: [main]
+					suites: [focal]
+					priority: 10
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	relerror: `chisel.yaml: v2-archives is deprecated since format v2`,
 }}
 
 var defaultChiselYaml = `
@@ -2475,7 +2521,7 @@ func (s *S) TestParseRelease(c *C) {
 	for _, t := range setupTests {
 		m := make(map[string]string)
 		for k, v := range t.input {
-			if !strings.Contains(v, "v2-archives:") {
+			if !strings.Contains(v, "v2-archives:") && strings.Contains(v, "format: v1") {
 				v = strings.Replace(v, "archives:", "v2-archives:", -1)
 			}
 			m[k] = v
@@ -2484,6 +2530,23 @@ func (s *S) TestParseRelease(c *C) {
 		v2ArchiveTests = append(v2ArchiveTests, t)
 	}
 	runParseReleaseTests(c, v2ArchiveTests)
+
+	// Run tests for "v2" format.
+	v2FormatTests := make([]setupTest, 0, len(setupTests))
+	for _, t := range setupTests {
+		m := make(map[string]string)
+		for k, v := range t.input {
+			if strings.Contains(v, "format: v1") &&
+				!strings.Contains(v, "v2-archives:") &&
+				!strings.Contains(v, "default: true") {
+				v = strings.Replace(v, "format: v1", "format: v2", -1)
+			}
+			m[k] = v
+		}
+		t.input = m
+		v2FormatTests = append(v2FormatTests, t)
+	}
+	runParseReleaseTests(c, v2FormatTests)
 }
 
 func runParseReleaseTests(c *C, tests []setupTest) {
