@@ -47,7 +47,7 @@ backends:
 
 prepare: |
   apt install -y golang-1.23 git
-  ln -s /usr/lib/go-1.23/bin/go /usr/local/bin/go
+  export PATH=/usr/lib/go-1.23/bin:$PATH
   go build -buildvcs=false ./cmd/chisel/
   mv chisel /usr/local/bin
 
