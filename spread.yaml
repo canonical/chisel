@@ -46,7 +46,8 @@ backends:
           password: ubuntu
 
 prepare: |
-  apt install -y golang git
+  apt install -y golang-1.23 git
+  export PATH=/usr/lib/go-1.23/bin:$PATH
   go build -buildvcs=false ./cmd/chisel/
   mv chisel /usr/local/bin
 
