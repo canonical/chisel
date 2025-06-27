@@ -48,7 +48,7 @@ var FileMatches check.Checker = &fileContentChecker{
 	CheckerInfo: &check.CheckerInfo{Name: "FileMatches", Params: []string{"filename", "regex"}},
 }
 
-func (c *fileContentChecker) Check(params []interface{}, names []string) (result bool, error string) {
+func (c *fileContentChecker) Check(params []any, names []string) (result bool, error string) {
 	filename, ok := params[0].(string)
 	if !ok {
 		return false, "Filename must be a string"
@@ -67,7 +67,7 @@ func (c *fileContentChecker) Check(params []interface{}, names []string) (result
 	return fileContentCheck(filename, params[1], c.exact)
 }
 
-func fileContentCheck(filename string, content interface{}, exact bool) (result bool, error string) {
+func fileContentCheck(filename string, content any, exact bool) (result bool, error string) {
 	buf, err := os.ReadFile(filename)
 	if err != nil {
 		return false, fmt.Sprintf("Cannot read file %q: %v", filename, err)

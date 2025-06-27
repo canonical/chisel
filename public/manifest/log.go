@@ -35,7 +35,7 @@ func SetDebug(debug bool) {
 
 // logf sends to the logger registered via SetLogger the string resulting
 // from running format and args through Sprintf.
-func logf(format string, args ...interface{}) {
+func logf(format string, args ...any) {
 	globalLoggerLock.Lock()
 	defer globalLoggerLock.Unlock()
 	if globalLogger != nil {
@@ -46,7 +46,7 @@ func logf(format string, args ...interface{}) {
 // debugf sends to the logger registered via SetLogger the string resulting
 // from running format and args through Sprintf, but only if debugging was
 // enabled via SetDebug.
-func debugf(format string, args ...interface{}) {
+func debugf(format string, args ...any) {
 	globalLoggerLock.Lock()
 	defer globalLoggerLock.Unlock()
 	if globalDebug && globalLogger != nil {
