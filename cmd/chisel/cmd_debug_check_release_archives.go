@@ -60,11 +60,10 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 			CacheDir:   cache.DefaultDir("chisel"),
 			PubKeys:    archiveInfo.PubKeys,
 		})
-		if err != nil {
-			if err == archive.ErrCredentialsNotFound {
-				logf("Archive %q ignored: credentials not found\n", archiveName)
-				continue
-			}
+		if err == archive.ErrCredentialsNotFound {
+			logf("Archive %q ignored: credentials not found\n", archiveName)
+			continue
+		} else if err != nil {
 			return err
 		}
 		archives[archiveName] = openArchive
