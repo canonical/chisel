@@ -69,11 +69,15 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 		archives[archiveName] = openArchive
 	}
 
-	type ownership struct {
-		Mode yamlMode `yaml:"mode"`
-		Link string   `yaml:"link"`
-		// Pkgs is a correspondence from archive name to package names.
-		Pkgs map[string][]string `yaml:"packages,flow"`
+	type pkgArchive struct {
+		Pkg     string `yaml:"package"`
+		Archive string `yaml:"archive"`
+	}
+
+	type pathContent struct {
+		Mode        yamlMode     `yaml:"mode"`
+		Link        string       `yaml:"link"`
+		PkgArchives []pkgArchive `yaml:"packages,flow"`
 	}
 
 	var orderedPkgs []string
@@ -82,7 +86,7 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 	}
 	slices.Sort(orderedPkgs)
 
-	directories := map[string][]ownership{}
+	pathContents := map[string][]pathContent{}
 	for archiveName, archive := range archives {
 		logf("Processing archive %s...", archiveName)
 		for _, pkgName := range orderedPkgs {
@@ -111,55 +115,55 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 				if !ok {
 					continue
 				}
+
 				// Make paths uniform: while directories always end in '/',
 				// symlinks don't.
 				path = strings.TrimSuffix(path, "/")
 
-				dir := directories[path]
+				contents := pathContents[path]
 				found := false
 				// We look for a previous group that has the same entry in
 				// terms of mode, link, etc. and we add the package to the
 				// group. If there is none, we create a new one.
-				for i, o := range dir {
-					link := tarHeader.Linkname != "" || o.Link != ""
-					if (link && tarHeader.Linkname == o.Link) ||
-						(!link && tarHeader.Mode == int64(o.Mode)) {
-						o.Pkgs[archiveName] = append(o.Pkgs[archiveName], pkgName)
-						dir[i] = o
+				for i, content := range contents {
+					link := tarHeader.Linkname != "" || content.Link != ""
+					if (link && tarHeader.Linkname == content.Link) ||
+						(!link && tarHeader.Mode == int64(content.Mode)) {
+						content.PkgArchives = append(content.PkgArchives, pkgArchive{pkgName, archiveName})
+						contents[i] = content
 						found = true
 						break
 					}
 				}
 				if !found {
-					dir = append(dir, ownership{
-						Mode: yamlMode(tarHeader.Mode),
-						Link: tarHeader.Linkname,
-						Pkgs: map[string][]string{archiveName: []string{pkgName}},
+					pathContents[path] = append(pathContents[path], pathContent{
+						Mode:        yamlMode(tarHeader.Mode),
+						Link:        tarHeader.Linkname,
+						PkgArchives: []pkgArchive{{pkgName, archiveName}},
 					})
-					directories[path] = dir
 				}
 			}
 		}
 	}
 
 	var issues []any
-	type parentDirectoryConflict struct {
-		Issue   string      `yaml:"issue"`
-		Path    string      `yaml:"path"`
-		Entries []ownership `yaml:"entries"`
+	type contentConflict struct {
+		Issue    string        `yaml:"issue"`
+		Path     string        `yaml:"path"`
+		Contents []pathContent `yaml:"extracted-from"`
 	}
-	var sortedDirs []string
-	for dir := range directories {
-		sortedDirs = append(sortedDirs, dir)
+	var sortedPaths []string
+	for path := range pathContents {
+		sortedPaths = append(sortedPaths, path)
 	}
-	slices.Sort(sortedDirs)
-	for _, dir := range sortedDirs {
-		o := directories[dir]
-		if len(o) > 1 {
-			issues = append(issues, parentDirectoryConflict{
-				Issue:   "parent-directory-conflict",
-				Path:    dir,
-				Entries: o,
+	slices.Sort(sortedPaths)
+	for _, dir := range sortedPaths {
+		contents := pathContents[dir]
+		if len(contents) > 1 {
+			issues = append(issues, contentConflict{
+				Issue:    "content-conflict",
+				Path:     dir,
+				Contents: contents,
 			})
 		}
 	}
