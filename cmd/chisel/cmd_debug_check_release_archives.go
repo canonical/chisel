@@ -121,20 +121,13 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 				// terms of mode, link, etc. and we add the package to the
 				// group. If there is none, we create a new one.
 				for i, o := range dir {
-					if tarHeader.Linkname != "" || o.Link != "" {
-						if tarHeader.Linkname == o.Link {
-							o.Pkgs[archiveName] = append(o.Pkgs[archiveName], pkgName)
-							dir[i] = o
-							found = true
-							break
-						}
-					} else {
-						if tarHeader.Mode == int64(o.Mode) {
-							o.Pkgs[archiveName] = append(o.Pkgs[archiveName], pkgName)
-							dir[i] = o
-							found = true
-							break
-						}
+					link := tarHeader.Linkname != "" || o.Link != ""
+					if (link && tarHeader.Linkname == o.Link) ||
+						(!link && tarHeader.Mode == int64(o.Mode)) {
+						o.Pkgs[archiveName] = append(o.Pkgs[archiveName], pkgName)
+						dir[i] = o
+						found = true
+						break
 					}
 				}
 				if !found {
@@ -156,7 +149,7 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 		Entries []ownership `yaml:"entries"`
 	}
 	var sortedDirs []string
-	for dir, _ := range directories {
+	for dir := range directories {
 		sortedDirs = append(sortedDirs, dir)
 	}
 	slices.Sort(sortedDirs)
