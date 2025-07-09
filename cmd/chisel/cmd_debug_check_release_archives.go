@@ -108,6 +108,8 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 		}
 		if hasConflict {
 			issues = append(issues, parentDirectoryConflict{
+				// At this time, there is only one possible type of conflict,
+				// we do not need to check.
 				Issue:        "parent-directory-conflict",
 				Path:         path,
 				Observations: pathObservations,
