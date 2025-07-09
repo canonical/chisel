@@ -14,6 +14,7 @@ import (
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/cache"
 	"github.com/canonical/chisel/internal/deb"
+	"github.com/canonical/chisel/internal/setup"
 )
 
 var shortCheckReleaseArchivesHelp = "Check the release's archives"
@@ -77,6 +78,56 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 		archives[archiveName] = openArchive
 	}
 
+	observations, err := checkReleaseArchives(release, archives)
+	if err != nil {
+		return err
+	}
+
+	var issues []any
+	type parentDirectoryConflict struct {
+		Issue        string        `yaml:"issue"`
+		Path         string        `yaml:"path"`
+		Observations []observation `yaml:"observations"`
+	}
+	var sortedPaths []string
+	for path := range observations {
+		sortedPaths = append(sortedPaths, path)
+	}
+	slices.Sort(sortedPaths)
+	for _, path := range sortedPaths {
+		pathObservations := observations[path]
+		hasConflict := false
+		base := pathObservations[0]
+		for _, observation := range pathObservations {
+			if observation.Kind != base.Kind ||
+				observation.Mode != base.Mode ||
+				observation.Link != base.Link {
+				hasConflict = true
+				break
+			}
+		}
+		if hasConflict {
+			issues = append(issues, parentDirectoryConflict{
+				Issue:        "parent-directory-conflict",
+				Path:         path,
+				Observations: pathObservations,
+			})
+		}
+	}
+
+	if len(issues) > 0 {
+		yb, err := yaml.Marshal(issues)
+		if err != nil {
+			return fmt.Errorf("internal error: cannot marshal issue list: %s", err)
+		}
+		fmt.Fprintf(Stdout, "%s", string(yb))
+		return errors.New("issues found in the release archives")
+	}
+
+	return nil
+}
+
+func checkReleaseArchives(release *setup.Release, archives map[string]archive.Archive) (map[string][]observation, error) {
 	var orderedPkgs []string
 	for packageName := range release.Packages {
 		orderedPkgs = append(orderedPkgs, packageName)
@@ -98,11 +149,11 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 			}
 			pkgReader, _, err := archive.Fetch(pkgName)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			dataReader, err := deb.DataReader(pkgReader)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			tarReader := tar.NewReader(dataReader)
 			for {
@@ -111,7 +162,7 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 					break
 				}
 				if err != nil {
-					return err
+					return nil, err
 				}
 
 				path, ok := sanitizeTarPath(tarHeader.Name)
@@ -168,49 +219,7 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 			}
 		}
 	}
-
-	var issues []any
-	type parentDirectoryConflict struct {
-		Issue        string        `yaml:"issue"`
-		Path         string        `yaml:"path"`
-		Observations []observation `yaml:"observations"`
-	}
-	var sortedPaths []string
-	for path := range observations {
-		sortedPaths = append(sortedPaths, path)
-	}
-	slices.Sort(sortedPaths)
-	for _, path := range sortedPaths {
-		pathObservations := observations[path]
-		hasConflict := false
-		base := pathObservations[0]
-		for _, observation := range pathObservations {
-			if observation.Kind != base.Kind ||
-				observation.Mode != base.Mode ||
-				observation.Link != base.Link {
-				hasConflict = true
-				break
-			}
-		}
-		if hasConflict {
-			issues = append(issues, parentDirectoryConflict{
-				Issue:        "parent-directory-conflict",
-				Path:         path,
-				Observations: pathObservations,
-			})
-		}
-	}
-
-	if len(issues) > 0 {
-		yb, err := yaml.Marshal(issues)
-		if err != nil {
-			return fmt.Errorf("internal error: cannot marshal issue list: %s", err)
-		}
-		fmt.Fprintf(Stdout, "%s", string(yb))
-		return errors.New("issues found in the release archives")
-	}
-
-	return nil
+	return observations, nil
 }
 
 // sanitizeTarPath removes the leading "./" from the source path in the tarball,
