@@ -54,7 +54,7 @@ var checkReleaseArchivesTests = []checkReleaseArchivesTest{{
 	}},
 	stdout: "",
 }, {
-	summary: "Parent directory conflicts, all types",
+	summary: "All types of conflicts",
 	release: map[string]string{
 		"chisel.yaml": makeChiselYaml([]string{"ubuntu"}),
 		"slices/mydir/pkg-a.yaml": `
@@ -86,22 +86,26 @@ var checkReleaseArchivesTests = []checkReleaseArchivesTest{{
 	stdout: `
 		- issue: parent-directory-conflict
 		  path: /link
-		  entries:
-			- mode: 0777
+		  observations:
+			- archive: ubuntu
+			  packages: [pkg-a]
+			  kind: symlink
 			  link: /other
-			  packages: {ubuntu: [pkg-a]}
-			- mode: 0777
-			  link: ""
-			  packages: {ubuntu: [pkg-b]}
+			- archive: ubuntu
+			  packages: [pkg-b]
+			  kind: dir
+			  mode: 0777
 		- issue: parent-directory-conflict
 		  path: /mode
-		  entries:
-			- mode: 0755
-			  link: ""
-			  packages: {ubuntu: [pkg-a]}
-			- mode: 0756
-			  link: ""
-			  packages: {ubuntu: [pkg-b]}
+		  observations:
+			- archive: ubuntu
+			  packages: [pkg-a]
+			  kind: dir
+			  mode: 0755
+			- archive: ubuntu
+			  packages: [pkg-b]
+			  kind: dir
+			  mode: 0756
 	`,
 	err: "issues found in the release archives",
 }, {
@@ -137,13 +141,19 @@ var checkReleaseArchivesTests = []checkReleaseArchivesTest{{
 	stdout: `
 		- issue: parent-directory-conflict
 		  path: /dir
-		  entries:
-			- mode: 0755
-			  link: ""
-			  packages: {archive1: [pkg-a], archive2: [pkg-a]}
-			- mode: 0756
-			  link: ""
-			  packages: {archive2: [pkg-b]}
+		  observations:
+			- archive: archive1
+			  packages: [pkg-a]
+			  kind: dir
+			  mode: 0755
+			- archive: archive2
+			  packages: [pkg-a]
+			  kind: dir
+			  mode: 0755
+			- archive: archive2
+			  packages: [pkg-b]
+			  kind: dir
+			  mode: 0756
 	`,
 	err: "issues found in the release archives",
 }, {
@@ -180,13 +190,15 @@ var checkReleaseArchivesTests = []checkReleaseArchivesTest{{
 	stdout: `
 		- issue: parent-directory-conflict
 		  path: /dir
-		  entries:
-			- mode: 0755
-			  link: ""
-			  packages: {ubuntu: [pkg-a]}
-			- mode: 0756
-			  link: ""
-			  packages: {ubuntu: [pkg-b]}
+		  observations:
+			- archive: ubuntu
+			  packages: [pkg-a]
+			  kind: dir
+			  mode: 0755
+			- archive: ubuntu
+			  packages: [pkg-b]
+			  kind: dir
+			  mode: 0756
 	`,
 	err: "issues found in the release archives",
 }}

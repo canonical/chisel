@@ -69,15 +69,12 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 		archives[archiveName] = openArchive
 	}
 
-	type pkgArchive struct {
-		Pkg     string `yaml:"package"`
-		Archive string `yaml:"archive"`
-	}
-
-	type pathContent struct {
-		Mode        yamlMode     `yaml:"mode"`
-		Link        string       `yaml:"link"`
-		PkgArchives []pkgArchive `yaml:"packages,flow"`
+	type observation struct {
+		Archive  string   `yaml:"archive"`
+		Packages []string `yaml:"packages,flow"`
+		Kind     string   `yaml:"kind"`
+		Mode     yamlMode `yaml:"mode,omitempty"`
+		Link     string   `yaml:"link,omitempty"`
 	}
 
 	var orderedPkgs []string
@@ -85,9 +82,15 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 		orderedPkgs = append(orderedPkgs, packageName)
 	}
 	slices.Sort(orderedPkgs)
+	var orderedArchives []string
+	for archiveName := range archives {
+		orderedArchives = append(orderedArchives, archiveName)
+	}
+	slices.Sort(orderedArchives)
 
-	pathContents := map[string][]pathContent{}
-	for archiveName, archive := range archives {
+	observations := map[string][]observation{}
+	for _, archiveName := range orderedArchives {
+		archive := archives[archiveName]
 		logf("Processing archive %s...", archiveName)
 		for _, pkgName := range orderedPkgs {
 			if !archive.Exists(pkgName) {
@@ -115,31 +118,51 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 				if !ok {
 					continue
 				}
+				if tarHeader.FileInfo().Mode().IsRegular() {
+					continue
+				}
 
 				// Make paths uniform: while directories always end in '/',
 				// symlinks don't.
 				path = strings.TrimSuffix(path, "/")
 
-				contents := pathContents[path]
+				pathObservations := observations[path]
 				found := false
-				// We look for a previous group that has the same entry in
-				// terms of mode, link, etc. and we add the package to the
-				// group. If there is none, we create a new one.
-				for i, content := range contents {
-					link := tarHeader.Linkname != "" || content.Link != ""
-					if (link && tarHeader.Linkname == content.Link) ||
-						(!link && tarHeader.Mode == int64(content.Mode)) {
-						content.PkgArchives = append(content.PkgArchives, pkgArchive{pkgName, archiveName})
-						contents[i] = content
-						found = true
-						break
+				// We look for a previous observation that extracts the same
+				// content in terms of mode, link, etc. and we add the package
+				// to it. If there is none, we create a new one.
+				for i, observation := range pathObservations {
+					if observation.Archive != archiveName {
+						continue
 					}
+
+					// Note: the order here is important, if we checked the
+					// mode first, two symlinks will always pass the test even
+					// if their target is different.
+					if tarHeader.Linkname != observation.Link ||
+						tarHeader.Mode != int64(observation.Mode) {
+						continue
+					}
+
+					observation.Packages = append(observation.Packages, pkgName)
+					pathObservations[i] = observation
+					found = true
 				}
 				if !found {
-					pathContents[path] = append(pathContents[path], pathContent{
-						Mode:        yamlMode(tarHeader.Mode),
-						Link:        tarHeader.Linkname,
-						PkgArchives: []pkgArchive{{pkgName, archiveName}},
+					kind := "symlink"
+					if tarHeader.FileInfo().IsDir() {
+						kind = "dir"
+					}
+					var mode yamlMode
+					if kind == "dir" {
+						mode = yamlMode(tarHeader.Mode)
+					}
+					observations[path] = append(observations[path], observation{
+						Kind:     kind,
+						Mode:     mode,
+						Link:     tarHeader.Linkname,
+						Archive:  archiveName,
+						Packages: []string{pkgName},
 					})
 				}
 			}
@@ -147,23 +170,33 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 	}
 
 	var issues []any
-	type contentConflict struct {
-		Issue    string        `yaml:"issue"`
-		Path     string        `yaml:"path"`
-		Contents []pathContent `yaml:"extracted-from"`
+	type parentDirectoryConflict struct {
+		Issue        string        `yaml:"issue"`
+		Path         string        `yaml:"path"`
+		Observations []observation `yaml:"observations"`
 	}
 	var sortedPaths []string
-	for path := range pathContents {
+	for path := range observations {
 		sortedPaths = append(sortedPaths, path)
 	}
 	slices.Sort(sortedPaths)
-	for _, dir := range sortedPaths {
-		contents := pathContents[dir]
-		if len(contents) > 1 {
-			issues = append(issues, contentConflict{
-				Issue:    "content-conflict",
-				Path:     dir,
-				Contents: contents,
+	for _, path := range sortedPaths {
+		pathObservations := observations[path]
+		hasConflict := false
+		base := pathObservations[0]
+		for _, observation := range pathObservations {
+			if observation.Kind != base.Kind ||
+				observation.Mode != base.Mode ||
+				observation.Link != base.Link {
+				hasConflict = true
+				break
+			}
+		}
+		if hasConflict {
+			issues = append(issues, parentDirectoryConflict{
+				Issue:        "parent-directory-conflict",
+				Path:         path,
+				Observations: pathObservations,
 			})
 		}
 	}
