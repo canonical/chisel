@@ -42,6 +42,14 @@ type cmdDebugCheckReleaseArchives struct {
 
 var archiveOpen = archive.Open
 
+type observation struct {
+	Archive  string   `yaml:"archive"`
+	Packages []string `yaml:"packages,flow"`
+	Kind     string   `yaml:"kind"`
+	Mode     yamlMode `yaml:"mode,omitempty"`
+	Link     string   `yaml:"link,omitempty"`
+}
+
 func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 	release, err := obtainRelease(cmd.Release)
 	if err != nil {
@@ -67,14 +75,6 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 			return err
 		}
 		archives[archiveName] = openArchive
-	}
-
-	type observation struct {
-		Archive  string   `yaml:"archive"`
-		Packages []string `yaml:"packages,flow"`
-		Kind     string   `yaml:"kind"`
-		Mode     yamlMode `yaml:"mode,omitempty"`
-		Link     string   `yaml:"link,omitempty"`
 	}
 
 	var orderedPkgs []string
