@@ -141,7 +141,7 @@ func checkReleaseArchives(release *setup.Release, archives map[string]archive.Ar
 	}
 	slices.Sort(orderedArchives)
 
-	observations := map[string][]observation{}
+	pathsObservations := map[string][]observation{}
 	for _, archiveName := range orderedArchives {
 		archive := archives[archiveName]
 		logf("Processing archive %s...", archiveName)
@@ -179,12 +179,12 @@ func checkReleaseArchives(release *setup.Release, archives map[string]archive.Ar
 				// symlinks don't.
 				path = strings.TrimSuffix(path, "/")
 
-				pathObservations := observations[path]
+				observations := pathsObservations[path]
 				found := false
 				// We look for a previous observation that extracts the same
 				// content in terms of mode, link, etc. and we add the package
 				// to it. If there is none, we create a new one.
-				for i, observation := range pathObservations {
+				for i, observation := range observations {
 					if observation.Archive != archiveName {
 						continue
 					}
@@ -198,7 +198,7 @@ func checkReleaseArchives(release *setup.Release, archives map[string]archive.Ar
 					}
 
 					observation.Packages = append(observation.Packages, pkgName)
-					pathObservations[i] = observation
+					observations[i] = observation
 					found = true
 				}
 				if !found {
@@ -210,7 +210,7 @@ func checkReleaseArchives(release *setup.Release, archives map[string]archive.Ar
 					if kind == "dir" {
 						mode = yamlMode(tarHeader.Mode)
 					}
-					observations[path] = append(observations[path], observation{
+					pathsObservations[path] = append(pathsObservations[path], observation{
 						Kind:     kind,
 						Mode:     mode,
 						Link:     tarHeader.Linkname,
@@ -221,7 +221,7 @@ func checkReleaseArchives(release *setup.Release, archives map[string]archive.Ar
 			}
 		}
 	}
-	return observations, nil
+	return pathsObservations, nil
 }
 
 // sanitizeTarPath removes the leading "./" from the source path in the tarball,
