@@ -78,7 +78,7 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 		archives[archiveName] = openArchive
 	}
 
-	observations, err := checkReleaseArchives(release, archives)
+	pathsObservations, err := checkReleaseArchives(release, archives)
 	if err != nil {
 		return err
 	}
@@ -90,15 +90,15 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 		Observations []observation `yaml:"observations"`
 	}
 	var sortedPaths []string
-	for path := range observations {
+	for path := range pathsObservations {
 		sortedPaths = append(sortedPaths, path)
 	}
 	slices.Sort(sortedPaths)
 	for _, path := range sortedPaths {
-		pathObservations := observations[path]
+		observations := pathsObservations[path]
 		hasConflict := false
-		base := pathObservations[0]
-		for _, observation := range pathObservations {
+		base := observations[0]
+		for _, observation := range observations {
 			if observation.Kind != base.Kind ||
 				observation.Mode != base.Mode ||
 				observation.Link != base.Link {
@@ -112,7 +112,7 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 				// we do not need to check.
 				Issue:        "parent-directory-conflict",
 				Path:         path,
-				Observations: pathObservations,
+				Observations: observations,
 			})
 		}
 	}
