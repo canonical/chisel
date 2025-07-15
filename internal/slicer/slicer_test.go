@@ -36,6 +36,7 @@ type slicerTest struct {
 	filesystem    map[string]string
 	manifestPaths map[string]string
 	manifestPkgs  map[string]string
+	logOutput     string
 	error         string
 }
 
@@ -1844,6 +1845,46 @@ var slicerTests = []slicerTest{{
 		"/link": "symlink /file1 {test-package1_myslice}",
 		"/text": "file 0644 2c26b46b {test-package1_myslice}",
 	},
+}, {
+	summary: "Warning when implicit parent directories conflict",
+	slices: []setup.SliceKey{
+		{"test-package1", "myslice"},
+		{"test-package2", "myslice"},
+	},
+	pkgs: []*testutil.TestPackage{{
+		Name: "test-package1",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			// Note that both implicit parents have different permissions.
+			testutil.Dir(0766, "./parent/"),
+			testutil.Reg(0644, "./parent/foo", "whatever"),
+		}),
+	}, {
+		Name: "test-package2",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			// And here.
+			testutil.Dir(0755, "./parent/"),
+			testutil.Reg(0644, "./parent/bar", "whatever"),
+		}),
+	}},
+	release: map[string]string{
+		"slices/mydir/test-package1.yaml": `
+			package: test-package1
+			slices:
+				myslice:
+					contents:
+						/parent/foo:
+		`,
+		"slices/mydir/test-package2.yaml": `
+			package: test-package2
+			slices:
+				myslice:
+					contents:
+						/parent/bar:
+		`,
+	},
+	logOutput: `(?s).*Warning: Attempted to extract path "/parent/".*`,
 }}
 
 var defaultChiselYaml = `
@@ -1862,7 +1903,7 @@ var defaultChiselYaml = `
 
 func (s *S) TestRun(c *C) {
 	// Run tests for "archives" field in "v1" format.
-	runSlicerTests(c, slicerTests)
+	runSlicerTests(s, c, slicerTests)
 
 	// Run tests for "v2-archives" field in "v1" format.
 	v2ArchiveTests := make([]slicerTest, 0, len(slicerTests))
@@ -1877,7 +1918,7 @@ func (s *S) TestRun(c *C) {
 		t.release = m
 		v2ArchiveTests = append(v2ArchiveTests, t)
 	}
-	runSlicerTests(c, v2ArchiveTests)
+	runSlicerTests(s, c, v2ArchiveTests)
 
 	// Run tests for "v2" format.
 	v2FormatTests := make([]slicerTest, 0, len(slicerTests))
@@ -1894,13 +1935,14 @@ func (s *S) TestRun(c *C) {
 		t.release = m
 		v2FormatTests = append(v2FormatTests, t)
 	}
-	runSlicerTests(c, v2FormatTests)
+	runSlicerTests(s, c, v2FormatTests)
 }
 
-func runSlicerTests(c *C, tests []slicerTest) {
+func runSlicerTests(s *S, c *C, tests []slicerTest) {
 	for _, test := range tests {
 		for _, testSlices := range testutil.Permutations(test.slices) {
 			c.Logf("Summary: %s", test.summary)
+			s.LogInterceptor().Reset()
 
 			if _, ok := test.release["chisel.yaml"]; !ok {
 				test.release["chisel.yaml"] = defaultChiselYaml
@@ -1996,7 +2038,7 @@ func runSlicerTests(c *C, tests []slicerTest) {
 			}
 			c.Assert(err, IsNil)
 
-			if test.filesystem == nil && test.manifestPaths == nil && test.manifestPkgs == nil {
+			if test.filesystem == nil && test.manifestPaths == nil && test.manifestPkgs == nil && test.logOutput == "" {
 				continue
 			}
 			mfest := readManifest(c, options.TargetDir, manifestPath)
@@ -2025,6 +2067,11 @@ func runSlicerTests(c *C, tests []slicerTest) {
 				pkgsDump, err := dumpManifestPkgs(mfest)
 				c.Assert(err, IsNil)
 				c.Assert(pkgsDump, DeepEquals, test.manifestPkgs)
+			}
+
+			// Assert log output.
+			if test.logOutput != "" {
+				c.Assert(s.LogInterceptor().Get(), Matches, test.logOutput)
 			}
 		}
 	}

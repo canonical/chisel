@@ -170,17 +170,16 @@ func Run(options *RunOptions) error {
 		return fmt.Errorf("internal error: cannot create report: %w", err)
 	}
 
+	// Record directories which are created but where not listed in the SDF.
+	createdNotListed := map[string]fs.FileMode{}
+	// Record directories which may be an implicit conflict.
+	var implicitConflicts []string
 	// Creates the filesystem entry and adds it to the report. It also updates
 	// knownPaths with the files created.
 	create := func(extractInfos []deb.ExtractInfo, o *fsutil.CreateOptions) error {
 		entry, err := fsutil.Create(o)
 		if err != nil {
 			return err
-		}
-		// Content created was not listed in a slice contents because extractInfo
-		// is empty.
-		if len(extractInfos) == 0 {
-			return nil
 		}
 
 		relPath := filepath.Clean("/" + strings.TrimPrefix(o.Path, targetDir))
@@ -223,6 +222,11 @@ func Run(options *RunOptions) error {
 				hardLink: entry.Mode.IsRegular() && entry.Link != "",
 			}
 			addKnownPath(knownPaths, relPath, data)
+		} else {
+			if mode, ok := createdNotListed[relPath]; ok && mode != o.Mode {
+				implicitConflicts = append(implicitConflicts, relPath)
+			}
+			createdNotListed[relPath] = o.Mode
 		}
 		return nil
 	}
@@ -243,6 +247,17 @@ func Run(options *RunOptions) error {
 		packages[slice.Package] = nil
 		if err != nil {
 			return err
+		}
+	}
+
+	for _, path := range implicitConflicts {
+		// If a directory is listed in the report it means it was listed
+		// explictly in an SDF, there is no conflict.
+		if _, ok := report.Entries[path]; !ok {
+			logf(`Warning: Attempted to extract path "%s" with different `+
+				`modes which are not handled explicitly. Check the manifest for `+
+				`more information and if this is an official release consider `+
+				`reporting it.`, path)
 		}
 	}
 
