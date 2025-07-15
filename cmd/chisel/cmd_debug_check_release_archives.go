@@ -85,7 +85,7 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 	}
 
 	var issues []any
-	type parentDirectoryConflict struct {
+	type pathConflict struct {
 		Issue        string        `yaml:"issue"`
 		Path         string        `yaml:"path"`
 		Observations []observation `yaml:"observations"`
@@ -108,7 +108,7 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 			}
 		}
 		if hasConflict {
-			issues = append(issues, parentDirectoryConflict{
+			issues = append(issues, pathConflict{
 				// At this time, there is only one possible type of conflict,
 				// we do not need to check.
 				Issue:        "path-conflict",
