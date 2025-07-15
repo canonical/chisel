@@ -84,7 +84,7 @@ var checkReleaseArchivesTests = []checkReleaseArchivesTest{{
 		}),
 	}},
 	stdout: `
-		- issue: parent-directory-conflict
+		- issue: path-conflict
 		  path: /link
 		  observations:
 			- archive: ubuntu
@@ -95,7 +95,7 @@ var checkReleaseArchivesTests = []checkReleaseArchivesTest{{
 			  packages: [pkg-b]
 			  kind: dir
 			  mode: 0777
-		- issue: parent-directory-conflict
+		- issue: path-conflict
 		  path: /mode
 		  observations:
 			- archive: ubuntu
@@ -139,7 +139,7 @@ var checkReleaseArchivesTests = []checkReleaseArchivesTest{{
 		Archives: []string{"archive2"},
 	}},
 	stdout: `
-		- issue: parent-directory-conflict
+		- issue: path-conflict
 		  path: /dir
 		  observations:
 			- archive: archive1
@@ -188,7 +188,7 @@ var checkReleaseArchivesTests = []checkReleaseArchivesTest{{
 		}),
 	}},
 	stdout: `
-		- issue: parent-directory-conflict
+		- issue: path-conflict
 		  path: /dir
 		  observations:
 			- archive: ubuntu
