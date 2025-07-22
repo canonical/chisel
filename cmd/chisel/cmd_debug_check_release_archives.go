@@ -42,9 +42,13 @@ type cmdDebugCheckReleaseArchives struct {
 	Arch    string `long:"arch" value-name:"<arch>"`
 }
 
+func init() {
+	addDebugCommand("check-release-archives", shortCheckReleaseArchivesHelp, longCheckReleaseArchivesHelp, func() flags.Commander { return &cmdDebugCheckReleaseArchives{} }, checkReleaseArchivesDescs, nil)
+}
+
 var archiveOpen = archive.Open
 
-type observation struct {
+type pathObservation struct {
 	Archive  string   `yaml:"archive"`
 	Packages []string `yaml:"packages,flow"`
 	Kind     string   `yaml:"kind"`
@@ -79,24 +83,24 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 		archives[archiveName] = openArchive
 	}
 
-	pathsObservations, err := checkReleaseArchives(release, archives)
+	pathObs, err := computePathObservations(release, archives)
 	if err != nil {
 		return err
 	}
 
 	var issues []any
 	type pathConflict struct {
-		Issue        string        `yaml:"issue"`
-		Path         string        `yaml:"path"`
-		Observations []observation `yaml:"observations"`
+		Issue        string            `yaml:"issue"`
+		Path         string            `yaml:"path"`
+		Observations []pathObservation `yaml:"observations"`
 	}
 	var sortedPaths []string
-	for path := range pathsObservations {
+	for path := range pathObs {
 		sortedPaths = append(sortedPaths, path)
 	}
 	slices.Sort(sortedPaths)
 	for _, path := range sortedPaths {
-		observations := pathsObservations[path]
+		observations := pathObs[path]
 		hasConflict := false
 		base := observations[0]
 		for _, observation := range observations {
@@ -130,7 +134,7 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 	return nil
 }
 
-func checkReleaseArchives(release *setup.Release, archives map[string]archive.Archive) (map[string][]observation, error) {
+func computePathObservations(release *setup.Release, archives map[string]archive.Archive) (map[string][]pathObservation, error) {
 	var orderedPkgs []string
 	for packageName := range release.Packages {
 		orderedPkgs = append(orderedPkgs, packageName)
@@ -142,7 +146,7 @@ func checkReleaseArchives(release *setup.Release, archives map[string]archive.Ar
 	}
 	slices.Sort(orderedArchives)
 
-	pathsObservations := map[string][]observation{}
+	pathObs := map[string][]pathObservation{}
 	for _, archiveName := range orderedArchives {
 		archive := archives[archiveName]
 		logf("Processing archive %s...", archiveName)
@@ -180,7 +184,7 @@ func checkReleaseArchives(release *setup.Release, archives map[string]archive.Ar
 				// symlinks don't.
 				path = strings.TrimSuffix(path, "/")
 
-				observations := pathsObservations[path]
+				observations := pathObs[path]
 				found := false
 				// We look for a previous observation that extracts the same
 				// content in terms of mode, link, etc. and we add the package
@@ -211,7 +215,7 @@ func checkReleaseArchives(release *setup.Release, archives map[string]archive.Ar
 					if kind == "dir" {
 						mode = yamlMode(tarHeader.Mode)
 					}
-					pathsObservations[path] = append(pathsObservations[path], observation{
+					pathObs[path] = append(pathObs[path], pathObservation{
 						Kind:     kind,
 						Mode:     mode,
 						Link:     tarHeader.Linkname,
@@ -222,7 +226,7 @@ func checkReleaseArchives(release *setup.Release, archives map[string]archive.Ar
 			}
 		}
 	}
-	return pathsObservations, nil
+	return pathObs, nil
 }
 
 // sanitizeTarPath removes the leading "./" from the source path in the tarball,
@@ -249,7 +253,3 @@ func (ym yamlMode) MarshalYAML() (interface{}, error) {
 }
 
 var _ yaml.Marshaler = yamlMode(0)
-
-func init() {
-	addDebugCommand("check-release-archives", shortCheckReleaseArchivesHelp, longCheckReleaseArchivesHelp, func() flags.Commander { return &cmdDebugCheckReleaseArchives{} }, checkReleaseArchivesDescs, nil)
-}
