@@ -173,29 +173,18 @@ func computePathObservations(release *setup.Release, archives map[string]archive
 				// symlinks don't.
 				path = strings.TrimSuffix(path, "/")
 
-				observations := pathObs[path]
-				found := false
 				// We look for a previous observation that extracts the same
 				// content in terms of mode, link, etc. and we add the package
 				// to it. If there is none, we create a new one.
-				for i, observation := range observations {
-					if observation.Archive != archiveName {
-						continue
-					}
-
-					// Note: the order here is important, if we checked the
-					// mode first, two symlinks will always pass the test even
-					// if their target is different.
-					if tarHeader.Linkname != observation.Link ||
-						tarHeader.Mode != int64(observation.Mode) {
-						continue
-					}
-
-					observation.Packages = append(observation.Packages, pkgName)
-					observations[i] = observation
-					found = true
-				}
-				if !found {
+				observations := pathObs[path]
+				index := slices.IndexFunc(observations, func(o pathObservation) bool {
+					return o.Archive == archiveName &&
+						tarHeader.Linkname == o.Link &&
+						tarHeader.Mode == int64(o.Mode)
+				})
+				if index != -1 {
+					observations[index].Packages = append(observations[index].Packages, pkgName)
+				} else {
 					kind := "symlink"
 					if tarHeader.FileInfo().IsDir() {
 						kind = "dir"
