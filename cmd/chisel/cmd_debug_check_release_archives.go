@@ -123,11 +123,10 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 	}
 
 	if len(issues) > 0 {
-		yb, err := yaml.Marshal(issues)
+		err := yaml.NewEncoder(Stdout).Encode(issues)
 		if err != nil {
 			return fmt.Errorf("internal error: cannot marshal issue list: %s", err)
 		}
-		fmt.Fprintf(Stdout, "%s", string(yb))
 		return errors.New("issues found in the release archives")
 	}
 
