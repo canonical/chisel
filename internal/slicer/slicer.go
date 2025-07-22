@@ -251,8 +251,8 @@ func Run(options *RunOptions) error {
 	}
 
 	for _, path := range implicitConflicts {
-		// If a directory is listed in the report it means it was listed
-		// explictly in an SDF, there is no conflict.
+		// A directory is listed in the report if and only if it was listed
+		// explictly in an SDF, meaning there is no conflict.
 		if _, ok := report.Entries[path]; !ok {
 			logf(`Warning: Attempted to extract path "%s" with different `+
 				`modes which are not handled explicitly. Check the manifest for `+
