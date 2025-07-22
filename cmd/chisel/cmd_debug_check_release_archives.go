@@ -101,17 +101,7 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 	slices.Sort(sortedPaths)
 	for _, path := range sortedPaths {
 		observations := pathObs[path]
-		hasConflict := false
-		base := observations[0]
-		for _, observation := range observations {
-			if observation.Kind != base.Kind ||
-				observation.Mode != base.Mode ||
-				observation.Link != base.Link {
-				hasConflict = true
-				break
-			}
-		}
-		if hasConflict {
+		if hasPathConflict(observations) {
 			issues = append(issues, pathConflict{
 				// At this time, there is only one possible type of conflict,
 				// we do not need to check.
@@ -226,6 +216,22 @@ func computePathObservations(release *setup.Release, archives map[string]archive
 		}
 	}
 	return pathObs, nil
+}
+
+func hasPathConflict(observations []pathObservation) bool {
+	if len(observations) == 0 {
+		return false
+	}
+
+	base := observations[0]
+	for _, observation := range observations[1:] {
+		if observation.Kind != base.Kind ||
+			observation.Mode != base.Mode ||
+			observation.Link != base.Link {
+			return true
+		}
+	}
+	return false
 }
 
 // sanitizeTarPath removes the leading "./" from the source path in the tarball,
