@@ -334,7 +334,7 @@ var slicerTests = []slicerTest{{
 	}, {
 		Name: "c-implicit-parent",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Dir(0755, "./dir/"),
+			testutil.Dir(0766, "./dir/"),
 			testutil.Reg(0644, "./dir/file-2", "random"),
 		}),
 	}},
@@ -371,6 +371,8 @@ var slicerTests = []slicerTest{{
 		"/dir/file-1": "file 0644 a441b15f {a-implicit-parent_myslice}",
 		"/dir/file-2": "file 0644 a441b15f {c-implicit-parent_myslice}",
 	},
+	// No Warning is emitted becaues the directory is explicitly listed.
+	logOutput: "",
 }, {
 	summary: "Valid same file in two slices in different packages",
 	slices: []setup.SliceKey{
@@ -2072,6 +2074,9 @@ func runSlicerTests(s *S, c *C, tests []slicerTest) {
 			// Assert log output.
 			if test.logOutput != "" {
 				c.Assert(s.LogInterceptor().Get(), Matches, test.logOutput)
+			} else {
+				// No warnings emitted.
+				c.Assert(s.LogInterceptor().Get(), Not(Matches), "(?s).*Warning.*")
 			}
 		}
 	}
