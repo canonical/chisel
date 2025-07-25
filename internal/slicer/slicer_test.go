@@ -1944,7 +1944,7 @@ func runSlicerTests(s *S, c *C, tests []slicerTest) {
 	for _, test := range tests {
 		for _, testSlices := range testutil.Permutations(test.slices) {
 			c.Logf("Summary: %s", test.summary)
-			s.LogInterceptor().Reset()
+			s.LogProxy().Reset()
 
 			if _, ok := test.release["chisel.yaml"]; !ok {
 				test.release["chisel.yaml"] = defaultChiselYaml
@@ -2073,10 +2073,10 @@ func runSlicerTests(s *S, c *C, tests []slicerTest) {
 
 			// Assert log output.
 			if test.logOutput != "" {
-				c.Assert(s.LogInterceptor().Get(), Matches, test.logOutput)
+				c.Assert(s.LogProxy().Get(), Matches, test.logOutput)
 			} else {
 				// No warnings emitted.
-				c.Assert(s.LogInterceptor().Get(), Not(Matches), "(?s).*Warning.*")
+				c.Assert(s.LogProxy().Get(), Not(Matches), "(?s).*Warning.*")
 			}
 		}
 	}
