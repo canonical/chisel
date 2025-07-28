@@ -170,7 +170,8 @@ func Run(options *RunOptions) error {
 		return fmt.Errorf("internal error: cannot create report: %w", err)
 	}
 
-	// Record directories which are created but where not listed in the SDF.
+	// Record directories which are created but where not listed in the slice
+	// contents.
 	createdNotListed := map[string]fs.FileMode{}
 	// Record directories which may be an implicit conflict.
 	var implicitConflicts []string
@@ -186,7 +187,7 @@ func Run(options *RunOptions) error {
 		if o.Mode.IsDir() {
 			relPath = relPath + "/"
 		}
-		inSliceContents := false
+		listed := false
 		until := setup.UntilMutate
 		mutable := false
 		for _, extractInfo := range extractInfos {
@@ -201,7 +202,7 @@ func Run(options *RunOptions) error {
 			if !ok {
 				return fmt.Errorf("internal error: path %q not listed in slice contents", extractInfo.Path)
 			}
-			inSliceContents = true
+			listed = true
 			mutable = mutable || pathInfo.Mutable
 			if pathInfo.Until == setup.UntilNone {
 				until = setup.UntilNone
@@ -215,7 +216,7 @@ func Run(options *RunOptions) error {
 			}
 		}
 
-		if inSliceContents {
+		if listed {
 			data := pathData{
 				mutable:  mutable,
 				until:    until,
@@ -252,12 +253,12 @@ func Run(options *RunOptions) error {
 
 	for _, path := range implicitConflicts {
 		// A directory is listed in the report if and only if it was listed
-		// explictly in an SDF, meaning there is no conflict.
+		// explictly in the slice contents, meaning there is no implicit
+		// conflict.
+		// Note: general conflicts are detected earlier as we forbid extracting
+		// content from multiple packages when paths match.
 		if _, ok := report.Entries[path]; !ok {
-			logf(`Warning: Attempted to extract path "%s" with different `+
-				`modes which are not handled explicitly. Check the manifest for `+
-				`more information and if this is an official release consider `+
-				`reporting it.`, path)
+			logf("Warning: Path %q has diverging modes in different packages. Please report.", path)
 		}
 	}
 

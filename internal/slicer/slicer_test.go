@@ -1886,7 +1886,7 @@ var slicerTests = []slicerTest{{
 						/parent/bar:
 		`,
 	},
-	logOutput: `(?s).*Warning: Attempted to extract path "/parent/".*`,
+	logOutput: `(?s).*Warning: Path "/parent/" has diverging modes in different packages\. Please report\..*`,
 }}
 
 var defaultChiselYaml = `
