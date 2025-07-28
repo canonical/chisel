@@ -170,17 +170,17 @@ func Run(options *RunOptions) error {
 		return fmt.Errorf("internal error: cannot create report: %w", err)
 	}
 
+	// Record directories which are created but where not listed in the slice
+	// contents.
+	notInSliceContents := map[string]fs.FileMode{}
+	// Record directories which may be an implicit conflict.
+	var implicitConflicts []string
 	// Creates the filesystem entry and adds it to the report. It also updates
 	// knownPaths with the files created.
 	create := func(extractInfos []deb.ExtractInfo, o *fsutil.CreateOptions) error {
 		entry, err := fsutil.Create(o)
 		if err != nil {
 			return err
-		}
-		// Content created was not listed in a slice contents because extractInfo
-		// is empty.
-		if len(extractInfos) == 0 {
-			return nil
 		}
 
 		relPath := filepath.Clean("/" + strings.TrimPrefix(o.Path, targetDir))
@@ -223,6 +223,11 @@ func Run(options *RunOptions) error {
 				hardLink: entry.Mode.IsRegular() && entry.Link != "",
 			}
 			addKnownPath(knownPaths, relPath, data)
+		} else {
+			if mode, ok := notInSliceContents[relPath]; ok && mode != o.Mode {
+				implicitConflicts = append(implicitConflicts, relPath)
+			}
+			notInSliceContents[relPath] = o.Mode
 		}
 		return nil
 	}
@@ -243,6 +248,17 @@ func Run(options *RunOptions) error {
 		packages[slice.Package] = nil
 		if err != nil {
 			return err
+		}
+	}
+
+	for _, path := range implicitConflicts {
+		// A directory is listed in the report if and only if it was listed
+		// explictly in the slice contents, meaning there is no implicit
+		// conflict.
+		// Note: general conflicts are detected earlier as we forbid extracting
+		// content from multiple packages when paths match.
+		if _, ok := report.Entries[path]; !ok {
+			logf("Warning: Path %q has diverging modes in different packages. Please report.", path)
 		}
 	}
 
