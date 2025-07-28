@@ -172,7 +172,7 @@ func Run(options *RunOptions) error {
 
 	// Record directories which are created but where not listed in the slice
 	// contents.
-	createdNotListed := map[string]fs.FileMode{}
+	notInSliceContents := map[string]fs.FileMode{}
 	// Record directories which may be an implicit conflict.
 	var implicitConflicts []string
 	// Creates the filesystem entry and adds it to the report. It also updates
@@ -187,7 +187,7 @@ func Run(options *RunOptions) error {
 		if o.Mode.IsDir() {
 			relPath = relPath + "/"
 		}
-		listed := false
+		inSliceContents := false
 		until := setup.UntilMutate
 		mutable := false
 		for _, extractInfo := range extractInfos {
@@ -202,7 +202,7 @@ func Run(options *RunOptions) error {
 			if !ok {
 				return fmt.Errorf("internal error: path %q not listed in slice contents", extractInfo.Path)
 			}
-			listed = true
+			inSliceContents = true
 			mutable = mutable || pathInfo.Mutable
 			if pathInfo.Until == setup.UntilNone {
 				until = setup.UntilNone
@@ -216,7 +216,7 @@ func Run(options *RunOptions) error {
 			}
 		}
 
-		if listed {
+		if inSliceContents {
 			data := pathData{
 				mutable:  mutable,
 				until:    until,
@@ -224,10 +224,10 @@ func Run(options *RunOptions) error {
 			}
 			addKnownPath(knownPaths, relPath, data)
 		} else {
-			if mode, ok := createdNotListed[relPath]; ok && mode != o.Mode {
+			if mode, ok := notInSliceContents[relPath]; ok && mode != o.Mode {
 				implicitConflicts = append(implicitConflicts, relPath)
 			}
-			createdNotListed[relPath] = o.Mode
+			notInSliceContents[relPath] = o.Mode
 		}
 		return nil
 	}
