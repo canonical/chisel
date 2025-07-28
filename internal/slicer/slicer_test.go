@@ -1943,6 +1943,8 @@ func (s *S) TestRun(c *C) {
 func runSlicerTests(s *S, c *C, tests []slicerTest) {
 	for _, test := range tests {
 		for _, testSlices := range testutil.Permutations(test.slices) {
+			const logMarker = "---log-marker---"
+			c.Logf(logMarker)
 			c.Logf("Summary: %s", test.summary)
 
 			if _, ok := test.release["chisel.yaml"]; !ok {
@@ -2072,7 +2074,7 @@ func runSlicerTests(s *S, c *C, tests []slicerTest) {
 
 			// Find the log output of this test by trimming the suite output
 			// until we find the last occurrence of the summary.
-			testLogs := strings.Split(c.GetTestLog(), fmt.Sprintf("Summary: %s", test.summary))
+			testLogs := strings.Split(c.GetTestLog(), logMarker)
 			logOutput := testLogs[len(testLogs)-1]
 
 			// Assert log output.
