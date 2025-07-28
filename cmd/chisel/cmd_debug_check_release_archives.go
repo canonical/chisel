@@ -101,7 +101,7 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 	slices.Sort(sortedPaths)
 	for _, path := range sortedPaths {
 		observations := pathObs[path]
-		if hasPathConflict(observations) {
+		if hasPathConflict(release, path, observations) {
 			issues = append(issues, pathConflict{
 				// At this time, there is only one possible type of conflict,
 				// we do not need to check.
@@ -207,13 +207,43 @@ func computePathObservations(release *setup.Release, archives map[string]archive
 	return pathObs, nil
 }
 
-func hasPathConflict(observations []pathObservation) bool {
-	if len(observations) == 0 {
+// isPathExplicit returns true if the path is listed in all slices of the
+// package or in their "immediate" essentials, there is no recursion.
+func isPathExplicit(release *setup.Release, pkgName string, path string) bool {
+	for _, slice := range release.Packages[pkgName].Slices {
+		if _, ok := slice.Contents[path]; !ok {
+			index := slices.IndexFunc(slice.Essential, func(sk setup.SliceKey) bool {
+				_, ok := release.Packages[sk.Package].Slices[sk.Slice].Contents[path]
+				return ok
+			})
+			if index == -1 {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func hasPathConflict(release *setup.Release, path string, observations []pathObservation) bool {
+	if len(observations) < 2 {
 		return false
 	}
 
-	base := observations[0]
-	for _, observation := range observations[1:] {
+	var notExplicit []pathObservation
+	for _, observation := range observations {
+		for _, pkgName := range observation.Packages {
+			if !isPathExplicit(release, pkgName, path) {
+				notExplicit = append(notExplicit, observation)
+			}
+		}
+	}
+
+	if len(notExplicit) == 0 {
+		return false
+	}
+
+	base := notExplicit[0]
+	for _, observation := range notExplicit[1:] {
 		if observation.Kind != base.Kind ||
 			observation.Mode != base.Mode ||
 			observation.Link != base.Link {
