@@ -23,13 +23,14 @@ type Release struct {
 
 // Archive is the location from which binary packages are obtained.
 type Archive struct {
-	Name       string
-	Version    string
-	Suites     []string
-	Components []string
-	Priority   int
-	Pro        string
-	PubKeys    []*packet.PublicKey
+	Name        string
+	Version     string
+	Suites      []string
+	Components  []string
+	Priority    int
+	Pro         string
+	PubKeys     []*packet.PublicKey
+	Unsupported bool
 }
 
 // Package holds a collection of slices that represent parts of themselves.

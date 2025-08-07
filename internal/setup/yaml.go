@@ -39,13 +39,14 @@ const (
 )
 
 type yamlArchive struct {
-	Version    string   `yaml:"version"`
-	Suites     []string `yaml:"suites"`
-	Components []string `yaml:"components"`
-	Priority   *int     `yaml:"priority"`
-	Pro        string   `yaml:"pro"`
-	Default    bool     `yaml:"default"`
-	PubKeys    []string `yaml:"public-keys"`
+	Version     string   `yaml:"version"`
+	Suites      []string `yaml:"suites"`
+	Components  []string `yaml:"components"`
+	Priority    *int     `yaml:"priority"`
+	Pro         string   `yaml:"pro"`
+	Default     bool     `yaml:"default"`
+	PubKeys     []string `yaml:"public-keys"`
+	Unsupported bool     `yaml:"unsupported"`
 }
 
 type yamlPackage struct {
@@ -259,13 +260,14 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 			}
 		}
 		release.Archives[archiveName] = &Archive{
-			Name:       archiveName,
-			Version:    details.Version,
-			Suites:     details.Suites,
-			Components: details.Components,
-			Pro:        details.Pro,
-			Priority:   priority,
-			PubKeys:    archiveKeys,
+			Name:        archiveName,
+			Version:     details.Version,
+			Suites:      details.Suites,
+			Components:  details.Components,
+			Pro:         details.Pro,
+			Priority:    priority,
+			PubKeys:     archiveKeys,
+			Unsupported: details.Unsupported,
 		}
 	}
 	if (hasPriority && archiveNoPriority != "") ||

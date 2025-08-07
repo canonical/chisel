@@ -1,12 +1,9 @@
 summary: Chisel can fetch packages from Ubuntu Pro archives
 
-manual: true
-
-variants:
-  - noble
-
 environment:
   ROOTFS: rootfs
+  OS: ubuntu
+  VARIANT: "24.04"
 
 prepare: |
   apt update && apt install -y ubuntu-pro-client

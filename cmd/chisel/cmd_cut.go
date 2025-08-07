@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/jessevdk/go-flags"
 
 	"github.com/canonical/chisel/internal/archive"
@@ -25,9 +27,10 @@ var cutDescs = map[string]string{
 }
 
 type cmdCut struct {
-	Release string `long:"release" value-name:"<dir>"`
-	RootDir string `long:"root" value-name:"<dir>" required:"yes"`
-	Arch    string `long:"arch" value-name:"<arch>"`
+	Release               string `long:"release" value-name:"<dir>"`
+	RootDir               string `long:"root" value-name:"<dir>" required:"yes"`
+	Arch                  string `long:"arch" value-name:"<arch>"`
+	AckUnsupportedRelease bool   `long:"ack-unsupported-release"`
 
 	Positional struct {
 		SliceRefs []string `positional-arg-name:"<slice names>" required:"yes"`
@@ -64,15 +67,24 @@ func (cmd *cmdCut) Execute(args []string) error {
 
 	archives := make(map[string]archive.Archive)
 	for archiveName, archiveInfo := range release.Archives {
+		if archiveInfo.Unsupported {
+			if cmd.AckUnsupportedRelease {
+				logf("Warning: Archive %v is no longer officially supported, consider changing to a newer release", archiveName)
+			} else {
+				return fmt.Errorf("cannot use unsupported archive %v without --ack-unsupported-release", archiveName)
+			}
+		}
+
 		openArchive, err := archive.Open(&archive.Options{
-			Label:      archiveName,
-			Version:    archiveInfo.Version,
-			Arch:       cmd.Arch,
-			Suites:     archiveInfo.Suites,
-			Components: archiveInfo.Components,
-			Pro:        archiveInfo.Pro,
-			CacheDir:   cache.DefaultDir("chisel"),
-			PubKeys:    archiveInfo.PubKeys,
+			Label:       archiveName,
+			Version:     archiveInfo.Version,
+			Arch:        cmd.Arch,
+			Suites:      archiveInfo.Suites,
+			Components:  archiveInfo.Components,
+			Pro:         archiveInfo.Pro,
+			CacheDir:    cache.DefaultDir("chisel"),
+			PubKeys:     archiveInfo.PubKeys,
+			Unsupported: archiveInfo.Unsupported,
 		})
 		if err != nil {
 			if err == archive.ErrCredentialsNotFound {

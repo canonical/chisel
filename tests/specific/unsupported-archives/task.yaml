@@ -1,0 +1,22 @@
+summary: Chisel can fetch packages from unsupported releases
+
+environment:
+  ROOTFS: rootfs
+  OS: ubuntu
+  RELEASE: "23.10"
+
+execute: |
+  mkdir "${ROOTFS}"
+
+  ! OUTPUT=$(chisel cut --release ./release-${RELEASE} --root ${ROOTFS} hello_bins 2>&1)
+  echo "$OUTPUT" | grep "cannot use unsupported archive ubuntu-23.10 without --ack-unsupported-release"
+
+  OUTPUT=$(chisel cut --release ./release-${RELEASE} --root ${ROOTFS} --ack-unsupported-release hello_bins 2>&1)
+  echo "$OUTPUT" | grep "Warning: Archive ubuntu-23.10 is no longer officially supported, consider changing to a newer release"
+
+  test -f ${ROOTFS}/usr/bin/hello
+  test -f ${ROOTFS}/usr/share/doc/hello/copyright
+
+  sed "s/unsupported: true/unsupported: false/" -i ./release-${RELEASE}/chisel.yaml
+  ! chisel cut --release ./release-${RELEASE} --root ${ROOTFS} --ack-unsupported-release hello_bins
+  ! chisel cut --release ./release-${RELEASE} --root ${ROOTFS} hello_bins

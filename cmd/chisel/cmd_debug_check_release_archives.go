@@ -65,14 +65,15 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 	archives := make(map[string]archive.Archive)
 	for archiveName, archiveInfo := range release.Archives {
 		openArchive, err := archiveOpen(&archive.Options{
-			Label:      archiveName,
-			Version:    archiveInfo.Version,
-			Arch:       cmd.Arch,
-			Suites:     archiveInfo.Suites,
-			Components: archiveInfo.Components,
-			Pro:        archiveInfo.Pro,
-			CacheDir:   cache.DefaultDir("chisel"),
-			PubKeys:    archiveInfo.PubKeys,
+			Label:       archiveName,
+			Version:     archiveInfo.Version,
+			Arch:        cmd.Arch,
+			Suites:      archiveInfo.Suites,
+			Components:  archiveInfo.Components,
+			Pro:         archiveInfo.Pro,
+			CacheDir:    cache.DefaultDir("chisel"),
+			PubKeys:     archiveInfo.PubKeys,
+			Unsupported: archiveInfo.Unsupported,
 		})
 		if err == archive.ErrCredentialsNotFound {
 			logf("Archive %q ignored: credentials not found\n", archiveName)

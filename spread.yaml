@@ -52,9 +52,13 @@ prepare: |
   mv chisel /usr/local/bin
 
 suites:
-  tests/:
-    summary: Tests common scenarios
+  tests/common/:
+    summary: Tests common scenarios across LTS releases
     environment:
         RELEASE/jammy: 22.04
         RELEASE/focal: 20.04
         RELEASE/noble: 24.04
+        # TODO(letfunny): after unsupported is added in chisel-releases, run tests in an interim release.
+        # RELEASE/mantic: 23.10
+  tests/specific/:
+    summary: Tests scenarios that require specific OS versions
