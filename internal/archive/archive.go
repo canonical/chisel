@@ -31,14 +31,15 @@ type PackageInfo struct {
 }
 
 type Options struct {
-	Label       string
-	Version     string
-	Arch        string
-	Suites      []string
-	Components  []string
-	Pro         string
-	CacheDir    string
-	PubKeys     []*packet.PublicKey
+	Label      string
+	Version    string
+	Arch       string
+	Suites     []string
+	Components []string
+	Pro        string
+	CacheDir   string
+	PubKeys    []*packet.PublicKey
+	// This Ubuntu archive is no longer actively maintained.
 	Unsupported bool
 }
 
