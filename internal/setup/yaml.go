@@ -314,7 +314,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 	for sliceName, yamlSlice := range yamlPkg.Slices {
 		match := apacheutil.SnameExp.FindStringSubmatch(sliceName)
 		if match == nil {
-			return nil, fmt.Errorf("invalid slice name %q in %s", sliceName, pkgPath)
+			return nil, fmt.Errorf("invalid slice name %q in %s (start with a-z, len >= 3, only a-z / 0-9 / -)", sliceName, pkgPath)
 		}
 
 		slice := &Slice{
