@@ -248,8 +248,9 @@ func hasPathConflict(release *setup.Release, path string, observations []pathObs
 }
 
 func extractsParentPath(slice *setup.Slice, parent string) bool {
+	slashParent := parent + "/"
 	for path := range slice.Contents {
-		if strings.HasPrefix(path, parent+"/") {
+		if strings.HasPrefix(path, slashParent) {
 			return true
 		}
 	}
