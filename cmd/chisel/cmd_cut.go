@@ -24,13 +24,14 @@ var cutDescs = map[string]string{
 	"release": "Chisel release name or directory (e.g. ubuntu-22.04)",
 	"root":    "Root for generated content",
 	"arch":    "Package architecture",
+	"ignore":  "Conditions to ignore (e.g. unmaintained)",
 }
 
 type cmdCut struct {
-	Release               string `long:"release" value-name:"<dir>"`
-	RootDir               string `long:"root" value-name:"<dir>" required:"yes"`
-	Arch                  string `long:"arch" value-name:"<arch>"`
-	AckUnsupportedRelease bool   `long:"ack-unsupported-release"`
+	Release string `long:"release" value-name:"<dir>"`
+	RootDir string `long:"root" value-name:"<dir>" required:"yes"`
+	Arch    string `long:"arch" value-name:"<arch>"`
+	Ignore  string `long:"ignore" choice:"unmaintained" value-name:"<cond>"`
 
 	Positional struct {
 		SliceRefs []string `positional-arg-name:"<slice names>" required:"yes"`
@@ -68,10 +69,10 @@ func (cmd *cmdCut) Execute(args []string) error {
 	archives := make(map[string]archive.Archive)
 	for archiveName, archiveInfo := range release.Archives {
 		if archiveInfo.Unsupported {
-			if cmd.AckUnsupportedRelease {
-				logf("Warning: Archive %v is no longer officially supported, consider changing to a newer release", archiveName)
+			if cmd.Ignore == "unmaintained" {
+				logf("Warning: Archive %v is no longer officially maintained, consider changing to a newer release", archiveName)
 			} else {
-				return fmt.Errorf("cannot use unsupported archive %v without --ack-unsupported-release", archiveName)
+				return fmt.Errorf("cannot use unmaintained archive %v, consider using --ignore", archiveName)
 			}
 		}
 
