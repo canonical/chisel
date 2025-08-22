@@ -39,8 +39,8 @@ type Options struct {
 	Pro        string
 	CacheDir   string
 	PubKeys    []*packet.PublicKey
-	// This Ubuntu archive is no longer actively maintained.
-	Unsupported bool
+	// This archive belongs to a release that is no longer actively maintained.
+	Unmaintained bool
 }
 
 func Open(options *Options) (Archive, error) {
@@ -181,7 +181,7 @@ var proArchiveInfo = map[string]struct {
 	},
 }
 
-func archiveURL(pro, arch string, unsupported bool) (string, *credentials, error) {
+func archiveURL(pro, arch string, unmaintained bool) (string, *credentials, error) {
 	if pro != "" {
 		archiveInfo, ok := proArchiveInfo[pro]
 		if !ok {
@@ -195,7 +195,7 @@ func archiveURL(pro, arch string, unsupported bool) (string, *credentials, error
 		return url, creds, nil
 	}
 
-	if unsupported {
+	if unmaintained {
 		return ubuntuOldReleasesURL, nil, nil
 	}
 
@@ -216,7 +216,7 @@ func openUbuntu(options *Options) (Archive, error) {
 		return nil, fmt.Errorf("archive options missing version")
 	}
 
-	baseURL, creds, err := archiveURL(options.Pro, options.Arch, options.Unsupported)
+	baseURL, creds, err := archiveURL(options.Pro, options.Arch, options.Unmaintained)
 	if err != nil {
 		return nil, err
 	}

@@ -10,10 +10,10 @@ execute: |
   mkdir "${ROOTFS}"
 
   ! OUTPUT=$(chisel cut --release ./release-${RELEASE} --root ${ROOTFS} hello_bins 2>&1)
-  echo "$OUTPUT" | grep "cannot use unmaintained archive ubuntu-23.10, consider using --ignore"
+  echo "$OUTPUT" | grep "cannot use unmaintained release, consider using --ignore"
 
   OUTPUT=$(chisel cut --release ./release-${RELEASE} --root ${ROOTFS} --ignore=unmaintained hello_bins 2>&1)
-  echo "$OUTPUT" | grep "Warning: Archive ubuntu-23.10 is no longer officially maintained, consider changing to a newer release"
+  echo "$OUTPUT" | grep "Warning: This release is no longer officially maintained, consider changing to a newer release"
 
   test -f ${ROOTFS}/usr/bin/hello
   test -f ${ROOTFS}/usr/share/doc/hello/copyright

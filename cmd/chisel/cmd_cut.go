@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/jessevdk/go-flags"
 
@@ -61,6 +62,15 @@ func (cmd *cmdCut) Execute(args []string) error {
 		return err
 	}
 
+	unmaintained := release.Maintenance.EndOfLife.Before(time.Now())
+	if unmaintained {
+		if cmd.Ignore == "unmaintained" {
+			logf("Warning: This release is no longer officially maintained, consider changing to a newer release")
+		} else {
+			return fmt.Errorf("cannot use unmaintained release, consider using --ignore")
+		}
+	}
+
 	selection, err := setup.Select(release, sliceKeys)
 	if err != nil {
 		return err
@@ -68,24 +78,16 @@ func (cmd *cmdCut) Execute(args []string) error {
 
 	archives := make(map[string]archive.Archive)
 	for archiveName, archiveInfo := range release.Archives {
-		if archiveInfo.Unsupported {
-			if cmd.Ignore == "unmaintained" {
-				logf("Warning: Archive %v is no longer officially maintained, consider changing to a newer release", archiveName)
-			} else {
-				return fmt.Errorf("cannot use unmaintained archive %v, consider using --ignore", archiveName)
-			}
-		}
-
 		openArchive, err := archive.Open(&archive.Options{
-			Label:       archiveName,
-			Version:     archiveInfo.Version,
-			Arch:        cmd.Arch,
-			Suites:      archiveInfo.Suites,
-			Components:  archiveInfo.Components,
-			Pro:         archiveInfo.Pro,
-			CacheDir:    cache.DefaultDir("chisel"),
-			PubKeys:     archiveInfo.PubKeys,
-			Unsupported: archiveInfo.Unsupported,
+			Label:        archiveName,
+			Version:      archiveInfo.Version,
+			Arch:         cmd.Arch,
+			Suites:       archiveInfo.Suites,
+			Components:   archiveInfo.Components,
+			Pro:          archiveInfo.Pro,
+			CacheDir:     cache.DefaultDir("chisel"),
+			PubKeys:      archiveInfo.PubKeys,
+			Unmaintained: unmaintained,
 		})
 		if err != nil {
 			if err == archive.ErrCredentialsNotFound {

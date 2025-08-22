@@ -2496,6 +2496,169 @@ var setupTests = []setupTest{{
 		`,
 	},
 	relerror: `chisel.yaml: v2-archives is deprecated since format v2`,
+}, {
+	summary: "Maintenance all dates",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v1
+			maintenance:
+				standard: 2001-02-03
+				expanded: 2004-05-06
+				legacy: 2007-08-09
+				end-of-life: 2010-11-12
+			archives:
+				ubuntu:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	release: &setup.Release{
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Name:   "mypkg",
+				Path:   "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{},
+			},
+		},
+		Maintenance: &setup.Maintenance{
+			Standard:  time.Date(2001, time.February, 3, 0, 0, 0, 0, time.UTC),
+			Expanded:  time.Date(2004, time.May, 6, 0, 0, 0, 0, time.UTC),
+			Legacy:    time.Date(2007, time.August, 9, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2010, time.November, 12, 0, 0, 0, 0, time.UTC),
+		},
+	},
+}, {
+	summary: "Maintenance: legacy and expanded are optional",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v1
+			maintenance:
+				standard: 2001-02-03
+				end-of-life: 2010-11-12
+			archives:
+				ubuntu:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	release: &setup.Release{
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Name:   "mypkg",
+				Path:   "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{},
+			},
+		},
+		Maintenance: &setup.Maintenance{
+			Standard:  time.Date(2001, time.February, 3, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2010, time.November, 12, 0, 0, 0, 0, time.UTC),
+		},
+	},
+}, {
+	summary: "Maintenance: end-of-life is required",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v1
+			maintenance:
+				standard: 2001-02-03
+			archives:
+				ubuntu:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	relerror: `chisel.yaml: cannot parse maintenance: "end-of-life" cannot be empty`,
+}, {
+	summary: "Maintenance: standard is required",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v1
+			maintenance:
+				end-of-life: 2010-11-12
+			archives:
+				ubuntu:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	relerror: `chisel.yaml: cannot parse maintenance: "standard" cannot be empty`,
+}, {
+	summary: "Maintenance: invalid date format",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v1
+			maintenance:
+				standard: 23 Oct 2010
+			archives:
+				ubuntu:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	relerror: `chisel.yaml: cannot parse maintenance: expected format for "standard" is YYYY-MM-DD`,
 }}
 
 var defaultChiselYaml = `

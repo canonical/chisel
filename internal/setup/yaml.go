@@ -2,10 +2,12 @@ package setup
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"path"
 	"slices"
 	"strings"
+	"time"
 
 	"golang.org/x/crypto/openpgp/packet"
 	"gopkg.in/yaml.v3"
@@ -23,9 +25,10 @@ func (p *Package) MarshalYAML() (interface{}, error) {
 var _ yaml.Marshaler = (*Package)(nil)
 
 type yamlRelease struct {
-	Format   string                 `yaml:"format"`
-	Archives map[string]yamlArchive `yaml:"archives"`
-	PubKeys  map[string]yamlPubKey  `yaml:"public-keys"`
+	Format      string                 `yaml:"format"`
+	Maintenance yamlMaintenance        `yaml:"maintenance"`
+	Archives    map[string]yamlArchive `yaml:"archives"`
+	PubKeys     map[string]yamlPubKey  `yaml:"public-keys"`
 	// "v2-archives" is used for backwards compatibility with Chisel <= 1.0.0,
 	// where it will be ignored. In new versions, it will be parsed with the new
 	// fields that break said compatibility (e.g. "pro" archives) and merged
@@ -39,14 +42,13 @@ const (
 )
 
 type yamlArchive struct {
-	Version     string   `yaml:"version"`
-	Suites      []string `yaml:"suites"`
-	Components  []string `yaml:"components"`
-	Priority    *int     `yaml:"priority"`
-	Pro         string   `yaml:"pro"`
-	Default     bool     `yaml:"default"`
-	PubKeys     []string `yaml:"public-keys"`
-	Unsupported bool     `yaml:"unsupported"`
+	Version    string   `yaml:"version"`
+	Suites     []string `yaml:"suites"`
+	Components []string `yaml:"components"`
+	Priority   *int     `yaml:"priority"`
+	Pro        string   `yaml:"pro"`
+	Default    bool     `yaml:"default"`
+	PubKeys    []string `yaml:"public-keys"`
 }
 
 type yamlPackage struct {
@@ -177,6 +179,13 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		return nil, fmt.Errorf("%s: no archives defined", fileName)
 	}
 
+	// Verify the date format for maintainance.
+	maintenance, err := parseYamlMaintenance(&yamlVar.Maintenance)
+	if err != nil {
+		return nil, fmt.Errorf("%s: cannot parse maintenance: %s", fileName, err)
+	}
+	release.Maintenance = &maintenance
+
 	// Decode the public keys and match against provided IDs.
 	pubKeys := make(map[string]*packet.PublicKey, len(yamlVar.PubKeys))
 	for keyName, yamlPubKey := range yamlVar.PubKeys {
@@ -260,14 +269,13 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 			}
 		}
 		release.Archives[archiveName] = &Archive{
-			Name:        archiveName,
-			Version:     details.Version,
-			Suites:      details.Suites,
-			Components:  details.Components,
-			Pro:         details.Pro,
-			Priority:    priority,
-			PubKeys:     archiveKeys,
-			Unsupported: details.Unsupported,
+			Name:       archiveName,
+			Version:    details.Version,
+			Suites:     details.Suites,
+			Components: details.Components,
+			Pro:        details.Pro,
+			Priority:   priority,
+			PubKeys:    archiveKeys,
 		}
 	}
 	if (hasPriority && archiveNoPriority != "") ||
@@ -547,4 +555,51 @@ func packageToYAML(p *Package) (*yamlPackage, error) {
 		pkg.Slices[name] = *yamlSlice
 	}
 	return pkg, nil
+}
+
+type yamlMaintenance struct {
+	Standard  string `yaml:"standard"`
+	Expanded  string `yaml:"expanded"`
+	Legacy    string `yaml:"legacy"`
+	EndOfLife string `yaml:"end-of-life"`
+}
+
+func parseYamlMaintenance(yamlVar *yamlMaintenance) (Maintenance, error) {
+	maintenance := Maintenance{}
+
+	if yamlVar.Standard == "" {
+		return Maintenance{}, errors.New(`"standard" cannot be empty`)
+	}
+	date, err := time.Parse(time.DateOnly, yamlVar.Standard)
+	if err != nil {
+		return Maintenance{}, errors.New(`expected format for "standard" is YYYY-MM-DD`)
+	}
+	maintenance.Standard = date
+
+	if yamlVar.EndOfLife == "" {
+		return Maintenance{}, errors.New(`"end-of-life" cannot be empty`)
+	}
+	date, err = time.Parse(time.DateOnly, yamlVar.EndOfLife)
+	if err != nil {
+		return Maintenance{}, errors.New(`expected format for "end-of-life" is YYYY-MM-DD`)
+	}
+	maintenance.EndOfLife = date
+
+	if yamlVar.Expanded != "" {
+		date, err = time.Parse(time.DateOnly, yamlVar.Expanded)
+		if err != nil {
+			return Maintenance{}, errors.New(`expected format for "expanded" is YYYY-MM-DD`)
+		}
+		maintenance.Expanded = date
+	}
+
+	if yamlVar.Legacy != "" {
+		date, err = time.Parse(time.DateOnly, yamlVar.Legacy)
+		if err != nil {
+			return Maintenance{}, errors.New(`expected format for "legacy" is YYYY-MM-DD`)
+		}
+		maintenance.Legacy = date
+	}
+
+	return maintenance, nil
 }

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"golang.org/x/crypto/openpgp/packet"
 
@@ -16,21 +17,28 @@ import (
 // Release is a collection of package slices targeting a particular
 // distribution version.
 type Release struct {
-	Path     string
-	Packages map[string]*Package
-	Archives map[string]*Archive
+	Path        string
+	Packages    map[string]*Package
+	Archives    map[string]*Archive
+	Maintenance *Maintenance
+}
+
+type Maintenance struct {
+	Standard  time.Time
+	Expanded  time.Time
+	Legacy    time.Time
+	EndOfLife time.Time
 }
 
 // Archive is the location from which binary packages are obtained.
 type Archive struct {
-	Name        string
-	Version     string
-	Suites      []string
-	Components  []string
-	Priority    int
-	Pro         string
-	PubKeys     []*packet.PublicKey
-	Unsupported bool
+	Name       string
+	Version    string
+	Suites     []string
+	Components []string
+	Priority   int
+	Pro        string
+	PubKeys    []*packet.PublicKey
 }
 
 // Package holds a collection of slices that represent parts of themselves.
