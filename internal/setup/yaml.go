@@ -567,6 +567,11 @@ type yamlMaintenance struct {
 func parseYamlMaintenance(yamlVar *yamlMaintenance) (Maintenance, error) {
 	maintenance := Maintenance{}
 
+	if *yamlVar == (yamlMaintenance{}) {
+		// Maintenance is optional.
+		return Maintenance{}, nil
+	}
+
 	if yamlVar.Standard == "" {
 		return Maintenance{}, errors.New(`"standard" cannot be empty`)
 	}
