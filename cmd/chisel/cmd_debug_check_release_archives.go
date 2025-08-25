@@ -101,7 +101,7 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 	slices.Sort(sortedPaths)
 	for _, path := range sortedPaths {
 		observations := pathObs[path]
-		if hasPathConflict(observations) {
+		if hasPathConflict(release, path, observations) {
 			issues = append(issues, pathConflict{
 				// At this time, there is only one possible type of conflict,
 				// we do not need to check.
@@ -207,16 +207,50 @@ func computePathObservations(release *setup.Release, archives map[string]archive
 	return pathObs, nil
 }
 
-func hasPathConflict(observations []pathObservation) bool {
-	if len(observations) == 0 {
+func hasPathConflict(release *setup.Release, path string, observations []pathObservation) bool {
+	if len(observations) < 2 {
 		return false
 	}
 
-	base := observations[0]
-	for _, observation := range observations[1:] {
+	// Only when a package declares a path that will extract the parent
+	// directory we could have a conflict.
+	// If the observation path itself is listed, it was already handled it
+	// during the release validation.
+	var mightConflict []pathObservation
+	for _, observation := range observations {
+		for _, pkgName := range observation.Packages {
+			for _, slice := range release.Packages[pkgName].Slices {
+				// Symlinks do not containg trailing slash but folders do,
+				// check for both.
+				_, ok1 := slice.Contents[path]
+				_, ok2 := slice.Contents[path+"/"]
+				isPathListed := ok1 || ok2
+				if !isPathListed && extractsParentPath(slice, path) {
+					mightConflict = append(mightConflict, observation)
+				}
+			}
+		}
+	}
+
+	if len(mightConflict) == 0 {
+		return false
+	}
+
+	base := mightConflict[0]
+	for _, observation := range mightConflict[1:] {
 		if observation.Kind != base.Kind ||
 			observation.Mode != base.Mode ||
 			observation.Link != base.Link {
+			return true
+		}
+	}
+	return false
+}
+
+func extractsParentPath(slice *setup.Slice, parent string) bool {
+	slashParent := parent + "/"
+	for path := range slice.Contents {
+		if strings.HasPrefix(path, slashParent) {
 			return true
 		}
 	}

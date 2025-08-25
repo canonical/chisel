@@ -1,0 +1,9 @@
+summary: Check cohesion runs correctly
+
+execute: |
+  chisel debug check-release-archives --release ${OS}-${RELEASE} 2> stderr.out || true
+
+  # We cannot assert that the command completed succesfully as that depends on
+  # the release itself. We check for progress instead.
+  grep -q "Fetching" stderr.out
+  grep -q "Processing archive" stderr.out
