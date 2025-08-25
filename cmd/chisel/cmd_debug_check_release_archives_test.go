@@ -277,19 +277,7 @@ func (s *ChiselSuite) TestRun(c *C) {
 // makeChiselYaml returns a valid chisel.yaml that contains the archives
 // supplied.
 func makeChiselYaml(archives []string) string {
-	archiveKey := testutil.PGPKeys["key-ubuntu-2018"]
-	rawChiselYaml := testutil.Reindent(`
-		format: v1
-		archives:
-			ubuntu:
-				version: 22.04
-				components: [main, universe]
-				suites: [jammy]
-				public-keys: [test-key]
-		public-keys:
-			test-key:
-				id: ` + archiveKey.ID + `
-				armor: |` + "\n" + testutil.PrefixEachLine(archiveKey.PubKeyArmor, "\t\t\t\t\t\t"))
+	rawChiselYaml := testutil.Reindent(testutil.DefaultChiselYaml)
 
 	chiselYaml := map[string]any{}
 	err := yaml.Unmarshal([]byte(rawChiselYaml), chiselYaml)
@@ -313,7 +301,9 @@ func makeChiselYaml(archives []string) string {
 	if err != nil {
 		panic(err)
 	}
-	return string(bs)
+	out := string(bs)
+	// Maintenance dates get marshaled as <date>T00:00:00Z by default.
+	return strings.ReplaceAll(out, "T00:00:00Z", "")
 }
 
 func deepCopyYAML(src map[string]any) map[string]any {

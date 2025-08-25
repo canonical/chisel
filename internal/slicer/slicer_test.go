@@ -1889,20 +1889,6 @@ var slicerTests = []slicerTest{{
 	logOutput: `(?s).*Warning: Path "/parent/" has diverging modes in different packages\. Please report\..*`,
 }}
 
-var defaultChiselYaml = `
-	format: v1
-	archives:
-		ubuntu:
-			version: 22.04
-			components: [main, universe]
-			suites: [jammy]
-			public-keys: [test-key]
-	public-keys:
-		test-key:
-			id: ` + testKey.ID + `
-			armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
-`
-
 func (s *S) TestRun(c *C) {
 	// Run tests for "archives" field in "v1" format.
 	runSlicerTests(s, c, slicerTests)
@@ -1948,7 +1934,7 @@ func runSlicerTests(s *S, c *C, tests []slicerTest) {
 			c.Logf("Summary: %s", test.summary)
 
 			if _, ok := test.release["chisel.yaml"]; !ok {
-				test.release["chisel.yaml"] = defaultChiselYaml
+				test.release["chisel.yaml"] = testutil.DefaultChiselYaml
 			}
 			if test.pkgs == nil {
 				test.pkgs = []*testutil.TestPackage{{

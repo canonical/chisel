@@ -510,7 +510,7 @@ func (s *httpSuite) TestOpenUnsupportedArchives(c *C) {
 	// default ubuntu archive where the release is no longer available.
 	c.Assert(err, Not(IsNil))
 
-	options.Unsupported = true
+	options.Unmaintained = true
 	_, err = archive.Open(&options)
 	c.Assert(err, IsNil)
 }
@@ -823,15 +823,15 @@ func (s *S) testOpenArchiveArch(c *C, test realArchiveTest, arch string) {
 	c.Logf("Checking ubuntu archive %s %s...", test.name, arch)
 
 	options := archive.Options{
-		Label:       "ubuntu",
-		Version:     test.version,
-		Arch:        arch,
-		Suites:      test.suites,
-		Components:  test.components,
-		CacheDir:    c.MkDir(),
-		Pro:         test.pro,
-		PubKeys:     test.archivePubKeys,
-		Unsupported: test.unsupported,
+		Label:        "ubuntu",
+		Version:      test.version,
+		Arch:         arch,
+		Suites:       test.suites,
+		Components:   test.components,
+		CacheDir:     c.MkDir(),
+		Pro:          test.pro,
+		PubKeys:      test.archivePubKeys,
+		Unmaintained: test.unsupported,
 	}
 
 	testArchive, err := archive.Open(&options)

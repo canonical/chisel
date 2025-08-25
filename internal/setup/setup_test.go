@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"golang.org/x/crypto/openpgp/packet"
 	. "gopkg.in/check.v1"
@@ -90,6 +91,7 @@ var setupTests = []setupTest{{
 				Slices: map[string]*setup.Slice{},
 			},
 		},
+		Maintenance: &setup.Maintenance{},
 	},
 }, {
 	summary: "Coverage of multiple path kinds",
@@ -161,6 +163,10 @@ var setupTests = []setupTest{{
 				},
 			},
 		},
+		Maintenance: &setup.Maintenance{
+			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
+		},
 	},
 }, {
 	summary: "Empty contents",
@@ -198,6 +204,10 @@ var setupTests = []setupTest{{
 					},
 				},
 			},
+		},
+		Maintenance: &setup.Maintenance{
+			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
 		},
 	},
 }, {
@@ -463,6 +473,10 @@ var setupTests = []setupTest{{
 				},
 			},
 		},
+		Maintenance: &setup.Maintenance{
+			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
+		},
 	},
 }, {
 	summary: "Conflicting globs",
@@ -668,6 +682,10 @@ var setupTests = []setupTest{{
 				},
 			},
 		},
+		Maintenance: &setup.Maintenance{
+			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
+		},
 	},
 }, {
 	summary: "Multiple architecture selection",
@@ -704,6 +722,10 @@ var setupTests = []setupTest{{
 					},
 				},
 			},
+		},
+		Maintenance: &setup.Maintenance{
+			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
 		},
 	},
 }, {
@@ -743,6 +765,10 @@ var setupTests = []setupTest{{
 					},
 				},
 			},
+		},
+		Maintenance: &setup.Maintenance{
+			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
 		},
 	},
 }, {
@@ -798,6 +824,7 @@ var setupTests = []setupTest{{
 				Slices: map[string]*setup.Slice{},
 			},
 		},
+		Maintenance: &setup.Maintenance{},
 	},
 }, {
 	summary: "Multiple archives inconsistent use of priorities",
@@ -935,6 +962,10 @@ var setupTests = []setupTest{{
 	input: map[string]string{
 		"chisel.yaml": `
 			format: v1
+			maintenance:
+			    standard: 2025-01-01
+			    end-of-life: 2100-01-01
+				madeUpKey7: whatever
 			archives:
 				ubuntu:
 					version: 22.04
@@ -983,6 +1014,10 @@ var setupTests = []setupTest{{
 					},
 				},
 			},
+		},
+		Maintenance: &setup.Maintenance{
+			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
 		},
 	},
 }, {
@@ -1041,6 +1076,7 @@ var setupTests = []setupTest{{
 				Slices: map[string]*setup.Slice{},
 			},
 		},
+		Maintenance: &setup.Maintenance{},
 	},
 }, {
 	summary: "Archive without public keys",
@@ -1156,6 +1192,10 @@ var setupTests = []setupTest{{
 				},
 			},
 		},
+		Maintenance: &setup.Maintenance{
+			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
+		},
 	},
 }, {
 	summary: "Very short, invalid package name",
@@ -1227,6 +1267,10 @@ var setupTests = []setupTest{{
 				},
 			},
 		},
+		Maintenance: &setup.Maintenance{
+			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
+		},
 	},
 }, {
 	summary: "Package essentials with slices from other packages",
@@ -1296,6 +1340,10 @@ var setupTests = []setupTest{{
 					},
 				},
 			},
+		},
+		Maintenance: &setup.Maintenance{
+			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
 		},
 	},
 }, {
@@ -1451,6 +1499,10 @@ var setupTests = []setupTest{{
 				},
 			},
 		},
+		Maintenance: &setup.Maintenance{
+			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
+		},
 	},
 	selslices: []setup.SliceKey{{"mypkg", "myslice"}},
 	selection: &setup.Selection{
@@ -1497,6 +1549,10 @@ var setupTests = []setupTest{{
 					},
 				},
 			},
+		},
+		Maintenance: &setup.Maintenance{
+			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
 		},
 	},
 	selslices: []setup.SliceKey{{"mypkg", "myslice"}},
@@ -1599,6 +1655,10 @@ var setupTests = []setupTest{{
 					},
 				},
 			},
+		},
+		Maintenance: &setup.Maintenance{
+			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
 		},
 	},
 }, {
@@ -1739,6 +1799,7 @@ var setupTests = []setupTest{{
 				Slices: map[string]*setup.Slice{},
 			},
 		},
+		Maintenance: &setup.Maintenance{},
 	},
 }, {
 	summary: "Pro values in archives",
@@ -1850,6 +1911,7 @@ var setupTests = []setupTest{{
 				Slices: map[string]*setup.Slice{},
 			},
 		},
+		Maintenance: &setup.Maintenance{},
 	},
 }, {
 	summary: "Default is ignored",
@@ -1905,6 +1967,7 @@ var setupTests = []setupTest{{
 				Slices: map[string]*setup.Slice{},
 			},
 		},
+		Maintenance: &setup.Maintenance{},
 	},
 }, {
 	summary: "Multiple default archives",
@@ -1990,6 +2053,7 @@ var setupTests = []setupTest{{
 				Slices: map[string]*setup.Slice{},
 			},
 		},
+		Maintenance: &setup.Maintenance{},
 	},
 }, {
 	summary: "Cannot define same archive name in archives and v2-archives",
@@ -2152,6 +2216,10 @@ var setupTests = []setupTest{{
 					},
 				},
 			},
+		},
+		Maintenance: &setup.Maintenance{
+			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
 		},
 	},
 	prefers: map[string]string{
@@ -2661,20 +2729,6 @@ var setupTests = []setupTest{{
 	relerror: `chisel.yaml: cannot parse maintenance: expected format for "standard" is YYYY-MM-DD`,
 }}
 
-var defaultChiselYaml = `
-	format: v1
-	archives:
-		ubuntu:
-			version: 22.04
-			components: [main, universe]
-			suites: [jammy]
-			public-keys: [test-key]
-	public-keys:
-		test-key:
-			id: ` + testKey.ID + `
-			armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
-`
-
 func (s *S) TestParseRelease(c *C) {
 	// Run tests for "archives" field in "v1" format.
 	runParseReleaseTests(c, setupTests)
@@ -2717,7 +2771,7 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 		c.Logf("Summary: %s", test.summary)
 
 		if _, ok := test.input["chisel.yaml"]; !ok {
-			test.input["chisel.yaml"] = string(defaultChiselYaml)
+			test.input["chisel.yaml"] = string(testutil.DefaultChiselYaml)
 		}
 		if test.prefers == nil {
 			test.prefers = make(map[string]string)
@@ -2783,7 +2837,7 @@ func (s *S) TestPackageMarshalYAML(c *C) {
 
 		data, ok := test.input["chisel.yaml"]
 		if !ok {
-			data = defaultChiselYaml
+			data = testutil.DefaultChiselYaml
 		}
 
 		dir := c.MkDir()
@@ -2920,7 +2974,7 @@ func (s *S) TestPackageYAMLFormat(c *C) {
 		c.Logf("Summary: %s", test.summary)
 
 		if _, ok := test.input["chisel.yaml"]; !ok {
-			test.input["chisel.yaml"] = defaultChiselYaml
+			test.input["chisel.yaml"] = testutil.DefaultChiselYaml
 		}
 
 		dir := c.MkDir()
