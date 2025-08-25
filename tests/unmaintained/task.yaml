@@ -9,6 +9,7 @@ environment:
 execute: |
   mkdir "${ROOTFS}"
 
+  # TODO: change to the upstream release when it has maintenance set.
   ! OUTPUT=$(chisel cut --release ./release-${RELEASE} --root ${ROOTFS} hello_bins 2>&1)
   echo "$OUTPUT" | grep "cannot use unmaintained release, consider using --ignore"
 
@@ -18,6 +19,7 @@ execute: |
   test -f ${ROOTFS}/usr/bin/hello
   test -f ${ROOTFS}/usr/share/doc/hello/copyright
 
-  sed "s/unsupported: true/unsupported: false/" -i ./release-${RELEASE}/chisel.yaml
+  # Remove the maintenance block.
+  sed -e "/maintenance:/,+3d" -i ./release-${RELEASE}/chisel.yaml
   ! chisel cut --release ./release-${RELEASE} --root ${ROOTFS} --ignore=unmaintained
   ! chisel cut --release ./release-${RELEASE} --root ${ROOTFS} hello_bins

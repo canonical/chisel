@@ -62,7 +62,10 @@ func (cmd *cmdCut) Execute(args []string) error {
 		return err
 	}
 
-	unmaintained := release.Maintenance.EndOfLife.Before(time.Now())
+	unmaintained := false
+	if *release.Maintenance != (setup.Maintenance{}) {
+		unmaintained = release.Maintenance.EndOfLife.Before(time.Now())
+	}
 	if unmaintained {
 		if cmd.Ignore == "unmaintained" {
 			logf("Warning: This release is no longer officially maintained, consider changing to a newer release")

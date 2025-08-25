@@ -1,9 +1,12 @@
 format: v2
 
+maintenance:
+  standard: 2023-10-01
+  end-of-life: 2024-04-01
+
 archives:
-  ubuntu-23.10:
+  ubuntu:
     version: 23.10
-    unsupported: true
     components: [main, universe]
     suites: [mantic, mantic-security, mantic-updates]
     public-keys: [ubuntu-archive-key-2018]
