@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"golang.org/x/crypto/openpgp/packet"
 	. "gopkg.in/check.v1"
@@ -59,9 +58,6 @@ var setupTests = []setupTest{{
 	input: map[string]string{
 		"chisel.yaml": `
 			format: v1
-			maintenance:
-			    standard: 2025-01-01
-			    end-of-life: 2100-01-01
 			archives:
 				ubuntu:
 					version: 22.04
@@ -93,10 +89,6 @@ var setupTests = []setupTest{{
 				Path:   "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{},
 			},
-		},
-		Maintenance: &setup.Maintenance{
-			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
-			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
 		},
 	},
 }, {
@@ -169,10 +161,6 @@ var setupTests = []setupTest{{
 				},
 			},
 		},
-		Maintenance: &setup.Maintenance{
-			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
-			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
-		},
 	},
 }, {
 	summary: "Empty contents",
@@ -210,10 +198,6 @@ var setupTests = []setupTest{{
 					},
 				},
 			},
-		},
-		Maintenance: &setup.Maintenance{
-			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
-			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
 		},
 	},
 }, {
@@ -479,10 +463,6 @@ var setupTests = []setupTest{{
 				},
 			},
 		},
-		Maintenance: &setup.Maintenance{
-			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
-			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
-		},
 	},
 }, {
 	summary: "Conflicting globs",
@@ -688,10 +668,6 @@ var setupTests = []setupTest{{
 				},
 			},
 		},
-		Maintenance: &setup.Maintenance{
-			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
-			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
-		},
 	},
 }, {
 	summary: "Multiple architecture selection",
@@ -728,10 +704,6 @@ var setupTests = []setupTest{{
 					},
 				},
 			},
-		},
-		Maintenance: &setup.Maintenance{
-			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
-			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
 		},
 	},
 }, {
@@ -772,19 +744,12 @@ var setupTests = []setupTest{{
 				},
 			},
 		},
-		Maintenance: &setup.Maintenance{
-			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
-			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
-		},
 	},
 }, {
 	summary: "Multiple archives with priorities",
 	input: map[string]string{
 		"chisel.yaml": `
 			format: v1
-			maintenance:
-			    standard: 2025-01-01
-			    end-of-life: 2100-01-01
 			archives:
 				foo:
 					version: 22.04
@@ -833,19 +798,12 @@ var setupTests = []setupTest{{
 				Slices: map[string]*setup.Slice{},
 			},
 		},
-		Maintenance: &setup.Maintenance{
-			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
-			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
-		},
 	},
 }, {
 	summary: "Multiple archives inconsistent use of priorities",
 	input: map[string]string{
 		"chisel.yaml": `
 			format: v1
-			maintenance:
-			    standard: 2025-01-01
-			    end-of-life: 2100-01-01
 			archives:
 				foo:
 					version: 22.04
@@ -873,9 +831,6 @@ var setupTests = []setupTest{{
 	input: map[string]string{
 		"chisel.yaml": `
 			format: v1
-			maintenance:
-			    standard: 2025-01-01
-			    end-of-life: 2100-01-01
 			archives:
 				foo:
 					version: 22.04
@@ -902,9 +857,6 @@ var setupTests = []setupTest{{
 	input: map[string]string{
 		"chisel.yaml": `
 			format: v1
-			maintenance:
-			    standard: 2025-01-01
-			    end-of-life: 2100-01-01
 			archives:
 				ubuntu:
 					version: 22.04
@@ -917,9 +869,6 @@ var setupTests = []setupTest{{
 	input: map[string]string{
 		"chisel.yaml": `
 			format: v1
-			maintenance:
-			    standard: 2025-01-01
-			    end-of-life: 2100-01-01
 			archives:
 				foo:
 					version: 22.04
@@ -948,9 +897,6 @@ var setupTests = []setupTest{{
 	input: map[string]string{
 		"chisel.yaml": `
 			format: v1
-			maintenance:
-			    standard: 2025-01-01
-			    end-of-life: 2100-01-01
 			archives:
 				foo:
 					version: 22.04
@@ -970,9 +916,6 @@ var setupTests = []setupTest{{
 	input: map[string]string{
 		"chisel.yaml": `
 			format: v1
-			maintenance:
-			    standard: 2025-01-01
-			    end-of-life: 2100-01-01
 			archives:
 				foo:
 					version: 22.04
@@ -992,10 +935,6 @@ var setupTests = []setupTest{{
 	input: map[string]string{
 		"chisel.yaml": `
 			format: v1
-			maintenance:
-			    standard: 2025-01-01
-			    end-of-life: 2100-01-01
-				madeUpKey7: whatever
 			archives:
 				ubuntu:
 					version: 22.04
@@ -1045,19 +984,12 @@ var setupTests = []setupTest{{
 				},
 			},
 		},
-		Maintenance: &setup.Maintenance{
-			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
-			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
-		},
 	},
 }, {
 	summary: "Archives with public keys",
 	input: map[string]string{
 		"chisel.yaml": `
 			format: v1
-			maintenance:
-			    standard: 2025-01-01
-			    end-of-life: 2100-01-01
 			archives:
 				foo:
 					version: 22.04
@@ -1109,19 +1041,12 @@ var setupTests = []setupTest{{
 				Slices: map[string]*setup.Slice{},
 			},
 		},
-		Maintenance: &setup.Maintenance{
-			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
-			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
-		},
 	},
 }, {
 	summary: "Archive without public keys",
 	input: map[string]string{
 		"chisel.yaml": `
 			format: v1
-			maintenance:
-			    standard: 2025-01-01
-			    end-of-life: 2100-01-01
 			archives:
 				foo:
 					version: 22.04
@@ -1135,9 +1060,6 @@ var setupTests = []setupTest{{
 	input: map[string]string{
 		"chisel.yaml": `
 			format: v1
-			maintenance:
-			    standard: 2025-01-01
-			    end-of-life: 2100-01-01
 			archives:
 				foo:
 					version: 22.04
@@ -1155,9 +1077,6 @@ var setupTests = []setupTest{{
 	input: map[string]string{
 		"chisel.yaml": `
 			format: v1
-			maintenance:
-			    standard: 2025-01-01
-			    end-of-life: 2100-01-01
 			archives:
 				foo:
 					version: 22.04
@@ -1185,9 +1104,6 @@ var setupTests = []setupTest{{
 	input: map[string]string{
 		"chisel.yaml": `
 			format: v1
-			maintenance:
-			    standard: 2025-01-01
-			    end-of-life: 2100-01-01
 			archives:
 				foo:
 					version: 22.04
@@ -1239,10 +1155,6 @@ var setupTests = []setupTest{{
 					},
 				},
 			},
-		},
-		Maintenance: &setup.Maintenance{
-			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
-			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
 		},
 	},
 }, {
@@ -1315,10 +1227,6 @@ var setupTests = []setupTest{{
 				},
 			},
 		},
-		Maintenance: &setup.Maintenance{
-			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
-			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
-		},
 	},
 }, {
 	summary: "Package essentials with slices from other packages",
@@ -1388,10 +1296,6 @@ var setupTests = []setupTest{{
 					},
 				},
 			},
-		},
-		Maintenance: &setup.Maintenance{
-			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
-			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
 		},
 	},
 }, {
@@ -1547,10 +1451,6 @@ var setupTests = []setupTest{{
 				},
 			},
 		},
-		Maintenance: &setup.Maintenance{
-			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
-			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
-		},
 	},
 	selslices: []setup.SliceKey{{"mypkg", "myslice"}},
 	selection: &setup.Selection{
@@ -1597,10 +1497,6 @@ var setupTests = []setupTest{{
 					},
 				},
 			},
-		},
-		Maintenance: &setup.Maintenance{
-			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
-			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
 		},
 	},
 	selslices: []setup.SliceKey{{"mypkg", "myslice"}},
@@ -1704,10 +1600,6 @@ var setupTests = []setupTest{{
 				},
 			},
 		},
-		Maintenance: &setup.Maintenance{
-			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
-			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
-		},
 	},
 }, {
 	summary: "Generate paths cannot conflict with any other path",
@@ -1787,9 +1679,6 @@ var setupTests = []setupTest{{
 	input: map[string]string{
 		"chisel.yaml": `
 			format: v1
-			maintenance:
-			    standard: 2025-01-01
-			    end-of-life: 2100-01-01
 			archives:
 				default:
 					default: true
@@ -1850,19 +1739,12 @@ var setupTests = []setupTest{{
 				Slices: map[string]*setup.Slice{},
 			},
 		},
-		Maintenance: &setup.Maintenance{
-			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
-			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
-		},
 	},
 }, {
 	summary: "Pro values in archives",
 	input: map[string]string{
 		"chisel.yaml": `
 			format: v1
-			maintenance:
-			    standard: 2025-01-01
-			    end-of-life: 2100-01-01
 			archives:
 				ubuntu:
 					version: 20.04
@@ -1968,19 +1850,12 @@ var setupTests = []setupTest{{
 				Slices: map[string]*setup.Slice{},
 			},
 		},
-		Maintenance: &setup.Maintenance{
-			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
-			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
-		},
 	},
 }, {
 	summary: "Default is ignored",
 	input: map[string]string{
 		"chisel.yaml": `
 			format: v1
-			maintenance:
-			    standard: 2025-01-01
-			    end-of-life: 2100-01-01
 			archives:
 				default:
 					default: true
@@ -2030,19 +1905,12 @@ var setupTests = []setupTest{{
 				Slices: map[string]*setup.Slice{},
 			},
 		},
-		Maintenance: &setup.Maintenance{
-			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
-			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
-		},
 	},
 }, {
 	summary: "Multiple default archives",
 	input: map[string]string{
 		"chisel.yaml": `
 			format: v1
-			maintenance:
-			    standard: 2025-01-01
-			    end-of-life: 2100-01-01
 			archives:
 				foo:
 					default: true
@@ -2071,9 +1939,6 @@ var setupTests = []setupTest{{
 	input: map[string]string{
 		"chisel.yaml": `
 			format: v1
-			maintenance:
-			    standard: 2025-01-01
-			    end-of-life: 2100-01-01
 			archives:
 				ubuntu:
 					version: 20.04
@@ -2125,19 +1990,12 @@ var setupTests = []setupTest{{
 				Slices: map[string]*setup.Slice{},
 			},
 		},
-		Maintenance: &setup.Maintenance{
-			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
-			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
-		},
 	},
 }, {
 	summary: "Cannot define same archive name in archives and v2-archives",
 	input: map[string]string{
 		"chisel.yaml": `
 			format: v1
-			maintenance:
-			    standard: 2025-01-01
-			    end-of-life: 2100-01-01
 			archives:
 				ubuntu:
 					version: 20.04
@@ -2294,10 +2152,6 @@ var setupTests = []setupTest{{
 					},
 				},
 			},
-		},
-		Maintenance: &setup.Maintenance{
-			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
-			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
 		},
 	},
 	prefers: map[string]string{
@@ -2601,9 +2455,6 @@ var setupTests = []setupTest{{
 	input: map[string]string{
 		"chisel.yaml": `
 			format: v2
-			maintenance:
-			    standard: 2025-01-01
-			    end-of-life: 2100-01-01
 			archives:
 				ubuntu:
 					default: true
@@ -2810,6 +2661,20 @@ var setupTests = []setupTest{{
 	relerror: `chisel.yaml: cannot parse maintenance: expected format for "standard" is YYYY-MM-DD`,
 }}
 
+var defaultChiselYaml = `
+	format: v1
+	archives:
+		ubuntu:
+			version: 22.04
+			components: [main, universe]
+			suites: [jammy]
+			public-keys: [test-key]
+	public-keys:
+		test-key:
+			id: ` + testKey.ID + `
+			armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+`
+
 func (s *S) TestParseRelease(c *C) {
 	// Run tests for "archives" field in "v1" format.
 	runParseReleaseTests(c, setupTests)
@@ -2852,7 +2717,7 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 		c.Logf("Summary: %s", test.summary)
 
 		if _, ok := test.input["chisel.yaml"]; !ok {
-			test.input["chisel.yaml"] = string(testutil.DefaultChiselYaml)
+			test.input["chisel.yaml"] = string(defaultChiselYaml)
 		}
 		if test.prefers == nil {
 			test.prefers = make(map[string]string)
@@ -2918,7 +2783,7 @@ func (s *S) TestPackageMarshalYAML(c *C) {
 
 		data, ok := test.input["chisel.yaml"]
 		if !ok {
-			data = testutil.DefaultChiselYaml
+			data = defaultChiselYaml
 		}
 
 		dir := c.MkDir()
@@ -3055,7 +2920,7 @@ func (s *S) TestPackageYAMLFormat(c *C) {
 		c.Logf("Summary: %s", test.summary)
 
 		if _, ok := test.input["chisel.yaml"]; !ok {
-			test.input["chisel.yaml"] = testutil.DefaultChiselYaml
+			test.input["chisel.yaml"] = defaultChiselYaml
 		}
 
 		dir := c.MkDir()
