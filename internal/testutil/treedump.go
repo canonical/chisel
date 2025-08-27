@@ -79,7 +79,7 @@ func TreeDump(dir string) map[string]string {
 	}
 
 	// Append identifiers to paths who share an inode e.g. hard links.
-	for i := 0; i < len(inodes); i++ {
+	for i := range inodes {
 		for _, path := range pathsByInodes[inodes[i]] {
 			result[path] = fmt.Sprintf("%s <%d>", result[path], i+1)
 		}
