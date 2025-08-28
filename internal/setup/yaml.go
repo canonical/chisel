@@ -618,15 +618,15 @@ func parseYamlMaintenance(yamlVar *yamlMaintenance) (Maintenance, error) {
 var defaultMaintenance = map[string]Maintenance{
 	"20.04": {
 		Standard:  time.Date(2020, time.April, 23, 0, 0, 0, 0, time.UTC),
-		Expanded:  time.Date(2025, time.May, 23, 0, 0, 0, 0, time.UTC),
+		Expanded:  time.Date(2025, time.May, 29, 0, 0, 0, 0, time.UTC),
 		Legacy:    time.Date(2030, time.April, 23, 0, 0, 0, 0, time.UTC),
-		EndOfLife: time.Date(2032, time.April, 23, 0, 0, 0, 0, time.UTC),
+		EndOfLife: time.Date(2032, time.April, 27, 0, 0, 0, 0, time.UTC),
 	},
 	"22.04": {
 		Standard:  time.Date(2022, time.April, 21, 0, 0, 0, 0, time.UTC),
-		Expanded:  time.Date(2027, time.June, 21, 0, 0, 0, 0, time.UTC),
+		Expanded:  time.Date(2027, time.June, 1, 0, 0, 0, 0, time.UTC),
 		Legacy:    time.Date(2032, time.April, 21, 0, 0, 0, 0, time.UTC),
-		EndOfLife: time.Date(2034, time.April, 21, 0, 0, 0, 0, time.UTC),
+		EndOfLife: time.Date(2034, time.April, 25, 0, 0, 0, 0, time.UTC),
 	},
 	"22.10": {
 		Standard:  time.Date(2022, time.October, 20, 0, 0, 0, 0, time.UTC),
@@ -642,9 +642,9 @@ var defaultMaintenance = map[string]Maintenance{
 	},
 	"24.04": {
 		Standard:  time.Date(2024, time.April, 25, 0, 0, 0, 0, time.UTC),
-		Expanded:  time.Date(2029, time.June, 25, 0, 0, 0, 0, time.UTC),
+		Expanded:  time.Date(2029, time.May, 31, 0, 0, 0, 0, time.UTC),
 		Legacy:    time.Date(2034, time.April, 25, 0, 0, 0, 0, time.UTC),
-		EndOfLife: time.Date(2036, time.April, 25, 0, 0, 0, 0, time.UTC),
+		EndOfLife: time.Date(2036, time.April, 29, 0, 0, 0, 0, time.UTC),
 	},
 	"24.10": {
 		Standard:  time.Date(2024, time.October, 10, 0, 0, 0, 0, time.UTC),
@@ -652,6 +652,6 @@ var defaultMaintenance = map[string]Maintenance{
 	},
 	"25.04": {
 		Standard:  time.Date(2025, time.April, 17, 0, 0, 0, 0, time.UTC),
-		EndOfLife: time.Date(2026, time.January, 17, 0, 0, 0, 0, time.UTC),
+		EndOfLife: time.Date(2026, time.January, 15, 0, 0, 0, 0, time.UTC),
 	},
 }
