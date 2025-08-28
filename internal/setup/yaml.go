@@ -179,13 +179,6 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		return nil, fmt.Errorf("%s: no archives defined", fileName)
 	}
 
-	// Verify the date format for maintainance.
-	maintenance, err := parseYamlMaintenance(&yamlVar.Maintenance)
-	if err != nil {
-		return nil, fmt.Errorf("%s: cannot parse maintenance: %s", fileName, err)
-	}
-	release.Maintenance = &maintenance
-
 	// Decode the public keys and match against provided IDs.
 	pubKeys := make(map[string]*packet.PublicKey, len(yamlVar.PubKeys))
 	for keyName, yamlPubKey := range yamlVar.PubKeys {
@@ -297,6 +290,24 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		}
 		release.Archives[defaultArchive].Priority = 1
 	}
+
+	var maintenance Maintenance
+	if yamlVar.Maintenance == (yamlMaintenance{}) {
+		// Use default if key not present in yaml, best effort if "ubuntu"
+		// archive is present.
+		// TODO remove defaults it on format version bump.
+		ubuntuArchive, ok := release.Archives["ubuntu"]
+		if ok {
+			maintenance = defaultMaintenance[ubuntuArchive.Version]
+		}
+	}
+	if maintenance == (Maintenance{}) {
+		maintenance, err = parseYamlMaintenance(&yamlVar.Maintenance)
+		if err != nil {
+			return nil, fmt.Errorf("%s: cannot parse maintenance: %s", fileName, err)
+		}
+	}
+	release.Maintenance = &maintenance
 
 	return release, err
 }
@@ -567,11 +578,6 @@ type yamlMaintenance struct {
 func parseYamlMaintenance(yamlVar *yamlMaintenance) (Maintenance, error) {
 	maintenance := Maintenance{}
 
-	if *yamlVar == (yamlMaintenance{}) {
-		// Maintenance is optional.
-		return Maintenance{}, nil
-	}
-
 	if yamlVar.Standard == "" {
 		return Maintenance{}, errors.New(`"standard" cannot be empty`)
 	}
@@ -607,4 +613,45 @@ func parseYamlMaintenance(yamlVar *yamlMaintenance) (Maintenance, error) {
 	}
 
 	return maintenance, nil
+}
+
+var defaultMaintenance = map[string]Maintenance{
+	"20.04": {
+		Standard:  time.Date(2020, time.April, 23, 0, 0, 0, 0, time.UTC),
+		Expanded:  time.Date(2025, time.May, 23, 0, 0, 0, 0, time.UTC),
+		Legacy:    time.Date(2030, time.April, 23, 0, 0, 0, 0, time.UTC),
+		EndOfLife: time.Date(2032, time.April, 23, 0, 0, 0, 0, time.UTC),
+	},
+	"22.04": {
+		Standard:  time.Date(2022, time.April, 21, 0, 0, 0, 0, time.UTC),
+		Expanded:  time.Date(2027, time.June, 21, 0, 0, 0, 0, time.UTC),
+		Legacy:    time.Date(2032, time.April, 21, 0, 0, 0, 0, time.UTC),
+		EndOfLife: time.Date(2034, time.April, 21, 0, 0, 0, 0, time.UTC),
+	},
+	"22.10": {
+		Standard:  time.Date(2022, time.October, 20, 0, 0, 0, 0, time.UTC),
+		EndOfLife: time.Date(2023, time.July, 20, 0, 0, 0, 0, time.UTC),
+	},
+	"23.04": {
+		Standard:  time.Date(2023, time.April, 20, 0, 0, 0, 0, time.UTC),
+		EndOfLife: time.Date(2024, time.January, 25, 0, 0, 0, 0, time.UTC),
+	},
+	"23.10": {
+		Standard:  time.Date(2023, time.October, 12, 0, 0, 0, 0, time.UTC),
+		EndOfLife: time.Date(2024, time.July, 11, 0, 0, 0, 0, time.UTC),
+	},
+	"24.04": {
+		Standard:  time.Date(2024, time.April, 25, 0, 0, 0, 0, time.UTC),
+		Expanded:  time.Date(2029, time.June, 25, 0, 0, 0, 0, time.UTC),
+		Legacy:    time.Date(2034, time.April, 25, 0, 0, 0, 0, time.UTC),
+		EndOfLife: time.Date(2036, time.April, 25, 0, 0, 0, 0, time.UTC),
+	},
+	"24.10": {
+		Standard:  time.Date(2024, time.October, 10, 0, 0, 0, 0, time.UTC),
+		EndOfLife: time.Date(2025, time.July, 10, 0, 0, 0, 0, time.UTC),
+	},
+	"25.04": {
+		Standard:  time.Date(2025, time.April, 17, 0, 0, 0, 0, time.UTC),
+		EndOfLife: time.Date(2026, time.January, 17, 0, 0, 0, 0, time.UTC),
+	},
 }

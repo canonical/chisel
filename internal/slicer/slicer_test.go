@@ -812,6 +812,9 @@ var slicerTests = []slicerTest{{
 	release: map[string]string{
 		"chisel.yaml": `
 			format: v1
+			maintenance:
+				standard: 2025-01-01
+				end-of-life: 2100-01-01
 			archives:
 				foo:
 					version: 22.04
@@ -884,6 +887,9 @@ var slicerTests = []slicerTest{{
 	release: map[string]string{
 		"chisel.yaml": `
 			format: v1
+			maintenance:
+				standard: 2025-01-01
+				end-of-life: 2100-01-01
 			archives:
 				foo:
 					version: 22.04
@@ -937,6 +943,9 @@ var slicerTests = []slicerTest{{
 	release: map[string]string{
 		"chisel.yaml": `
 			format: v1
+			maintenance:
+				standard: 2025-01-01
+				end-of-life: 2100-01-01
 			archives:
 				foo:
 					version: 22.04
@@ -974,6 +983,9 @@ var slicerTests = []slicerTest{{
 	release: map[string]string{
 		"chisel.yaml": `
 			format: v1
+			maintenance:
+				standard: 2025-01-01
+				end-of-life: 2100-01-01
 			archives:
 				foo:
 					version: 22.04
@@ -1014,6 +1026,9 @@ var slicerTests = []slicerTest{{
 	release: map[string]string{
 		"chisel.yaml": `
 			format: v1
+			maintenance:
+				standard: 2025-01-01
+				end-of-life: 2100-01-01
 			archives:
 				foo:
 					version: 22.04
@@ -1051,6 +1066,9 @@ var slicerTests = []slicerTest{{
 	release: map[string]string{
 		"chisel.yaml": `
 			format: v1
+			maintenance:
+				standard: 2025-01-01
+				end-of-life: 2100-01-01
 			archives:
 				foo:
 					version: 22.04
@@ -1465,6 +1483,9 @@ var slicerTests = []slicerTest{{
 	release: map[string]string{
 		"chisel.yaml": `
 			format: v1
+			maintenance:
+				standard: 2025-01-01
+				end-of-life: 2100-01-01
 			archives:
 				invalid:
 					version: 20.04
