@@ -1,4 +1,4 @@
-summary: Chisel can fetch packages from unsupported releases
+summary: Chisel can fetch packages from unmaintained releases
 
 variants:
   - mantic

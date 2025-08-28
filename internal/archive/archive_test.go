@@ -506,7 +506,7 @@ func (s *httpSuite) TestOpenUnsupportedArchives(c *C) {
 	}
 
 	_, err := archive.Open(&options)
-	// Fails when unsupported is not set because it attempts to contact the
+	// Fails when Unmaintained is not set because it attempts to contact the
 	// default ubuntu archive where the release is no longer available.
 	c.Assert(err, Not(IsNil))
 
@@ -666,7 +666,7 @@ type realArchiveTest struct {
 	suites         []string
 	components     []string
 	pro            string
-	unsupported    bool
+	unmaintained   bool
 	archivePubKeys []*packet.PublicKey
 	archs          []string
 	pkg            string
@@ -700,7 +700,7 @@ var realArchiveTests = []realArchiveTest{{
 }, {
 	name:           "mantic",
 	version:        "23.10",
-	unsupported:    true,
+	unmaintained:   true,
 	suites:         []string{"mantic"},
 	components:     []string{"main", "universe"},
 	archivePubKeys: []*packet.PublicKey{keyUbuntu2018.PubKey},
@@ -831,7 +831,7 @@ func (s *S) testOpenArchiveArch(c *C, test realArchiveTest, arch string) {
 		CacheDir:     c.MkDir(),
 		Pro:          test.pro,
 		PubKeys:      test.archivePubKeys,
-		Unmaintained: test.unsupported,
+		Unmaintained: test.unmaintained,
 	}
 
 	testArchive, err := archive.Open(&options)
