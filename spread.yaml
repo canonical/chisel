@@ -58,7 +58,3 @@ prepare: |
 suites:
   tests/:
     summary: Tests common scenarios
-    variants:
-      # TODO(letfunny): after unsupported is added in chisel-releases, run
-      # tests in an interim release.
-      - -mantic
