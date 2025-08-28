@@ -3,8 +3,13 @@ summary: Ensure multiple slices (with mutation scripts) are properly installed
 execute: |
   rootfs_folder=rootfs_${RELEASE}
   mkdir -p $rootfs_folder
-  chisel cut --release ${OS}-${RELEASE} \
-    --root $rootfs_folder base-passwd_data openssl_bins
+  if [ "$RELEASE" = "23.10" ]; then
+    chisel cut --ignore=unmaintained --release ${OS}-${RELEASE} \
+      --root $rootfs_folder base-passwd_data openssl_bins
+  else
+    chisel cut --release ${OS}-${RELEASE} \
+      --root $rootfs_folder base-passwd_data openssl_bins
+  fi
 
   # make sure $rootfs_folder is not empty
   ls ${rootfs_folder}/*
