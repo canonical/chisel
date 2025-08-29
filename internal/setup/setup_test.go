@@ -1166,6 +1166,18 @@ var setupTests = []setupTest{{
 	},
 	relerror: `invalid slice definition filename: "a.yaml"`,
 }, {
+	summary: "Invalid slice name - too short",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				cc:
+					contents:
+						/usr/bin/cc:
+		`,
+	},
+	relerror: `invalid slice name "cc" in slices/mydir/mypkg.yaml \(start with a-z, len >= 3, only a-z / 0-9 / -\)`,
+}, {
 	summary: "Package essentials with same package slice",
 	input: map[string]string{
 		"slices/mydir/mypkg.yaml": `
