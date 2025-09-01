@@ -25,11 +25,16 @@ execute: |
           /chisel/**: {generate: manifest}
   EOF
 
+  EXTRA_OPTIONS=""
   if [ "$RELEASE" = "23.10" ]; then
-    chisel cut --ignore=unmaintained --release $chisel_release --root $rootfs_folder base-files_myslice base-files_manifest
-  else
-    chisel cut --release $chisel_release --root $rootfs_folder base-files_myslice base-files_manifest
+    EXTRA_OPTIONS="--ignore=unmaintained "
   fi
+
+  chisel cut --release $chisel_release \
+    --root $rootfs_folder \
+    $EXTRA_OPTIONS \
+    base-files_myslice base-files_manifest
+
   # make sure $rootfs_folder is not empty
   ls ${rootfs_folder}/*
 
