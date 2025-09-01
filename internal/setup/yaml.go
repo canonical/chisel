@@ -295,7 +295,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 	if yamlVar.Maintenance == (yamlMaintenance{}) {
 		// Use default if key not present in yaml, best effort if "ubuntu"
 		// archive is present.
-		// TODO remove defaults it on format version bump.
+		// TODO remove the defaults some time after chisel-releases is updated.
 		ubuntuArchive, ok := release.Archives["ubuntu"]
 		if ok {
 			maintenance = defaultMaintenance[ubuntuArchive.Version]
