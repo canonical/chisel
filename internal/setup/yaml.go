@@ -16,7 +16,7 @@ import (
 	"github.com/canonical/chisel/internal/pgputil"
 )
 
-func (p *Package) MarshalYAML() (interface{}, error) {
+func (p *Package) MarshalYAML() (any, error) {
 	return packageToYAML(p)
 }
 
@@ -68,7 +68,7 @@ type yamlPath struct {
 	Prefer   string       `yaml:"prefer,omitempty"`
 }
 
-func (yp *yamlPath) MarshalYAML() (interface{}, error) {
+func (yp *yamlPath) MarshalYAML() (any, error) {
 	type flowPath *yamlPath
 	node := &yaml.Node{}
 	err := node.Encode(flowPath(yp))
@@ -113,7 +113,7 @@ func (ya *yamlArch) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-func (ya yamlArch) MarshalYAML() (interface{}, error) {
+func (ya yamlArch) MarshalYAML() (any, error) {
 	if len(ya.List) == 1 {
 		return ya.List[0], nil
 	}
@@ -124,7 +124,7 @@ var _ yaml.Marshaler = yamlArch{}
 
 type yamlMode uint
 
-func (ym yamlMode) MarshalYAML() (interface{}, error) {
+func (ym yamlMode) MarshalYAML() (any, error) {
 	// Workaround for marshalling integers in octal format.
 	// Ref: https://github.com/go-yaml/yaml/issues/420.
 	node := &yaml.Node{}
