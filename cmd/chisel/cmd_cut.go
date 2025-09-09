@@ -25,14 +25,14 @@ var cutDescs = map[string]string{
 	"release": "Chisel release name or directory (e.g. ubuntu-22.04)",
 	"root":    "Root for generated content",
 	"arch":    "Package architecture",
-	"ignore":  "Conditions to ignore (e.g. unmaintained)",
+	"ignore":  "Conditions to ignore (e.g. unmaintained, unstable)",
 }
 
 type cmdCut struct {
 	Release string `long:"release" value-name:"<dir>"`
 	RootDir string `long:"root" value-name:"<dir>" required:"yes"`
 	Arch    string `long:"arch" value-name:"<arch>"`
-	Ignore  string `long:"ignore" choice:"unmaintained" value-name:"<cond>"`
+	Ignore  string `long:"ignore" choice:"unmaintained" choice:"unstable" value-name:"<cond>"`
 
 	Positional struct {
 		SliceRefs []string `positional-arg-name:"<slice names>" required:"yes"`
@@ -62,12 +62,20 @@ func (cmd *cmdCut) Execute(args []string) error {
 		return err
 	}
 
-	unmaintained := release.Maintenance.EndOfLife.Before(time.Now())
+	unmaintained := time.Now().After(release.Maintenance.EndOfLife)
 	if unmaintained {
 		if cmd.Ignore == "unmaintained" {
 			logf("Warning: This release is no longer officially maintained, consider changing to a newer release")
 		} else {
 			return fmt.Errorf("cannot use unmaintained release, consider using --ignore")
+		}
+	}
+	unstable := time.Now().Before(release.Maintenance.Standard)
+	if unstable {
+		if cmd.Ignore == "unstable" {
+			logf("Warning: This release is unstable")
+		} else {
+			return fmt.Errorf("cannot use unstable release, consider using --ignore")
 		}
 	}
 
