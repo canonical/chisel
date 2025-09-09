@@ -30,6 +30,13 @@ type PackageInfo struct {
 	SHA256  string
 }
 
+const (
+	Standard  = "standard"
+	EndOfLife = "end-of-life"
+	Unstable  = "unstable"
+	Legacy    = "legacy" // TODO: to be discussed.
+)
+
 type Options struct {
 	Label      string
 	Version    string
@@ -40,7 +47,7 @@ type Options struct {
 	CacheDir   string
 	PubKeys    []*packet.PublicKey
 	// This archive belongs to a release that is no longer actively maintained.
-	Unmaintained bool
+	Maintenance string
 }
 
 func Open(options *Options) (Archive, error) {
@@ -181,7 +188,7 @@ var proArchiveInfo = map[string]struct {
 	},
 }
 
-func archiveURL(pro, arch string, unmaintained bool) (string, *credentials, error) {
+func archiveURL(pro, arch string, maintenance string) (string, *credentials, error) {
 	if pro != "" {
 		archiveInfo, ok := proArchiveInfo[pro]
 		if !ok {
@@ -195,7 +202,7 @@ func archiveURL(pro, arch string, unmaintained bool) (string, *credentials, erro
 		return url, creds, nil
 	}
 
-	if unmaintained {
+	if maintenance == EndOfLife {
 		return ubuntuOldReleasesURL, nil, nil
 	}
 
@@ -216,7 +223,7 @@ func openUbuntu(options *Options) (Archive, error) {
 		return nil, fmt.Errorf("archive options missing version")
 	}
 
-	baseURL, creds, err := archiveURL(options.Pro, options.Arch, options.Unmaintained)
+	baseURL, creds, err := archiveURL(options.Pro, options.Arch, options.Maintenance)
 	if err != nil {
 		return nil, err
 	}

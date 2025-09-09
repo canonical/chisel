@@ -62,16 +62,16 @@ func (cmd *cmdCut) Execute(args []string) error {
 		return err
 	}
 
-	unmaintained := time.Now().After(release.Maintenance.EndOfLife)
-	if unmaintained {
+	maintenance := archive.Standard
+	if time.Now().After(release.Maintenance.EndOfLife) {
+		maintenance = archive.EndOfLife
 		if cmd.Ignore == "unmaintained" {
 			logf("Warning: This release is no longer officially maintained, consider changing to a newer release")
 		} else {
 			return fmt.Errorf("cannot use unmaintained release, consider using --ignore")
 		}
-	}
-	unstable := time.Now().Before(release.Maintenance.Standard)
-	if unstable {
+	} else if time.Now().Before(release.Maintenance.Standard) {
+		maintenance = archive.Unstable
 		if cmd.Ignore == "unstable" {
 			logf("Warning: This release is unstable")
 		} else {
@@ -87,15 +87,15 @@ func (cmd *cmdCut) Execute(args []string) error {
 	archives := make(map[string]archive.Archive)
 	for archiveName, archiveInfo := range release.Archives {
 		openArchive, err := archive.Open(&archive.Options{
-			Label:        archiveName,
-			Version:      archiveInfo.Version,
-			Arch:         cmd.Arch,
-			Suites:       archiveInfo.Suites,
-			Components:   archiveInfo.Components,
-			Pro:          archiveInfo.Pro,
-			CacheDir:     cache.DefaultDir("chisel"),
-			PubKeys:      archiveInfo.PubKeys,
-			Unmaintained: unmaintained,
+			Label:       archiveName,
+			Version:     archiveInfo.Version,
+			Arch:        cmd.Arch,
+			Suites:      archiveInfo.Suites,
+			Components:  archiveInfo.Components,
+			Pro:         archiveInfo.Pro,
+			CacheDir:    cache.DefaultDir("chisel"),
+			PubKeys:     archiveInfo.PubKeys,
+			Maintenance: maintenance,
 		})
 		if err != nil {
 			if err == archive.ErrCredentialsNotFound {
