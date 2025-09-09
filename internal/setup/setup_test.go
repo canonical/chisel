@@ -2740,7 +2740,7 @@ var setupTests = []setupTest{{
 			package: mypkg
 		`,
 	},
-	relerror: `chisel.yaml: cannot parse maintenance: "end-of-life" cannot be empty`,
+	relerror: `chisel.yaml: cannot parse maintenance: "end-of-life" is unset`,
 }, {
 	summary: "Maintenance: standard is required",
 	input: map[string]string{
@@ -2763,7 +2763,7 @@ var setupTests = []setupTest{{
 			package: mypkg
 		`,
 	},
-	relerror: `chisel.yaml: cannot parse maintenance: "standard" cannot be empty`,
+	relerror: `chisel.yaml: cannot parse maintenance: "standard" is unset`,
 }, {
 	summary: "Maintenance: invalid date format",
 	input: map[string]string{

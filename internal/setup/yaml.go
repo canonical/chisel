@@ -579,7 +579,7 @@ func parseYamlMaintenance(yamlVar *yamlMaintenance) (Maintenance, error) {
 	maintenance := Maintenance{}
 
 	if yamlVar.Standard == "" {
-		return Maintenance{}, errors.New(`"standard" cannot be empty`)
+		return Maintenance{}, errors.New(`"standard" is unset`)
 	}
 	date, err := time.Parse(time.DateOnly, yamlVar.Standard)
 	if err != nil {
@@ -588,7 +588,7 @@ func parseYamlMaintenance(yamlVar *yamlMaintenance) (Maintenance, error) {
 	maintenance.Standard = date
 
 	if yamlVar.EndOfLife == "" {
-		return Maintenance{}, errors.New(`"end-of-life" cannot be empty`)
+		return Maintenance{}, errors.New(`"end-of-life" is unset`)
 	}
 	date, err = time.Parse(time.DateOnly, yamlVar.EndOfLife)
 	if err != nil {
