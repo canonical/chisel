@@ -65,7 +65,7 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 
 	maintenance := archive.Standard
 	if time.Now().After(release.Maintenance.EndOfLife) {
-		maintenance = archive.EndOfLife
+		maintenance = archive.Unmaintained
 	} else if time.Now().Before(release.Maintenance.Standard) {
 		maintenance = archive.Unstable
 	}

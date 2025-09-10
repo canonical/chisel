@@ -64,7 +64,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 
 	maintenance := archive.Standard
 	if time.Now().After(release.Maintenance.EndOfLife) {
-		maintenance = archive.EndOfLife
+		maintenance = archive.Unmaintained
 		if cmd.Ignore == "unmaintained" {
 			logf(`Warning: This release has reached the "unmaintained" maintenance status. ` +
 				`See https://documentation.ubuntu.com/chisel/en/latest/reference/chisel-releases/chisel.yaml/#maintenance to be safe`)

@@ -510,7 +510,7 @@ func (s *httpSuite) TestOpenUnmaintainedArchives(c *C) {
 	// default ubuntu archive where the release is no longer available.
 	c.Assert(err, Not(IsNil))
 
-	options.Maintenance = archive.EndOfLife
+	options.Maintenance = archive.Unmaintained
 	_, err = archive.Open(&options)
 	c.Assert(err, IsNil)
 }
@@ -722,7 +722,7 @@ var realArchiveTests = []realArchiveTest{{
 }, {
 	name:           "mantic",
 	version:        "23.10",
-	maintenance:    archive.EndOfLife,
+	maintenance:    archive.Unmaintained,
 	suites:         []string{"mantic"},
 	components:     []string{"main", "universe"},
 	archivePubKeys: []*packet.PublicKey{keyUbuntu2018.PubKey},

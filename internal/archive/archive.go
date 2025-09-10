@@ -30,11 +30,11 @@ type PackageInfo struct {
 	SHA256  string
 }
 
+// Different maintenance statuses for a release.
 const (
-	Standard  = "standard"
-	EndOfLife = "end-of-life"
-	Unstable  = "unstable"
-	Legacy    = "legacy" // TODO: to be discussed.
+	Standard     = "standard"
+	Unmaintained = "unmaintained"
+	Unstable     = "unstable"
 )
 
 type Options struct {
@@ -202,7 +202,7 @@ func archiveURL(pro, arch string, maintenance string) (string, *credentials, err
 		return url, creds, nil
 	}
 
-	if maintenance == EndOfLife {
+	if maintenance == Unmaintained {
 		return ubuntuOldReleasesURL, nil, nil
 	}
 
