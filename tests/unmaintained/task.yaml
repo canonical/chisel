@@ -11,10 +11,10 @@ execute: |
 
   # TODO: change to the upstream release when it has maintenance set.
   ! OUTPUT=$(chisel cut --release ./release-${RELEASE} --root ${ROOTFS} hello_bins 2>&1)
-  echo "$OUTPUT" | grep "cannot use unmaintained release, consider using --ignore"
+  echo "$OUTPUT" | grep "this release has reached the \"unmaintained\" maintenance status, see https://documentation.ubuntu.com/chisel/en/latest/reference/chisel-releases/chisel.yaml/#maintenance for details"
 
   OUTPUT=$(chisel cut --release ./release-${RELEASE} --root ${ROOTFS} --ignore=unmaintained hello_bins 2>&1)
-  echo "$OUTPUT" | grep "Warning: This release is no longer officially maintained, consider changing to a newer release"
+  echo "$OUTPUT" | grep "Warning: This release has reached the \"unmaintained\" maintenance status. See https://documentation.ubuntu.com/chisel/en/latest/reference/chisel-releases/chisel.yaml/#maintenance to be safe"
 
   test -f ${ROOTFS}/usr/bin/hello
   test -f ${ROOTFS}/usr/share/doc/hello/copyright

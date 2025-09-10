@@ -66,16 +66,20 @@ func (cmd *cmdCut) Execute(args []string) error {
 	if time.Now().After(release.Maintenance.EndOfLife) {
 		maintenance = archive.EndOfLife
 		if cmd.Ignore == "unmaintained" {
-			logf("Warning: This release is no longer officially maintained, consider changing to a newer release")
+			logf(`Warning: This release has reached the "unmaintained" maintenance status. ` +
+				`See https://documentation.ubuntu.com/chisel/en/latest/reference/chisel-releases/chisel.yaml/#maintenance to be safe`)
 		} else {
-			return fmt.Errorf("cannot use unmaintained release, consider using --ignore")
+			return fmt.Errorf(`this release has reached the "unmaintained" maintenance status, ` +
+				`see https://documentation.ubuntu.com/chisel/en/latest/reference/chisel-releases/chisel.yaml/#maintenance for details`)
 		}
 	} else if time.Now().Before(release.Maintenance.Standard) {
 		maintenance = archive.Unstable
 		if cmd.Ignore == "unstable" {
-			logf("Warning: This release is unstable")
+			logf(`Warning: This release is in the "unstable" maintenance status. ` +
+				`See https://documentation.ubuntu.com/chisel/en/latest/reference/chisel-releases/chisel.yaml/#maintenance to be safe`)
 		} else {
-			return fmt.Errorf("cannot use unstable release, consider using --ignore")
+			return fmt.Errorf(`this release is in the "unstable" maintenance status, ` +
+				`see https://documentation.ubuntu.com/chisel/en/latest/reference/chisel-releases/chisel.yaml/#maintenance for details`)
 		}
 	}
 
