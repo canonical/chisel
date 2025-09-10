@@ -1,0 +1,31 @@
+summary: Chisel can fetch packages from unmaintained releases
+
+variants:
+  # No reason we should run this test for all releases.
+  - noble
+
+environment:
+  ROOTFS: rootfs
+
+execute: |
+  # Install yq.
+  wget -q https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq &&\
+    chmod +x /usr/bin/yq
+
+  mkdir "${ROOTFS}"
+
+  git clone --depth=1 -b ${OS}-${RELEASE} \
+    https://github.com/canonical/chisel-releases release-${RELEASE}
+
+  # Add dates for the release to be unstable.
+  yq -i '.maintenance.standard = "2100-01-01"' ./release-${RELEASE}/chisel.yaml
+  yq -i '.maintenance.end-of-life = "2200-01-01"' ./release-${RELEASE}/chisel.yaml
+
+  ! OUTPUT=$(chisel cut --release ./release-${RELEASE} --root ${ROOTFS} hello_bins 2>&1)
+  echo "$OUTPUT" | grep "this release is in the \"unstable\" maintenance status, see https://documentation.ubuntu.com/chisel/en/latest/reference/chisel-releases/chisel.yaml/#maintenance for details"
+
+  OUTPUT=$(chisel cut --release ./release-${RELEASE} --root ${ROOTFS} --ignore=unstable hello_bins 2>&1)
+  echo "$OUTPUT" | grep "Warning: This release is in the \"unstable\" maintenance status. See https://documentation.ubuntu.com/chisel/en/latest/reference/chisel-releases/chisel.yaml/#maintenance to be safe"
+
+  test -f ${ROOTFS}/usr/bin/hello
+  test -f ${ROOTFS}/usr/share/doc/hello/copyright

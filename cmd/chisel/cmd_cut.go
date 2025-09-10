@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/jessevdk/go-flags"
 
 	"github.com/canonical/chisel/internal/archive"
@@ -22,12 +25,14 @@ var cutDescs = map[string]string{
 	"release": "Chisel release name or directory (e.g. ubuntu-22.04)",
 	"root":    "Root for generated content",
 	"arch":    "Package architecture",
+	"ignore":  "Conditions to ignore (e.g. unmaintained, unstable)",
 }
 
 type cmdCut struct {
 	Release string `long:"release" value-name:"<dir>"`
 	RootDir string `long:"root" value-name:"<dir>" required:"yes"`
 	Arch    string `long:"arch" value-name:"<arch>"`
+	Ignore  string `long:"ignore" choice:"unmaintained" choice:"unstable" value-name:"<cond>"`
 
 	Positional struct {
 		SliceRefs []string `positional-arg-name:"<slice names>" required:"yes"`
@@ -57,6 +62,27 @@ func (cmd *cmdCut) Execute(args []string) error {
 		return err
 	}
 
+	maintenance := archive.Standard
+	if time.Now().After(release.Maintenance.EndOfLife) {
+		maintenance = archive.Unmaintained
+		if cmd.Ignore == "unmaintained" {
+			logf(`Warning: This release has reached the "unmaintained" maintenance status. ` +
+				`See https://documentation.ubuntu.com/chisel/en/latest/reference/chisel-releases/chisel.yaml/#maintenance to be safe`)
+		} else {
+			return fmt.Errorf(`this release has reached the "unmaintained" maintenance status, ` +
+				`see https://documentation.ubuntu.com/chisel/en/latest/reference/chisel-releases/chisel.yaml/#maintenance for details`)
+		}
+	} else if time.Now().Before(release.Maintenance.Standard) {
+		maintenance = archive.Unstable
+		if cmd.Ignore == "unstable" {
+			logf(`Warning: This release is in the "unstable" maintenance status. ` +
+				`See https://documentation.ubuntu.com/chisel/en/latest/reference/chisel-releases/chisel.yaml/#maintenance to be safe`)
+		} else {
+			return fmt.Errorf(`this release is in the "unstable" maintenance status, ` +
+				`see https://documentation.ubuntu.com/chisel/en/latest/reference/chisel-releases/chisel.yaml/#maintenance for details`)
+		}
+	}
+
 	selection, err := setup.Select(release, sliceKeys)
 	if err != nil {
 		return err
@@ -65,14 +91,15 @@ func (cmd *cmdCut) Execute(args []string) error {
 	archives := make(map[string]archive.Archive)
 	for archiveName, archiveInfo := range release.Archives {
 		openArchive, err := archive.Open(&archive.Options{
-			Label:      archiveName,
-			Version:    archiveInfo.Version,
-			Arch:       cmd.Arch,
-			Suites:     archiveInfo.Suites,
-			Components: archiveInfo.Components,
-			Pro:        archiveInfo.Pro,
-			CacheDir:   cache.DefaultDir("chisel"),
-			PubKeys:    archiveInfo.PubKeys,
+			Label:       archiveName,
+			Version:     archiveInfo.Version,
+			Arch:        cmd.Arch,
+			Suites:      archiveInfo.Suites,
+			Components:  archiveInfo.Components,
+			Pro:         archiveInfo.Pro,
+			CacheDir:    cache.DefaultDir("chisel"),
+			PubKeys:     archiveInfo.PubKeys,
+			Maintenance: maintenance,
 		})
 		if err != nil {
 			if err == archive.ErrCredentialsNotFound {
