@@ -33,7 +33,7 @@ func max(a, b int) int {
 //go:generate go run ./chrorder/main.go -package=deb -output=chrorder.go
 
 func cmpString(as, bs string) int {
-	for i := 0; i < max(len(as), len(bs)); i++ {
+	for i := range max(len(as), len(bs)) {
 		var a uint8
 		var b uint8
 		if i < len(as) {
@@ -53,7 +53,7 @@ func cmpString(as, bs string) int {
 }
 
 func trimLeadingZeroes(a string) string {
-	for i := 0; i < len(a); i++ {
+	for i := range len(a) {
 		if a[i] != '0' {
 			return a[i:]
 		}
@@ -72,7 +72,7 @@ func cmpNumeric(a, b string) int {
 	case d < 0:
 		return -1
 	}
-	for i := 0; i < len(a); i++ {
+	for i := range len(a) {
 		switch {
 		case a[i] > b[i]:
 			return 1

@@ -1,7 +1,7 @@
 package testutil_test
 
 import (
-	"sort"
+	"slices"
 
 	. "gopkg.in/check.v1"
 
@@ -43,7 +43,7 @@ func (*permutationSuite) TestPermutations(c *C) {
 func (*permutationSuite) TestFuzzPermutations(c *C) {
 	for sLen := 0; sLen <= 10; sLen++ {
 		s := make([]byte, sLen)
-		for i := 0; i < sLen; i++ {
+		for i := range sLen {
 			s[i] = byte(i)
 		}
 		permutations := testutil.Permutations(s)
@@ -64,9 +64,7 @@ func (*permutationSuite) TestFuzzPermutations(c *C) {
 			}
 			duplicated[permStr] = true
 			// Check that the elements are the same.
-			sort.Slice(perm, func(i, j int) bool {
-				return perm[i] < perm[j]
-			})
+			slices.Sort(perm)
 			c.Assert(perm, DeepEquals, s, Commentf("invalid elements in permutation %v of base slice %v", perm, s))
 		}
 	}

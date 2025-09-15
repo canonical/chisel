@@ -23,7 +23,7 @@ import (
 )
 
 type httpSuite struct {
-	logf      func(string, ...interface{})
+	logf      func(string, ...any)
 	base      string
 	request   *http.Request
 	requests  []*http.Request
@@ -119,7 +119,7 @@ func (s *httpSuite) prepareArchiveAdjustRelease(suite, version, arch string, com
 			Component: component,
 			Arch:      arch,
 		}
-		for j := 0; j < 2; j++ {
+		for j := range 2 {
 			seq := 1 + i*2 + j
 			index.Packages = append(index.Packages, &testarchive.Package{
 				Name:      fmt.Sprintf("mypkg%d", seq),
