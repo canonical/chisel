@@ -37,7 +37,7 @@ jobs:
         uses: tiobe/tics-github-action@v3
         with:
           mode: qserver
-          viewerUrl: https://canonical.tiobe.com/tiobeweb/TICS/api/cfg?name=default
+          viewerUrl: https://canonical.tiobe.com/tiobeweb/TICS/api/cfg?name=GoProjects
           ticsAuthToken: ${{ secrets.TICSAUTHTOKEN }}
           project: chisel
           installTics: true
