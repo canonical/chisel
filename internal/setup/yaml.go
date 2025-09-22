@@ -222,12 +222,14 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		if len(details.Components) == 0 {
 			return nil, fmt.Errorf("%s: archive %q missing components field", fileName, archiveName)
 		}
+
 		switch details.Pro {
 		case "", archive.ProApps, archive.ProFIPS, archive.ProFIPSUpdates, archive.ProInfra:
 		default:
 			logf("Archive %q ignored: invalid pro value: %q", archiveName, details.Pro)
 			continue
 		}
+
 		if details.Default && defaultArchive != "" {
 			if archiveName < defaultArchive {
 				archiveName, defaultArchive = defaultArchive, archiveName
@@ -237,6 +239,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		if details.Default {
 			defaultArchive = archiveName
 		}
+
 		if len(details.PubKeys) == 0 {
 			return nil, fmt.Errorf("%s: archive %q missing public-keys field", fileName, archiveName)
 		}
@@ -248,6 +251,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 			}
 			archiveKeys = append(archiveKeys, key)
 		}
+
 		priority := 0
 		if details.Priority != nil {
 			hasPriority = true
@@ -261,6 +265,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 				archiveNoPriority = archiveName
 			}
 		}
+
 		release.Archives[archiveName] = &Archive{
 			Name:       archiveName,
 			Version:    details.Version,
@@ -308,6 +313,34 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		}
 	}
 	release.Maintenance = &maintenance
+	for archiveName, details := range release.Archives {
+		maintained := true
+		switch details.Pro {
+		case "":
+			// The standard archive is no longer maintained during Expanded
+			// Security Maintenance for LTS, or after End of Life for interim
+			// releases.
+			if release.Maintenance.Expanded != (time.Time{}) {
+				maintained = time.Now().Before(release.Maintenance.Expanded)
+			} else {
+				maintained = time.Now().Before(release.Maintenance.EndOfLife)
+			}
+		case archive.ProInfra, archive.ProApps:
+			// Legacy support requires a different subscription and a different
+			// archive.
+			if release.Maintenance.Legacy != (time.Time{}) {
+				maintained = time.Now().Before(release.Maintenance.Legacy)
+			} else {
+				maintained = time.Now().Before(release.Maintenance.EndOfLife)
+			}
+		default:
+			// FIPS archives are not included in the support window, they need
+			// a different subscription and have a different lifetime.
+			maintained = time.Now().Before(release.Maintenance.EndOfLife)
+		}
+		details.Maintained = maintained
+		release.Archives[archiveName] = details
+	}
 
 	return release, err
 }

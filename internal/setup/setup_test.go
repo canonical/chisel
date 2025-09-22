@@ -85,6 +85,7 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy", "jammy-security"},
 				Components: []string{"main", "other"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -130,6 +131,7 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -193,6 +195,7 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -455,6 +458,7 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -671,6 +675,7 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -712,6 +717,7 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -754,6 +760,7 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -816,6 +823,7 @@ var setupTests = []setupTest{{
 				Components: []string{"main", "universe"},
 				Priority:   20,
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
 			},
 			"bar": {
 				Name:       "bar",
@@ -824,6 +832,7 @@ var setupTests = []setupTest{{
 				Components: []string{"universe"},
 				Priority:   -10,
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -1028,6 +1037,7 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy", "jammy-security"},
 				Components: []string{"main", "other"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -1092,6 +1102,7 @@ var setupTests = []setupTest{{
 				Components: []string{"main", "universe"},
 				Priority:   20,
 				PubKeys:    []*packet.PublicKey{extraTestKey.PubKey},
+				Maintained: true,
 			},
 			"bar": {
 				Name:       "bar",
@@ -1100,6 +1111,7 @@ var setupTests = []setupTest{{
 				Components: []string{"universe"},
 				Priority:   10,
 				PubKeys:    []*packet.PublicKey{testKey.PubKey, extraTestKey.PubKey},
+				Maintained: true,
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -1211,6 +1223,7 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -1266,6 +1279,7 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -1337,6 +1351,7 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -1518,6 +1533,7 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -1569,6 +1585,7 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -1662,6 +1679,7 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -1812,6 +1830,7 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy"},
 				Components: []string{"main"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
 				Priority:   1,
 			},
 			"other-1": {
@@ -1820,6 +1839,7 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy"},
 				Components: []string{"main"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
 				Priority:   -2,
 			},
 			"other-2": {
@@ -1828,6 +1848,7 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy"},
 				Components: []string{"main"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
 				Priority:   -3,
 			},
 		},
@@ -1849,7 +1870,9 @@ var setupTests = []setupTest{{
 		"chisel.yaml": `
 			format: v1
 			maintenance:
-				standard: 2025-01-01
+				standard:    2025-01-01
+				expanded:    2100-01-01
+				legacy:      2100-01-01
 				end-of-life: 2100-01-01
 			archives:
 				ubuntu:
@@ -1911,6 +1934,7 @@ var setupTests = []setupTest{{
 				Components: []string{"main"},
 				Priority:   10,
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
 			},
 			"fips": {
 				Name:       "fips",
@@ -1920,6 +1944,7 @@ var setupTests = []setupTest{{
 				Pro:        "fips",
 				Priority:   20,
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
 			},
 			"fips-updates": {
 				Name:       "fips-updates",
@@ -1929,6 +1954,7 @@ var setupTests = []setupTest{{
 				Pro:        "fips-updates",
 				Priority:   21,
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
 			},
 			"esm-apps": {
 				Name:       "esm-apps",
@@ -1938,6 +1964,7 @@ var setupTests = []setupTest{{
 				Pro:        "esm-apps",
 				Priority:   16,
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
 			},
 			"esm-infra": {
 				Name:       "esm-infra",
@@ -1947,6 +1974,7 @@ var setupTests = []setupTest{{
 				Pro:        "esm-infra",
 				Priority:   15,
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -1958,6 +1986,8 @@ var setupTests = []setupTest{{
 		},
 		Maintenance: &setup.Maintenance{
 			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Expanded:  time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Legacy:    time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
 			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
 		},
 	},
@@ -2000,6 +2030,7 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy"},
 				Components: []string{"main"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
 				Priority:   10,
 			},
 			"other": {
@@ -2008,6 +2039,7 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy"},
 				Components: []string{"main"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
 				Priority:   20,
 			},
 		},
@@ -2092,6 +2124,7 @@ var setupTests = []setupTest{{
 				Components: []string{"main"},
 				Priority:   10,
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
 			},
 			"fips": {
 				Name:       "fips",
@@ -2101,6 +2134,7 @@ var setupTests = []setupTest{{
 				Pro:        "fips",
 				Priority:   20,
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -2225,6 +2259,7 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -2657,6 +2692,7 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: false,
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -2704,6 +2740,7 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: false,
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -2787,6 +2824,602 @@ var setupTests = []setupTest{{
 		`,
 	},
 	relerror: `chisel.yaml: cannot parse maintenance: expected format for "standard" is YYYY-MM-DD`,
+}, {
+	summary: "Maintenance: archives in standard phase",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v1
+			maintenance:
+				standard:    2025-01-01
+				expanded:    2100-01-01
+				legacy:      2100-01-01
+				end-of-life: 2100-01-01
+			archives:
+				ubuntu:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					public-keys: [test-key]
+					priority: 3
+				esm-apps:
+					version: 22.04
+					components: [main]
+					suites: [jammy-apps-security]
+					pro: esm-apps
+					priority: 2
+					public-keys: [test-key]
+				esm-infra:
+					version: 22.04
+					components: [main]
+					suites: [jammy-infra-security]
+					pro: esm-infra
+					priority: 1
+					public-keys: [test-key]
+				fips:
+					version: 22.04
+					components: [main]
+					suites: [jammy]
+					pro: fips
+					priority: 20
+					public-keys: [test-key]
+				fips-updates:
+					version: 22.04
+					components: [main]
+					suites: [jammy-updates]
+					pro: fips-updates
+					priority: 21
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	release: &setup.Release{
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
+				Priority:   3,
+			},
+			"esm-apps": {
+				Name:       "esm-apps",
+				Pro:        "esm-apps",
+				Version:    "22.04",
+				Suites:     []string{"jammy-apps-security"},
+				Components: []string{"main"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
+				Priority:   2,
+			},
+			"esm-infra": {
+				Name:       "esm-infra",
+				Pro:        "esm-infra",
+				Version:    "22.04",
+				Suites:     []string{"jammy-infra-security"},
+				Components: []string{"main"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
+				Priority:   1,
+			},
+			"fips": {
+				Name:       "fips",
+				Pro:        "fips",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
+				Priority:   20,
+			},
+			"fips-updates": {
+				Name:       "fips-updates",
+				Pro:        "fips-updates",
+				Version:    "22.04",
+				Suites:     []string{"jammy-updates"},
+				Components: []string{"main"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
+				Priority:   21,
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Name:   "mypkg",
+				Path:   "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{},
+			},
+		},
+		Maintenance: &setup.Maintenance{
+			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Expanded:  time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Legacy:    time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
+		},
+	},
+}, {
+	summary: "Maintenance: pro archives in expanded phase",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v1
+			maintenance:
+				standard:    2001-01-01
+				expanded:    2025-01-01
+				legacy:      2100-01-01
+				end-of-life: 2100-01-01
+			archives:
+				ubuntu:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					public-keys: [test-key]
+					priority: 3
+				esm-apps:
+					version: 22.04
+					components: [main]
+					suites: [jammy-apps-security]
+					pro: esm-apps
+					priority: 2
+					public-keys: [test-key]
+				esm-infra:
+					version: 22.04
+					components: [main]
+					suites: [jammy-infra-security]
+					pro: esm-infra
+					priority: 1
+					public-keys: [test-key]
+				fips:
+					version: 22.04
+					components: [main]
+					suites: [jammy]
+					pro: fips
+					priority: 20
+					public-keys: [test-key]
+				fips-updates:
+					version: 22.04
+					components: [main]
+					suites: [jammy-updates]
+					pro: fips-updates
+					priority: 21
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	release: &setup.Release{
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: false,
+				Priority:   3,
+			},
+			"esm-apps": {
+				Name:       "esm-apps",
+				Pro:        "esm-apps",
+				Version:    "22.04",
+				Suites:     []string{"jammy-apps-security"},
+				Components: []string{"main"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
+				Priority:   2,
+			},
+			"esm-infra": {
+				Name:       "esm-infra",
+				Pro:        "esm-infra",
+				Version:    "22.04",
+				Suites:     []string{"jammy-infra-security"},
+				Components: []string{"main"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
+				Priority:   1,
+			},
+			"fips": {
+				Name:       "fips",
+				Pro:        "fips",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
+				Priority:   20,
+			},
+			"fips-updates": {
+				Name:       "fips-updates",
+				Pro:        "fips-updates",
+				Version:    "22.04",
+				Suites:     []string{"jammy-updates"},
+				Components: []string{"main"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
+				Priority:   21,
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Name:   "mypkg",
+				Path:   "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{},
+			},
+		},
+		Maintenance: &setup.Maintenance{
+			Standard:  time.Date(2001, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Expanded:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Legacy:    time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
+		},
+	},
+}, {
+	summary: "Maintenance: pro archives in legacy phase",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v1
+			maintenance:
+				standard:    2001-01-01
+				expanded:    2001-01-01
+				legacy:      2025-01-01
+				end-of-life: 2100-01-01
+			archives:
+				ubuntu:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					public-keys: [test-key]
+					priority: 3
+				esm-apps:
+					version: 22.04
+					components: [main]
+					suites: [jammy-apps-security]
+					pro: esm-apps
+					priority: 2
+					public-keys: [test-key]
+				esm-infra:
+					version: 22.04
+					components: [main]
+					suites: [jammy-infra-security]
+					pro: esm-infra
+					priority: 1
+					public-keys: [test-key]
+				fips:
+					version: 22.04
+					components: [main]
+					suites: [jammy]
+					pro: fips
+					priority: 20
+					public-keys: [test-key]
+				fips-updates:
+					version: 22.04
+					components: [main]
+					suites: [jammy-updates]
+					pro: fips-updates
+					priority: 21
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	release: &setup.Release{
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: false,
+				Priority:   3,
+			},
+			"esm-apps": {
+				Name:       "esm-apps",
+				Pro:        "esm-apps",
+				Version:    "22.04",
+				Suites:     []string{"jammy-apps-security"},
+				Components: []string{"main"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: false,
+				Priority:   2,
+			},
+			"esm-infra": {
+				Name:       "esm-infra",
+				Pro:        "esm-infra",
+				Version:    "22.04",
+				Suites:     []string{"jammy-infra-security"},
+				Components: []string{"main"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: false,
+				Priority:   1,
+			},
+			"fips": {
+				Name:       "fips",
+				Pro:        "fips",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
+				Priority:   20,
+			},
+			"fips-updates": {
+				Name:       "fips-updates",
+				Pro:        "fips-updates",
+				Version:    "22.04",
+				Suites:     []string{"jammy-updates"},
+				Components: []string{"main"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
+				Priority:   21,
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Name:   "mypkg",
+				Path:   "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{},
+			},
+		},
+		Maintenance: &setup.Maintenance{
+			Standard:  time.Date(2001, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Expanded:  time.Date(2001, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Legacy:    time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
+		},
+	},
+}, {
+	summary: "Maintenance: pro archives in end-of-life phase",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v1
+			maintenance:
+				standard:    2001-01-01
+				expanded:    2001-01-01
+				legacy:      2001-01-01
+				end-of-life: 2025-01-01
+			archives:
+				ubuntu:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					public-keys: [test-key]
+					priority: 3
+				esm-apps:
+					version: 22.04
+					components: [main]
+					suites: [jammy-apps-security]
+					pro: esm-apps
+					priority: 2
+					public-keys: [test-key]
+				esm-infra:
+					version: 22.04
+					components: [main]
+					suites: [jammy-infra-security]
+					pro: esm-infra
+					priority: 1
+					public-keys: [test-key]
+				fips:
+					version: 22.04
+					components: [main]
+					suites: [jammy]
+					pro: fips
+					priority: 20
+					public-keys: [test-key]
+				fips-updates:
+					version: 22.04
+					components: [main]
+					suites: [jammy-updates]
+					pro: fips-updates
+					priority: 21
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	release: &setup.Release{
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: false,
+				Priority:   3,
+			},
+			"esm-apps": {
+				Name:       "esm-apps",
+				Pro:        "esm-apps",
+				Version:    "22.04",
+				Suites:     []string{"jammy-apps-security"},
+				Components: []string{"main"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: false,
+				Priority:   2,
+			},
+			"esm-infra": {
+				Name:       "esm-infra",
+				Pro:        "esm-infra",
+				Version:    "22.04",
+				Suites:     []string{"jammy-infra-security"},
+				Components: []string{"main"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: false,
+				Priority:   1,
+			},
+			"fips": {
+				Name:       "fips",
+				Pro:        "fips",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: false,
+				Priority:   20,
+			},
+			"fips-updates": {
+				Name:       "fips-updates",
+				Pro:        "fips-updates",
+				Version:    "22.04",
+				Suites:     []string{"jammy-updates"},
+				Components: []string{"main"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: false,
+				Priority:   21,
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Name:   "mypkg",
+				Path:   "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{},
+			},
+		},
+		Maintenance: &setup.Maintenance{
+			Standard:  time.Date(2001, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Expanded:  time.Date(2001, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Legacy:    time.Date(2001, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+		},
+	},
+}, {
+	summary: "Maintenance: pro archives default to end-of-life when expanded or legacy missing",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v1
+			maintenance:
+				standard:    2001-01-01
+				end-of-life: 2100-01-01
+			archives:
+				ubuntu:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					public-keys: [test-key]
+					priority: 3
+				esm-apps:
+					version: 22.04
+					components: [main]
+					suites: [jammy-apps-security]
+					pro: esm-apps
+					priority: 2
+					public-keys: [test-key]
+				esm-infra:
+					version: 22.04
+					components: [main]
+					suites: [jammy-infra-security]
+					pro: esm-infra
+					priority: 1
+					public-keys: [test-key]
+				fips:
+					version: 22.04
+					components: [main]
+					suites: [jammy]
+					pro: fips
+					priority: 20
+					public-keys: [test-key]
+				fips-updates:
+					version: 22.04
+					components: [main]
+					suites: [jammy-updates]
+					pro: fips-updates
+					priority: 21
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	release: &setup.Release{
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
+				Priority:   3,
+			},
+			"esm-apps": {
+				Name:       "esm-apps",
+				Pro:        "esm-apps",
+				Version:    "22.04",
+				Suites:     []string{"jammy-apps-security"},
+				Components: []string{"main"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
+				Priority:   2,
+			},
+			"esm-infra": {
+				Name:       "esm-infra",
+				Pro:        "esm-infra",
+				Version:    "22.04",
+				Suites:     []string{"jammy-infra-security"},
+				Components: []string{"main"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
+				Priority:   1,
+			},
+			"fips": {
+				Name:       "fips",
+				Pro:        "fips",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
+				Priority:   20,
+			},
+			"fips-updates": {
+				Name:       "fips-updates",
+				Pro:        "fips-updates",
+				Version:    "22.04",
+				Suites:     []string{"jammy-updates"},
+				Components: []string{"main"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
+				Priority:   21,
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Name:   "mypkg",
+				Path:   "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{},
+			},
+		},
+		Maintenance: &setup.Maintenance{
+			Standard:  time.Date(2001, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
+		},
+	},
 }}
 
 func (s *S) TestParseRelease(c *C) {

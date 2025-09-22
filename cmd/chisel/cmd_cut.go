@@ -62,18 +62,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 		return err
 	}
 
-	maintenance := archive.Standard
-	if time.Now().After(release.Maintenance.EndOfLife) {
-		maintenance = archive.Unmaintained
-		if cmd.Ignore == "unmaintained" {
-			logf(`Warning: This release has reached the "unmaintained" maintenance status. ` +
-				`See https://documentation.ubuntu.com/chisel/en/latest/reference/chisel-releases/chisel.yaml/#maintenance to be safe.`)
-		} else {
-			return fmt.Errorf(`this release has reached the "unmaintained" maintenance status, ` +
-				`see https://documentation.ubuntu.com/chisel/en/latest/reference/chisel-releases/chisel.yaml/#maintenance for details.`)
-		}
-	} else if time.Now().Before(release.Maintenance.Standard) {
-		maintenance = archive.Unstable
+	if time.Now().Before(release.Maintenance.Standard) {
 		if cmd.Ignore == "unstable" {
 			logf(`Warning: This release is in the "unstable" maintenance status. ` +
 				`See https://documentation.ubuntu.com/chisel/en/latest/reference/chisel-releases/chisel.yaml/#maintenance to be safe`)
@@ -91,15 +80,15 @@ func (cmd *cmdCut) Execute(args []string) error {
 	archives := make(map[string]archive.Archive)
 	for archiveName, archiveInfo := range release.Archives {
 		openArchive, err := archive.Open(&archive.Options{
-			Label:       archiveName,
-			Version:     archiveInfo.Version,
-			Arch:        cmd.Arch,
-			Suites:      archiveInfo.Suites,
-			Components:  archiveInfo.Components,
-			Pro:         archiveInfo.Pro,
-			CacheDir:    cache.DefaultDir("chisel"),
-			PubKeys:     archiveInfo.PubKeys,
-			Maintenance: maintenance,
+			Label:      archiveName,
+			Version:    archiveInfo.Version,
+			Arch:       cmd.Arch,
+			Suites:     archiveInfo.Suites,
+			Components: archiveInfo.Components,
+			Pro:        archiveInfo.Pro,
+			CacheDir:   cache.DefaultDir("chisel"),
+			PubKeys:    archiveInfo.PubKeys,
+			Maintained: archiveInfo.Maintained,
 		})
 		if err != nil {
 			if err == archive.ErrCredentialsNotFound {
@@ -109,6 +98,25 @@ func (cmd *cmdCut) Execute(args []string) error {
 			return err
 		}
 		archives[archiveName] = openArchive
+	}
+
+	hasMaintainedArchive := false
+	for _, archive := range archives {
+		if archive.Options().Maintained {
+			hasMaintainedArchive = true
+			break
+		}
+	}
+	if !hasMaintainedArchive {
+		if cmd.Ignore == "unmaintained" {
+			logf(`Warning: No archive has "maintained" maintenance status. ` +
+				`Consider the different Ubuntu Pro subcriptions to be safe. ` +
+				`See https://documentation.ubuntu.com/chisel/en/latest/reference/chisel-releases/chisel.yaml/#maintenance for details.`)
+		} else {
+			return fmt.Errorf(`no archive has "maintained" maintenance status, ` +
+				`consider the different Ubuntu Pro subcriptions to be safe, ` +
+				`see https://documentation.ubuntu.com/chisel/en/latest/reference/chisel-releases/chisel.yaml/#maintenance for details`)
+		}
 	}
 
 	err = slicer.Run(&slicer.RunOptions{

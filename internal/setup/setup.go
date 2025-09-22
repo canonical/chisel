@@ -39,6 +39,7 @@ type Archive struct {
 	Priority   int
 	Pro        string
 	PubKeys    []*packet.PublicKey
+	Maintained bool
 }
 
 // Package holds a collection of slices that represent parts of themselves.

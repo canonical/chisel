@@ -7,7 +7,6 @@ import (
 	"io"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/jessevdk/go-flags"
 	"gopkg.in/yaml.v3"
@@ -63,24 +62,18 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 		return err
 	}
 
-	maintenance := archive.Standard
-	if time.Now().After(release.Maintenance.EndOfLife) {
-		maintenance = archive.Unmaintained
-	} else if time.Now().Before(release.Maintenance.Standard) {
-		maintenance = archive.Unstable
-	}
 	archives := make(map[string]archive.Archive)
 	for archiveName, archiveInfo := range release.Archives {
 		openArchive, err := archiveOpen(&archive.Options{
-			Label:       archiveName,
-			Version:     archiveInfo.Version,
-			Arch:        cmd.Arch,
-			Suites:      archiveInfo.Suites,
-			Components:  archiveInfo.Components,
-			Pro:         archiveInfo.Pro,
-			CacheDir:    cache.DefaultDir("chisel"),
-			PubKeys:     archiveInfo.PubKeys,
-			Maintenance: maintenance,
+			Label:      archiveName,
+			Version:    archiveInfo.Version,
+			Arch:       cmd.Arch,
+			Suites:     archiveInfo.Suites,
+			Components: archiveInfo.Components,
+			Pro:        archiveInfo.Pro,
+			CacheDir:   cache.DefaultDir("chisel"),
+			PubKeys:    archiveInfo.PubKeys,
+			Maintained: archiveInfo.Maintained,
 		})
 		if err == archive.ErrCredentialsNotFound {
 			logf("Archive %q ignored: credentials not found\n", archiveName)

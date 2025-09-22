@@ -97,6 +97,7 @@ func (s *httpSuite) TestDoError(c *C) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main"},
 		CacheDir:   c.MkDir(),
+		Maintained: true,
 	}
 
 	_, err := archive.Open(&options)
@@ -154,14 +155,16 @@ var optionErrorTests = []optionErrorTest{{
 		Arch:       "amd64",
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "other"},
+		Maintained: true,
 	},
 	error: `archive has no component "other"`,
 }, {
 	options: archive.Options{
-		Label:   "ubuntu",
-		Version: "22.04",
-		Arch:    "amd64",
-		Suites:  []string{"jammy"},
+		Label:      "ubuntu",
+		Version:    "22.04",
+		Arch:       "amd64",
+		Suites:     []string{"jammy"},
+		Maintained: true,
 	},
 	error: "archive options missing components",
 }, {
@@ -170,6 +173,7 @@ var optionErrorTests = []optionErrorTest{{
 		Version:    "22.04",
 		Arch:       "amd64",
 		Components: []string{"main", "other"},
+		Maintained: true,
 	},
 	error: `archive options missing suites`,
 }, {
@@ -179,6 +183,7 @@ var optionErrorTests = []optionErrorTest{{
 		Arch:       "foo",
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "other"},
+		Maintained: true,
 	},
 	error: `invalid package architecture: foo`,
 }, {
@@ -189,6 +194,7 @@ var optionErrorTests = []optionErrorTest{{
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "other"},
 		Pro:        "invalid",
+		Maintained: true,
 	},
 	error: `invalid pro value: "invalid"`,
 }}
@@ -216,6 +222,7 @@ func (s *httpSuite) TestFetchPackage(c *C) {
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
 		PubKeys:    []*packet.PublicKey{s.pubKey},
+		Maintained: true,
 	}
 
 	testArchive, err := archive.Open(&options)
@@ -258,6 +265,7 @@ func (s *httpSuite) TestFetchPortsPackage(c *C) {
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
 		PubKeys:    []*packet.PublicKey{s.pubKey},
+		Maintained: true,
 	}
 
 	testArchive, err := archive.Open(&options)
@@ -308,6 +316,7 @@ func (s *httpSuite) TestFetchSecurityPackage(c *C) {
 		Suites:     []string{"jammy", "jammy-security", "jammy-updates"},
 		Components: []string{"main", "universe"},
 		PubKeys:    []*packet.PublicKey{s.pubKey},
+		Maintained: true,
 	}
 
 	testArchive, err := archive.Open(&options)
@@ -371,6 +380,7 @@ func (s *httpSuite) TestArchiveLabels(c *C) {
 			Components: []string{"main", "universe"},
 			CacheDir:   c.MkDir(),
 			PubKeys:    []*packet.PublicKey{s.pubKey},
+			Maintained: true,
 		}
 
 		_, err := archive.Open(&options)
@@ -423,6 +433,7 @@ func (s *httpSuite) TestProArchives(c *C) {
 			CacheDir:   c.MkDir(),
 			Pro:        pro,
 			PubKeys:    []*packet.PublicKey{s.pubKey},
+			Maintained: true,
 		}
 
 		_, err = archive.Open(&options)
@@ -449,6 +460,7 @@ func (s *httpSuite) TestProArchives(c *C) {
 		Components: []string{"main"},
 		CacheDir:   c.MkDir(),
 		PubKeys:    []*packet.PublicKey{s.pubKey},
+		Maintained: true,
 	}
 
 	_, err = archive.Open(&options)
@@ -481,6 +493,7 @@ func (s *httpSuite) TestProArchives(c *C) {
 			CacheDir:   c.MkDir(),
 			Pro:        pro,
 			PubKeys:    []*packet.PublicKey{s.pubKey},
+			Maintained: true,
 		}
 
 		testArchive, err := archive.Open(&options)
@@ -503,6 +516,7 @@ func (s *httpSuite) TestOpenUnmaintainedArchives(c *C) {
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
 		PubKeys:    []*packet.PublicKey{s.pubKey},
+		Maintained: true,
 	}
 
 	_, err := archive.Open(&options)
@@ -510,27 +524,8 @@ func (s *httpSuite) TestOpenUnmaintainedArchives(c *C) {
 	// default ubuntu archive where the release is no longer available.
 	c.Assert(err, Not(IsNil))
 
-	options.Maintenance = archive.Unmaintained
+	options.Maintained = false
 	_, err = archive.Open(&options)
-	c.Assert(err, IsNil)
-}
-
-func (s *httpSuite) TestOpenUnstableArchives(c *C) {
-	s.base = "http://archive.ubuntu.com/ubuntu/"
-	s.prepareArchive("jammy", "22.04", "amd64", []string{"main", "universe"})
-
-	options := archive.Options{
-		Label:       "ubuntu",
-		Version:     "22.04",
-		Arch:        "amd64",
-		Suites:      []string{"jammy"},
-		Components:  []string{"main", "universe"},
-		CacheDir:    c.MkDir(),
-		PubKeys:     []*packet.PublicKey{s.pubKey},
-		Maintenance: archive.Unstable,
-	}
-
-	_, err := archive.Open(&options)
 	c.Assert(err, IsNil)
 }
 
@@ -569,6 +564,7 @@ func (s *httpSuite) TestVerifyArchiveRelease(c *C) {
 			Components: []string{"main", "universe"},
 			CacheDir:   c.MkDir(),
 			PubKeys:    test.pubKeys,
+			Maintained: true,
 		}
 
 		_, err := archive.Open(&options)
@@ -611,6 +607,7 @@ func (s *httpSuite) TestPackageInfo(c *C) {
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
 		PubKeys:    []*packet.PublicKey{s.pubKey},
+		Maintained: true,
 	}
 
 	testArchive, err := archive.Open(&options)
@@ -685,7 +682,7 @@ type realArchiveTest struct {
 	suites         []string
 	components     []string
 	pro            string
-	maintenance    string
+	maintained     bool
 	archivePubKeys []*packet.PublicKey
 	archs          []string
 	pkg            string
@@ -695,7 +692,7 @@ type realArchiveTest struct {
 var realArchiveTests = []realArchiveTest{{
 	name:           "focal",
 	version:        "20.04",
-	maintenance:    archive.Standard,
+	maintained:     true,
 	suites:         []string{"focal"},
 	components:     []string{"main", "universe"},
 	archivePubKeys: []*packet.PublicKey{keyUbuntu2018.PubKey},
@@ -704,7 +701,7 @@ var realArchiveTests = []realArchiveTest{{
 }, {
 	name:           "jammy",
 	version:        "22.04",
-	maintenance:    archive.Standard,
+	maintained:     true,
 	suites:         []string{"jammy"},
 	components:     []string{"main", "universe"},
 	archivePubKeys: []*packet.PublicKey{keyUbuntu2018.PubKey},
@@ -713,7 +710,7 @@ var realArchiveTests = []realArchiveTest{{
 }, {
 	name:           "noble",
 	version:        "24.04",
-	maintenance:    archive.Standard,
+	maintained:     true,
 	suites:         []string{"noble"},
 	components:     []string{"main", "universe"},
 	archivePubKeys: []*packet.PublicKey{keyUbuntu2018.PubKey},
@@ -722,7 +719,7 @@ var realArchiveTests = []realArchiveTest{{
 }, {
 	name:           "mantic",
 	version:        "23.10",
-	maintenance:    archive.Unmaintained,
+	maintained:     false,
 	suites:         []string{"mantic"},
 	components:     []string{"main", "universe"},
 	archivePubKeys: []*packet.PublicKey{keyUbuntu2018.PubKey},
@@ -845,15 +842,15 @@ func (s *S) testOpenArchiveArch(c *C, test realArchiveTest, arch string) {
 	c.Logf("Checking ubuntu archive %s %s...", test.name, arch)
 
 	options := archive.Options{
-		Label:       "ubuntu",
-		Version:     test.version,
-		Arch:        arch,
-		Suites:      test.suites,
-		Components:  test.components,
-		CacheDir:    c.MkDir(),
-		Pro:         test.pro,
-		PubKeys:     test.archivePubKeys,
-		Maintenance: test.maintenance,
+		Label:      "ubuntu",
+		Version:    test.version,
+		Arch:       arch,
+		Suites:     test.suites,
+		Components: test.components,
+		CacheDir:   c.MkDir(),
+		Pro:        test.pro,
+		PubKeys:    test.archivePubKeys,
+		Maintained: test.maintained,
 	}
 
 	testArchive, err := archive.Open(&options)
