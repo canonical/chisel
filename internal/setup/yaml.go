@@ -314,6 +314,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 	}
 	release.Maintenance = &maintenance
 	for archiveName, details := range release.Archives {
+		oldRelease := false
 		maintained := true
 		switch details.Pro {
 		case "":
@@ -325,6 +326,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 			} else {
 				maintained = time.Now().Before(release.Maintenance.EndOfLife)
 			}
+			oldRelease = time.Now().After(release.Maintenance.EndOfLife)
 		case archive.ProInfra, archive.ProApps:
 			// Legacy support requires a different subscription and a different
 			// archive.
@@ -339,6 +341,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 			maintained = time.Now().Before(release.Maintenance.EndOfLife)
 		}
 		details.Maintained = maintained
+		details.OldRelease = oldRelease
 		release.Archives[archiveName] = details
 	}
 

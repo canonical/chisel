@@ -39,7 +39,11 @@ type Archive struct {
 	Priority   int
 	Pro        string
 	PubKeys    []*packet.PublicKey
+	// Maintained is set when the archive is still being updated.
 	Maintained bool
+	// OldRelease is set for Ubuntu releases which are moved from the regular
+	// archive which happens after the release's end of life date.
+	OldRelease bool
 }
 
 // Package holds a collection of slices that represent parts of themselves.

@@ -39,7 +39,11 @@ type Options struct {
 	Pro        string
 	CacheDir   string
 	PubKeys    []*packet.PublicKey
+	// Maintained is set when the archive is still being updated.
 	Maintained bool
+	// OldRelease is set for Ubuntu releases which are moved from the regular
+	// archive which happens after the release's end of life date.
+	OldRelease bool
 }
 
 func Open(options *Options) (Archive, error) {
@@ -180,7 +184,7 @@ var proArchiveInfo = map[string]struct {
 	},
 }
 
-func archiveURL(pro, arch string, maintained bool) (string, *credentials, error) {
+func archiveURL(pro, arch string, oldRelease bool) (string, *credentials, error) {
 	if pro != "" {
 		archiveInfo, ok := proArchiveInfo[pro]
 		if !ok {
@@ -194,7 +198,7 @@ func archiveURL(pro, arch string, maintained bool) (string, *credentials, error)
 		return url, creds, nil
 	}
 
-	if !maintained {
+	if oldRelease {
 		return ubuntuOldReleasesURL, nil, nil
 	}
 
@@ -215,7 +219,7 @@ func openUbuntu(options *Options) (Archive, error) {
 		return nil, fmt.Errorf("archive options missing version")
 	}
 
-	baseURL, creds, err := archiveURL(options.Pro, options.Arch, options.Maintained)
+	baseURL, creds, err := archiveURL(options.Pro, options.Arch, options.OldRelease)
 	if err != nil {
 		return nil, err
 	}

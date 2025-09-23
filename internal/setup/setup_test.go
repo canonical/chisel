@@ -2693,6 +2693,7 @@ var setupTests = []setupTest{{
 				Components: []string{"main", "universe"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
 				Maintained: false,
+				OldRelease: true,
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -2741,6 +2742,7 @@ var setupTests = []setupTest{{
 				Components: []string{"main", "universe"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
 				Maintained: false,
+				OldRelease: true,
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -2825,7 +2827,7 @@ var setupTests = []setupTest{{
 	},
 	relerror: `chisel.yaml: cannot parse maintenance: expected format for "standard" is YYYY-MM-DD`,
 }, {
-	summary: "Maintenance: archives in standard phase",
+	summary: "Maintenance: all in standard phase",
 	input: map[string]string{
 		"chisel.yaml": `
 			format: v1
@@ -2886,8 +2888,9 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
-				Maintained: true,
 				Priority:   3,
+				Maintained: true,
+				OldRelease: false,
 			},
 			"esm-apps": {
 				Name:       "esm-apps",
@@ -2896,8 +2899,8 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy-apps-security"},
 				Components: []string{"main"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
-				Maintained: true,
 				Priority:   2,
+				Maintained: true,
 			},
 			"esm-infra": {
 				Name:       "esm-infra",
@@ -2906,8 +2909,8 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy-infra-security"},
 				Components: []string{"main"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
-				Maintained: true,
 				Priority:   1,
+				Maintained: true,
 			},
 			"fips": {
 				Name:       "fips",
@@ -2916,8 +2919,8 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy"},
 				Components: []string{"main"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
-				Maintained: true,
 				Priority:   20,
+				Maintained: true,
 			},
 			"fips-updates": {
 				Name:       "fips-updates",
@@ -2926,8 +2929,8 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy-updates"},
 				Components: []string{"main"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
-				Maintained: true,
 				Priority:   21,
+				Maintained: true,
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -2945,7 +2948,7 @@ var setupTests = []setupTest{{
 		},
 	},
 }, {
-	summary: "Maintenance: pro archives in expanded phase",
+	summary: "Maintenance: all archives in expanded phase",
 	input: map[string]string{
 		"chisel.yaml": `
 			format: v1
@@ -3006,8 +3009,9 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
-				Maintained: false,
 				Priority:   3,
+				Maintained: false,
+				OldRelease: false,
 			},
 			"esm-apps": {
 				Name:       "esm-apps",
@@ -3016,8 +3020,8 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy-apps-security"},
 				Components: []string{"main"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
-				Maintained: true,
 				Priority:   2,
+				Maintained: true,
 			},
 			"esm-infra": {
 				Name:       "esm-infra",
@@ -3026,8 +3030,8 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy-infra-security"},
 				Components: []string{"main"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
-				Maintained: true,
 				Priority:   1,
+				Maintained: true,
 			},
 			"fips": {
 				Name:       "fips",
@@ -3036,8 +3040,8 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy"},
 				Components: []string{"main"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
-				Maintained: true,
 				Priority:   20,
+				Maintained: true,
 			},
 			"fips-updates": {
 				Name:       "fips-updates",
@@ -3046,8 +3050,8 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy-updates"},
 				Components: []string{"main"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
-				Maintained: true,
 				Priority:   21,
+				Maintained: true,
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -3065,7 +3069,7 @@ var setupTests = []setupTest{{
 		},
 	},
 }, {
-	summary: "Maintenance: pro archives in legacy phase",
+	summary: "Maintenance: all archives in legacy phase",
 	input: map[string]string{
 		"chisel.yaml": `
 			format: v1
@@ -3126,8 +3130,9 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
-				Maintained: false,
 				Priority:   3,
+				Maintained: false,
+				OldRelease: false,
 			},
 			"esm-apps": {
 				Name:       "esm-apps",
@@ -3136,8 +3141,8 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy-apps-security"},
 				Components: []string{"main"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
-				Maintained: false,
 				Priority:   2,
+				Maintained: false,
 			},
 			"esm-infra": {
 				Name:       "esm-infra",
@@ -3146,8 +3151,8 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy-infra-security"},
 				Components: []string{"main"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
-				Maintained: false,
 				Priority:   1,
+				Maintained: false,
 			},
 			"fips": {
 				Name:       "fips",
@@ -3156,8 +3161,8 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy"},
 				Components: []string{"main"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
-				Maintained: true,
 				Priority:   20,
+				Maintained: true,
 			},
 			"fips-updates": {
 				Name:       "fips-updates",
@@ -3166,8 +3171,8 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy-updates"},
 				Components: []string{"main"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
-				Maintained: true,
 				Priority:   21,
+				Maintained: true,
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -3185,7 +3190,7 @@ var setupTests = []setupTest{{
 		},
 	},
 }, {
-	summary: "Maintenance: pro archives in end-of-life phase",
+	summary: "Maintenance: all archives in end-of-life phase",
 	input: map[string]string{
 		"chisel.yaml": `
 			format: v1
@@ -3246,8 +3251,9 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
-				Maintained: false,
 				Priority:   3,
+				Maintained: false,
+				OldRelease: true,
 			},
 			"esm-apps": {
 				Name:       "esm-apps",
@@ -3256,8 +3262,8 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy-apps-security"},
 				Components: []string{"main"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
-				Maintained: false,
 				Priority:   2,
+				Maintained: false,
 			},
 			"esm-infra": {
 				Name:       "esm-infra",
@@ -3266,8 +3272,8 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy-infra-security"},
 				Components: []string{"main"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
-				Maintained: false,
 				Priority:   1,
+				Maintained: false,
 			},
 			"fips": {
 				Name:       "fips",
@@ -3276,8 +3282,8 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy"},
 				Components: []string{"main"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
-				Maintained: false,
 				Priority:   20,
+				Maintained: false,
 			},
 			"fips-updates": {
 				Name:       "fips-updates",
@@ -3286,8 +3292,8 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy-updates"},
 				Components: []string{"main"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
-				Maintained: false,
 				Priority:   21,
+				Maintained: false,
 			},
 		},
 		Packages: map[string]*setup.Package{
@@ -3364,8 +3370,9 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy"},
 				Components: []string{"main", "universe"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
-				Maintained: true,
 				Priority:   3,
+				Maintained: true,
+				OldRelease: false,
 			},
 			"esm-apps": {
 				Name:       "esm-apps",
@@ -3374,8 +3381,8 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy-apps-security"},
 				Components: []string{"main"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
-				Maintained: true,
 				Priority:   2,
+				Maintained: true,
 			},
 			"esm-infra": {
 				Name:       "esm-infra",
@@ -3384,8 +3391,8 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy-infra-security"},
 				Components: []string{"main"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
-				Maintained: true,
 				Priority:   1,
+				Maintained: true,
 			},
 			"fips": {
 				Name:       "fips",
@@ -3394,8 +3401,8 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy"},
 				Components: []string{"main"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
-				Maintained: true,
 				Priority:   20,
+				Maintained: true,
 			},
 			"fips-updates": {
 				Name:       "fips-updates",
@@ -3404,8 +3411,8 @@ var setupTests = []setupTest{{
 				Suites:     []string{"jammy-updates"},
 				Components: []string{"main"},
 				PubKeys:    []*packet.PublicKey{testKey.PubKey},
-				Maintained: true,
 				Priority:   21,
+				Maintained: true,
 			},
 		},
 		Packages: map[string]*setup.Package{

@@ -89,6 +89,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 			CacheDir:   cache.DefaultDir("chisel"),
 			PubKeys:    archiveInfo.PubKeys,
 			Maintained: archiveInfo.Maintained,
+			OldRelease: archiveInfo.OldRelease,
 		})
 		if err != nil {
 			if err == archive.ErrCredentialsNotFound {

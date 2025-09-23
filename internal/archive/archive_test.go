@@ -97,7 +97,6 @@ func (s *httpSuite) TestDoError(c *C) {
 		Suites:     []string{"jammy"},
 		Components: []string{"main"},
 		CacheDir:   c.MkDir(),
-		Maintained: true,
 	}
 
 	_, err := archive.Open(&options)
@@ -155,16 +154,14 @@ var optionErrorTests = []optionErrorTest{{
 		Arch:       "amd64",
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "other"},
-		Maintained: true,
 	},
 	error: `archive has no component "other"`,
 }, {
 	options: archive.Options{
-		Label:      "ubuntu",
-		Version:    "22.04",
-		Arch:       "amd64",
-		Suites:     []string{"jammy"},
-		Maintained: true,
+		Label:   "ubuntu",
+		Version: "22.04",
+		Arch:    "amd64",
+		Suites:  []string{"jammy"},
 	},
 	error: "archive options missing components",
 }, {
@@ -173,7 +170,6 @@ var optionErrorTests = []optionErrorTest{{
 		Version:    "22.04",
 		Arch:       "amd64",
 		Components: []string{"main", "other"},
-		Maintained: true,
 	},
 	error: `archive options missing suites`,
 }, {
@@ -183,7 +179,6 @@ var optionErrorTests = []optionErrorTest{{
 		Arch:       "foo",
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "other"},
-		Maintained: true,
 	},
 	error: `invalid package architecture: foo`,
 }, {
@@ -194,7 +189,6 @@ var optionErrorTests = []optionErrorTest{{
 		Suites:     []string{"jammy"},
 		Components: []string{"main", "other"},
 		Pro:        "invalid",
-		Maintained: true,
 	},
 	error: `invalid pro value: "invalid"`,
 }}
@@ -222,7 +216,6 @@ func (s *httpSuite) TestFetchPackage(c *C) {
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
 		PubKeys:    []*packet.PublicKey{s.pubKey},
-		Maintained: true,
 	}
 
 	testArchive, err := archive.Open(&options)
@@ -265,7 +258,6 @@ func (s *httpSuite) TestFetchPortsPackage(c *C) {
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
 		PubKeys:    []*packet.PublicKey{s.pubKey},
-		Maintained: true,
 	}
 
 	testArchive, err := archive.Open(&options)
@@ -316,7 +308,6 @@ func (s *httpSuite) TestFetchSecurityPackage(c *C) {
 		Suites:     []string{"jammy", "jammy-security", "jammy-updates"},
 		Components: []string{"main", "universe"},
 		PubKeys:    []*packet.PublicKey{s.pubKey},
-		Maintained: true,
 	}
 
 	testArchive, err := archive.Open(&options)
@@ -380,7 +371,6 @@ func (s *httpSuite) TestArchiveLabels(c *C) {
 			Components: []string{"main", "universe"},
 			CacheDir:   c.MkDir(),
 			PubKeys:    []*packet.PublicKey{s.pubKey},
-			Maintained: true,
 		}
 
 		_, err := archive.Open(&options)
@@ -433,7 +423,6 @@ func (s *httpSuite) TestProArchives(c *C) {
 			CacheDir:   c.MkDir(),
 			Pro:        pro,
 			PubKeys:    []*packet.PublicKey{s.pubKey},
-			Maintained: true,
 		}
 
 		_, err = archive.Open(&options)
@@ -460,7 +449,6 @@ func (s *httpSuite) TestProArchives(c *C) {
 		Components: []string{"main"},
 		CacheDir:   c.MkDir(),
 		PubKeys:    []*packet.PublicKey{s.pubKey},
-		Maintained: true,
 	}
 
 	_, err = archive.Open(&options)
@@ -493,7 +481,6 @@ func (s *httpSuite) TestProArchives(c *C) {
 			CacheDir:   c.MkDir(),
 			Pro:        pro,
 			PubKeys:    []*packet.PublicKey{s.pubKey},
-			Maintained: true,
 		}
 
 		testArchive, err := archive.Open(&options)
@@ -516,7 +503,7 @@ func (s *httpSuite) TestOpenUnmaintainedArchives(c *C) {
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
 		PubKeys:    []*packet.PublicKey{s.pubKey},
-		Maintained: true,
+		OldRelease: false,
 	}
 
 	_, err := archive.Open(&options)
@@ -524,7 +511,7 @@ func (s *httpSuite) TestOpenUnmaintainedArchives(c *C) {
 	// default ubuntu archive where the release is no longer available.
 	c.Assert(err, Not(IsNil))
 
-	options.Maintained = false
+	options.OldRelease = true
 	_, err = archive.Open(&options)
 	c.Assert(err, IsNil)
 }
@@ -564,7 +551,6 @@ func (s *httpSuite) TestVerifyArchiveRelease(c *C) {
 			Components: []string{"main", "universe"},
 			CacheDir:   c.MkDir(),
 			PubKeys:    test.pubKeys,
-			Maintained: true,
 		}
 
 		_, err := archive.Open(&options)
@@ -607,7 +593,6 @@ func (s *httpSuite) TestPackageInfo(c *C) {
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
 		PubKeys:    []*packet.PublicKey{s.pubKey},
-		Maintained: true,
 	}
 
 	testArchive, err := archive.Open(&options)
