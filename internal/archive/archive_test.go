@@ -507,7 +507,7 @@ func (s *httpSuite) TestOpenUnmaintainedArchives(c *C) {
 	}
 
 	_, err := archive.Open(&options)
-	// Fails when Unmaintained is not set because it attempts to contact the
+	// Fails when OldRelease is not set because it attempts to contact the
 	// default ubuntu archive where the release is no longer available.
 	c.Assert(err, Not(IsNil))
 
@@ -667,7 +667,7 @@ type realArchiveTest struct {
 	suites         []string
 	components     []string
 	pro            string
-	maintained     bool
+	oldRelease     bool
 	archivePubKeys []*packet.PublicKey
 	archs          []string
 	pkg            string
@@ -677,7 +677,7 @@ type realArchiveTest struct {
 var realArchiveTests = []realArchiveTest{{
 	name:           "focal",
 	version:        "20.04",
-	maintained:     true,
+	oldRelease:     false,
 	suites:         []string{"focal"},
 	components:     []string{"main", "universe"},
 	archivePubKeys: []*packet.PublicKey{keyUbuntu2018.PubKey},
@@ -686,7 +686,7 @@ var realArchiveTests = []realArchiveTest{{
 }, {
 	name:           "jammy",
 	version:        "22.04",
-	maintained:     true,
+	oldRelease:     false,
 	suites:         []string{"jammy"},
 	components:     []string{"main", "universe"},
 	archivePubKeys: []*packet.PublicKey{keyUbuntu2018.PubKey},
@@ -695,7 +695,7 @@ var realArchiveTests = []realArchiveTest{{
 }, {
 	name:           "noble",
 	version:        "24.04",
-	maintained:     true,
+	oldRelease:     false,
 	suites:         []string{"noble"},
 	components:     []string{"main", "universe"},
 	archivePubKeys: []*packet.PublicKey{keyUbuntu2018.PubKey},
@@ -704,7 +704,7 @@ var realArchiveTests = []realArchiveTest{{
 }, {
 	name:           "mantic",
 	version:        "23.10",
-	maintained:     false,
+	oldRelease:     true,
 	suites:         []string{"mantic"},
 	components:     []string{"main", "universe"},
 	archivePubKeys: []*packet.PublicKey{keyUbuntu2018.PubKey},
@@ -835,7 +835,7 @@ func (s *S) testOpenArchiveArch(c *C, test realArchiveTest, arch string) {
 		CacheDir:   c.MkDir(),
 		Pro:        test.pro,
 		PubKeys:    test.archivePubKeys,
-		Maintained: test.maintained,
+		OldRelease: test.oldRelease,
 	}
 
 	testArchive, err := archive.Open(&options)
