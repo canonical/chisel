@@ -1,0 +1,43 @@
+name: TIOBE Quality Checks
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron:  '0 7 1 * *'
+
+jobs:
+  TiCS:
+    runs-on: [self-hosted, reactive, amd64, tiobe, noble]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Install dependencies
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@v0.6.1
+          go install github.com/axw/gocov/gocov@v1.1.0
+          go install github.com/AlekSi/gocov-xml@v1.1.0
+
+      # We could store a report from the regular run, but this is cheap to do and keeps this isolated.
+      - name: Test and generate coverage report
+        run: |
+          go test -coverprofile=coverage.out ./...
+          gocov convert coverage.out > coverage.json
+          # Annoyingly, the coverage.xml file needs to be in a .coverage folder.
+          mkdir .coverage
+          gocov-xml < coverage.json > .coverage/coverage.xml
+
+      - name: TiCS GitHub Action
+        uses: tiobe/tics-github-action@v3
+        with:
+          mode: qserver
+          viewerUrl: https://canonical.tiobe.com/tiobeweb/TICS/api/cfg?name=GoProjects
+          ticsAuthToken: ${{ secrets.TICSAUTHTOKEN }}
+          project: chisel
+          installTics: true
