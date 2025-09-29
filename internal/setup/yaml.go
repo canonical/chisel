@@ -2,10 +2,12 @@ package setup
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"path"
 	"slices"
 	"strings"
+	"time"
 
 	"golang.org/x/crypto/openpgp/packet"
 	"gopkg.in/yaml.v3"
@@ -23,9 +25,10 @@ func (p *Package) MarshalYAML() (any, error) {
 var _ yaml.Marshaler = (*Package)(nil)
 
 type yamlRelease struct {
-	Format   string                 `yaml:"format"`
-	Archives map[string]yamlArchive `yaml:"archives"`
-	PubKeys  map[string]yamlPubKey  `yaml:"public-keys"`
+	Format      string                 `yaml:"format"`
+	Maintenance yamlMaintenance        `yaml:"maintenance"`
+	Archives    map[string]yamlArchive `yaml:"archives"`
+	PubKeys     map[string]yamlPubKey  `yaml:"public-keys"`
 	// "v2-archives" is used for backwards compatibility with Chisel <= 1.0.0,
 	// where it will be ignored. In new versions, it will be parsed with the new
 	// fields that break said compatibility (e.g. "pro" archives) and merged
@@ -219,12 +222,14 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		if len(details.Components) == 0 {
 			return nil, fmt.Errorf("%s: archive %q missing components field", fileName, archiveName)
 		}
+
 		switch details.Pro {
 		case "", archive.ProApps, archive.ProFIPS, archive.ProFIPSUpdates, archive.ProInfra:
 		default:
 			logf("Archive %q ignored: invalid pro value: %q", archiveName, details.Pro)
 			continue
 		}
+
 		if details.Default && defaultArchive != "" {
 			if archiveName < defaultArchive {
 				archiveName, defaultArchive = defaultArchive, archiveName
@@ -234,6 +239,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		if details.Default {
 			defaultArchive = archiveName
 		}
+
 		if len(details.PubKeys) == 0 {
 			return nil, fmt.Errorf("%s: archive %q missing public-keys field", fileName, archiveName)
 		}
@@ -245,6 +251,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 			}
 			archiveKeys = append(archiveKeys, key)
 		}
+
 		priority := 0
 		if details.Priority != nil {
 			hasPriority = true
@@ -258,6 +265,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 				archiveNoPriority = archiveName
 			}
 		}
+
 		release.Archives[archiveName] = &Archive{
 			Name:       archiveName,
 			Version:    details.Version,
@@ -286,6 +294,55 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 			release.Archives[archiveName].Priority = -i - 1
 		}
 		release.Archives[defaultArchive].Priority = 1
+	}
+
+	var maintenance Maintenance
+	if yamlVar.Maintenance == (yamlMaintenance{}) {
+		// Use default if key not present in yaml, best effort if "ubuntu"
+		// archive is present.
+		// TODO remove the defaults some time after chisel-releases is updated.
+		ubuntuArchive, ok := release.Archives["ubuntu"]
+		if ok {
+			maintenance = defaultMaintenance[ubuntuArchive.Version]
+		}
+	}
+	if maintenance == (Maintenance{}) {
+		maintenance, err = parseYamlMaintenance(&yamlVar.Maintenance)
+		if err != nil {
+			return nil, fmt.Errorf("%s: cannot parse maintenance: %s", fileName, err)
+		}
+	}
+	release.Maintenance = &maintenance
+	for archiveName, details := range release.Archives {
+		oldRelease := false
+		maintained := true
+		switch details.Pro {
+		case "":
+			// The standard archive is no longer maintained during Expanded
+			// Security Maintenance for LTS, or after End of Life for interim
+			// releases.
+			if release.Maintenance.Expanded != (time.Time{}) {
+				maintained = time.Now().Before(release.Maintenance.Expanded)
+			} else {
+				maintained = time.Now().Before(release.Maintenance.EndOfLife)
+			}
+			oldRelease = time.Now().After(release.Maintenance.EndOfLife)
+		case archive.ProInfra, archive.ProApps:
+			// Legacy support requires a different subscription and a different
+			// archive.
+			if release.Maintenance.Legacy != (time.Time{}) {
+				maintained = time.Now().Before(release.Maintenance.Legacy)
+			} else {
+				maintained = time.Now().Before(release.Maintenance.EndOfLife)
+			}
+		default:
+			// FIPS archives are not included in the support window, they need
+			// a different subscription and have a different lifetime.
+			maintained = time.Now().Before(release.Maintenance.EndOfLife)
+		}
+		details.Maintained = maintained
+		details.OldRelease = oldRelease
+		release.Archives[archiveName] = details
 	}
 
 	return release, err
@@ -545,4 +602,92 @@ func packageToYAML(p *Package) (*yamlPackage, error) {
 		pkg.Slices[name] = *yamlSlice
 	}
 	return pkg, nil
+}
+
+type yamlMaintenance struct {
+	Standard  string `yaml:"standard"`
+	Expanded  string `yaml:"expanded"`
+	Legacy    string `yaml:"legacy"`
+	EndOfLife string `yaml:"end-of-life"`
+}
+
+func parseYamlMaintenance(yamlVar *yamlMaintenance) (Maintenance, error) {
+	maintenance := Maintenance{}
+
+	if yamlVar.Standard == "" {
+		return Maintenance{}, errors.New(`"standard" is unset`)
+	}
+	date, err := time.Parse(time.DateOnly, yamlVar.Standard)
+	if err != nil {
+		return Maintenance{}, errors.New(`expected format for "standard" is YYYY-MM-DD`)
+	}
+	maintenance.Standard = date
+
+	if yamlVar.EndOfLife == "" {
+		return Maintenance{}, errors.New(`"end-of-life" is unset`)
+	}
+	date, err = time.Parse(time.DateOnly, yamlVar.EndOfLife)
+	if err != nil {
+		return Maintenance{}, errors.New(`expected format for "end-of-life" is YYYY-MM-DD`)
+	}
+	maintenance.EndOfLife = date
+
+	if yamlVar.Expanded != "" {
+		date, err = time.Parse(time.DateOnly, yamlVar.Expanded)
+		if err != nil {
+			return Maintenance{}, errors.New(`expected format for "expanded" is YYYY-MM-DD`)
+		}
+		maintenance.Expanded = date
+	}
+
+	if yamlVar.Legacy != "" {
+		date, err = time.Parse(time.DateOnly, yamlVar.Legacy)
+		if err != nil {
+			return Maintenance{}, errors.New(`expected format for "legacy" is YYYY-MM-DD`)
+		}
+		maintenance.Legacy = date
+	}
+
+	return maintenance, nil
+}
+
+var defaultMaintenance = map[string]Maintenance{
+	"20.04": {
+		Standard:  time.Date(2020, time.April, 23, 0, 0, 0, 0, time.UTC),
+		Expanded:  time.Date(2025, time.May, 29, 0, 0, 0, 0, time.UTC),
+		Legacy:    time.Date(2030, time.April, 23, 0, 0, 0, 0, time.UTC),
+		EndOfLife: time.Date(2032, time.April, 27, 0, 0, 0, 0, time.UTC),
+	},
+	"22.04": {
+		Standard:  time.Date(2022, time.April, 21, 0, 0, 0, 0, time.UTC),
+		Expanded:  time.Date(2027, time.June, 1, 0, 0, 0, 0, time.UTC),
+		Legacy:    time.Date(2032, time.April, 21, 0, 0, 0, 0, time.UTC),
+		EndOfLife: time.Date(2034, time.April, 25, 0, 0, 0, 0, time.UTC),
+	},
+	"22.10": {
+		Standard:  time.Date(2022, time.October, 20, 0, 0, 0, 0, time.UTC),
+		EndOfLife: time.Date(2023, time.July, 20, 0, 0, 0, 0, time.UTC),
+	},
+	"23.04": {
+		Standard:  time.Date(2023, time.April, 20, 0, 0, 0, 0, time.UTC),
+		EndOfLife: time.Date(2024, time.January, 25, 0, 0, 0, 0, time.UTC),
+	},
+	"23.10": {
+		Standard:  time.Date(2023, time.October, 12, 0, 0, 0, 0, time.UTC),
+		EndOfLife: time.Date(2024, time.July, 11, 0, 0, 0, 0, time.UTC),
+	},
+	"24.04": {
+		Standard:  time.Date(2024, time.April, 25, 0, 0, 0, 0, time.UTC),
+		Expanded:  time.Date(2029, time.May, 31, 0, 0, 0, 0, time.UTC),
+		Legacy:    time.Date(2034, time.April, 25, 0, 0, 0, 0, time.UTC),
+		EndOfLife: time.Date(2036, time.April, 29, 0, 0, 0, 0, time.UTC),
+	},
+	"24.10": {
+		Standard:  time.Date(2024, time.October, 10, 0, 0, 0, 0, time.UTC),
+		EndOfLife: time.Date(2025, time.July, 10, 0, 0, 0, 0, time.UTC),
+	},
+	"25.04": {
+		Standard:  time.Date(2025, time.April, 17, 0, 0, 0, 0, time.UTC),
+		EndOfLife: time.Date(2026, time.January, 15, 0, 0, 0, 0, time.UTC),
+	},
 }

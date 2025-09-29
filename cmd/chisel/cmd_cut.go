@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/jessevdk/go-flags"
 
 	"github.com/canonical/chisel/internal/archive"
@@ -22,12 +25,14 @@ var cutDescs = map[string]string{
 	"release": "Chisel release name or directory (e.g. ubuntu-22.04)",
 	"root":    "Root for generated content",
 	"arch":    "Package architecture",
+	"ignore":  "Conditions to ignore (e.g. unmaintained, unstable)",
 }
 
 type cmdCut struct {
 	Release string `long:"release" value-name:"<dir>"`
 	RootDir string `long:"root" value-name:"<dir>" required:"yes"`
 	Arch    string `long:"arch" value-name:"<arch>"`
+	Ignore  string `long:"ignore" choice:"unmaintained" choice:"unstable" value-name:"<cond>"`
 
 	Positional struct {
 		SliceRefs []string `positional-arg-name:"<slice names>" required:"yes"`
@@ -57,6 +62,16 @@ func (cmd *cmdCut) Execute(args []string) error {
 		return err
 	}
 
+	if time.Now().Before(release.Maintenance.Standard) {
+		if cmd.Ignore == "unstable" {
+			logf(`Warning: This release is in the "unstable" maintenance status. ` +
+				`See https://documentation.ubuntu.com/chisel/en/latest/reference/chisel-releases/chisel.yaml/#maintenance to be safe`)
+		} else {
+			return fmt.Errorf(`this release is in the "unstable" maintenance status, ` +
+				`see https://documentation.ubuntu.com/chisel/en/latest/reference/chisel-releases/chisel.yaml/#maintenance for details`)
+		}
+	}
+
 	selection, err := setup.Select(release, sliceKeys)
 	if err != nil {
 		return err
@@ -73,6 +88,8 @@ func (cmd *cmdCut) Execute(args []string) error {
 			Pro:        archiveInfo.Pro,
 			CacheDir:   cache.DefaultDir("chisel"),
 			PubKeys:    archiveInfo.PubKeys,
+			Maintained: archiveInfo.Maintained,
+			OldRelease: archiveInfo.OldRelease,
 		})
 		if err != nil {
 			if err == archive.ErrCredentialsNotFound {
@@ -82,6 +99,25 @@ func (cmd *cmdCut) Execute(args []string) error {
 			return err
 		}
 		archives[archiveName] = openArchive
+	}
+
+	hasMaintainedArchive := false
+	for _, archive := range archives {
+		if archive.Options().Maintained {
+			hasMaintainedArchive = true
+			break
+		}
+	}
+	if !hasMaintainedArchive {
+		if cmd.Ignore == "unmaintained" {
+			logf(`Warning: No archive has "maintained" maintenance status. ` +
+				`Consider the different Ubuntu Pro subcriptions to be safe. ` +
+				`See https://documentation.ubuntu.com/chisel/en/latest/reference/chisel-releases/chisel.yaml/#maintenance for details.`)
+		} else {
+			return fmt.Errorf(`no archive has "maintained" maintenance status, ` +
+				`consider the different Ubuntu Pro subcriptions to be safe, ` +
+				`see https://documentation.ubuntu.com/chisel/en/latest/reference/chisel-releases/chisel.yaml/#maintenance for details`)
+		}
 	}
 
 	err = slicer.Run(&slicer.RunOptions{
