@@ -30,10 +30,10 @@ var cutDescs = map[string]string{
 }
 
 type cmdCut struct {
-	Release string `long:"release" value-name:"<dir>"`
-	RootDir string `long:"root" value-name:"<dir>" required:"yes"`
-	Arch    string `long:"arch" value-name:"<arch>"`
-	Ignore []string `long:"ignore" choice:"unmaintained" choice:"unstable" value-name:"<cond>"`
+	Release string   `long:"release" value-name:"<dir>"`
+	RootDir string   `long:"root" value-name:"<dir>" required:"yes"`
+	Arch    string   `long:"arch" value-name:"<arch>"`
+	Ignore  []string `long:"ignore" choice:"unmaintained" choice:"unstable" value-name:"<cond>"`
 
 	Positional struct {
 		SliceRefs []string `positional-arg-name:"<slice names>" required:"yes"`
