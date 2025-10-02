@@ -371,7 +371,7 @@ var slicerTests = []slicerTest{{
 		"/dir/file-1": "file 0644 a441b15f {a-implicit-parent_myslice}",
 		"/dir/file-2": "file 0644 a441b15f {c-implicit-parent_myslice}",
 	},
-	// No Warning is emitted becaues the directory is explicitly listed.
+	// No Warning is emitted because the directory is explicitly listed.
 	logOutput: "",
 }, {
 	summary: "Valid same file in two slices in different packages",
