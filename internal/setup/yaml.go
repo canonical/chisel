@@ -56,6 +56,10 @@ type yamlPackage struct {
 	Archive   string               `yaml:"archive,omitempty"`
 	Essential []string             `yaml:"essential,omitempty"`
 	Slices    map[string]yamlSlice `yaml:"slices,omitempty"`
+	// "v3-essential" is used for backwards porting of arch-specific essential
+	// to releases that use "v1" or "v2". When using older versions of Chisel
+	// the field will be ignored and `essential` is used as a fallback.
+	V3Essential map[string]*yamlEssential `yaml:"v3-essential,omitempty"`
 }
 
 type yamlPath struct {
@@ -145,12 +149,33 @@ type yamlSlice struct {
 	Essential []string             `yaml:"essential,omitempty"`
 	Contents  map[string]*yamlPath `yaml:"contents,omitempty"`
 	Mutate    string               `yaml:"mutate,omitempty"`
+	// "v3-essential" is used for backwards porting of arch-specific essential
+	// to releases that use "v1" or "v2". When using older versions of Chisel
+	// the field will be ignored and `essential` is used as a fallback.
+	V3Essential map[string]*yamlEssential `yaml:"v3-essential,omitempty"`
 }
 
 type yamlPubKey struct {
 	ID    string `yaml:"id"`
 	Armor string `yaml:"armor"`
 }
+
+type yamlEssential struct {
+	Arch yamlArch `yaml:"arch,omitempty"`
+}
+
+func (ye *yamlEssential) MarshalYAML() (any, error) {
+	type flowEssential *yamlEssential
+	node := &yaml.Node{}
+	err := node.Encode(flowEssential(ye))
+	if err != nil {
+		return nil, err
+	}
+	node.Style |= yaml.FlowStyle
+	return node, nil
+}
+
+var _ yaml.Marshaler = (*yamlEssential)(nil)
 
 func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 	release := &Release{
@@ -365,15 +390,25 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 	if yamlPkg.Name != pkg.Name {
 		return nil, fmt.Errorf("%s: filename and 'package' field (%q) disagree", pkgPath, yamlPkg.Name)
 	}
-	pkg.Archive = yamlPkg.Archive
+	if yamlPkg.V3Essential == nil {
+		yamlPkg.V3Essential = map[string]*yamlEssential{}
+	}
+	for _, refName := range yamlPkg.Essential {
+		if _, ok := yamlPkg.V3Essential[refName]; ok {
+			// This check is only needed because the list format can contain
+			// duplicates. It should be removed when format "v2" is deprecated.
+			return nil, fmt.Errorf("package %s defined with redundant essential slice: %s", pkgName, refName)
+		}
+		yamlPkg.V3Essential[refName] = &yamlEssential{}
+	}
 
+	pkg.Archive = yamlPkg.Archive
 	zeroPath := yamlPath{}
 	for sliceName, yamlSlice := range yamlPkg.Slices {
 		match := apacheutil.SnameExp.FindStringSubmatch(sliceName)
 		if match == nil {
 			return nil, fmt.Errorf("invalid slice name %q in %s (start with a-z, len >= 3, only a-z / 0-9 / -)", sliceName, pkgPath)
 		}
-
 		slice := &Slice{
 			Package: pkgName,
 			Name:    sliceName,
@@ -381,7 +416,19 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 				Mutate: yamlSlice.Mutate,
 			},
 		}
-		for _, refName := range yamlPkg.Essential {
+
+		if yamlSlice.V3Essential == nil {
+			yamlSlice.V3Essential = map[string]*yamlEssential{}
+		}
+		for _, refName := range yamlSlice.Essential {
+			if _, ok := yamlSlice.V3Essential[refName]; ok {
+				// This check is only needed because the list format can contain
+				// duplicates. It should be removed when format "v2" is deprecated.
+				return nil, fmt.Errorf("slice %s defined with redundant essential slice: %s", slice, refName)
+			}
+			yamlSlice.V3Essential[refName] = &yamlEssential{}
+		}
+		for refName, essentialInfo := range yamlPkg.V3Essential {
 			sliceKey, err := ParseSliceKey(refName)
 			if err != nil {
 				return nil, fmt.Errorf("package %q has invalid essential slice reference: %q", pkgName, refName)
@@ -390,12 +437,19 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 				// Do not add the slice to its own essentials list.
 				continue
 			}
-			if slices.Contains(slice.Essential, sliceKey) {
+			if _, ok := slice.Essential[sliceKey]; ok {
 				return nil, fmt.Errorf("package %s defined with redundant essential slice: %s", pkgName, refName)
 			}
-			slice.Essential = append(slice.Essential, sliceKey)
+			if slice.Essential == nil {
+				slice.Essential = map[SliceKey]EssentialInfo{}
+			}
+			var archList []string
+			if essentialInfo != nil {
+				archList = essentialInfo.Arch.List
+			}
+			slice.Essential[sliceKey] = EssentialInfo{Arch: archList}
 		}
-		for _, refName := range yamlSlice.Essential {
+		for refName, essentialInfo := range yamlSlice.V3Essential {
 			sliceKey, err := ParseSliceKey(refName)
 			if err != nil {
 				return nil, fmt.Errorf("package %q has invalid essential slice reference: %q", pkgName, refName)
@@ -403,10 +457,17 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 			if sliceKey.Package == slice.Package && sliceKey.Slice == slice.Name {
 				return nil, fmt.Errorf("cannot add slice to itself as essential %q in %s", refName, pkgPath)
 			}
-			if slices.Contains(slice.Essential, sliceKey) {
+			if _, ok := slice.Essential[sliceKey]; ok {
 				return nil, fmt.Errorf("slice %s defined with redundant essential slice: %s", slice, refName)
 			}
-			slice.Essential = append(slice.Essential, sliceKey)
+			if slice.Essential == nil {
+				slice.Essential = map[SliceKey]EssentialInfo{}
+			}
+			var archList []string
+			if essentialInfo != nil {
+				archList = essentialInfo.Arch.List
+			}
+			slice.Essential[sliceKey] = EssentialInfo{Arch: archList}
 		}
 
 		if len(yamlSlice.Contents) > 0 {
@@ -570,12 +631,12 @@ func pathInfoToYAML(pi *PathInfo) (*yamlPath, error) {
 // sliceToYAML converts a Slice object to a yamlSlice object.
 func sliceToYAML(s *Slice) (*yamlSlice, error) {
 	slice := &yamlSlice{
-		Essential: make([]string, 0, len(s.Essential)),
-		Contents:  make(map[string]*yamlPath, len(s.Contents)),
-		Mutate:    s.Scripts.Mutate,
+		Contents:    make(map[string]*yamlPath, len(s.Contents)),
+		Mutate:      s.Scripts.Mutate,
+		V3Essential: make(map[string]*yamlEssential, len(s.Essential)),
 	}
-	for _, key := range s.Essential {
-		slice.Essential = append(slice.Essential, key.String())
+	for key, info := range s.Essential {
+		slice.V3Essential[key.String()] = &yamlEssential{Arch: yamlArch{info.Arch}}
 	}
 	for path, info := range s.Contents {
 		yamlPath, err := pathInfoToYAML(&info)

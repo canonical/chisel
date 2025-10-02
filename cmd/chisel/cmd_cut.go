@@ -72,7 +72,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 		}
 	}
 
-	selection, err := setup.Select(release, sliceKeys)
+	selection, err := setup.Select(release, sliceKeys, cmd.Arch)
 	if err != nil {
 		return err
 	}
