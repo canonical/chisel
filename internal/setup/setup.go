@@ -137,7 +137,7 @@ type Selection struct {
 	Slices  []*Slice
 }
 
-// Perfers uses the prefer relationships and returns a map from each path to
+// Prefers uses the prefer relationships and returns a map from each path to
 // the package where it should be extracted from. If there is no relationship
 // for a given path then it will not be present on the map.
 func (s *Selection) Prefers() (map[string]*Package, error) {

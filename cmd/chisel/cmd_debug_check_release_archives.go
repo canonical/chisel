@@ -222,7 +222,7 @@ func hasPathConflict(release *setup.Release, path string, observations []pathObs
 	for _, observation := range observations {
 		for _, pkgName := range observation.Packages {
 			for _, slice := range release.Packages[pkgName].Slices {
-				// Symlinks do not containg trailing slash but folders do,
+				// Symlinks do not contain trailing slash but folders do,
 				// check for both.
 				_, ok1 := slice.Contents[path]
 				_, ok2 := slice.Contents[path+"/"]

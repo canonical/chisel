@@ -253,7 +253,7 @@ func Run(options *RunOptions) error {
 
 	for _, path := range implicitConflicts {
 		// A directory is listed in the report if and only if it was listed
-		// explictly in the slice contents, meaning there is no implicit
+		// explicitly in the slice contents, meaning there is no implicit
 		// conflict.
 		// Note: general conflicts are detected earlier as we forbid extracting
 		// content from multiple packages when paths match.
