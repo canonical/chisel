@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jessevdk/go-flags"
@@ -29,10 +30,10 @@ var cutDescs = map[string]string{
 }
 
 type cmdCut struct {
-	Release string `long:"release" value-name:"<dir>"`
-	RootDir string `long:"root" value-name:"<dir>" required:"yes"`
-	Arch    string `long:"arch" value-name:"<arch>"`
-	Ignore  string `long:"ignore" choice:"unmaintained" choice:"unstable" value-name:"<cond>"`
+	Release string   `long:"release" value-name:"<dir>"`
+	RootDir string   `long:"root" value-name:"<dir>" required:"yes"`
+	Arch    string   `long:"arch" value-name:"<arch>"`
+	Ignore  []string `long:"ignore" choice:"unmaintained" choice:"unstable" value-name:"<cond>"`
 
 	Positional struct {
 		SliceRefs []string `positional-arg-name:"<slice names>" required:"yes"`
@@ -63,7 +64,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 	}
 
 	if time.Now().Before(release.Maintenance.Standard) {
-		if cmd.Ignore == "unstable" {
+		if slices.Contains(cmd.Ignore, "unstable") {
 			logf(`Warning: This release is in the "unstable" maintenance status. ` +
 				`See https://documentation.ubuntu.com/chisel/en/latest/reference/chisel-releases/chisel.yaml/#maintenance to be safe`)
 		} else {
@@ -109,7 +110,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 		}
 	}
 	if !hasMaintainedArchive {
-		if cmd.Ignore == "unmaintained" {
+		if slices.Contains(cmd.Ignore, "unmaintained") {
 			logf(`Warning: No archive has "maintained" maintenance status. ` +
 				`Consider the different Ubuntu Pro subscriptions to be safe. ` +
 				`See https://documentation.ubuntu.com/chisel/en/latest/reference/chisel-releases/chisel.yaml/#maintenance for details.`)
