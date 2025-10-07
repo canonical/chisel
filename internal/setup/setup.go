@@ -59,9 +59,13 @@ type Package struct {
 type Slice struct {
 	Package   string
 	Name      string
-	Essential []SliceKey
+	Essential map[SliceKey]EssentialInfo
 	Contents  map[string]PathInfo
 	Scripts   SliceScripts
+}
+
+type EssentialInfo struct {
+	Arch []string
 }
 
 type SliceScripts struct {
@@ -298,7 +302,12 @@ func (r *Release) validate() error {
 	}
 
 	// Check for cycles.
-	_, err = order(r.Packages, keys)
+	// Note: For release validation an essential with a specific arch is the
+	// same as an essential with all archs, i.e. Chisel does not use arch to
+	// partition the dependency set. If we were to use arch, we would allow
+	// combinations of dependencies which are overly complex and brittle, that
+	// is why it is better to be more strict here.
+	_, err = order(r.Packages, keys, "")
 	if err != nil {
 		return err
 	}
@@ -328,7 +337,12 @@ func (r *Release) validate() error {
 	return nil
 }
 
-func order(pkgs map[string]*Package, keys []SliceKey) ([]SliceKey, error) {
+// order will use TarjanSort to get an ordering of the essential(s). It will
+// return an error if there are cycles.
+//
+// If arch is supplied, essential(s) not specific to that arch are not
+// considered.
+func order(pkgs map[string]*Package, keys []SliceKey, arch string) ([]SliceKey, error) {
 
 	// Preprocess the list to improve error messages.
 	for _, key := range keys {
@@ -354,15 +368,18 @@ func order(pkgs map[string]*Package, keys []SliceKey) ([]SliceKey, error) {
 		slice := pkg.Slices[key.Slice]
 		fqslice := slice.String()
 		predecessors := successors[fqslice]
-		for _, req := range slice.Essential {
+		for req, info := range slice.Essential {
+			if len(info.Arch) > 0 && !slices.Contains(info.Arch, arch) {
+				continue
+			}
 			fqreq := req.String()
 			if reqpkg, ok := pkgs[req.Package]; !ok || reqpkg.Slices[req.Slice] == nil {
 				return nil, fmt.Errorf("%s requires %s, but slice is missing", fqslice, fqreq)
 			}
 			predecessors = append(predecessors, fqreq)
+			pending = append(pending, req)
 		}
 		successors[fqslice] = predecessors
-		pending = append(pending, slice.Essential...)
 	}
 
 	// Sort them up.
@@ -445,14 +462,14 @@ func stripBase(baseDir, path string) string {
 	return strings.TrimPrefix(path, baseDir+string(filepath.Separator))
 }
 
-func Select(release *Release, slices []SliceKey) (*Selection, error) {
+func Select(release *Release, slices []SliceKey, arch string) (*Selection, error) {
 	logf("Selecting slices...")
 
 	selection := &Selection{
 		Release: release,
 	}
 
-	sorted, err := order(release.Packages, slices)
+	sorted, err := order(release.Packages, slices, arch)
 	if err != nil {
 		return nil, err
 	}

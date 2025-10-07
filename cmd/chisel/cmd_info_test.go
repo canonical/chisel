@@ -52,9 +52,9 @@ var infoTests = []infoTest{{
 				contents:
 					/dir/file: {}
 			myslice2:
-				essential:
-					- mypkg1_myslice1
-					- mypkg2_myslice
+				v3-essential:
+					mypkg1_myslice1: {}
+					mypkg2_myslice: {arch: amd64}
 	`,
 }, {
 	summary: "Packages and slices",
@@ -67,9 +67,9 @@ var infoTests = []infoTest{{
 				contents:
 					/dir/file: {}
 			myslice2:
-				essential:
-					- mypkg1_myslice1
-					- mypkg2_myslice
+				v3-essential:
+					mypkg1_myslice1: {}
+					mypkg2_myslice: {arch: amd64}
 		---
 		package: mypkg2
 		slices:
@@ -88,9 +88,9 @@ var infoTests = []infoTest{{
 				contents:
 					/dir/file: {}
 			myslice2:
-				essential:
-					- mypkg1_myslice1
-					- mypkg2_myslice
+				v3-essential:
+					mypkg1_myslice1: {}
+					mypkg2_myslice: {arch: amd64}
 	`,
 }, {
 	summary: "Same slice appearing multiple times",
@@ -148,8 +148,8 @@ var infoRelease = map[string]string{
 				contents:
 					/dir/file:
 			myslice2:
-				essential:
-					- mypkg2_myslice
+				v3-essential:
+					mypkg2_myslice: {arch: amd64}
 	`,
 	"slices/mypkg2.yaml": `
 		package: mypkg2

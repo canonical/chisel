@@ -154,8 +154,8 @@ var setupTests = []setupTest{{
 					"myslice2": {
 						Package: "mypkg",
 						Name:    "myslice2",
-						Essential: []setup.SliceKey{
-							{"mypkg", "myslice1"},
+						Essential: map[setup.SliceKey]setup.EssentialInfo{
+							{"mypkg", "myslice1"}: {},
 						},
 						Contents: map[string]setup.PathInfo{
 							"/another/path": {Kind: "copy"},
@@ -334,8 +334,8 @@ var setupTests = []setupTest{{
 		}, {
 			Package: "mypkg2",
 			Name:    "myslice2",
-			Essential: []setup.SliceKey{
-				{"mypkg1", "myslice1"},
+			Essential: map[setup.SliceKey]setup.EssentialInfo{
+				{"mypkg1", "myslice1"}: {},
 			},
 		}},
 	},
@@ -1302,8 +1302,8 @@ var setupTests = []setupTest{{
 					"slice1": {
 						Package: "mypkg",
 						Name:    "slice1",
-						Essential: []setup.SliceKey{
-							{"mypkg", "slice2"},
+						Essential: map[setup.SliceKey]setup.EssentialInfo{
+							{"mypkg", "slice2"}: {},
 						},
 					},
 					"slice2": {
@@ -1313,17 +1313,17 @@ var setupTests = []setupTest{{
 					"slice3": {
 						Package: "mypkg",
 						Name:    "slice3",
-						Essential: []setup.SliceKey{
-							{"mypkg", "slice2"},
-							{"mypkg", "slice1"},
-							{"mypkg", "slice4"},
+						Essential: map[setup.SliceKey]setup.EssentialInfo{
+							{"mypkg", "slice2"}: {},
+							{"mypkg", "slice1"}: {},
+							{"mypkg", "slice4"}: {},
 						},
 					},
 					"slice4": {
 						Package: "mypkg",
 						Name:    "slice4",
-						Essential: []setup.SliceKey{
-							{"mypkg", "slice2"},
+						Essential: map[setup.SliceKey]setup.EssentialInfo{
+							{"mypkg", "slice2"}: {},
 						},
 					},
 				},
@@ -1374,17 +1374,17 @@ var setupTests = []setupTest{{
 					"slice1": {
 						Package: "mypkg",
 						Name:    "slice1",
-						Essential: []setup.SliceKey{
-							{"myotherpkg", "slice2"},
-							{"mypkg", "slice2"},
-							{"myotherpkg", "slice1"},
+						Essential: map[setup.SliceKey]setup.EssentialInfo{
+							{"myotherpkg", "slice2"}: {},
+							{"mypkg", "slice2"}:      {},
+							{"myotherpkg", "slice1"}: {},
 						},
 					},
 					"slice2": {
 						Package: "mypkg",
 						Name:    "slice2",
-						Essential: []setup.SliceKey{
-							{"myotherpkg", "slice2"},
+						Essential: map[setup.SliceKey]setup.EssentialInfo{
+							{"myotherpkg", "slice2"}: {},
 						},
 					},
 				},
@@ -1449,7 +1449,7 @@ var setupTests = []setupTest{{
 				slice2:
 		`,
 	},
-	relerror: `slice mypkg_slice1 defined with redundant essential slice: mypkg_slice2`,
+	relerror: `slice mypkg_slice1 repeats mypkg_slice2 in essential fields`,
 }, {
 	summary: "Duplicated slice essentials",
 	input: map[string]string{
@@ -1463,7 +1463,7 @@ var setupTests = []setupTest{{
 				slice2:
 		`,
 	},
-	relerror: `slice mypkg_slice1 defined with redundant essential slice: mypkg_slice2`,
+	relerror: `slice mypkg_slice1 repeats mypkg_slice2 in essential fields`,
 }, {
 	summary: "Duplicated package essentials",
 	input: map[string]string{
@@ -1477,7 +1477,7 @@ var setupTests = []setupTest{{
 				slice2:
 		`,
 	},
-	relerror: `package mypkg defined with redundant essential slice: mypkg_slice1`,
+	relerror: `package "mypkg" repeats mypkg_slice1 in essential fields`,
 }, {
 	summary: "Bad slice reference in slice essential",
 	input: map[string]string{
@@ -3439,6 +3439,115 @@ var setupTests = []setupTest{{
 			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
 		},
 	},
+}, {
+	summary: "Essentials with arch",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			v3-essential:
+				mypkg_myslice4: {arch: [amd64, i386]}
+			slices:
+				myslice1:
+					v3-essential:
+						mypkg_myslice2: {arch: amd64}
+						mypkg_myslice3: {arch: [amd64, arm64]}
+						mypkg_myslice5:
+				myslice2:
+				myslice3:
+				myslice4:
+				myslice5:
+		`,
+	},
+	release: &setup.Release{
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Name: "mypkg",
+				Path: "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{
+					"myslice1": {
+						Package: "mypkg",
+						Name:    "myslice1",
+						Essential: map[setup.SliceKey]setup.EssentialInfo{
+							{"mypkg", "myslice2"}: {Arch: []string{"amd64"}},
+							{"mypkg", "myslice3"}: {Arch: []string{"amd64", "arm64"}},
+							{"mypkg", "myslice4"}: {Arch: []string{"amd64", "i386"}},
+							{"mypkg", "myslice5"}: {Arch: nil},
+						},
+					},
+					"myslice2": {
+						Package: "mypkg",
+						Name:    "myslice2",
+						Essential: map[setup.SliceKey]setup.EssentialInfo{
+							{"mypkg", "myslice4"}: {Arch: []string{"amd64", "i386"}},
+						},
+					},
+					"myslice3": {
+						Package: "mypkg",
+						Name:    "myslice3",
+						Essential: map[setup.SliceKey]setup.EssentialInfo{
+							{"mypkg", "myslice4"}: {Arch: []string{"amd64", "i386"}},
+						},
+					},
+					"myslice4": {
+						Package:   "mypkg",
+						Name:      "myslice4",
+						Essential: nil,
+					},
+					"myslice5": {
+						Package: "mypkg",
+						Name:    "myslice5",
+						Essential: map[setup.SliceKey]setup.EssentialInfo{
+							{"mypkg", "myslice4"}: {Arch: []string{"amd64", "i386"}},
+						},
+					},
+				},
+			},
+		},
+		Maintenance: &setup.Maintenance{
+			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
+		},
+	},
+}, {
+	summary: "'essential' and 'v3-essential' cannot intersect",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice1:
+					essential:
+						- mypkg_myslice2
+					v3-essential:
+						mypkg_myslice2: {arch: [amd64, i386]}
+				myslice2:
+		`,
+	},
+	relerror: `slice mypkg_myslice1 repeats mypkg_myslice2 in essential fields`,
+}, {
+	summary: "'essential' and 'v3-essential' cannot intersect at pkg level",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			essential:
+				- mypkg_myslice2
+			v3-essential:
+				mypkg_myslice2: {arch: [amd64, i386]}
+			slices:
+				myslice1:
+				myslice2:
+		`,
+	},
+	relerror: `package "mypkg" repeats mypkg_myslice2 in essential fields`,
 }}
 
 func (s *S) TestParseRelease(c *C) {
@@ -3516,7 +3625,7 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 		}
 
 		if test.selslices != nil {
-			selection, err := setup.Select(release, test.selslices)
+			selection, err := setup.Select(release, test.selslices, "")
 			if test.selerror != "" {
 				c.Assert(err, ErrorMatches, test.selerror)
 				continue
@@ -3627,8 +3736,8 @@ func (s *S) TestPackageYAMLFormat(c *C) {
 					- mypkg_myslice3
 				slices:
 					myslice1:
-						essential:
-							- mypkg_myslice2
+						v3-essential:
+							mypkg_myslice2: {arch: i386}
 						contents:
 							/dir/file1: {}
 					myslice2:
@@ -3645,16 +3754,16 @@ func (s *S) TestPackageYAMLFormat(c *C) {
 				archive: ubuntu
 				slices:
 					myslice1:
-						essential:
-							- mypkg_myslice3
-							- mypkg_myslice2
 						contents:
 							/dir/file1: {}
+						v3-essential:
+							mypkg_myslice2: {arch: i386}
+							mypkg_myslice3: {}
 					myslice2:
-						essential:
-							- mypkg_myslice3
 						contents:
 							/dir/file2: {}
+						v3-essential:
+							mypkg_myslice3: {}
 					myslice3:
 						contents:
 							/dir/file3: {}

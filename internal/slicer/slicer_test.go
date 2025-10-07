@@ -1908,6 +1908,49 @@ var slicerTests = []slicerTest{{
 		`,
 	},
 	logOutput: `(?s).*Warning: Path "/parent/" has diverging modes in different packages\. Please report\..*`,
+}, {
+	summary: "Arch specific slice is not installed when it does not match requested arch",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	arch:    "amd64",
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					v3-essential:
+						test-package_not-installed: {arch: arm64}
+					contents:
+				not-installed:
+					contents:
+						/dir/file:
+		`,
+	},
+	filesystem:    map[string]string{},
+	manifestPaths: map[string]string{},
+}, {
+	summary: "Arch specific slice is installed when it matches requested arch",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	arch:    "arm64",
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					v3-essential:
+						test-package_installed: {arch: arm64}
+					contents:
+				installed:
+					contents:
+						/dir/file:
+		`,
+	},
+	filesystem: map[string]string{
+		"/dir/":     "dir 0755",
+		"/dir/file": "file 0644 cc55e2ec",
+	},
+	manifestPaths: map[string]string{
+		"/dir/file": "file 0644 cc55e2ec {test-package_installed}",
+	},
 }}
 
 func (s *S) TestRun(c *C) {
@@ -2008,7 +2051,7 @@ func runSlicerTests(s *S, c *C, tests []slicerTest) {
 				Slice:   "manifest",
 			})
 
-			selection, err := setup.Select(release, testSlices)
+			selection, err := setup.Select(release, testSlices, test.arch)
 			c.Assert(err, IsNil)
 
 			archives := map[string]archive.Archive{}
