@@ -1449,7 +1449,7 @@ var setupTests = []setupTest{{
 				slice2:
 		`,
 	},
-	relerror: `slice mypkg_slice1 defined with redundant essential slice: mypkg_slice2`,
+	relerror: `slice mypkg_slice1 repeats mypkg_slice2 in essential fields`,
 }, {
 	summary: "Duplicated slice essentials",
 	input: map[string]string{
@@ -1463,7 +1463,7 @@ var setupTests = []setupTest{{
 				slice2:
 		`,
 	},
-	relerror: `slice mypkg_slice1 defined with redundant essential slice: mypkg_slice2`,
+	relerror: `slice mypkg_slice1 repeats mypkg_slice2 in essential fields`,
 }, {
 	summary: "Duplicated package essentials",
 	input: map[string]string{
@@ -1477,7 +1477,7 @@ var setupTests = []setupTest{{
 				slice2:
 		`,
 	},
-	relerror: `package mypkg defined with redundant essential slice: mypkg_slice1`,
+	relerror: `package "mypkg" repeats mypkg_slice1 in essential fields`,
 }, {
 	summary: "Bad slice reference in slice essential",
 	input: map[string]string{
@@ -3532,7 +3532,7 @@ var setupTests = []setupTest{{
 				myslice2:
 		`,
 	},
-	relerror: "slice mypkg_myslice1 defined with redundant essential slice: mypkg_myslice2",
+	relerror: `slice mypkg_myslice1 repeats mypkg_myslice2 in essential fields`,
 }, {
 	summary: "'essential' and 'v3-essential' cannot intersect at pkg level",
 	input: map[string]string{
@@ -3547,7 +3547,7 @@ var setupTests = []setupTest{{
 				myslice2:
 		`,
 	},
-	relerror: "package mypkg defined with redundant essential slice: mypkg_myslice2",
+	relerror: `package "mypkg" repeats mypkg_myslice2 in essential fields`,
 }}
 
 func (s *S) TestParseRelease(c *C) {

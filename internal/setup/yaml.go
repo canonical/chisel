@@ -397,7 +397,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 		if _, ok := yamlPkg.V3Essential[refName]; ok {
 			// This check is only needed because the list format can contain
 			// duplicates. It should be removed when format "v2" is deprecated.
-			return nil, fmt.Errorf("package %s defined with redundant essential slice: %s", pkgName, refName)
+			return nil, fmt.Errorf("package %q repeats %s in essential fields", pkgName, refName)
 		}
 		yamlPkg.V3Essential[refName] = &yamlEssential{}
 	}
@@ -424,7 +424,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 			if _, ok := yamlSlice.V3Essential[refName]; ok {
 				// This check is only needed because the list format can contain
 				// duplicates. It should be removed when format "v2" is deprecated.
-				return nil, fmt.Errorf("slice %s defined with redundant essential slice: %s", slice, refName)
+				return nil, fmt.Errorf("slice %s repeats %s in essential fields", slice, refName)
 			}
 			yamlSlice.V3Essential[refName] = &yamlEssential{}
 		}
@@ -438,7 +438,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 				continue
 			}
 			if _, ok := slice.Essential[sliceKey]; ok {
-				return nil, fmt.Errorf("package %s defined with redundant essential slice: %s", pkgName, refName)
+				return nil, fmt.Errorf("package %q repeats %s in essential fields", pkgName, refName)
 			}
 			if slice.Essential == nil {
 				slice.Essential = map[SliceKey]EssentialInfo{}
@@ -458,7 +458,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 				return nil, fmt.Errorf("cannot add slice to itself as essential %q in %s", refName, pkgPath)
 			}
 			if _, ok := slice.Essential[sliceKey]; ok {
-				return nil, fmt.Errorf("slice %s defined with redundant essential slice: %s", slice, refName)
+				return nil, fmt.Errorf("slice %s repeats %s in essential fields", slice, refName)
 			}
 			if slice.Essential == nil {
 				slice.Essential = map[SliceKey]EssentialInfo{}
