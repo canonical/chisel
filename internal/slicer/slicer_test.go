@@ -1951,6 +1951,33 @@ var slicerTests = []slicerTest{{
 	manifestPaths: map[string]string{
 		"/dir/file": "file 0644 cc55e2ec {test-package_installed}",
 	},
+}, {
+	summary: "Transitive essential",
+	slices:  []setup.SliceKey{{"test-package", "first"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				first:
+					essential:
+						- test-package_second
+					contents:
+				second:
+					essential:
+						- test-package_third
+					contents:
+				third:
+					contents:
+						/dir/file:
+		`,
+	},
+	filesystem: map[string]string{
+		"/dir/":     "dir 0755",
+		"/dir/file": "file 0644 cc55e2ec",
+	},
+	manifestPaths: map[string]string{
+		"/dir/file": "file 0644 cc55e2ec {test-package_third}",
+	},
 }}
 
 func (s *S) TestRun(c *C) {
