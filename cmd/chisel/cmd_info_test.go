@@ -138,7 +138,7 @@ var infoTests = []infoTest{{
 }}
 
 var infoRelease = map[string]string{
-	"chisel.yaml": string(testutil.DefaultChiselYaml),
+	"chisel.yaml": testutil.DefaultChiselYaml,
 	"slices/mypkg1.yaml": `
 		package: mypkg1
 		essential:
