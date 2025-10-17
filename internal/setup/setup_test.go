@@ -4080,7 +4080,6 @@ func oldEssentialToV3(c *C, input []byte) (out string, skip bool) {
 					for key, value := range oldEssential {
 						if _, ok := newEssential[key]; ok {
 							return "", true
-							return "", true
 						}
 						newEssential[key] = value
 					}
