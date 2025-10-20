@@ -22,6 +22,8 @@ type Release struct {
 	Packages    map[string]*Package
 	Archives    map[string]*Archive
 	Maintenance *Maintenance
+	// Format is used for marshaling, unmarshalling and error checking.
+	Format string
 }
 
 type Maintenance struct {
@@ -53,6 +55,8 @@ type Package struct {
 	Path    string
 	Archive string
 	Slices  map[string]*Slice
+	// Format is used for marshaling, unmarshalling and error checking.
+	Format string
 }
 
 // Slice holds the details about a package slice.
@@ -447,7 +451,7 @@ func readSlices(release *Release, baseDir, dirName string) error {
 			return fmt.Errorf("cannot read slice definition file: %v", err)
 		}
 
-		pkg, err := parsePackage(baseDir, pkgName, stripBase(baseDir, pkgPath), data)
+		pkg, err := parsePackage(release.Format, baseDir, pkgName, stripBase(baseDir, pkgPath), data)
 		if err != nil {
 			return err
 		}
