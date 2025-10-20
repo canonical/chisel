@@ -358,7 +358,7 @@ func order(pkgs map[string]*Package, keys []SliceKey, arch string) ([]SliceKey, 
 	pending := slices.Clone(keys)
 
 	seen := make(map[SliceKey]bool)
-	for i := range pending {
+	for i := 0; i < len(pending); i++ {
 		key := pending[i]
 		if seen[key] {
 			continue
