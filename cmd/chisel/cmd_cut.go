@@ -23,17 +23,21 @@ current host, unless the --release flag is used.
 `
 
 var cutDescs = map[string]string{
-	"release": "Chisel release name or directory (e.g. ubuntu-22.04)",
-	"root":    "Root for generated content",
-	"arch":    "Package architecture",
-	"ignore":  "Conditions to ignore (e.g. unmaintained, unstable)",
+	"release":                  "Chisel release name or directory (e.g. ubuntu-22.04)",
+	"root":                     "Root for generated content",
+	"arch":                     "Package architecture",
+	"ignore":                   "Conditions to ignore (e.g. unmaintained, unstable)",
+	"mirrorUbuntuBaseUrl":      "Mirror proxy to http://archive.ubuntu.com/ubuntu/",
+	"mirrorUbuntuPortsBaseUrl": "Mirror proxy to http://ports.ubuntu.com/ubuntu-ports/",
 }
 
 type cmdCut struct {
-	Release string   `long:"release" value-name:"<dir>"`
-	RootDir string   `long:"root" value-name:"<dir>" required:"yes"`
-	Arch    string   `long:"arch" value-name:"<arch>"`
-	Ignore  []string `long:"ignore" choice:"unmaintained" choice:"unstable" value-name:"<cond>"`
+	Release                  string   `long:"release" value-name:"<dir>"`
+	RootDir                  string   `long:"root" value-name:"<dir>" required:"yes"`
+	Arch                     string   `long:"arch" value-name:"<arch>"`
+	Ignore                   []string `long:"ignore" choice:"unmaintained" choice:"unstable" value-name:"<cond>"`
+	MirrorUbuntuBaseUrl      string   `long:"mirrorUbuntuBaseUrl" value-name:"<mirrorBaseUrl>"`
+	MirrorUbuntuPortsBaseUrl string   `long:"mirrorUbuntuPortsBaseUrl" value-name:"<mirrorBaseUrl>"`
 
 	Positional struct {
 		SliceRefs []string `positional-arg-name:"<slice names>" required:"yes"`
@@ -81,16 +85,18 @@ func (cmd *cmdCut) Execute(args []string) error {
 	archives := make(map[string]archive.Archive)
 	for archiveName, archiveInfo := range release.Archives {
 		openArchive, err := archive.Open(&archive.Options{
-			Label:      archiveName,
-			Version:    archiveInfo.Version,
-			Arch:       cmd.Arch,
-			Suites:     archiveInfo.Suites,
-			Components: archiveInfo.Components,
-			Pro:        archiveInfo.Pro,
-			CacheDir:   cache.DefaultDir("chisel"),
-			PubKeys:    archiveInfo.PubKeys,
-			Maintained: archiveInfo.Maintained,
-			OldRelease: archiveInfo.OldRelease,
+			Label:                    archiveName,
+			Version:                  archiveInfo.Version,
+			Arch:                     cmd.Arch,
+			Suites:                   archiveInfo.Suites,
+			Components:               archiveInfo.Components,
+			Pro:                      archiveInfo.Pro,
+			CacheDir:                 cache.DefaultDir("chisel"),
+			PubKeys:                  archiveInfo.PubKeys,
+			Maintained:               archiveInfo.Maintained,
+			OldRelease:               archiveInfo.OldRelease,
+			MirrorUbuntuBaseUrl:      cmd.MirrorUbuntuBaseUrl,
+			MirrorUbuntuPortsBaseUrl: cmd.MirrorUbuntuPortsBaseUrl,
 		})
 		if err != nil {
 			if err == archive.ErrCredentialsNotFound {

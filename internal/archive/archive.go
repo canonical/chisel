@@ -45,6 +45,10 @@ type Options struct {
 	// OldRelease is set for Ubuntu releases which are moved from the regular
 	// archive which happens after the release's end of life date.
 	OldRelease bool
+	// Mirror proxy to http://archive.ubuntu.com/ubuntu/
+	MirrorUbuntuBaseUrl string
+	// Mirror proxy to http://ports.ubuntu.com/ubuntu-ports/
+	MirrorUbuntuPortsBaseUrl string
 }
 
 func Open(options *Options) (Archive, error) {
@@ -185,7 +189,7 @@ var proArchiveInfo = map[string]struct {
 	},
 }
 
-func archiveURL(pro, arch string, oldRelease bool) (string, *credentials, error) {
+func archiveURL(pro, arch string, oldRelease bool, mirrorUbuntuBaseUrl string, mirrorUbuntuPortsBaseUrl string) (string, *credentials, error) {
 	if pro != "" {
 		archiveInfo, ok := proArchiveInfo[pro]
 		if !ok {
@@ -204,8 +208,24 @@ func archiveURL(pro, arch string, oldRelease bool) (string, *credentials, error)
 	}
 
 	if arch == "amd64" || arch == "i386" {
+		if mirrorUbuntuBaseUrl != "" {
+			creds, err := findCredentials(mirrorUbuntuBaseUrl)
+			if err != nil {
+				return "", nil, err
+			}
+			return mirrorUbuntuBaseUrl, creds, nil
+		}
 		return ubuntuURL, nil, nil
 	}
+
+	if mirrorUbuntuPortsBaseUrl != "" {
+		creds, err := findCredentials(mirrorUbuntuPortsBaseUrl)
+		if err != nil {
+			return "", nil, err
+		}
+		return mirrorUbuntuPortsBaseUrl, creds, nil
+	}
+
 	return ubuntuPortsURL, nil, nil
 }
 
@@ -220,7 +240,7 @@ func openUbuntu(options *Options) (Archive, error) {
 		return nil, fmt.Errorf("archive options missing version")
 	}
 
-	baseURL, creds, err := archiveURL(options.Pro, options.Arch, options.OldRelease)
+	baseURL, creds, err := archiveURL(options.Pro, options.Arch, options.OldRelease, options.MirrorUbuntuBaseUrl, options.MirrorUbuntuPortsBaseUrl)
 	if err != nil {
 		return nil, err
 	}
