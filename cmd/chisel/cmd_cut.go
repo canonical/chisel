@@ -9,6 +9,7 @@ import (
 
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/cache"
+	"github.com/canonical/chisel/internal/deb"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/slicer"
 )
@@ -57,6 +58,14 @@ func (cmd *cmdCut) Execute(args []string) error {
 		}
 		sliceKeys[i] = sliceKey
 	}
+	arch := cmd.Arch
+	if arch == "" {
+		darch, err := deb.InferArch()
+		if err != nil {
+			return err
+		}
+		arch = darch
+	}
 
 	release, err := obtainRelease(cmd.Release)
 	if err != nil {
@@ -73,7 +82,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 		}
 	}
 
-	selection, err := setup.Select(release, sliceKeys, cmd.Arch)
+	selection, err := setup.Select(release, sliceKeys, arch)
 	if err != nil {
 		return err
 	}
@@ -83,7 +92,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 		openArchive, err := archive.Open(&archive.Options{
 			Label:      archiveName,
 			Version:    archiveInfo.Version,
-			Arch:       cmd.Arch,
+			Arch:       arch,
 			Suites:     archiveInfo.Suites,
 			Components: archiveInfo.Components,
 			Pro:        archiveInfo.Pro,
