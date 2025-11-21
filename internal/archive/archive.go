@@ -378,14 +378,16 @@ func (index *ubuntuIndex) fetch(suffix, digest string, flags fetchFlags) (io.Rea
 
 	baseURL, creds := index.archive.baseURL, index.archive.creds
 
-	var url string
-	if strings.HasPrefix(suffix, "pool/") {
-		url = baseURL + suffix
-	} else {
-		url = baseURL + "dists/" + index.suite + "/" + suffix
+	if !strings.HasPrefix(suffix, "pool/") {
+		suffix = "dists/" + index.suite + "/" + suffix
 	}
 
-	req, err := http.NewRequest("GET", url, nil)
+	u, err := url.JoinPath(baseURL, suffix)
+	if err != nil {
+		return nil, fmt.Errorf("cannot construct URL: %v", err)
+	}
+
+	req, err := http.NewRequest("GET", u, nil)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create HTTP request: %v", err)
 	}
