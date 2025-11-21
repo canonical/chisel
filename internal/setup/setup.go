@@ -369,7 +369,7 @@ func order(pkgs map[string]*Package, keys []SliceKey, arch string) ([]SliceKey, 
 		fqslice := slice.String()
 		predecessors := successors[fqslice]
 		for req, info := range slice.Essential {
-			if len(info.Arch) > 0 && !slices.Contains(info.Arch, arch) {
+			if len(info.Arch) > 0 && len(arch) > 0 && !slices.Contains(info.Arch, arch) {
 				continue
 			}
 			fqreq := req.String()

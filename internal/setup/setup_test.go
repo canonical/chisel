@@ -3548,6 +3548,25 @@ var setupTests = []setupTest{{
 		`,
 	},
 	relerror: `package "mypkg" repeats mypkg_myslice2 in essential fields`,
+}, {
+	summary: "Cycles are detected with 'v3-essential'",
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice:
+					v3-essential:
+						mypkg2_myslice: {arch: [amd64, i386]}
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+			slices:
+				myslice:
+					v3-essential:
+						mypkg1_myslice: {arch: [amd64, i386]}
+		`,
+	},
+	relerror: `essential loop detected: mypkg1_myslice, mypkg2_myslice`,
 }}
 
 func (s *S) TestParseRelease(c *C) {
