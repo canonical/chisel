@@ -3891,5 +3891,5 @@ func (s *S) TestYAMLPathGenerate(c *C) {
 
 func (s *S) TestSelectEmptyArch(c *C) {
 	_, err := setup.Select(nil, nil, "")
-	c.Assert(err, ErrorMatches, "cannot select slices for an empty architecture")
+	c.Assert(err, ErrorMatches, `cannot select slices: "arch" is unset`)
 }

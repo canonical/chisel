@@ -369,7 +369,7 @@ func order(pkgs map[string]*Package, keys []SliceKey, arch string) ([]SliceKey, 
 		fqslice := slice.String()
 		predecessors := successors[fqslice]
 		for req, info := range slice.Essential {
-			if len(info.Arch) > 0 && len(arch) > 0 && !slices.Contains(info.Arch, arch) {
+			if len(info.Arch) > 0 && arch != "" && !slices.Contains(info.Arch, arch) {
 				continue
 			}
 			fqreq := req.String()
@@ -465,8 +465,8 @@ func stripBase(baseDir, path string) string {
 func Select(release *Release, slices []SliceKey, arch string) (*Selection, error) {
 	logf("Selecting slices...")
 
-	if len(arch) == 0 {
-		return nil, fmt.Errorf("cannot select slices for an empty architecture")
+	if arch == "" {
+		return nil, fmt.Errorf(`cannot select slices: "arch" is unset`)
 	}
 
 	selection := &Selection{
