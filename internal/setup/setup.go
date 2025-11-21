@@ -465,6 +465,10 @@ func stripBase(baseDir, path string) string {
 func Select(release *Release, slices []SliceKey, arch string) (*Selection, error) {
 	logf("Selecting slices...")
 
+	if len(arch) == 0 {
+		return nil, fmt.Errorf("cannot select slices for an empty architecture")
+	}
+
 	selection := &Selection{
 		Release: release,
 	}

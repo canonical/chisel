@@ -3567,6 +3567,25 @@ var setupTests = []setupTest{{
 		`,
 	},
 	relerror: `essential loop detected: mypkg1_myslice, mypkg2_myslice`,
+}, {
+	summary: "Cycles are detected with 'v3-essential' without architecture",
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice:
+					v3-essential:
+						mypkg2_myslice:
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+			slices:
+				myslice:
+					v3-essential:
+						mypkg1_myslice: {arch: [amd64, i386]}
+		`,
+	},
+	relerror: `essential loop detected: mypkg1_myslice, mypkg2_myslice`,
 }}
 
 func (s *S) TestParseRelease(c *C) {
@@ -3644,7 +3663,7 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 		}
 
 		if test.selslices != nil {
-			selection, err := setup.Select(release, test.selslices, "")
+			selection, err := setup.Select(release, test.selslices, "amd64")
 			if test.selerror != "" {
 				c.Assert(err, ErrorMatches, test.selerror)
 				continue
@@ -3868,4 +3887,9 @@ func (s *S) TestYAMLPathGenerate(c *C) {
 		result := test.path1.SameContent(test.path2)
 		c.Assert(result, Equals, test.result)
 	}
+}
+
+func (s *S) TestSelectEmptyArch(c *C) {
+	_, err := setup.Select(nil, nil, "")
+	c.Assert(err, ErrorMatches, "cannot select slices for an empty architecture")
 }
