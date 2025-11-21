@@ -1952,7 +1952,7 @@ var slicerTests = []slicerTest{{
 		"/dir/file": "file 0644 cc55e2ec {test-package_installed}",
 	},
 }, {
-	summary: "Arch specific slice is not installed when requested arch is empty",
+	summary: "Arch specific slice is installed when requested arch is empty",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
 	arch:    "",
 	release: map[string]string{
@@ -1961,15 +1961,20 @@ var slicerTests = []slicerTest{{
 			slices:
 				myslice:
 					v3-essential:
-						test-package_not-installed: {arch: amd64}
+						test-package_myslice2: {arch: amd64}
 					contents:
-				not-installed:
+				myslice2:
 					contents:
 						/dir/file:
 		`,
 	},
-	filesystem:    map[string]string{},
-	manifestPaths: map[string]string{},
+	filesystem: map[string]string{
+		"/dir/":     "dir 0755",
+		"/dir/file": "file 0644 cc55e2ec",
+	},
+	manifestPaths: map[string]string{
+		"/dir/file": "file 0644 cc55e2ec {test-package_myslice2}",
+	},
 }, {
 	summary: "Transitive essential",
 	slices:  []setup.SliceKey{{"test-package", "first"}},
