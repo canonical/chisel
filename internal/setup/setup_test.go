@@ -3566,7 +3566,7 @@ var setupTests = []setupTest{{
 						mypkg1_myslice: {arch: [amd64, i386]}
 		`,
 	},
-	relerror: `essential loop detected: mypkg1_myslice, mypkg2_myslice`,
+	relerror: "essential loop detected: mypkg1_myslice, mypkg2_myslice",
 }, {
 	summary: "Cycles are detected with 'v3-essential' without architecture",
 	input: map[string]string{
@@ -3585,7 +3585,7 @@ var setupTests = []setupTest{{
 						mypkg1_myslice: {arch: [amd64, i386]}
 		`,
 	},
-	relerror: `essential loop detected: mypkg1_myslice, mypkg2_myslice`,
+	relerror: "essential loop detected: mypkg1_myslice, mypkg2_myslice",
 }}
 
 func (s *S) TestParseRelease(c *C) {
