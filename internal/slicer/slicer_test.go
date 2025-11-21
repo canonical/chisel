@@ -2078,12 +2078,11 @@ func runSlicerTests(s *S, c *C, tests []slicerTest) {
 				Slice:   "manifest",
 			})
 
-			arch := test.arch
-			if arch == "" {
-				arch = "amd64"
+			if test.arch == "" {
+				test.arch = "amd64"
 			}
 
-			selection, err := setup.Select(release, testSlices, arch)
+			selection, err := setup.Select(release, testSlices, test.arch)
 			c.Assert(err, IsNil)
 
 			archives := map[string]archive.Archive{}
@@ -2101,7 +2100,7 @@ func runSlicerTests(s *S, c *C, tests []slicerTest) {
 						Suites:     setupArchive.Suites,
 						Components: setupArchive.Components,
 						Pro:        setupArchive.Pro,
-						Arch:       arch,
+						Arch:       test.arch,
 					},
 					Packages: pkgs,
 				}
