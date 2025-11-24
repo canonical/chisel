@@ -385,7 +385,7 @@ func (index *ubuntuIndex) fetch(suffix, digest string, flags fetchFlags) (io.Rea
 
 	u, err := url.JoinPath(baseURL, suffix)
 	if err != nil {
-		return nil, fmt.Errorf("cannot construct URL: %v", err)
+		return nil, fmt.Errorf("internal error: cannot construct URL: %v", err)
 	}
 
 	req, err := http.NewRequest("GET", u, nil)
