@@ -383,12 +383,12 @@ func (index *ubuntuIndex) fetch(suffix, digest string, flags fetchFlags) (io.Rea
 		suffix = "dists/" + index.suite + "/" + suffix
 	}
 
-	u, err := url.JoinPath(baseURL, suffix)
+	reqURL, err := url.JoinPath(baseURL, suffix)
 	if err != nil {
 		return nil, fmt.Errorf("internal error: cannot construct URL: %v", err)
 	}
 
-	req, err := http.NewRequest("GET", u, nil)
+	req, err := http.NewRequest("GET", reqURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create HTTP request: %v", err)
 	}
