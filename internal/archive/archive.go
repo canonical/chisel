@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"slices"
 	"strings"
 	"time"
@@ -379,17 +378,15 @@ func (index *ubuntuIndex) fetch(suffix, digest string, flags fetchFlags) (io.Rea
 
 	baseURL, creds := index.archive.baseURL, index.archive.creds
 
-	// Scope content fetching with the suite unless fetching a package from the pool
-	if !strings.HasPrefix(suffix, "pool/") {
-		suffix = "dists/" + index.suite + "/" + suffix
+	var url string
+	if strings.HasPrefix(suffix, "pool/") {
+		url = baseURL + suffix
+	} else {
+		// If path is not a package then it is relative to the suite.
+		url = baseURL + "dists/" + index.suite + "/" + suffix
 	}
 
-	reqURL, err := url.JoinPath(baseURL, suffix)
-	if err != nil {
-		return nil, fmt.Errorf("internal error: cannot construct URL: %v", err)
-	}
-
-	req, err := http.NewRequest("GET", reqURL, nil)
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create HTTP request: %v", err)
 	}
