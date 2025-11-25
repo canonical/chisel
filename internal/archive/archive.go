@@ -137,7 +137,7 @@ func (a *ubuntuArchive) Fetch(pkg string) (io.ReadSeekCloser, *PackageInfo, erro
 	}
 	suffix := section.Get("Filename")
 	logf("Fetching %s...", suffix)
-	reader, err := index.fetch("../../"+suffix, section.Get("SHA256"), fetchBulk)
+	reader, err := index.fetch(suffix, section.Get("SHA256"), fetchBulk)
 	if err != nil {
 		return nil, nil, err
 	}
