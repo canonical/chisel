@@ -379,6 +379,7 @@ func (index *ubuntuIndex) fetch(suffix, digest string, flags fetchFlags) (io.Rea
 
 	baseURL, creds := index.archive.baseURL, index.archive.creds
 
+	// Scope content fetching with the suite unless fetching a package from the pool
 	if !strings.HasPrefix(suffix, "pool/") {
 		suffix = "dists/" + index.suite + "/" + suffix
 	}
