@@ -18,20 +18,42 @@ import (
 
 const DefaultFilename = "manifest.wall"
 
+func collectManifests(slice *setup.Slice, collector func(path string, slice *setup.Slice)) {
+	for path, info := range slice.Contents {
+		if info.Generate == setup.GenerateManifest {
+			dir := strings.TrimSuffix(path, "**")
+			path = filepath.Join(dir, DefaultFilename)
+			collector(path, slice)
+		}
+	}
+}
+
 // FindPaths finds the paths marked with "generate:manifest" and
 // returns a map from the manifest path to all the slices that declare it.
 func FindPaths(slices []*setup.Slice) map[string][]*setup.Slice {
 	manifestSlices := make(map[string][]*setup.Slice)
+	collector := func(path string, slice *setup.Slice) {
+		manifestSlices[path] = append(manifestSlices[path], slice)
+	}
 	for _, slice := range slices {
-		for path, info := range slice.Contents {
-			if info.Generate == setup.GenerateManifest {
-				dir := strings.TrimSuffix(path, "**")
-				path = filepath.Join(dir, DefaultFilename)
-				manifestSlices[path] = append(manifestSlices[path], slice)
-			}
-		}
+		collectManifests(slice, collector)
 	}
 	return manifestSlices
+}
+
+// FindPathsInRelease finds all the paths marked with "generate:manifest"
+// for the given release.
+func FindPathsInRelease(r *setup.Release) []string {
+	manifestPaths := make([]string,0)
+	collector := func(path string, slice *setup.Slice) {
+		manifestPaths = append(manifestPaths, path)
+	}
+	for _, pkg := range r.Packages {
+		for _, slice := range pkg.Slices {
+			collectManifests(slice, collector)
+		}
+	}
+	return manifestPaths
 }
 
 type WriteOptions struct {
@@ -340,3 +362,12 @@ func Validate(mfest *manifest.Manifest) (err error) {
 	}
 	return nil
 }
+
+// CompareSchemas compares two manifest schema strings.
+func CompareSchemas(va, vb string) int {
+	if va == manifest.Schema && va == vb {
+		return 0
+	}
+	return -1
+}
+

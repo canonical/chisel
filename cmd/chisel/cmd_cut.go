@@ -11,6 +11,7 @@ import (
 	"github.com/canonical/chisel/internal/cache"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/slicer"
+	"github.com/canonical/chisel/public/manifest"
 )
 
 var shortCutHelp = "Cut a tree with selected slices"
@@ -71,6 +72,21 @@ func (cmd *cmdCut) Execute(args []string) error {
 			return fmt.Errorf(`this release is in the "unstable" maintenance status, ` +
 				`see https://documentation.ubuntu.com/chisel/en/latest/reference/chisel-releases/chisel.yaml/#maintenance for details`)
 		}
+	}
+
+	mfest, err := slicer.Inspect(cmd.RootDir, release)
+	if err != nil {
+		return err
+	}
+	if mfest != nil {
+		mfest.IterateSlices("", func(slice *manifest.Slice) error {
+			sk, err := setup.ParseSliceKey(slice.Name)
+			if err != nil {
+				return err
+			}
+			sliceKeys = append(sliceKeys, sk)
+			return nil
+		})
 	}
 
 	selection, err := setup.Select(release, sliceKeys, cmd.Arch)

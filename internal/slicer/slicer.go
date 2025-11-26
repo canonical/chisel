@@ -3,10 +3,12 @@ package slicer
 import (
 	"archive/tar"
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -21,6 +23,7 @@ import (
 	"github.com/canonical/chisel/internal/manifestutil"
 	"github.com/canonical/chisel/internal/scripts"
 	"github.com/canonical/chisel/internal/setup"
+	"github.com/canonical/chisel/public/manifest"
 )
 
 const manifestMode fs.FileMode = 0644
@@ -536,4 +539,93 @@ func selectPkgArchives(archives map[string]archive.Archive, selection *setup.Sel
 		pkgArchive[pkg.Name] = chosen
 	}
 	return pkgArchive, nil
+}
+
+// Inspect examines and validates the targetDir. It returns, if found and valid
+// the manifest representing the content in the targetDir.
+func Inspect(targetDir string, release *setup.Release) (*manifest.Manifest, error) {
+	var mfest *manifest.Manifest
+	manifestPaths := manifestutil.FindPathsInRelease(release)
+	if len(manifestPaths) > 0 {
+		logf("Inspecting root directory...")
+		var err error
+		mfest, err = selectValidManifest(targetDir, manifestPaths)
+		if err != nil {
+			return nil, err
+		}
+		if mfest != nil {
+			err = checkRootDir(mfest, targetDir)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	return mfest, nil
+}
+
+// selectValidManifest returns, if found, a valid manifest with the latest
+// schema. Consistency with all other manifests with the same schema is verified
+// so the selection is deterministic.
+func selectValidManifest(targetDir string, manifestPaths []string) (*manifest.Manifest, error) {
+	targetDir = filepath.Clean(targetDir)
+	if !filepath.IsAbs(targetDir) {
+		dir, err := os.Getwd()
+		if err != nil {
+			return nil, fmt.Errorf("cannot obtain current directory: %w", err)
+		}
+		targetDir = filepath.Join(dir, targetDir)
+	}
+
+	type manifestHash struct {
+		path string
+		hash string
+	}
+	var selected *manifest.Manifest
+	schemaManifest := make(map[string]manifestHash)
+	for _, mfestPath := range manifestPaths {
+		err := func() error {
+			mfestFullPath := path.Join(targetDir, mfestPath)
+			f, err := os.Open(mfestFullPath)
+			if err != nil {
+				if os.IsNotExist(err) {
+					return nil
+				}
+				return err
+			}
+			defer f.Close()
+			r, err := zstd.NewReader(f)
+			if err != nil {
+				return err
+			}
+			defer r.Close()
+			mfest, err := manifest.Read(r)
+			if err != nil {
+				return nil
+			}
+			err = manifestutil.Validate(mfest)
+			if err != nil {
+				return nil
+			}
+
+			if selected == nil || manifestutil.CompareSchemas(mfest.Schema(), selected.Schema()) > 0 {
+				h, err := contentHash(mfestFullPath)
+				if err != nil {
+					return fmt.Errorf("cannot compute hash for %q: %w", mfestFullPath, err)
+				}
+				mfestHash := hex.EncodeToString(h)
+				refMfest, ok := schemaManifest[mfest.Schema()]
+				if !ok {
+					schemaManifest[mfest.Schema()] = manifestHash{mfestPath, mfestHash}
+				} else if refMfest.hash != mfestHash {
+					return fmt.Errorf("inconsistent manifests: %q and %q", refMfest.path, mfestPath)
+				}
+				selected = mfest
+			}
+			return nil
+		}()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return selected, nil
 }

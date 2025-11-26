@@ -68,6 +68,10 @@ func Read(reader io.Reader) (manifest *Manifest, err error) {
 	return manifest, nil
 }
 
+func (manifest *Manifest) Schema() string {
+	return manifest.db.Schema()
+}
+
 func (manifest *Manifest) IteratePaths(pathPrefix string, onMatch func(*Path) error) (err error) {
 	return iteratePrefix(manifest, &Path{Kind: "path", Path: pathPrefix}, onMatch)
 }
