@@ -62,7 +62,7 @@ var distanceTests = []distanceTest{
 
 func (s *S) TestGlobPathIssue258(c *C) {
 	// Test for issue-258: Glob patterns with different literal segments should not match. For example:
-	// 
+	//
 	// - Pattern A: /foo/bar/libopcodes-*-system.*.so
 	//   Matches: /foo/bar/libopcodes-2.45.50-system.20251212.so
 	// - Pattern B: /foo/bar/libopcodes-*-arm64.so
@@ -80,7 +80,7 @@ func (s *S) TestGlobPathIssue258(c *C) {
 		{a: "/a/b/c-*-d.*.so", b: "/a/b/c-*-e.so", expected: false},
 		{a: "/a/b/c-*-d.*.so", b: "/a/b/c-*-d.so", expected: false},
 	}
-	
+
 	for _, test := range tests {
 		c.Logf("Testing GlobPath(%q, %q)", test.a, test.b)
 		result := strdist.GlobPath(test.a, test.b)

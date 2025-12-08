@@ -189,23 +189,23 @@ func wildcardLiteralSegmentsMatch(a, b string) bool {
 	// Check if both strings contain wildcards
 	aHasWildcard := strings.ContainsAny(a, "*?")
 	bHasWildcard := strings.ContainsAny(b, "*?")
-	
+
 	// If only one has wildcards, this is glob-to-literal matching,
 	// which is handled by the distance algorithm
 	if !aHasWildcard || !bHasWildcard {
 		return true
 	}
-	
+
 	// If either pattern contains **, skip this check as ** can match across
 	// path separators and break the structure
 	if strings.Contains(a, "**") || strings.Contains(b, "**") {
 		return true
 	}
-	
+
 	// Extract literal segments from both patterns (text between wildcards)
 	aSegments := splitAtDelimiters(a, '*', '?', '⁑')
 	bSegments := splitAtDelimiters(b, '*', '?', '⁑')
-	
+
 	// Check all literal segments from one pattern appear in the other
 	return !slices.ContainsFunc(aSegments, func(seg string) bool {
 		return seg != "" && !strings.Contains(b, seg)
@@ -239,6 +239,6 @@ func splitAtDelimiters(s string, delimiters ...rune) []string {
 	if current != "" {
 		segments = append(segments, current)
 	}
-	
+
 	return segments
 }
