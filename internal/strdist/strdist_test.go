@@ -60,6 +60,34 @@ var distanceTests = []distanceTest{
 	{f: strdist.GlobCost, r: 0, a: "a**f/hij/klm", b: "abc/d**m"},
 }
 
+func (s *S) TestGlobPathIssue258(c *C) {
+	// Test for issue-258: Glob patterns with different literal segments should not match. For example:
+	// 
+	// - Pattern A: /foo/bar/libopcodes-*-system.*.so
+	//   Matches: /foo/bar/libopcodes-2.45.50-system.20251212.so
+	// - Pattern B: /foo/bar/libopcodes-*-arm64.so
+	//   Matches: /foo/bar/libopcodes-2.45.50-arm64.so
+	//
+	// These two patterns should NOT match each other
+	// https://github.com/canonical/chisel/issues/258
+	tests := []struct {
+		a, b     string
+		expected bool
+	}{
+		{a: "/foo/bar/libopcodes-*-system.*.so", b: "/foo/bar/libopcodes-*-arm64.so", expected: false},
+		{a: "/foo/bar/libopcodes-*-arm64.so", b: "/foo/bar/libopcodes-*-system.*.so", expected: false},
+		{a: "/foo/bar/libopcodes-*-system.*.so", b: "/foo/bar/libopcodes-*-system.so", expected: false},
+		{a: "/a/b/c-*-d.*.so", b: "/a/b/c-*-e.so", expected: false},
+		{a: "/a/b/c-*-d.*.so", b: "/a/b/c-*-d.so", expected: false},
+	}
+	
+	for _, test := range tests {
+		c.Logf("Testing GlobPath(%q, %q)", test.a, test.b)
+		result := strdist.GlobPath(test.a, test.b)
+		c.Assert(result, Equals, test.expected)
+	}
+}
+
 func (s *S) TestDistance(c *C) {
 	for _, test := range distanceTests {
 		c.Logf("Test: %v", test)
