@@ -120,3 +120,12 @@ func BenchmarkDistanceCut(b *testing.B) {
 		strdist.Distance(one, two, strdist.StandardCost, 1)
 	}
 }
+
+func BenchmarkGlobPath(b *testing.B) {
+	// Benchmark with a complex glob pattern with lots of literals between wildcards.
+	const pattern = "a**b*c?d*e*f?g*h*i*j*k*l*m*n*o*p*q*r*s*t*u*v*w*x*y*z"
+	const target = "abdefghijklmnopqrstuvwxyz"
+	for i := 0; i < b.N; i++ {
+		strdist.GlobPath(pattern, target)
+	}
+}
