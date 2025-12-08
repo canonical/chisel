@@ -227,7 +227,7 @@ func globCost(ar, br rune) Cost {
 // wildcardPrefixMatch compares whether the prefixes of a and b are equal up
 // to the shortest one. The prefix is defined as the longest substring that
 // starts at index 0 and does not contain a wildcard.
-func wildcardPrefixMatch(a, b string) bool {
+func wildcardPrefixMatch(a, b string) bool { //nolint:all
 	return wildcardPrefixMatchWithSpecial(a, b, nil, nil)
 }
 
@@ -247,7 +247,7 @@ func wildcardPrefixMatchWithSpecial(a, b string, aSpecial, bSpecial map[rune]str
 // wildcardSuffixMatch compares whether the suffixes of a and b are equal up
 // to the shortest one. The suffix is defined as the longest substring that ends
 // at the string length and does not contain a wildcard.
-func wildcardSuffixMatch(a, b string) bool {
+func wildcardSuffixMatch(a, b string) bool { //nolint:all
 	return wildcardSuffixMatchWithSpecial(a, b, nil, nil)
 }
 
