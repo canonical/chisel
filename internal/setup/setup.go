@@ -105,11 +105,12 @@ type PathInfo struct {
 	Info string
 	Mode uint
 
-	Mutable  bool
-	Until    PathUntil
-	Arch     []string
-	Generate GenerateKind
-	Prefer   string
+	Mutable      bool
+	Until        PathUntil
+	Arch         []string
+	Generate     GenerateKind
+	Prefer       string
+	SpecialGlobs map[rune]string
 }
 
 // SameContent returns whether the path has the same content properties as some
@@ -206,6 +207,21 @@ func (r *Release) validate() error {
 
 	keys := []SliceKey(nil)
 
+	// Validate special-globs regex patterns can compile
+	for _, pkg := range r.Packages {
+		for _, slice := range pkg.Slices {
+			for path, info := range slice.Contents {
+				if len(info.SpecialGlobs) > 0 {
+					for char, pattern := range info.SpecialGlobs {
+						if err := strdist.ValidateSpecialGlob(char, pattern); err != nil {
+							return fmt.Errorf("slice %s path %s has invalid special-glob: %w", slice, path, err)
+						}
+					}
+				}
+			}
+		}
+	}
+
 	// Check for info conflicts and prepare for following checks. A conflict
 	// means that two slices attempt to extract different files or directories
 	// to the same location.
@@ -288,7 +304,7 @@ func (r *Release) validate() error {
 							continue
 						}
 					}
-					if strdist.GlobPath(newPath, oldPath) {
+					if strdist.GlobPathWithSpecial(newPath, oldPath, newInfo.SpecialGlobs, oldInfo.SpecialGlobs) {
 						if (old.Package > new.Package) || (old.Package == new.Package && old.Name > new.Name) ||
 							(old.Package == new.Package && old.Name == new.Name && oldPath > newPath) {
 							old, new = new, old
