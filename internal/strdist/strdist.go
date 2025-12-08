@@ -2,6 +2,7 @@ package strdist
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -113,6 +114,11 @@ func GlobPath(a, b string) bool {
 		// Fast path.
 		return false
 	}
+	if !wildcardLiteralSegmentsMatch(a, b) {
+		// Check that literal segments between wildcards are compatible.
+		// See: https://github.com/canonical/chisel/issues/258
+		return false
+	}
 
 	a = strings.ReplaceAll(a, "**", "⁑")
 	b = strings.ReplaceAll(b, "**", "⁑")
@@ -126,7 +132,12 @@ func globCost(ar, br rune) Cost {
 	if ar == '/' || br == '/' {
 		return Cost{SwapAB: Inhibit, DeleteA: Inhibit, InsertB: Inhibit}
 	}
+	// if ar == '*' && br == '*' {
+	// 	// Both are wildcards, they match perfectly
+	// 	return Cost{SwapAB: 0, DeleteA: 0, InsertB: 0}
+	// }
 	if ar == '*' || br == '*' {
+		// One is a wildcard, one is literal - wildcards can match literals
 		return Cost{SwapAB: 0, DeleteA: 0, InsertB: 0}
 	}
 	if ar == '?' || br == '?' {
@@ -167,4 +178,67 @@ func wildcardSuffixMatch(a, b string) bool {
 	}
 	minl := min(la, lb)
 	return a[len(a)-minl:] == b[len(b)-minl:]
+}
+
+// wildcardLiteralSegmentsMatch checks if the literal segments between wildcards
+// in pattern a are compatible with those in pattern b. For glob-to-glob matching,
+// all literal segments must be present in both patterns (though wildcards may
+// match different amounts of text between them).
+// This check only applies when both patterns contain wildcards and neither contains **.
+func wildcardLiteralSegmentsMatch(a, b string) bool {
+	// Check if both strings contain wildcards
+	aHasWildcard := strings.ContainsAny(a, "*?")
+	bHasWildcard := strings.ContainsAny(b, "*?")
+	
+	// If only one has wildcards, this is glob-to-literal matching,
+	// which is handled by the distance algorithm
+	if !aHasWildcard || !bHasWildcard {
+		return true
+	}
+	
+	// If either pattern contains **, skip this check as ** can match across
+	// path separators and break the structure
+	if strings.Contains(a, "**") || strings.Contains(b, "**") {
+		return true
+	}
+	
+	// Extract literal segments from both patterns (text between wildcards)
+	aSegments := splitAtDelimiters(a, '*', '?', '⁑')
+	bSegments := splitAtDelimiters(b, '*', '?', '⁑')
+	
+	// Check all literal segments from one pattern appear in the other
+	return !slices.ContainsFunc(aSegments, func(seg string) bool {
+		return seg != "" && !strings.Contains(b, seg)
+	}) && !slices.ContainsFunc(bSegments, func(seg string) bool {
+		return seg != "" && !strings.Contains(a, seg)
+	})
+}
+
+// splitAtDelimiters splits a string into segments separated by any of the given delimiters.
+// Empty segments are not included in the result.
+func splitAtDelimiters(s string, delimiters ...rune) []string {
+	var segments []string
+	current := ""
+	for _, r := range s {
+		isDelimiter := false
+		for _, d := range delimiters {
+			if r == d {
+				isDelimiter = true
+				break
+			}
+		}
+		if isDelimiter {
+			if current != "" {
+				segments = append(segments, current)
+				current = ""
+			}
+		} else {
+			current += string(r)
+		}
+	}
+	if current != "" {
+		segments = append(segments, current)
+	}
+	
+	return segments
 }
