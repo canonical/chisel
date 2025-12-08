@@ -138,7 +138,7 @@ func GlobPathWithSpecial(a, b string, aSpecial, bSpecial map[rune]string) bool {
 
 	a = strings.ReplaceAll(a, "**", "⁑")
 	b = strings.ReplaceAll(b, "**", "⁑")
-	
+
 	costFunc := makeGlobCostFunc(aSpecial, bSpecial)
 	return Distance(a, b, costFunc, 1) == 0
 }
@@ -147,7 +147,7 @@ func makeGlobCostFunc(aSpecial, bSpecial map[rune]string) CostFunc {
 	// Compile regex patterns once
 	aRegex := make(map[rune]*regexp.Regexp)
 	bRegex := make(map[rune]*regexp.Regexp)
-	
+
 	for r, pattern := range aSpecial {
 		re, err := regexp.Compile("^" + pattern + "$")
 		if err == nil {
@@ -160,7 +160,7 @@ func makeGlobCostFunc(aSpecial, bSpecial map[rune]string) CostFunc {
 			bRegex[r] = re
 		}
 	}
-	
+
 	return func(ar, br rune) Cost {
 		// Handle standard wildcards first
 		if ar == '⁑' || br == '⁑' {
@@ -175,7 +175,7 @@ func makeGlobCostFunc(aSpecial, bSpecial map[rune]string) CostFunc {
 		if ar == '?' || br == '?' {
 			return Cost{SwapAB: 0, DeleteA: 1, InsertB: 1}
 		}
-		
+
 		// Handle special globs
 		if re, ok := aRegex[ar]; ok {
 			// ar is a special glob from a
@@ -203,7 +203,7 @@ func makeGlobCostFunc(aSpecial, bSpecial map[rune]string) CostFunc {
 			}
 			return Cost{SwapAB: Inhibit, DeleteA: Inhibit, InsertB: 1}
 		}
-		
+
 		return Cost{SwapAB: 1, DeleteA: 1, InsertB: 1}
 	}
 }

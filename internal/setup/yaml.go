@@ -492,7 +492,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 			var generate GenerateKind
 			var prefer string
 			var specialGlobs map[rune]string
-			
+
 			// Parse special-globs first if present
 			if yamlPath != nil && len(yamlPath.SpecialGlobs) > 0 {
 				specialGlobs = make(map[rune]string)
@@ -510,7 +510,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 					specialGlobs[r] = pattern
 				}
 			}
-			
+
 			if yamlPath != nil && yamlPath.Generate != "" {
 				zeroPathGenerate := zeroPath
 				zeroPathGenerate.Generate = yamlPath.Generate
