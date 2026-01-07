@@ -3663,7 +3663,7 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 		}
 
 		if test.selslices != nil {
-			selection, err := setup.Select(release, test.selslices, "")
+			selection, err := setup.Select(release, test.selslices, "amd64")
 			if test.selerror != "" {
 				c.Assert(err, ErrorMatches, test.selerror)
 				continue
@@ -3889,7 +3889,51 @@ func (s *S) TestYAMLPathGenerate(c *C) {
 	}
 }
 
-func (s *S) TestSelectInvalidArch(c *C) {
-	_, err := setup.Select(nil, nil, "foo")
-	c.Assert(err, ErrorMatches, `invalid package architecture: foo`)
+var selectWithArchTests = []struct {
+	summary  string
+	arch     string
+	input    map[string]string
+	selerror string
+}{{
+	summary: "Empty arch",
+	arch:    "",
+}, {
+	summary:  "Invalid arch",
+	arch:     "foo",
+	selerror: "invalid package architecture: foo",
+}}
+
+func (s *S) TestSelectWithArch(c *C) {
+	input := map[string]string{
+		"chisel.yaml": string(testutil.DefaultChiselYaml),
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+					contents:
+						/dir/file1: {}
+		`,
+	}
+	selslices := []setup.SliceKey{{"mypkg", "myslice"}}
+	dir := c.MkDir()
+	for path, data := range input {
+		fpath := filepath.Join(dir, path)
+		err := os.MkdirAll(filepath.Dir(fpath), 0o755)
+		c.Assert(err, IsNil)
+		err = os.WriteFile(fpath, testutil.Reindent(data), 0o644)
+		c.Assert(err, IsNil)
+	}
+
+	release, err := setup.ReadRelease(dir)
+	c.Assert(err, IsNil)
+
+	for _, test := range selectWithArchTests {
+		_, err = setup.Select(release, selslices, test.arch)
+		if test.selerror != "" {
+			c.Assert(err, ErrorMatches, test.selerror)
+			continue
+		} else {
+			c.Assert(err, IsNil)
+		}
+	}
 }
