@@ -2078,10 +2078,6 @@ func runSlicerTests(s *S, c *C, tests []slicerTest) {
 				Slice:   "manifest",
 			})
 
-			if test.arch == "" {
-				test.arch = "amd64"
-			}
-
 			selection, err := setup.Select(release, testSlices, test.arch)
 			c.Assert(err, IsNil)
 

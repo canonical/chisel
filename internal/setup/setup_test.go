@@ -3663,7 +3663,7 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 		}
 
 		if test.selslices != nil {
-			selection, err := setup.Select(release, test.selslices, "amd64")
+			selection, err := setup.Select(release, test.selslices, "")
 			if test.selerror != "" {
 				c.Assert(err, ErrorMatches, test.selerror)
 				continue
@@ -3887,9 +3887,4 @@ func (s *S) TestYAMLPathGenerate(c *C) {
 		result := test.path1.SameContent(test.path2)
 		c.Assert(result, Equals, test.result)
 	}
-}
-
-func (s *S) TestSelectEmptyArch(c *C) {
-	_, err := setup.Select(nil, nil, "")
-	c.Assert(err, ErrorMatches, `cannot select slices: "arch" is unset`)
 }

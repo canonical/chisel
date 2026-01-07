@@ -12,6 +12,7 @@ import (
 	"golang.org/x/crypto/openpgp/packet"
 
 	"github.com/canonical/chisel/internal/apacheutil"
+	"github.com/canonical/chisel/internal/deb"
 	"github.com/canonical/chisel/internal/strdist"
 )
 
@@ -465,8 +466,14 @@ func stripBase(baseDir, path string) string {
 func Select(release *Release, slices []SliceKey, arch string) (*Selection, error) {
 	logf("Selecting slices...")
 
+	var err error
 	if arch == "" {
-		return nil, fmt.Errorf(`cannot select slices: "arch" is unset`)
+		arch, err = deb.InferArch()
+	} else {
+		err = deb.ValidateArch(arch)
+	}
+	if err != nil {
+		return nil, err
 	}
 
 	selection := &Selection{
