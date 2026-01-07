@@ -3888,3 +3888,8 @@ func (s *S) TestYAMLPathGenerate(c *C) {
 		c.Assert(result, Equals, test.result)
 	}
 }
+
+func (s *S) TestSelectInvalidArch(c *C) {
+	_, err := setup.Select(nil, nil, "foo")
+	c.Assert(err, ErrorMatches, `invalid package architecture: foo`)
+}
