@@ -3890,20 +3890,12 @@ func (s *S) TestYAMLPathGenerate(c *C) {
 	}
 }
 
-var selectWithArchTests = []struct {
-	summary  string
-	arch     string
-	selerror string
-}{{
-	summary: "Empty arch",
-	arch:    "",
-}, {
-	summary:  "Invalid arch",
-	arch:     "foo",
-	selerror: "invalid package architecture: foo",
-}}
+func (s *S) TestSelectInvalidArch(c *C) {
+	_, err := setup.Select(nil, nil, "foo")
+	c.Assert(err, ErrorMatches, "invalid package architecture: foo")
+}
 
-func (s *S) TestSelectWithArch(c *C) {
+func (s *S) TestSelectEmptyArch(c *C) {
 	mypkgYAML := `
 			package: mypkg
 			slices:
@@ -3923,26 +3915,6 @@ func (s *S) TestSelectWithArch(c *C) {
 		"chisel.yaml":             string(testutil.DefaultChiselYaml),
 		"slices/mydir/mypkg.yaml": mypkgYAML,
 	}
-	selslice := []setup.SliceKey{{"mypkg", "myslice"}}
-	selectedSlices := []*setup.Slice{
-		{
-			Package: "mypkg",
-			Name:    "myotherslice",
-			Contents: map[string]setup.PathInfo{
-				"/dir2/file1": {Kind: "copy"},
-			},
-		},
-		{
-			Package: "mypkg",
-			Name:    "myslice",
-			Contents: map[string]setup.PathInfo{
-				"/dir/file1": {Kind: "copy"},
-			},
-			Essential: map[setup.SliceKey]setup.EssentialInfo{
-				{"mypkg", "myotherslice"}: {Arch: []string{arch}},
-			},
-		},
-	}
 
 	dir := c.MkDir()
 	for path, data := range input {
@@ -3956,14 +3928,14 @@ func (s *S) TestSelectWithArch(c *C) {
 	release, err := setup.ReadRelease(dir)
 	c.Assert(err, IsNil)
 
-	for _, test := range selectWithArchTests {
-		selection, err := setup.Select(release, selslice, test.arch)
-		if test.selerror != "" {
-			c.Assert(err, ErrorMatches, test.selerror)
-			continue
-		} else {
-			c.Assert(err, IsNil)
-			c.Assert(selection.Slices, DeepEquals, selectedSlices)
-		}
+	selslice := []setup.SliceKey{{"mypkg", "myslice"}}
+	selection, err := setup.Select(release, selslice, "")
+	c.Assert(err, IsNil)
+
+	var sliceNames []string
+	for _, s := range selection.Slices {
+		sliceNames = append(sliceNames, s.Name)
 	}
+	expected := []string{"myotherslice", "myslice"}
+	c.Assert(sliceNames, DeepEquals, expected)
 }
