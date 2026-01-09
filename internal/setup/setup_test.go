@@ -10,6 +10,7 @@ import (
 	. "gopkg.in/check.v1"
 	"gopkg.in/yaml.v3"
 
+	"github.com/canonical/chisel/internal/deb"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/testutil"
 )
@@ -3892,7 +3893,6 @@ func (s *S) TestYAMLPathGenerate(c *C) {
 var selectWithArchTests = []struct {
 	summary  string
 	arch     string
-	input    map[string]string
 	selerror string
 }{{
 	summary: "Empty arch",
@@ -3904,17 +3904,46 @@ var selectWithArchTests = []struct {
 }}
 
 func (s *S) TestSelectWithArch(c *C) {
-	input := map[string]string{
-		"chisel.yaml": string(testutil.DefaultChiselYaml),
-		"slices/mydir/mypkg.yaml": `
+	mypkgYAML := `
 			package: mypkg
 			slices:
 				myslice:
 					contents:
 						/dir/file1: {}
-		`,
+					v3-essential:
+						mypkg_myotherslice: {arch: [amd64]}
+				myotherslice:
+					contents:
+					    /dir2/file1: {}
+		`
+	arch, err := deb.InferArch()
+	c.Assert(err, IsNil)
+	mypkgYAML = strings.ReplaceAll(mypkgYAML, "amd64", arch)
+	input := map[string]string{
+		"chisel.yaml":             string(testutil.DefaultChiselYaml),
+		"slices/mydir/mypkg.yaml": mypkgYAML,
 	}
-	selslices := []setup.SliceKey{{"mypkg", "myslice"}}
+	selslice := []setup.SliceKey{{"mypkg", "myslice"}}
+	selectedSlices := []*setup.Slice{
+		{
+			Package: "mypkg",
+			Name:    "myotherslice",
+			Contents: map[string]setup.PathInfo{
+				"/dir2/file1": {Kind: "copy"},
+			},
+		},
+		{
+			Package: "mypkg",
+			Name:    "myslice",
+			Contents: map[string]setup.PathInfo{
+				"/dir/file1": {Kind: "copy"},
+			},
+			Essential: map[setup.SliceKey]setup.EssentialInfo{
+				{"mypkg", "myotherslice"}: {Arch: []string{arch}},
+			},
+		},
+	}
+
 	dir := c.MkDir()
 	for path, data := range input {
 		fpath := filepath.Join(dir, path)
@@ -3928,12 +3957,13 @@ func (s *S) TestSelectWithArch(c *C) {
 	c.Assert(err, IsNil)
 
 	for _, test := range selectWithArchTests {
-		_, err = setup.Select(release, selslices, test.arch)
+		selection, err := setup.Select(release, selslice, test.arch)
 		if test.selerror != "" {
 			c.Assert(err, ErrorMatches, test.selerror)
 			continue
 		} else {
 			c.Assert(err, IsNil)
+			c.Assert(selection.Slices, DeepEquals, selectedSlices)
 		}
 	}
 }
