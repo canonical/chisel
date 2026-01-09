@@ -1267,6 +1267,35 @@ var setupTests = []setupTest{{
 	},
 	relerror: `invalid slice name "cc" in slices/mydir/mypkg.yaml \(start with a-z, len >= 3, only a-z / 0-9 / -\)`,
 }, {
+	summary: "Invalid slice hint - too long",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				slice1:
+					hint: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+					contents:
+						/usr/bin/cc:
+		`,
+	},
+	relerror: `invalid slice hint for "slice1" in slices/mydir/mypkg.yaml: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" \(len <= 40, no line breaks\)`,
+}, {
+	summary: "Invalid slice hint - line breaks",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				slice1:
+					hint: |
+						On
+						multiple
+						lines.
+					contents:
+						/usr/bin/cc:
+		`,
+	},
+	relerror: `invalid slice hint for "slice1" in slices/mydir/mypkg.yaml: "On\\nmultiple\\nlines.\\n" \(len <= 40, no line breaks\)`,
+}, {
 	summary: "Package essentials with same package slice",
 	input: map[string]string{
 		"slices/mydir/mypkg.yaml": `

@@ -38,6 +38,7 @@ var infoTests = []infoTest{{
 		package: mypkg2
 		slices:
 			myslice:
+				hint: Another-file included
 				contents:
 					/dir/another-file: {}
 	`,
@@ -52,6 +53,7 @@ var infoTests = []infoTest{{
 				contents:
 					/dir/file: {}
 			myslice2:
+				hint: Different than myslice1
 				v3-essential:
 					mypkg1_myslice1: {}
 					mypkg2_myslice: {arch: amd64}
@@ -67,6 +69,7 @@ var infoTests = []infoTest{{
 				contents:
 					/dir/file: {}
 			myslice2:
+				hint: Different than myslice1
 				v3-essential:
 					mypkg1_myslice1: {}
 					mypkg2_myslice: {arch: amd64}
@@ -74,6 +77,7 @@ var infoTests = []infoTest{{
 		package: mypkg2
 		slices:
 			myslice:
+				hint: Another-file included
 				contents:
 					/dir/another-file: {}
 	`,
@@ -88,6 +92,7 @@ var infoTests = []infoTest{{
 				contents:
 					/dir/file: {}
 			myslice2:
+				hint: Different than myslice1
 				v3-essential:
 					mypkg1_myslice1: {}
 					mypkg2_myslice: {arch: amd64}
@@ -148,6 +153,7 @@ var infoRelease = map[string]string{
 				contents:
 					/dir/file:
 			myslice2:
+				hint: Different than myslice1
 				v3-essential:
 					mypkg2_myslice: {arch: amd64}
 	`,
@@ -155,6 +161,7 @@ var infoRelease = map[string]string{
 		package: mypkg2
 		slices:
 			myslice:
+				hint: Another-file included
 				contents:
 					/dir/another-file:
 	`,
