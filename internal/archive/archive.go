@@ -382,7 +382,6 @@ func (index *ubuntuIndex) fetch(suffix, digest string, flags fetchFlags) (io.Rea
 	if strings.HasPrefix(suffix, "pool/") {
 		url = baseURL + suffix
 	} else {
-		// If path is not a package then it is relative to the suite.
 		url = baseURL + "dists/" + index.suite + "/" + suffix
 	}
 
