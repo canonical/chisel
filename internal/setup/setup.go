@@ -12,6 +12,7 @@ import (
 	"golang.org/x/crypto/openpgp/packet"
 
 	"github.com/canonical/chisel/internal/apacheutil"
+	"github.com/canonical/chisel/internal/deb"
 	"github.com/canonical/chisel/internal/strdist"
 )
 
@@ -369,7 +370,7 @@ func order(pkgs map[string]*Package, keys []SliceKey, arch string) ([]SliceKey, 
 		fqslice := slice.String()
 		predecessors := successors[fqslice]
 		for req, info := range slice.Essential {
-			if len(info.Arch) > 0 && !slices.Contains(info.Arch, arch) {
+			if len(info.Arch) > 0 && arch != "" && !slices.Contains(info.Arch, arch) {
 				continue
 			}
 			fqreq := req.String()
@@ -464,6 +465,16 @@ func stripBase(baseDir, path string) string {
 
 func Select(release *Release, slices []SliceKey, arch string) (*Selection, error) {
 	logf("Selecting slices...")
+
+	var err error
+	if arch == "" {
+		arch, err = deb.InferArch()
+	} else {
+		err = deb.ValidateArch(arch)
+	}
+	if err != nil {
+		return nil, err
+	}
 
 	selection := &Selection{
 		Release: release,
