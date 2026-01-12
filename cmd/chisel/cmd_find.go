@@ -60,7 +60,7 @@ func (cmd *cmdFind) Execute(args []string) error {
 	fmt.Fprintf(w, "Slice\tHint\n")
 	for _, s := range slices {
 		hint := "-"
-		if len(s.Hint) > 0 {
+		if s.Hint != "" {
 			hint = s.Hint
 		}
 		fmt.Fprintf(w, "%s\t%s\n", s, hint)
