@@ -1278,7 +1278,7 @@ var setupTests = []setupTest{{
 						/usr/bin/cc:
 		`,
 	},
-	relerror: `invalid slice hint for "slice1" in slices/mydir/mypkg.yaml: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" \(len <= 40, no line breaks\)`,
+	relerror: `invalid slice hint for "slice1" in slices/mydir/mypkg.yaml \(len <= 40, no line breaks\): "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"`,
 }, {
 	summary: "Invalid slice hint - line breaks",
 	input: map[string]string{
@@ -1294,7 +1294,7 @@ var setupTests = []setupTest{{
 						/usr/bin/cc:
 		`,
 	},
-	relerror: `invalid slice hint for "slice1" in slices/mydir/mypkg.yaml: "On\\nmultiple\\nlines.\\n" \(len <= 40, no line breaks\)`,
+	relerror: `invalid slice hint for "slice1" in slices/mydir/mypkg.yaml \(len <= 40, no line breaks\): "On\\nmultiple\\nlines.\\n"`,
 }, {
 	summary: "Package essentials with same package slice",
 	input: map[string]string{

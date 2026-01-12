@@ -411,7 +411,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 			return nil, fmt.Errorf("invalid slice name %q in %s (start with a-z, len >= 3, only a-z / 0-9 / -)", sliceName, pkgPath)
 		}
 		if len(yamlSlice.Hint) > 40 || strings.ContainsAny(yamlSlice.Hint, "\n") {
-			return nil, fmt.Errorf("invalid slice hint for %q in %s: %q (len <= 40, no line breaks)", sliceName, pkgPath, yamlSlice.Hint)
+			return nil, fmt.Errorf("invalid slice hint for %q in %s (len <= 40, no line breaks): %q", sliceName, pkgPath, yamlSlice.Hint)
 		}
 		slice := &Slice{
 			Package: pkgName,
