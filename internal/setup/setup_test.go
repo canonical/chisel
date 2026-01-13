@@ -3633,6 +3633,34 @@ var setupTests = []setupTest{{
 		`,
 	},
 	relerror: `cannot parse slice mypkg_myslice1: v3-essential is deprecated since format v3`,
+}, {
+	summary: "Format v1/v2 expect a list in 'essential' (pkg)",
+	input: map[string]string{
+		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYaml, "format: v1", "format: v2"),
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			essential:
+				mypkg_myslice2: {}
+			slices:
+				myslice1:
+				myslice2:
+		`,
+	},
+	relerror: `cannot parse package "mypkg": essential expects a list`,
+}, {
+	summary: "Format v1/v2 expect a list in 'essential' (slice)",
+	input: map[string]string{
+		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYaml, "format: v1", "format: v2"),
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice1:
+					essential:
+						mypkg_myslice2: {}
+				myslice2:
+		`,
+	},
+	relerror: `cannot parse slice mypkg_myslice1: essential expects a list`,
 }}
 
 func (s *S) TestParseRelease(c *C) {
