@@ -19,22 +19,6 @@ import (
 )
 
 func (p *Package) MarshalYAML() (any, error) {
-	if p.Format == "v1" || p.Format == "v2" {
-		oldPkg := &v1v2YAMLPackage{
-			Name:    p.Name,
-			Archive: p.Archive,
-			Slices:  make(map[string]v1v2YAMLSlice, len(p.Slices)),
-		}
-		for name, slice := range p.Slices {
-			yamlSlice, err := v1v2SliceToYAML(slice)
-			if err != nil {
-				return nil, err
-			}
-			oldPkg.Slices[name] = *yamlSlice
-		}
-		return oldPkg, nil
-	}
-
 	pkg := &yamlPackage{
 		Name:    p.Name,
 		Archive: p.Archive,
@@ -79,13 +63,38 @@ type yamlArchive struct {
 	PubKeys    []string `yaml:"public-keys"`
 }
 
+type essentialListMap struct {
+	Essential map[string]*yamlEssential
+	list      bool
+}
+
+func (es *essentialListMap) UnmarshalYAML(value *yaml.Node) error {
+	type essentialList struct {
+		Essential []string `yaml:"essential,omitempty"`
+	}
+	type essentialMap struct {
+		Essential map[string]*yamlEssential `yaml:"essential,omitempty"`
+	}
+	essential := essentialMap{}
+	err := value.Decode(&essential)
+	if err != nil {
+		list := essentialList{}
+		value.Decode(&essential)
+		for _, slice := range list.Essential {
+			essential.Essential[slice] = &yamlEssential{}
+		}
+	}
+	es.Essential = essential.Essential
+	return nil
+}
+
 type yamlPackage struct {
 	Name    string               `yaml:"package"`
 	Archive string               `yaml:"archive,omitempty"`
 	Slices  map[string]yamlSlice `yaml:"slices,omitempty"`
 	// For backwards-compatibility reasons with v1 and v2, essential needs
 	// custom logic to be parsed. See [parsePackage].
-	Essential map[string]*yamlEssential `yaml:"essential,omitempty"`
+	Essential essentialListMap `yaml:"essential,omitempty"`
 	// It is only used to present an error message to the user if the field
 	// is used in v3.
 	V3Essential map[string]*yamlEssential `yaml:"v3-essential,omitempty"`
@@ -177,12 +186,12 @@ var _ yaml.Marshaler = yamlMode(0)
 type yamlSlice struct {
 	Contents map[string]*yamlPath `yaml:"contents,omitempty"`
 	Mutate   string               `yaml:"mutate,omitempty"`
-	// For backwards-compatibility reasons with v1 and v2, essential needs
-	// custom logic to be parsed. See [parsePackage].
-	Essential map[string]*yamlEssential `yaml:"essential,omitempty"`
 	// It is only used to present an error message to the user if the field
 	// is used in v3.
 	V3Essential map[string]*yamlEssential `yaml:"v3-essential,omitempty"`
+	// For backwards-compatibility reasons with v1 and v2, essential needs
+	// custom logic to be parsed. See [parsePackage].
+	Essential essentialListMap `yaml:"essential,omitempty"`
 }
 
 type yamlPubKey struct {
@@ -415,56 +424,32 @@ func parsePackage(format, baseDir, pkgName, pkgPath string, data []byte) (*Packa
 	yamlPkg := yamlPackage{}
 	dec := yaml.NewDecoder(bytes.NewBuffer(data))
 	dec.KnownFields(false)
-	if format == "v1" || format == "v2" {
-		oldPkg := &v1v2YAMLPackage{}
-		err := dec.Decode(&oldPkg)
-		if err != nil {
-			return nil, fmt.Errorf("cannot parse package %q slice definitions: %v", pkgName, err)
-		}
-		if oldPkg.V3Essential == nil {
-			oldPkg.V3Essential = map[string]*yamlEssential{}
-		}
-		for _, refName := range oldPkg.Essential {
-			if _, ok := oldPkg.V3Essential[refName]; ok {
-				// This check is only needed because the list format can contain
-				// duplicates. It should be removed when format "v2" is deprecated.
-				return nil, fmt.Errorf("package %q repeats %s in essential fields", pkgName, refName)
-			}
-			oldPkg.V3Essential[refName] = &yamlEssential{}
-		}
-		yamlPkg.Archive = oldPkg.Archive
-		yamlPkg.Name = oldPkg.Name
-		yamlPkg.Slices = map[string]yamlSlice{}
-		for sliceName, oldSlice := range oldPkg.Slices {
-			if oldSlice.V3Essential == nil {
-				oldSlice.V3Essential = map[string]*yamlEssential{}
-			}
-			for _, refName := range oldSlice.Essential {
-				if _, ok := oldSlice.V3Essential[refName]; ok {
-					// This check is only needed because the list format can contain
-					// duplicates. It should be removed when format "v2" is deprecated.
-					return nil, fmt.Errorf("slice %s repeats %s in essential fields", SliceKey{pkgName, sliceName}, refName)
-				}
-				oldSlice.V3Essential[refName] = &yamlEssential{}
-			}
-			yamlPkg.Slices[sliceName] = yamlSlice{
-				Contents:  oldSlice.Contents,
-				Mutate:    oldSlice.Mutate,
-				Essential: oldSlice.V3Essential,
-			}
-		}
-		yamlPkg.Essential = oldPkg.V3Essential
-	} else {
-		err := dec.Decode(&yamlPkg)
-		if err != nil {
-			return nil, fmt.Errorf("cannot parse package %q slice definitions: %v", pkgName, err)
-		}
-		if yamlPkg.V3Essential != nil {
+	// if _, ok := oldPkg.V3Essential[refName]; ok {
+	// 	// This check is only needed because the list format can contain
+	// 	// duplicates. It should be removed when format "v2" is deprecated.
+	// 	return nil, fmt.Errorf("package %q repeats %s in essential fields", pkgName, refName)
+	// }
+	// for _, refName := range oldSlice.Essential {
+	// 	if _, ok := oldSlice.V3Essential[refName]; ok {
+	// 		// This check is only needed because the list format can contain
+	// 		// duplicates. It should be removed when format "v2" is deprecated.
+	// 		return nil, fmt.Errorf("slice %s repeats %s in essential fields", SliceKey{pkgName, sliceName}, refName)
+	// 	}
+	// 	oldSlice.V3Essential[refName] = &yamlEssential{}
+	// }
+	err := dec.Decode(&yamlPkg)
+	if err != nil {
+		return nil, fmt.Errorf("cannot parse package %q slice definitions: %v", pkgName, err)
+	}
+	if yamlPkg.V3Essential != nil {
+		if format != "v1" && format != "v2" {
 			return nil, fmt.Errorf("package %q: v3-essential is deprecated since format v3", pkgName)
 		}
-		for sliceName, slice := range yamlPkg.Slices {
-			if len(slice.V3Essential) > 0 {
-				return nil, fmt.Errorf("slice %s: v3-essential is deprecated since format v3", SliceKey{pkgName, sliceName})
+	}
+	for _, yamlSlice := range yamlPkg.Slices {
+		if yamlSlice.V3Essential != nil {
+			if format != "v1" && format != "v2" {
+				return nil, fmt.Errorf("package %q: v3-essential is deprecated since format v3", pkgName)
 			}
 		}
 	}
@@ -487,7 +472,8 @@ func parsePackage(format, baseDir, pkgName, pkgPath string, data []byte) (*Packa
 			},
 		}
 
-		for refName, essentialInfo := range yamlPkg.Essential {
+		// TODO
+		for refName, essentialInfo := range yamlPkg.Essential.Essential {
 			sliceKey, err := ParseSliceKey(refName)
 			if err != nil {
 				return nil, fmt.Errorf("package %q has invalid essential slice reference: %q", pkgName, refName)
@@ -508,7 +494,28 @@ func parsePackage(format, baseDir, pkgName, pkgPath string, data []byte) (*Packa
 			}
 			slice.Essential[sliceKey] = EssentialInfo{Arch: archList}
 		}
-		for refName, essentialInfo := range yamlSlice.Essential {
+		// TODO
+		for refName, essentialInfo := range yamlSlice.Essential.Essential {
+			sliceKey, err := ParseSliceKey(refName)
+			if err != nil {
+				return nil, fmt.Errorf("package %q has invalid essential slice reference: %q", pkgName, refName)
+			}
+			if sliceKey.Package == slice.Package && sliceKey.Slice == slice.Name {
+				return nil, fmt.Errorf("cannot add slice to itself as essential %q in %s", refName, pkgPath)
+			}
+			if _, ok := slice.Essential[sliceKey]; ok {
+				return nil, fmt.Errorf("slice %s repeats %s in essential fields", slice, refName)
+			}
+			if slice.Essential == nil {
+				slice.Essential = map[SliceKey]EssentialInfo{}
+			}
+			var archList []string
+			if essentialInfo != nil {
+				archList = essentialInfo.Arch.List
+			}
+			slice.Essential[sliceKey] = EssentialInfo{Arch: archList}
+		}
+		for refName, essentialInfo := range yamlSlice.V3Essential {
 			sliceKey, err := ParseSliceKey(refName)
 			if err != nil {
 				return nil, fmt.Errorf("package %q has invalid essential slice reference: %q", pkgName, refName)
@@ -687,34 +694,19 @@ func pathInfoToYAML(pi *PathInfo) (*yamlPath, error) {
 	return path, nil
 }
 
-func v1v2SliceToYAML(s *Slice) (*v1v2YAMLSlice, error) {
-	oldSlice := &v1v2YAMLSlice{
-		Contents:    make(map[string]*yamlPath, len(s.Contents)),
-		Mutate:      s.Scripts.Mutate,
-		V3Essential: map[string]*yamlEssential{},
-	}
-	for key, info := range s.Essential {
-		oldSlice.V3Essential[key.String()] = &yamlEssential{Arch: yamlArch{info.Arch}}
-	}
-	for path, info := range s.Contents {
-		yamlPath, err := pathInfoToYAML(&info)
-		if err != nil {
-			return nil, err
-		}
-		oldSlice.Contents[path] = yamlPath
-	}
-	return oldSlice, nil
-}
-
 // sliceToYAML converts a Slice object to a yamlSlice object.
 func sliceToYAML(s *Slice) (*yamlSlice, error) {
 	slice := &yamlSlice{
-		Contents:  make(map[string]*yamlPath, len(s.Contents)),
-		Mutate:    s.Scripts.Mutate,
-		Essential: make(map[string]*yamlEssential, len(s.Essential)),
+		Contents: make(map[string]*yamlPath, len(s.Contents)),
+		Mutate:   s.Scripts.Mutate,
+		// TODO
+		Essential: essentialListMap{
+			Essential: make(map[string]*yamlEssential, len(s.Essential)),
+		},
 	}
+	// TODO
 	for key, info := range s.Essential {
-		slice.Essential[key.String()] = &yamlEssential{Arch: yamlArch{info.Arch}}
+		slice.Essential.Essential[key.String()] = &yamlEssential{Arch: yamlArch{info.Arch}}
 	}
 	for path, info := range s.Contents {
 		yamlPath, err := pathInfoToYAML(&info)
@@ -724,21 +716,6 @@ func sliceToYAML(s *Slice) (*yamlSlice, error) {
 		slice.Contents[path] = yamlPath
 	}
 	return slice, nil
-}
-
-type v1v2YAMLSlice struct {
-	Essential   []string                  `yaml:"essential,omitempty"`
-	Contents    map[string]*yamlPath      `yaml:"contents,omitempty"`
-	Mutate      string                    `yaml:"mutate,omitempty"`
-	V3Essential map[string]*yamlEssential `yaml:"v3-essential,omitempty"`
-}
-
-type v1v2YAMLPackage struct {
-	Name        string                    `yaml:"package"`
-	Archive     string                    `yaml:"archive,omitempty"`
-	Slices      map[string]v1v2YAMLSlice  `yaml:"slices,omitempty"`
-	Essential   []string                  `yaml:"essential,omitempty"`
-	V3Essential map[string]*yamlEssential `yaml:"v3-essential,omitempty"`
 }
 
 type yamlMaintenance struct {
