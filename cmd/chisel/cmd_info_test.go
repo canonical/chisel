@@ -88,7 +88,7 @@ var infoTests = []infoTest{{
 				contents:
 					/dir/file: {}
 			myslice2:
-				v3-essential:
+				essential:
 					mypkg1_myslice1: {}
 					mypkg2_myslice: {arch: amd64}
 	`,

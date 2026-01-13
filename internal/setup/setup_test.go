@@ -1490,7 +1490,7 @@ var setupTests = []setupTest{{
 				slice2:
 		`,
 	},
-	relerror: `slice mypkg_slice1 repeats mypkg_slice2 in essential fields`,
+	relerror: `cannot parse package "mypkg" slice definitions: cannot decode essential: repeats mypkg_slice2`,
 }, {
 	summary: "Duplicated package essentials",
 	input: map[string]string{
@@ -1504,7 +1504,7 @@ var setupTests = []setupTest{{
 				slice2:
 		`,
 	},
-	relerror: `package "mypkg" repeats mypkg_slice1 in essential fields`,
+	relerror: `cannot parse package "mypkg" slice definitions: cannot decode essential: repeats mypkg_slice1`,
 }, {
 	summary: "Bad slice reference in slice essential",
 	input: map[string]string{
@@ -3623,7 +3623,7 @@ var setupTests = []setupTest{{
 				myslice2:
 		`,
 	},
-	relerror: `cannot parse package "mypkg" slice definitions: (.|\n)*`,
+	relerror: `cannot parse package "mypkg": essential expects a map`,
 }, {
 	summary: "Format v3 expects a map in 'essential' (slice)",
 	input: map[string]string{
@@ -3637,7 +3637,7 @@ var setupTests = []setupTest{{
 				myslice2:
 		`,
 	},
-	relerror: `cannot parse package "mypkg" slice definitions: (.|\n)*`,
+	relerror: `cannot parse slice mypkg_myslice1: essential expects a map`,
 }, {
 	summary: "In format v3 'v3-essential' is not supported (pkg)",
 	input: map[string]string{
@@ -3651,7 +3651,7 @@ var setupTests = []setupTest{{
 				myslice2:
 		`,
 	},
-	relerror: `package "mypkg": v3-essential is deprecated since format v3`,
+	relerror: `cannot parse package "mypkg": v3-essential is deprecated since format v3`,
 }, {
 	summary: "In format v3 'v3-essential' is not supported (slice)",
 	input: map[string]string{
@@ -3665,7 +3665,7 @@ var setupTests = []setupTest{{
 				myslice2:
 		`,
 	},
-	relerror: `slice mypkg_myslice1: v3-essential is deprecated since format v3`,
+	relerror: `cannot parse slice mypkg_myslice1: v3-essential is deprecated since format v3`,
 }}
 
 func (s *S) TestParseRelease(c *C) {
@@ -3925,13 +3925,13 @@ func (s *S) TestPackageYAMLFormat(c *C) {
 					myslice1:
 						contents:
 							/dir/file1: {}
-						v3-essential:
+						essential:
 							mypkg_myslice2: {arch: i386}
 							mypkg_myslice3: {}
 					myslice2:
 						contents:
 							/dir/file2: {}
-						v3-essential:
+						essential:
 							mypkg_myslice3: {}
 					myslice3:
 						contents:
