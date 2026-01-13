@@ -276,7 +276,7 @@ func openUbuntu(options *Options) (Archive, error) {
 
 func (index *ubuntuIndex) fetchRelease() error {
 	logf("Fetching %s %s %s suite details...", index.displayName(), index.version, index.suite)
-	reader, err := index.fetch(index.relativePath("InRelease"), "", fetchDefault)
+	reader, err := index.fetch(index.distPath("InRelease"), "", fetchDefault)
 	if err != nil {
 		return err
 	}
@@ -333,7 +333,7 @@ func (index *ubuntuIndex) fetchIndex() error {
 	}
 
 	logf("Fetching index for %s %s %s %s component...", index.displayName(), index.version, index.suite, index.component)
-	reader, err := index.fetch(index.relativePath(packagesPath+".gz"), digest, fetchBulk)
+	reader, err := index.fetch(index.distPath(packagesPath+".gz"), digest, fetchBulk)
 	if err != nil {
 		return err
 	}
@@ -368,7 +368,7 @@ func (index *ubuntuIndex) checkComponents(components []string) error {
 	return nil
 }
 
-func (index *ubuntuIndex) relativePath(suffix string) string {
+func (index *ubuntuIndex) distPath(suffix string) string {
 	return "dists/" + index.suite + "/" + suffix
 }
 
