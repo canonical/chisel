@@ -123,7 +123,6 @@ func selectPackageSlices(release *setup.Release, queries []string) (packages []*
 		} else {
 			releasePkg := release.Packages[pkgName]
 			pkg = &setup.Package{
-				Format:  release.Format,
 				Name:    releasePkg.Name,
 				Archive: releasePkg.Archive,
 				Slices:  make(map[string]*setup.Slice),

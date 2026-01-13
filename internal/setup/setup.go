@@ -22,7 +22,7 @@ type Release struct {
 	Packages    map[string]*Package
 	Archives    map[string]*Archive
 	Maintenance *Maintenance
-	// Format is used for marshaling, unmarshalling and error checking.
+	// Format is used for parsing and error checking.
 	Format string
 }
 
@@ -55,8 +55,6 @@ type Package struct {
 	Path    string
 	Archive string
 	Slices  map[string]*Slice
-	// Format is used for marshaling, unmarshalling and error checking.
-	Format string
 }
 
 // Slice holds the details about a package slice.

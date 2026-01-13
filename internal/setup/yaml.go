@@ -19,19 +19,7 @@ import (
 )
 
 func (p *Package) MarshalYAML() (any, error) {
-	pkg := &yamlPackage{
-		Name:    p.Name,
-		Archive: p.Archive,
-		Slices:  make(map[string]yamlSlice, len(p.Slices)),
-	}
-	for name, slice := range p.Slices {
-		yamlSlice, err := sliceToYAML(slice)
-		if err != nil {
-			return nil, err
-		}
-		pkg.Slices[name] = *yamlSlice
-	}
-	return pkg, nil
+	return packageToYAML(p)
 }
 
 var _ yaml.Marshaler = (*Package)(nil)
@@ -426,25 +414,11 @@ func parsePackage(format, baseDir, pkgName, pkgPath string, data []byte) (*Packa
 		Name:   pkgName,
 		Path:   pkgPath,
 		Slices: make(map[string]*Slice),
-		Format: format,
 	}
 
 	yamlPkg := yamlPackage{}
 	dec := yaml.NewDecoder(bytes.NewBuffer(data))
 	dec.KnownFields(false)
-	// if _, ok := oldPkg.V3Essential[refName]; ok {
-	// 	// This check is only needed because the list format can contain
-	// 	// duplicates. It should be removed when format "v2" is deprecated.
-	// 	return nil, fmt.Errorf("package %q repeats %s in essential fields", pkgName, refName)
-	// }
-	// for _, refName := range oldSlice.Essential {
-	// 	if _, ok := oldSlice.V3Essential[refName]; ok {
-	// 		// This check is only needed because the list format can contain
-	// 		// duplicates. It should be removed when format "v2" is deprecated.
-	// 		return nil, fmt.Errorf("slice %s repeats %s in essential fields", SliceKey{pkgName, sliceName}, refName)
-	// 	}
-	// 	oldSlice.V3Essential[refName] = &yamlEssential{}
-	// }
 	err := dec.Decode(&yamlPkg)
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse package %q slice definitions: %v", pkgName, err)
@@ -483,88 +457,9 @@ func parsePackage(format, baseDir, pkgName, pkgPath string, data []byte) (*Packa
 				Mutate: yamlSlice.Mutate,
 			},
 		}
-
-		for refName, essentialInfo := range yamlPkg.Essential.Essential {
-			sliceKey, err := ParseSliceKey(refName)
-			if err != nil {
-				return nil, fmt.Errorf("package %q has invalid essential slice reference: %q", pkgName, refName)
-			}
-			if sliceKey.Package == slice.Package && sliceKey.Slice == slice.Name {
-				// Do not add the slice to its own essentials list.
-				continue
-			}
-			if _, ok := slice.Essential[sliceKey]; ok {
-				return nil, fmt.Errorf("package %q repeats %s in essential fields", pkgName, refName)
-			}
-			if slice.Essential == nil {
-				slice.Essential = map[SliceKey]EssentialInfo{}
-			}
-			var archList []string
-			if essentialInfo != nil {
-				archList = essentialInfo.Arch.List
-			}
-			slice.Essential[sliceKey] = EssentialInfo{Arch: archList}
-		}
-		for refName, essentialInfo := range yamlPkg.V3Essential {
-			sliceKey, err := ParseSliceKey(refName)
-			if err != nil {
-				return nil, fmt.Errorf("package %q has invalid essential slice reference: %q", pkgName, refName)
-			}
-			if sliceKey.Package == slice.Package && sliceKey.Slice == slice.Name {
-				// Do not add the slice to its own essentials list.
-				continue
-			}
-			if _, ok := slice.Essential[sliceKey]; ok {
-				return nil, fmt.Errorf("package %q repeats %s in essential fields", pkgName, refName)
-			}
-			if slice.Essential == nil {
-				slice.Essential = map[SliceKey]EssentialInfo{}
-			}
-			var archList []string
-			if essentialInfo != nil {
-				archList = essentialInfo.Arch.List
-			}
-			slice.Essential[sliceKey] = EssentialInfo{Arch: archList}
-		}
-		for refName, essentialInfo := range yamlSlice.Essential.Essential {
-			sliceKey, err := ParseSliceKey(refName)
-			if err != nil {
-				return nil, fmt.Errorf("package %q has invalid essential slice reference: %q", pkgName, refName)
-			}
-			if sliceKey.Package == slice.Package && sliceKey.Slice == slice.Name {
-				return nil, fmt.Errorf("cannot add slice to itself as essential %q in %s", refName, pkgPath)
-			}
-			if _, ok := slice.Essential[sliceKey]; ok {
-				return nil, fmt.Errorf("slice %s repeats %s in essential fields", slice, refName)
-			}
-			if slice.Essential == nil {
-				slice.Essential = map[SliceKey]EssentialInfo{}
-			}
-			var archList []string
-			if essentialInfo != nil {
-				archList = essentialInfo.Arch.List
-			}
-			slice.Essential[sliceKey] = EssentialInfo{Arch: archList}
-		}
-		for refName, essentialInfo := range yamlSlice.V3Essential {
-			sliceKey, err := ParseSliceKey(refName)
-			if err != nil {
-				return nil, fmt.Errorf("package %q has invalid essential slice reference: %q", pkgName, refName)
-			}
-			if sliceKey.Package == slice.Package && sliceKey.Slice == slice.Name {
-				return nil, fmt.Errorf("cannot add slice to itself as essential %q in %s", refName, pkgPath)
-			}
-			if _, ok := slice.Essential[sliceKey]; ok {
-				return nil, fmt.Errorf("slice %s repeats %s in essential fields", slice, refName)
-			}
-			if slice.Essential == nil {
-				slice.Essential = map[SliceKey]EssentialInfo{}
-			}
-			var archList []string
-			if essentialInfo != nil {
-				archList = essentialInfo.Arch.List
-			}
-			slice.Essential[sliceKey] = EssentialInfo{Arch: archList}
+		err := parseSliceEssential(&yamlPkg, &yamlSlice, slice)
+		if err != nil {
+			return nil, err
 		}
 
 		if len(yamlSlice.Contents) > 0 {
@@ -747,6 +642,23 @@ func sliceToYAML(s *Slice) (*yamlSlice, error) {
 	return slice, nil
 }
 
+// packageToYAML converts a Package object to a yamlPackage object.
+func packageToYAML(p *Package) (*yamlPackage, error) {
+	pkg := &yamlPackage{
+		Name:    p.Name,
+		Archive: p.Archive,
+		Slices:  make(map[string]yamlSlice, len(p.Slices)),
+	}
+	for name, slice := range p.Slices {
+		yamlSlice, err := sliceToYAML(slice)
+		if err != nil {
+			return nil, err
+		}
+		pkg.Slices[name] = *yamlSlice
+	}
+	return pkg, nil
+}
+
 type yamlMaintenance struct {
 	Standard  string `yaml:"standard"`
 	Expanded  string `yaml:"expanded"`
@@ -833,4 +745,90 @@ var defaultMaintenance = map[string]Maintenance{
 		Standard:  time.Date(2025, time.April, 17, 0, 0, 0, 0, time.UTC),
 		EndOfLife: time.Date(2026, time.January, 15, 0, 0, 0, 0, time.UTC),
 	},
+}
+
+func parseSliceEssential(yamlPkg *yamlPackage, yamlSlice *yamlSlice, slice *Slice) error {
+	for refName, essentialInfo := range yamlPkg.Essential.Essential {
+		sliceKey, err := ParseSliceKey(refName)
+		if err != nil {
+			return fmt.Errorf("package %q has invalid essential slice reference: %q", yamlPkg.Name, refName)
+		}
+		if sliceKey.Package == slice.Package && sliceKey.Slice == slice.Name {
+			// Do not add the slice to its own essentials list.
+			continue
+		}
+		if _, ok := slice.Essential[sliceKey]; ok {
+			return fmt.Errorf("package %q repeats %s in essential fields", yamlPkg.Name, refName)
+		}
+		if slice.Essential == nil {
+			slice.Essential = map[SliceKey]EssentialInfo{}
+		}
+		var archList []string
+		if essentialInfo != nil {
+			archList = essentialInfo.Arch.List
+		}
+		slice.Essential[sliceKey] = EssentialInfo{Arch: archList}
+	}
+	for refName, essentialInfo := range yamlPkg.V3Essential {
+		sliceKey, err := ParseSliceKey(refName)
+		if err != nil {
+			return fmt.Errorf("package %q has invalid essential slice reference: %q", yamlPkg.Name, refName)
+		}
+		if sliceKey.Package == slice.Package && sliceKey.Slice == slice.Name {
+			// Do not add the slice to its own essentials list.
+			continue
+		}
+		if _, ok := slice.Essential[sliceKey]; ok {
+			return fmt.Errorf("package %q repeats %s in essential fields", yamlPkg.Name, refName)
+		}
+		if slice.Essential == nil {
+			slice.Essential = map[SliceKey]EssentialInfo{}
+		}
+		var archList []string
+		if essentialInfo != nil {
+			archList = essentialInfo.Arch.List
+		}
+		slice.Essential[sliceKey] = EssentialInfo{Arch: archList}
+	}
+	for refName, essentialInfo := range yamlSlice.Essential.Essential {
+		sliceKey, err := ParseSliceKey(refName)
+		if err != nil {
+			return fmt.Errorf("package %q has invalid essential slice reference: %q", yamlPkg.Name, refName)
+		}
+		if sliceKey.Package == slice.Package && sliceKey.Slice == slice.Name {
+			return fmt.Errorf("package %q: cannot add slice to itself as essential %q", yamlPkg.Name, refName)
+		}
+		if _, ok := slice.Essential[sliceKey]; ok {
+			return fmt.Errorf("slice %s repeats %s in essential fields", slice, refName)
+		}
+		if slice.Essential == nil {
+			slice.Essential = map[SliceKey]EssentialInfo{}
+		}
+		var archList []string
+		if essentialInfo != nil {
+			archList = essentialInfo.Arch.List
+		}
+		slice.Essential[sliceKey] = EssentialInfo{Arch: archList}
+	}
+	for refName, essentialInfo := range yamlSlice.V3Essential {
+		sliceKey, err := ParseSliceKey(refName)
+		if err != nil {
+			return fmt.Errorf("package %q has invalid essential slice reference: %q", yamlPkg.Name, refName)
+		}
+		if sliceKey.Package == slice.Package && sliceKey.Slice == slice.Name {
+			return fmt.Errorf("package %q: cannot add slice to itself as essential %q", yamlPkg.Name, refName)
+		}
+		if _, ok := slice.Essential[sliceKey]; ok {
+			return fmt.Errorf("slice %s repeats %s in essential fields", slice, refName)
+		}
+		if slice.Essential == nil {
+			slice.Essential = map[SliceKey]EssentialInfo{}
+		}
+		var archList []string
+		if essentialInfo != nil {
+			archList = essentialInfo.Arch.List
+		}
+		slice.Essential[sliceKey] = EssentialInfo{Arch: archList}
+	}
+	return nil
 }

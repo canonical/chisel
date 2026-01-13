@@ -91,7 +91,6 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Format: "v1",
 				Name:   "mypkg",
 				Path:   "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{},
@@ -139,9 +138,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Format: "v1",
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
+				Name: "mypkg",
+				Path: "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice1": {
 						Package: "mypkg",
@@ -205,9 +203,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Format: "v1",
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
+				Name: "mypkg",
+				Path: "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice1": {
 						Package: "mypkg",
@@ -470,9 +467,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Format: "v1",
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
+				Name: "mypkg",
+				Path: "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice1": {
 						Package: "mypkg",
@@ -689,9 +685,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Format: "v1",
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
+				Name: "mypkg",
+				Path: "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg",
@@ -733,9 +728,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Format: "v1",
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
+				Name: "mypkg",
+				Path: "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg",
@@ -778,9 +772,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Format: "v1",
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
+				Name: "mypkg",
+				Path: "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg",
@@ -852,7 +845,6 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Format: "v1",
 				Name:   "mypkg",
 				Path:   "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{},
@@ -1059,9 +1051,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Format: "v1",
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
+				Name: "mypkg",
+				Path: "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg",
@@ -1135,7 +1126,6 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Format: "v1",
 				Name:   "mypkg",
 				Path:   "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{},
@@ -1249,9 +1239,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"jq": {
-				Format: "v1",
-				Name:   "jq",
-				Path:   "slices/mydir/jq.yaml",
+				Name: "jq",
+				Path: "slices/mydir/jq.yaml",
 				Slices: map[string]*setup.Slice{
 					"bins": {
 						Package: "jq",
@@ -1319,9 +1308,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Format: "v1",
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
+				Name: "mypkg",
+				Path: "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"slice1": {
 						Package: "mypkg",
@@ -1393,9 +1381,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Format: "v1",
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
+				Name: "mypkg",
+				Path: "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"slice1": {
 						Package: "mypkg",
@@ -1416,9 +1403,8 @@ var setupTests = []setupTest{{
 				},
 			},
 			"myotherpkg": {
-				Format: "v1",
-				Name:   "myotherpkg",
-				Path:   "slices/mydir/myotherpkg.yaml",
+				Name: "myotherpkg",
+				Path: "slices/mydir/myotherpkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"slice1": {
 						Package: "myotherpkg",
@@ -1461,7 +1447,7 @@ var setupTests = []setupTest{{
 						- mypkg_slice1
 		`,
 	},
-	relerror: `cannot add slice to itself as essential "mypkg_slice1" in slices/mydir/mypkg.yaml`,
+	relerror: `package "mypkg": cannot add slice to itself as essential "mypkg_slice1"`,
 }, {
 	summary: "Package essentials clashes with slice essentials",
 	input: map[string]string{
@@ -1578,9 +1564,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Format: "v1",
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
+				Name: "mypkg",
+				Path: "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg",
@@ -1632,9 +1617,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Format: "v1",
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
+				Name: "mypkg",
+				Path: "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg",
@@ -1728,9 +1712,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Format: "v1",
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
+				Name: "mypkg",
+				Path: "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg",
@@ -1742,9 +1725,8 @@ var setupTests = []setupTest{{
 				},
 			},
 			"mypkg2": {
-				Format: "v1",
-				Name:   "mypkg2",
-				Path:   "slices/mydir/mypkg2.yaml",
+				Name: "mypkg2",
+				Path: "slices/mydir/mypkg2.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg2",
@@ -1901,7 +1883,6 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Format: "v1",
 				Name:   "mypkg",
 				Path:   "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{},
@@ -2028,7 +2009,6 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Format: "v1",
 				Name:   "mypkg",
 				Path:   "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{},
@@ -2096,7 +2076,6 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Format: "v1",
 				Name:   "mypkg",
 				Path:   "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{},
@@ -2192,7 +2171,6 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Format: "v1",
 				Name:   "mypkg",
 				Path:   "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{},
@@ -2319,9 +2297,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg1": {
-				Format: "v1",
-				Name:   "mypkg1",
-				Path:   "slices/mydir/mypkg1.yaml",
+				Name: "mypkg1",
+				Path: "slices/mydir/mypkg1.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice1": {
 						Package: "mypkg1",
@@ -2341,9 +2318,8 @@ var setupTests = []setupTest{{
 				},
 			},
 			"mypkg2": {
-				Format: "v1",
-				Name:   "mypkg2",
-				Path:   "slices/mydir/mypkg2.yaml",
+				Name: "mypkg2",
+				Path: "slices/mydir/mypkg2.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice1": {
 						Package: "mypkg2",
@@ -2356,9 +2332,8 @@ var setupTests = []setupTest{{
 				},
 			},
 			"mypkg3": {
-				Format: "v1",
-				Name:   "mypkg3",
-				Path:   "slices/mydir/mypkg3.yaml",
+				Name: "mypkg3",
+				Path: "slices/mydir/mypkg3.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice1": {
 						Package: "mypkg3",
@@ -2757,7 +2732,6 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Format: "v1",
 				Name:   "mypkg",
 				Path:   "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{},
@@ -2808,7 +2782,6 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Format: "v1",
 				Name:   "mypkg",
 				Path:   "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{},
@@ -2998,7 +2971,6 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Format: "v1",
 				Name:   "mypkg",
 				Path:   "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{},
@@ -3121,7 +3093,6 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Format: "v1",
 				Name:   "mypkg",
 				Path:   "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{},
@@ -3244,7 +3215,6 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Format: "v1",
 				Name:   "mypkg",
 				Path:   "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{},
@@ -3367,7 +3337,6 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Format: "v1",
 				Name:   "mypkg",
 				Path:   "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{},
@@ -3488,7 +3457,6 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Format: "v1",
 				Name:   "mypkg",
 				Path:   "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{},
@@ -3532,9 +3500,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Format: "v1",
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
+				Name: "mypkg",
+				Path: "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice1": {
 						Package: "mypkg",
@@ -3711,9 +3678,6 @@ func (s *S) TestParseRelease(c *C) {
 		t.input = m
 		if t.release != nil {
 			t.release.Format = "v2"
-			for _, pkg := range t.release.Packages {
-				pkg.Format = "v2"
-			}
 		}
 		v2FormatTests = append(v2FormatTests, t)
 	}
@@ -3747,9 +3711,6 @@ func (s *S) TestParseRelease(c *C) {
 		t.input = m
 		if t.release != nil {
 			t.release.Format = "v3"
-			for _, pkg := range t.release.Packages {
-				pkg.Format = "v3"
-			}
 		}
 		v3FormatTests = append(v3FormatTests, t)
 	}
