@@ -429,6 +429,10 @@ func parsePackage(format, baseDir, pkgName, pkgPath string, data []byte) (*Packa
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse package %q slice definitions: %v", pkgName, err)
 	}
+	if yamlPkg.Name != pkg.Name {
+		return nil, fmt.Errorf("%s: filename and 'package' field (%q) disagree", pkgPath, yamlPkg.Name)
+	}
+
 	if format == "v1" || format == "v2" {
 		if len(yamlPkg.Essential.Essential) > 0 && !yamlPkg.Essential.list {
 			return nil, fmt.Errorf("cannot parse package %q: essential expects a list", pkgName)
@@ -455,9 +459,6 @@ func parsePackage(format, baseDir, pkgName, pkgPath string, data []byte) (*Packa
 		}
 	}
 
-	if yamlPkg.Name != pkg.Name {
-		return nil, fmt.Errorf("%s: filename and 'package' field (%q) disagree", pkgPath, yamlPkg.Name)
-	}
 	pkg.Archive = yamlPkg.Archive
 	zeroPath := yamlPath{}
 	for sliceName, yamlSlice := range yamlPkg.Slices {
