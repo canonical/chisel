@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode"
 
 	"golang.org/x/crypto/openpgp/packet"
 	"gopkg.in/yaml.v3"
@@ -410,8 +411,10 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 		if match == nil {
 			return nil, fmt.Errorf("invalid slice name %q in %s (start with a-z, len >= 3, only a-z / 0-9 / -)", sliceName, pkgPath)
 		}
-		if len(yamlSlice.Hint) > 40 || strings.ContainsAny(yamlSlice.Hint, "\n") {
-			return nil, fmt.Errorf("invalid slice hint for %q in %s (len <= 40, no line breaks): %q", sliceName, pkgPath, yamlSlice.Hint)
+		if len(yamlSlice.Hint) > 40 || strings.ContainsFunc(yamlSlice.Hint, func(r rune) bool {
+			return unicode.IsSpace(r) && r != ' '
+		}) {
+			return nil, fmt.Errorf("invalid slice hint for %q in %s (len <= 40, no line breaks, no non-standard spaces): %q", sliceName, pkgPath, yamlSlice.Hint)
 		}
 		slice := &Slice{
 			Package: pkgName,

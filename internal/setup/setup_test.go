@@ -1278,7 +1278,7 @@ var setupTests = []setupTest{{
 						/usr/bin/cc:
 		`,
 	},
-	relerror: `invalid slice hint for "slice1" in slices/mydir/mypkg.yaml \(len <= 40, no line breaks\): "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"`,
+	relerror: `invalid slice hint for "slice1" in slices/mydir/mypkg.yaml \(len <= 40, no line breaks, no non-standard spaces\): "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"`,
 }, {
 	summary: "Invalid slice hint - line breaks",
 	input: map[string]string{
@@ -1294,7 +1294,20 @@ var setupTests = []setupTest{{
 						/usr/bin/cc:
 		`,
 	},
-	relerror: `invalid slice hint for "slice1" in slices/mydir/mypkg.yaml \(len <= 40, no line breaks\): "On\\nmultiple\\nlines.\\n"`,
+	relerror: `invalid slice hint for "slice1" in slices/mydir/mypkg.yaml \(len <= 40, no line breaks, no non-standard spaces\): "On\\nmultiple\\nlines.\\n"`,
+}, {
+	summary: "Invalid slice hint - non-standard spaces",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				slice1:
+					hint: "Seperated\tby\ttabs."
+					contents:
+						/usr/bin/cc:
+		`,
+	},
+	relerror: `invalid slice hint for "slice1" in slices/mydir/mypkg.yaml \(len <= 40, no line breaks, no non-standard spaces\): "Seperated\\tby\\ttabs."`,
 }, {
 	summary: "Package essentials with same package slice",
 	input: map[string]string{
