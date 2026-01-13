@@ -380,7 +380,7 @@ func (index *ubuntuIndex) fetch(path, digest string, flags fetchFlags) (io.ReadS
 		return nil, err
 	}
 
-	req, err := http.NewRequest("GET", index.archive.baseURL + path, nil)
+	req, err := http.NewRequest("GET", index.archive.baseURL+path, nil)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create HTTP request: %v", err)
 	}
