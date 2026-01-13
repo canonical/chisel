@@ -53,7 +53,10 @@ type yamlArchive struct {
 
 type essentialListMap struct {
 	Essential map[string]*yamlEssential
-	list      bool
+	// list is set to true when the marshaler found a list and false if it
+	// found a map. The former is only valid in format "v1" and "v2" while the
+	// latter is valid from "v3" onwards.
+	list bool
 }
 
 func (es *essentialListMap) UnmarshalYAML(value *yaml.Node) error {
