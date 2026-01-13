@@ -82,6 +82,9 @@ func (es essentialListMap) MarshalYAML() (any, error) {
 	return es.Essential, nil
 }
 
+var _ yaml.Marshaler = essentialListMap{}
+var _ yaml.Unmarshaler = (*essentialListMap)(nil)
+
 type yamlPackage struct {
 	Name    string               `yaml:"package"`
 	Archive string               `yaml:"archive,omitempty"`
@@ -423,18 +426,27 @@ func parsePackage(format, baseDir, pkgName, pkgPath string, data []byte) (*Packa
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse package %q slice definitions: %v", pkgName, err)
 	}
-	if format != "v1" && format != "v2" {
+	if format == "v1" || format == "v2" {
+		if len(yamlPkg.Essential.Essential) > 0 && !yamlPkg.Essential.list {
+			return nil, fmt.Errorf("cannot parse package %q: essential expects a list", pkgName)
+		}
+		for sliceName, yamlSlice := range yamlPkg.Slices {
+			if len(yamlSlice.Essential.Essential) > 0 && !yamlSlice.Essential.list {
+				return nil, fmt.Errorf("cannot parse slice %s: essential expects a list", SliceKey{pkgName, sliceName})
+			}
+		}
+	} else {
 		if yamlPkg.V3Essential != nil {
 			return nil, fmt.Errorf("cannot parse package %q: v3-essential is deprecated since format v3", pkgName)
 		}
-		if yamlPkg.Essential.list {
+		if len(yamlPkg.Essential.Essential) > 0 && yamlPkg.Essential.list {
 			return nil, fmt.Errorf("cannot parse package %q: essential expects a map", pkgName)
 		}
 		for sliceName, yamlSlice := range yamlPkg.Slices {
 			if yamlSlice.V3Essential != nil {
 				return nil, fmt.Errorf("cannot parse slice %s: v3-essential is deprecated since format v3", SliceKey{pkgName, sliceName})
 			}
-			if yamlSlice.Essential.list {
+			if len(yamlSlice.Essential.Essential) > 0 && yamlSlice.Essential.list {
 				return nil, fmt.Errorf("cannot parse slice %s: essential expects a map", SliceKey{pkgName, sliceName})
 			}
 		}
