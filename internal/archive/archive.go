@@ -134,9 +134,9 @@ func (a *ubuntuArchive) Fetch(pkg string) (io.ReadSeekCloser, *PackageInfo, erro
 	if err != nil {
 		return nil, nil, err
 	}
-	suffix := section.Get("Filename")
-	logf("Fetching %s...", suffix)
-	reader, err := index.fetch(suffix, section.Get("SHA256"), fetchBulk)
+	path := section.Get("Filename")
+	logf("Fetching %s...", path)
+	reader, err := index.fetch(path, section.Get("SHA256"), fetchBulk)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -276,7 +276,7 @@ func openUbuntu(options *Options) (Archive, error) {
 
 func (index *ubuntuIndex) fetchRelease() error {
 	logf("Fetching %s %s %s suite details...", index.displayName(), index.version, index.suite)
-	reader, err := index.fetch("InRelease", "", fetchDefault)
+	reader, err := index.fetch(index.relativePath("InRelease"), "", fetchDefault)
 	if err != nil {
 		return err
 	}
@@ -333,7 +333,7 @@ func (index *ubuntuIndex) fetchIndex() error {
 	}
 
 	logf("Fetching index for %s %s %s %s component...", index.displayName(), index.version, index.suite, index.component)
-	reader, err := index.fetch(packagesPath+".gz", digest, fetchBulk)
+	reader, err := index.fetch(index.relativePath(packagesPath+".gz"), digest, fetchBulk)
 	if err != nil {
 		return err
 	}
@@ -368,7 +368,11 @@ func (index *ubuntuIndex) checkComponents(components []string) error {
 	return nil
 }
 
-func (index *ubuntuIndex) fetch(suffix, digest string, flags fetchFlags) (io.ReadSeekCloser, error) {
+func (index *ubuntuIndex) relativePath(suffix string) string {
+	return "dists/" + index.suite + "/" + suffix
+}
+
+func (index *ubuntuIndex) fetch(path, digest string, flags fetchFlags) (io.ReadSeekCloser, error) {
 	reader, err := index.archive.cache.Open(digest)
 	if err == nil {
 		return reader, nil
@@ -376,19 +380,11 @@ func (index *ubuntuIndex) fetch(suffix, digest string, flags fetchFlags) (io.Rea
 		return nil, err
 	}
 
-	baseURL, creds := index.archive.baseURL, index.archive.creds
-
-	var url string
-	if strings.HasPrefix(suffix, "pool/") {
-		url = baseURL + suffix
-	} else {
-		url = baseURL + "dists/" + index.suite + "/" + suffix
-	}
-
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", index.archive.baseURL + path, nil)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create HTTP request: %v", err)
 	}
+	creds := index.archive.creds
 	if creds != nil && !creds.Empty() {
 		req.SetBasicAuth(creds.Username, creds.Password)
 	}
@@ -415,7 +411,7 @@ func (index *ubuntuIndex) fetch(suffix, digest string, flags fetchFlags) (io.Rea
 	}
 
 	body := resp.Body
-	if strings.HasSuffix(suffix, ".gz") {
+	if strings.HasSuffix(path, ".gz") {
 		reader, err := gzip.NewReader(body)
 		if err != nil {
 			return nil, fmt.Errorf("cannot decompress data: %v", err)
