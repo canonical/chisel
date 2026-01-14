@@ -411,9 +411,10 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 		if match == nil {
 			return nil, fmt.Errorf("invalid slice name in %s (start with a-z, len >= 3, only a-z / 0-9 / -): %q", pkgPath, sliceName)
 		}
-		if len(yamlSlice.Hint) > 40 || strings.ContainsFunc(yamlSlice.Hint, func(r rune) bool {
+		hintNotPrintable := strings.ContainsFunc(yamlSlice.Hint, func(r rune) bool {
 			return !unicode.IsPrint(r)
-		}) {
+		})
+		if len(yamlSlice.Hint) > 40 || hintNotPrintable {
 			return nil, fmt.Errorf("invalid slice hint for %q in %s (len <= 40, only printable characters and standard space): %q", sliceName, pkgPath, yamlSlice.Hint)
 		}
 		slice := &Slice{

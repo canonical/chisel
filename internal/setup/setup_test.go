@@ -3757,17 +3757,6 @@ func (s *S) TestPackageYAMLFormat(c *C) {
 							/dir/file: {}
 			`,
 		},
-		expected: map[string]string{
-			"slices/mypkg.yaml": `
-				package: mypkg
-				archive: ubuntu
-				slices:
-					myslice:
-						hint: Shipping greatness
-						contents:
-							/dir/file: {}
-			`,
-		},
 	}, {
 		summary: "All types of paths",
 		input: map[string]string{
