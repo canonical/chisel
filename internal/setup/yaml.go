@@ -415,7 +415,7 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 			return !unicode.IsPrint(r)
 		})
 		if len(yamlSlice.Hint) > 40 || hintNotPrintable {
-			return nil, fmt.Errorf("invalid slice hint for %q in %s (len <= 40, only printable characters and standard space): %q", sliceName, pkgPath, yamlSlice.Hint)
+			return nil, fmt.Errorf("invalid slice hint for %q in %s (len <= 40, only letters, numbers, symbols and \" \"): %q", sliceName, pkgPath, yamlSlice.Hint)
 		}
 		slice := &Slice{
 			Package: pkgName,
