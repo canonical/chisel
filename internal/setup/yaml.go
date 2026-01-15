@@ -51,7 +51,7 @@ type yamlArchive struct {
 	PubKeys    []string `yaml:"public-keys"`
 }
 
-type essentialListMap struct {
+type yamlEssentialListMap struct {
 	Values map[string]*yamlEssential
 	// isList is set to true when the marshaler found a isList and false if it
 	// found a map. The former is only valid in format "v1" and "v2" while the
@@ -59,7 +59,7 @@ type essentialListMap struct {
 	isList bool
 }
 
-func (es *essentialListMap) UnmarshalYAML(value *yaml.Node) error {
+func (es *yamlEssentialListMap) UnmarshalYAML(value *yaml.Node) error {
 	m := map[string]*yamlEssential{}
 	es.isList = false
 	err := value.Decode(&m)
@@ -81,12 +81,12 @@ func (es *essentialListMap) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-func (es essentialListMap) MarshalYAML() (any, error) {
+func (es yamlEssentialListMap) MarshalYAML() (any, error) {
 	return es.Values, nil
 }
 
-var _ yaml.Marshaler = essentialListMap{}
-var _ yaml.Unmarshaler = (*essentialListMap)(nil)
+var _ yaml.Marshaler = yamlEssentialListMap{}
+var _ yaml.Unmarshaler = (*yamlEssentialListMap)(nil)
 
 type yamlPackage struct {
 	Name    string               `yaml:"package"`
@@ -98,7 +98,7 @@ type yamlPackage struct {
 	V3Essential map[string]*yamlEssential `yaml:"v3-essential,omitempty"`
 	// For backwards-compatibility reasons with v1 and v2, essential needs
 	// custom logic to be parsed. See [essentialListMap].
-	Essential essentialListMap `yaml:"essential,omitempty"`
+	Essential yamlEssentialListMap `yaml:"essential,omitempty"`
 }
 
 type yamlPath struct {
@@ -193,7 +193,7 @@ type yamlSlice struct {
 	V3Essential map[string]*yamlEssential `yaml:"v3-essential,omitempty"`
 	// For backwards-compatibility reasons with v1 and v2, essential needs
 	// custom logic to be parsed. See [essentialListMap].
-	Essential essentialListMap `yaml:"essential,omitempty"`
+	Essential yamlEssentialListMap `yaml:"essential,omitempty"`
 }
 
 type yamlPubKey struct {
@@ -641,7 +641,7 @@ func sliceToYAML(s *Slice) (*yamlSlice, error) {
 	slice := &yamlSlice{
 		Contents: make(map[string]*yamlPath, len(s.Contents)),
 		Mutate:   s.Scripts.Mutate,
-		Essential: essentialListMap{
+		Essential: yamlEssentialListMap{
 			Values: make(map[string]*yamlEssential, len(s.Essential)),
 		},
 	}
