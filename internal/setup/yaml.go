@@ -60,7 +60,7 @@ type yamlPackage struct {
 	// the field will be ignored and `essential` is used as a fallback.
 	V3Essential map[string]*yamlEssential `yaml:"v3-essential,omitempty"`
 	// For backwards-compatibility reasons with v1 and v2, essential needs
-	// custom logic to be parsed. See [essentialListMap].
+	// custom logic to be parsed. See [yamlEssentialListMap].
 	Essential yamlEssentialListMap `yaml:"essential,omitempty"`
 }
 
@@ -192,7 +192,7 @@ type yamlSlice struct {
 	// the field will be ignored and `essential` is used as a fallback.
 	V3Essential map[string]*yamlEssential `yaml:"v3-essential,omitempty"`
 	// For backwards-compatibility reasons with v1 and v2, essential needs
-	// custom logic to be parsed. See [essentialListMap].
+	// custom logic to be parsed. See [yamlEssentialListMap].
 	Essential yamlEssentialListMap `yaml:"essential,omitempty"`
 }
 

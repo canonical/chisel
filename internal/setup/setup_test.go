@@ -3756,9 +3756,13 @@ func (s *S) TestParseRelease(c *C) {
 		t.summary += " (v3)"
 		m := make(map[string]string)
 		skip := false
+		if strings.Contains(t.relerror, "essential expects a list") {
+			// The incorrect format for v1/v2 is the correct one for v3, it
+			// won't produce an error.
+			continue
+		}
 		for k, v := range t.input {
-			if strings.Contains(v, "format: v2") ||
-				strings.Contains(v, "format: v3") ||
+			if strings.Contains(v, "format: v3") ||
 				strings.Contains(v, "v2-archives:") ||
 				strings.Contains(v, "default: true") {
 				skip = true
