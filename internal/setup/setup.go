@@ -449,7 +449,7 @@ func readSlices(release *Release, baseDir, dirName string) error {
 			return fmt.Errorf("cannot read slice definition file: %v", err)
 		}
 
-		pkg, err := parsePackage(release.Format, baseDir, pkgName, stripBase(baseDir, pkgPath), data)
+		pkg, err := parsePackage(release.Format, pkgName, stripBase(baseDir, pkgPath), data)
 		if err != nil {
 			return err
 		}

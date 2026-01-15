@@ -415,7 +415,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 	return release, err
 }
 
-func parsePackage(format, baseDir, pkgName, pkgPath string, data []byte) (*Package, error) {
+func parsePackage(format, pkgName, pkgPath string, data []byte) (*Package, error) {
 	pkg := Package{
 		Name:   pkgName,
 		Path:   pkgPath,
