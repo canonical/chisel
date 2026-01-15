@@ -51,6 +51,19 @@ type yamlArchive struct {
 	PubKeys    []string `yaml:"public-keys"`
 }
 
+type yamlPackage struct {
+	Name    string               `yaml:"package"`
+	Archive string               `yaml:"archive,omitempty"`
+	Slices  map[string]yamlSlice `yaml:"slices,omitempty"`
+	// "v3-essential" is used for backwards porting of arch-specific essential
+	// to releases that use "v1" or "v2". When using older versions of Chisel
+	// the field will be ignored and `essential` is used as a fallback.
+	V3Essential map[string]*yamlEssential `yaml:"v3-essential,omitempty"`
+	// For backwards-compatibility reasons with v1 and v2, essential needs
+	// custom logic to be parsed. See [essentialListMap].
+	Essential yamlEssentialListMap `yaml:"essential,omitempty"`
+}
+
 type yamlEssentialListMap struct {
 	Values map[string]*yamlEssential
 	// isList is set to true when the marshaler found a isList and false if it
@@ -87,19 +100,6 @@ func (es yamlEssentialListMap) MarshalYAML() (any, error) {
 
 var _ yaml.Marshaler = yamlEssentialListMap{}
 var _ yaml.Unmarshaler = (*yamlEssentialListMap)(nil)
-
-type yamlPackage struct {
-	Name    string               `yaml:"package"`
-	Archive string               `yaml:"archive,omitempty"`
-	Slices  map[string]yamlSlice `yaml:"slices,omitempty"`
-	// "v3-essential" is used for backwards porting of arch-specific essential
-	// to releases that use "v1" or "v2". When using older versions of Chisel
-	// the field will be ignored and `essential` is used as a fallback.
-	V3Essential map[string]*yamlEssential `yaml:"v3-essential,omitempty"`
-	// For backwards-compatibility reasons with v1 and v2, essential needs
-	// custom logic to be parsed. See [essentialListMap].
-	Essential yamlEssentialListMap `yaml:"essential,omitempty"`
-}
 
 type yamlPath struct {
 	Dir      bool         `yaml:"make,omitempty"`
