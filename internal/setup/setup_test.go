@@ -10,6 +10,7 @@ import (
 	. "gopkg.in/check.v1"
 	"gopkg.in/yaml.v3"
 
+	"github.com/canonical/chisel/internal/deb"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/testutil"
 )
@@ -3578,6 +3579,44 @@ var setupTests = []setupTest{{
 	},
 	relerror: `package "mypkg" repeats mypkg_myslice2 in essential fields`,
 }, {
+	summary: "Cycles are detected with 'v3-essential'",
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice:
+					v3-essential:
+						mypkg2_myslice: {arch: [amd64, i386]}
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+			slices:
+				myslice:
+					v3-essential:
+						mypkg1_myslice: {arch: [amd64, i386]}
+		`,
+	},
+	relerror: "essential loop detected: mypkg1_myslice, mypkg2_myslice",
+}, {
+	summary: "Cycles are detected with 'v3-essential' without architecture",
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice:
+					v3-essential:
+						mypkg2_myslice:
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+			slices:
+				myslice:
+					v3-essential:
+						mypkg1_myslice: {arch: [amd64, i386]}
+		`,
+	},
+	relerror: "essential loop detected: mypkg1_myslice, mypkg2_myslice",
+}, {
 	summary: "Format v3 expects a map in 'essential' (pkg)",
 	input: map[string]string{
 		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYaml, "format: v1", "format: v3"),
@@ -3783,7 +3822,7 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 		}
 
 		if test.selslices != nil {
-			selection, err := setup.Select(release, test.selslices, "")
+			selection, err := setup.Select(release, test.selslices, "amd64")
 			if test.selerror != "" {
 				c.Assert(err, ErrorMatches, test.selerror)
 				continue
@@ -4040,6 +4079,56 @@ func (s *S) TestYAMLPathGenerate(c *C) {
 		result := test.path1.SameContent(test.path2)
 		c.Assert(result, Equals, test.result)
 	}
+}
+
+func (s *S) TestSelectInvalidArch(c *C) {
+	_, err := setup.Select(nil, nil, "foo")
+	c.Assert(err, ErrorMatches, "invalid package architecture: foo")
+}
+
+func (s *S) TestSelectEmptyArch(c *C) {
+	mypkgYAML := `
+			package: mypkg
+			slices:
+				myslice:
+					contents:
+						/dir/file1: {}
+					v3-essential:
+						mypkg_myotherslice: {arch: [amd64]}
+				myotherslice:
+					contents:
+					    /dir2/file1: {}
+		`
+	arch, err := deb.InferArch()
+	c.Assert(err, IsNil)
+	mypkgYAML = strings.ReplaceAll(mypkgYAML, "amd64", arch)
+	input := map[string]string{
+		"chisel.yaml":             string(testutil.DefaultChiselYaml),
+		"slices/mydir/mypkg.yaml": mypkgYAML,
+	}
+
+	dir := c.MkDir()
+	for path, data := range input {
+		fpath := filepath.Join(dir, path)
+		err := os.MkdirAll(filepath.Dir(fpath), 0o755)
+		c.Assert(err, IsNil)
+		err = os.WriteFile(fpath, testutil.Reindent(data), 0o644)
+		c.Assert(err, IsNil)
+	}
+
+	release, err := setup.ReadRelease(dir)
+	c.Assert(err, IsNil)
+
+	selslice := []setup.SliceKey{{"mypkg", "myslice"}}
+	selection, err := setup.Select(release, selslice, "")
+	c.Assert(err, IsNil)
+
+	var sliceNames []string
+	for _, s := range selection.Slices {
+		sliceNames = append(sliceNames, s.Name)
+	}
+	expected := []string{"myotherslice", "myslice"}
+	c.Assert(sliceNames, DeepEquals, expected)
 }
 
 // oldEssentialToV3 converts the essentials in v1 and v2, both 'essential', and
