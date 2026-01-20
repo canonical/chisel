@@ -1265,7 +1265,7 @@ var setupTests = []setupTest{{
 						/usr/bin/cc:
 		`,
 	},
-	relerror: `invalid slice name in slices/mydir/mypkg.yaml \(start with a-z, len >= 3, only a-z / 0-9 / -\): "cc"`,
+	relerror: `invalid slice name in slices/mydir/mypkg.yaml: "cc" \(must start with a-z, len >= 3, only a-z / 0-9 / -\)`,
 }, {
 	summary: "Invalid slice hint - too long",
 	input: map[string]string{
@@ -1278,7 +1278,7 @@ var setupTests = []setupTest{{
 						/usr/bin/cc:
 		`,
 	},
-	relerror: `invalid slice hint for "slice1" in slices/mydir/mypkg.yaml \(len <= 40, only letters, numbers, symbols and " "\): "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"`,
+	relerror: `invalid slice hint in slices/mydir/mypkg.yaml for "slice1": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" \(must be len <= 40, only contain letters, numbers, symbols and " "\)`,
 }, {
 	summary: "Invalid slice hint - line breaks",
 	input: map[string]string{
@@ -1294,7 +1294,7 @@ var setupTests = []setupTest{{
 						/usr/bin/cc:
 		`,
 	},
-	relerror: `invalid slice hint for "slice1" in slices/mydir/mypkg.yaml \(len <= 40, only letters, numbers, symbols and " "\): "On\\nmultiple\\nlines.\\n"`,
+	relerror: `invalid slice hint in slices/mydir/mypkg.yaml for "slice1": "On\\nmultiple\\nlines.\\n" \(must be len <= 40, only contain letters, numbers, symbols and " "\)`,
 }, {
 	summary: "Invalid slice hint - non-standard spaces",
 	input: map[string]string{
@@ -1307,7 +1307,7 @@ var setupTests = []setupTest{{
 						/usr/bin/cc:
 		`,
 	},
-	relerror: `invalid slice hint for "slice1" in slices/mydir/mypkg.yaml \(len <= 40, only letters, numbers, symbols and " "\): "Seperated\\tby\\ttabs."`,
+	relerror: `invalid slice hint in slices/mydir/mypkg.yaml for "slice1": "Seperated\\tby\\ttabs." \(must be len <= 40, only contain letters, numbers, symbols and " "\)`,
 }, {
 	summary: "Package essentials with same package slice",
 	input: map[string]string{

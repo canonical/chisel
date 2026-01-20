@@ -409,13 +409,13 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 	for sliceName, yamlSlice := range yamlPkg.Slices {
 		match := apacheutil.SnameExp.FindStringSubmatch(sliceName)
 		if match == nil {
-			return nil, fmt.Errorf("invalid slice name in %s (start with a-z, len >= 3, only a-z / 0-9 / -): %q", pkgPath, sliceName)
+			return nil, fmt.Errorf("invalid slice name in %s: %q (must start with a-z, len >= 3, only a-z / 0-9 / -)", pkgPath, sliceName)
 		}
 		hintNotPrintable := strings.ContainsFunc(yamlSlice.Hint, func(r rune) bool {
 			return !unicode.IsPrint(r)
 		})
 		if len(yamlSlice.Hint) > 40 || hintNotPrintable {
-			return nil, fmt.Errorf("invalid slice hint for %q in %s (len <= 40, only letters, numbers, symbols and \" \"): %q", sliceName, pkgPath, yamlSlice.Hint)
+			return nil, fmt.Errorf("invalid slice hint in %s for %q: %q (must be len <= 40, only contain letters, numbers, symbols and \" \")", pkgPath, sliceName, yamlSlice.Hint)
 		}
 		slice := &Slice{
 			Package: pkgName,
