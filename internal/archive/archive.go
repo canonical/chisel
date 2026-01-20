@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"slices"
 	"strings"
 	"time"
@@ -380,7 +381,11 @@ func (index *ubuntuIndex) fetch(path, digest string, flags fetchFlags) (io.ReadS
 		return nil, err
 	}
 
-	req, err := http.NewRequest("GET", index.archive.baseURL+path, nil)
+	cleanURL, err := url.JoinPath(index.archive.baseURL, path)
+	if err != nil {
+		return nil, fmt.Errorf("internal error: cannot construct URL: %v", err)
+	}
+	req, err := http.NewRequest("GET", cleanURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create HTTP request: %v", err)
 	}
