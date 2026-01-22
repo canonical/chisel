@@ -409,23 +409,23 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 	for sliceName, yamlSlice := range yamlPkg.Slices {
 		match := apacheutil.SnameExp.FindStringSubmatch(sliceName)
 		if match == nil {
-			return nil, fmt.Errorf("invalid slice name in %s: %q (must start with a-z, len >= 3, only a-z / 0-9 / -)", pkgPath, sliceName)
+			return nil, fmt.Errorf("invalid slice name %q in %s (must start with a-z, len >= 3, only a-z / 0-9 / -)", sliceName, pkgPath)
+		}
+		slice := &Slice{
+			Package: pkgName,
+			Name:    sliceName,
+			Scripts: SliceScripts{
+				Mutate: yamlSlice.Mutate,
+			},
 		}
 		hintNotPrintable := strings.ContainsFunc(yamlSlice.Hint, func(r rune) bool {
 			return !unicode.IsPrint(r)
 		})
 		if len(yamlSlice.Hint) > 40 || hintNotPrintable {
-			return nil, fmt.Errorf("invalid slice hint in %s for %q: %q (must be len <= 40, only contain letters, numbers, symbols and \" \")", pkgPath, sliceName, yamlSlice.Hint)
-		}
-		slice := &Slice{
-			Package: pkgName,
-			Name:    sliceName,
-			Hint:    yamlSlice.Hint,
-			Scripts: SliceScripts{
-				Mutate: yamlSlice.Mutate,
-			},
+			return nil, fmt.Errorf("slice %s has invalid hint %q (must be len <= 40, only contain letters, numbers, symbols and \" \")", slice, yamlSlice.Hint)
 		}
 
+		slice.Hint = yamlSlice.Hint
 		if yamlSlice.V3Essential == nil {
 			yamlSlice.V3Essential = map[string]*yamlEssential{}
 		}
