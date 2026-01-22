@@ -19,12 +19,11 @@ import (
 // Release is a collection of package slices targeting a particular
 // distribution version.
 type Release struct {
+	Format      string
 	Path        string
 	Packages    map[string]*Package
 	Archives    map[string]*Archive
 	Maintenance *Maintenance
-	// Format is used for parsing and error checking.
-	Format string
 }
 
 type Maintenance struct {

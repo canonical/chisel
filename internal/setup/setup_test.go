@@ -1448,7 +1448,7 @@ var setupTests = []setupTest{{
 						- mypkg_slice1
 		`,
 	},
-	relerror: `package "mypkg": cannot add slice to itself as essential "mypkg_slice1"`,
+	relerror: `cannot add slice to itself as essential mypkg_slice1 in slices/mydir/mypkg.yaml`,
 }, {
 	summary: "Package essentials clashes with slice essentials",
 	input: map[string]string{
@@ -1477,7 +1477,7 @@ var setupTests = []setupTest{{
 				slice2:
 		`,
 	},
-	relerror: `cannot parse package "mypkg" slice definitions: cannot decode essential: repeats mypkg_slice2`,
+	relerror: `cannot parse package "mypkg" slice definitions: repeats mypkg_slice2 in essential fields`,
 }, {
 	summary: "Duplicated package essentials",
 	input: map[string]string{
@@ -1491,7 +1491,7 @@ var setupTests = []setupTest{{
 				slice2:
 		`,
 	},
-	relerror: `cannot parse package "mypkg" slice definitions: cannot decode essential: repeats mypkg_slice1`,
+	relerror: `cannot parse package "mypkg" slice definitions: repeats mypkg_slice1 in essential fields`,
 }, {
 	summary: "Bad slice reference in slice essential",
 	input: map[string]string{
@@ -1800,7 +1800,7 @@ var setupTests = []setupTest{{
 	},
 	relerror: `slice mypkg_myslice path /path/\*\* has invalid generate options`,
 }, {
-	summary: "chisel-v1 is deprecated",
+	summary: "chisel-v1 is obsolete",
 	input: map[string]string{
 		"chisel.yaml": `
 			format: chisel-v1
@@ -2669,7 +2669,7 @@ var setupTests = []setupTest{{
 			package: mypkg
 		`,
 	},
-	relerror: `chisel.yaml: archive "ubuntu" has 'default' field which is deprecated since format v2`,
+	relerror: `chisel.yaml: archive "ubuntu" has 'default' field which is obsolete since format v2`,
 }, {
 	summary: "Format v2 does not support v2-archives",
 	input: map[string]string{
@@ -2692,7 +2692,7 @@ var setupTests = []setupTest{{
 			package: mypkg
 		`,
 	},
-	relerror: `chisel.yaml: v2-archives is deprecated since format v2`,
+	relerror: `chisel.yaml: v2-archives is obsolete since format v2`,
 }, {
 	summary: "Maintenance all dates",
 	input: map[string]string{
@@ -3657,7 +3657,7 @@ var setupTests = []setupTest{{
 				myslice2:
 		`,
 	},
-	relerror: `cannot parse package "mypkg": v3-essential is deprecated since format v3`,
+	relerror: `cannot parse package "mypkg": v3-essential is obsolete since format v3`,
 }, {
 	summary: "In format v3 'v3-essential' is not supported (slice)",
 	input: map[string]string{
@@ -3671,7 +3671,7 @@ var setupTests = []setupTest{{
 				myslice2:
 		`,
 	},
-	relerror: `cannot parse slice mypkg_myslice1: v3-essential is deprecated since format v3`,
+	relerror: `cannot parse slice mypkg_myslice1: v3-essential is obsolete since format v3`,
 }, {
 	summary: "Format v1/v2 expect a list in 'essential' (pkg)",
 	input: map[string]string{
