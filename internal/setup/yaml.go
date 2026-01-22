@@ -52,16 +52,16 @@ type yamlArchive struct {
 }
 
 type yamlPackage struct {
-	Name    string               `yaml:"package"`
-	Archive string               `yaml:"archive,omitempty"`
-	Slices  map[string]yamlSlice `yaml:"slices,omitempty"`
+	Name    string `yaml:"package"`
+	Archive string `yaml:"archive,omitempty"`
+	// For backwards-compatibility reasons with v1 and v2, essential needs
+	// custom logic to be parsed. See [yamlEssentialListMap].
+	Essential yamlEssentialListMap `yaml:"essential,omitempty"`
+	Slices    map[string]yamlSlice `yaml:"slices,omitempty"`
 	// "v3-essential" is used for backwards porting of arch-specific essential
 	// to releases that use "v1" or "v2". When using older versions of Chisel
 	// the field will be ignored and `essential` is used as a fallback.
 	V3Essential map[string]*yamlEssential `yaml:"v3-essential,omitempty"`
-	// For backwards-compatibility reasons with v1 and v2, essential needs
-	// custom logic to be parsed. See [yamlEssentialListMap].
-	Essential yamlEssentialListMap `yaml:"essential,omitempty"`
 }
 
 type yamlEssentialListMap struct {
@@ -190,15 +190,15 @@ func (ym yamlMode) MarshalYAML() (any, error) {
 var _ yaml.Marshaler = yamlMode(0)
 
 type yamlSlice struct {
-	Contents map[string]*yamlPath `yaml:"contents,omitempty"`
-	Mutate   string               `yaml:"mutate,omitempty"`
+	// For backwards-compatibility reasons with v1 and v2, essential needs
+	// custom logic to be parsed. See [yamlEssentialListMap].
+	Essential yamlEssentialListMap `yaml:"essential,omitempty"`
+	Contents  map[string]*yamlPath `yaml:"contents,omitempty"`
+	Mutate    string               `yaml:"mutate,omitempty"`
 	// "v3-essential" is used for backwards porting of arch-specific essential
 	// to releases that use "v1" or "v2". When using older versions of Chisel
 	// the field will be ignored and `essential` is used as a fallback.
 	V3Essential map[string]*yamlEssential `yaml:"v3-essential,omitempty"`
-	// For backwards-compatibility reasons with v1 and v2, essential needs
-	// custom logic to be parsed. See [yamlEssentialListMap].
-	Essential yamlEssentialListMap `yaml:"essential,omitempty"`
 }
 
 type yamlPubKey struct {

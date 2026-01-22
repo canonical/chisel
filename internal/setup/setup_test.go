@@ -3955,16 +3955,16 @@ func (s *S) TestPackageYAMLFormat(c *C) {
 				archive: ubuntu
 				slices:
 					myslice1:
-						contents:
-							/dir/file1: {}
 						essential:
 							mypkg_myslice2: {arch: i386}
 							mypkg_myslice3: {}
-					myslice2:
 						contents:
-							/dir/file2: {}
+							/dir/file1: {}
+					myslice2:
 						essential:
 							mypkg_myslice3: {}
+						contents:
+							/dir/file2: {}
 					myslice3:
 						contents:
 							/dir/file3: {}
