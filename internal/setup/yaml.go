@@ -411,21 +411,21 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 		if match == nil {
 			return nil, fmt.Errorf("invalid slice name %q in %s (must start with a-z, len >= 3, only a-z / 0-9 / -)", sliceName, pkgPath)
 		}
-		slice := &Slice{
-			Package: pkgName,
-			Name:    sliceName,
-			Scripts: SliceScripts{
-				Mutate: yamlSlice.Mutate,
-			},
-		}
 		hintNotPrintable := strings.ContainsFunc(yamlSlice.Hint, func(r rune) bool {
 			return !unicode.IsPrint(r)
 		})
 		if len(yamlSlice.Hint) > 40 || hintNotPrintable {
-			return nil, fmt.Errorf("slice %s has invalid hint %q (must be len <= 40, only contain letters, numbers, symbols and \" \")", slice, yamlSlice.Hint)
+			return nil, fmt.Errorf("slice %s has invalid hint %q (must be len <= 40, only contain letters, numbers, symbols and \" \")", SliceKey{pkgName, sliceName}, yamlSlice.Hint)
+		}
+		slice := &Slice{
+			Package: pkgName,
+			Name:    sliceName,
+			Hint:    yamlSlice.Hint,
+			Scripts: SliceScripts{
+				Mutate: yamlSlice.Mutate,
+			},
 		}
 
-		slice.Hint = yamlSlice.Hint
 		if yamlSlice.V3Essential == nil {
 			yamlSlice.V3Essential = map[string]*yamlEssential{}
 		}
