@@ -60,6 +60,7 @@ type Package struct {
 type Slice struct {
 	Package   string
 	Name      string
+	Hint      string
 	Essential map[SliceKey]EssentialInfo
 	Contents  map[string]PathInfo
 	Scripts   SliceScripts

@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode"
 
 	"golang.org/x/crypto/openpgp/packet"
 	"gopkg.in/yaml.v3"
@@ -146,6 +147,7 @@ func (ym yamlMode) MarshalYAML() (any, error) {
 var _ yaml.Marshaler = yamlMode(0)
 
 type yamlSlice struct {
+	Hint      string               `yaml:"hint,omitempty"`
 	Essential []string             `yaml:"essential,omitempty"`
 	Contents  map[string]*yamlPath `yaml:"contents,omitempty"`
 	Mutate    string               `yaml:"mutate,omitempty"`
@@ -407,11 +409,18 @@ func parsePackage(baseDir, pkgName, pkgPath string, data []byte) (*Package, erro
 	for sliceName, yamlSlice := range yamlPkg.Slices {
 		match := apacheutil.SnameExp.FindStringSubmatch(sliceName)
 		if match == nil {
-			return nil, fmt.Errorf("invalid slice name %q in %s (start with a-z, len >= 3, only a-z / 0-9 / -)", sliceName, pkgPath)
+			return nil, fmt.Errorf("invalid slice name %q in %s (must start with a-z, len >= 3, only a-z / 0-9 / -)", sliceName, pkgPath)
+		}
+		hintNotPrintable := strings.ContainsFunc(yamlSlice.Hint, func(r rune) bool {
+			return !unicode.IsPrint(r)
+		})
+		if len(yamlSlice.Hint) > 40 || hintNotPrintable {
+			return nil, fmt.Errorf("slice %s has invalid hint %q (must be len <= 40, only contain letters, numbers, symbols and \" \")", SliceKey{pkgName, sliceName}, yamlSlice.Hint)
 		}
 		slice := &Slice{
 			Package: pkgName,
 			Name:    sliceName,
+			Hint:    yamlSlice.Hint,
 			Scripts: SliceScripts{
 				Mutate: yamlSlice.Mutate,
 			},
@@ -631,6 +640,7 @@ func pathInfoToYAML(pi *PathInfo) (*yamlPath, error) {
 // sliceToYAML converts a Slice object to a yamlSlice object.
 func sliceToYAML(s *Slice) (*yamlSlice, error) {
 	slice := &yamlSlice{
+		Hint:        s.Hint,
 		Contents:    make(map[string]*yamlPath, len(s.Contents)),
 		Mutate:      s.Scripts.Mutate,
 		V3Essential: make(map[string]*yamlEssential, len(s.Essential)),
