@@ -57,9 +57,13 @@ func (cmd *cmdFind) Execute(args []string) error {
 	}
 
 	w := tabWriter()
-	fmt.Fprintf(w, "Slice\tSummary\n")
+	fmt.Fprintf(w, "Slice\tHint\n")
 	for _, s := range slices {
-		fmt.Fprintf(w, "%s\t%s\n", s, "-")
+		hint := "-"
+		if s.Hint != "" {
+			hint = s.Hint
+		}
+		fmt.Fprintf(w, "%s\t%s\n", s, hint)
 	}
 	w.Flush()
 

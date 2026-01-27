@@ -72,6 +72,14 @@ func (s *httpSuite) Do(req *http.Request) (*http.Response, error) {
 		return nil, fmt.Errorf("test expected base %q, got %q", s.base, req.URL.String())
 	}
 
+	cleanURL, err := url.JoinPath(req.URL.String())
+	if err != nil {
+		return nil, fmt.Errorf("cannot clean requested URL: %v", err)
+	}
+	if cleanURL != req.URL.String() {
+		return nil, fmt.Errorf("test expected clean URL %q, got %q", cleanURL, req.URL.String())
+	}
+
 	s.request = req
 	s.requests = append(s.requests, req)
 	body := s.response
