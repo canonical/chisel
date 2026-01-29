@@ -74,7 +74,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 		}
 	}
 
-	mfest, err := slicer.Inspect(cmd.RootDir, release)
+	mfest, err := slicer.SelectValidManifest(cmd.RootDir, release)
 	if err != nil {
 		return err
 	}
@@ -141,6 +141,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 		Selection: selection,
 		Archives:  archives,
 		TargetDir: cmd.RootDir,
+		Manifest: mfest,
 	})
 	return err
 }

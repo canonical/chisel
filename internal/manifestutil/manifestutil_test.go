@@ -2,7 +2,6 @@ package manifestutil_test
 
 import (
 	"bytes"
-	"io"
 	"io/fs"
 	"os"
 	"path"

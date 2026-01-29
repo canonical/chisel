@@ -44,7 +44,7 @@ func FindPaths(slices []*setup.Slice) map[string][]*setup.Slice {
 // FindPathsInRelease finds all the paths marked with "generate:manifest"
 // for the given release.
 func FindPathsInRelease(r *setup.Release) []string {
-	manifestPaths := make([]string,0)
+	manifestPaths := make([]string, 0)
 	collector := func(path string, slice *setup.Slice) {
 		manifestPaths = append(manifestPaths, path)
 	}
@@ -370,4 +370,3 @@ func CompareSchemas(va, vb string) int {
 	}
 	return -1
 }
-

@@ -166,11 +166,19 @@ func createDir(o *CreateOptions) error {
 	if err != nil {
 		return err
 	}
-	err = os.Mkdir(path, o.Mode)
-	if os.IsExist(err) {
-		return nil
+	fileinfo, err := os.Lstat(path)
+	if err == nil {
+		if fileinfo.IsDir() {
+			return nil
+		}
+		err = os.Remove(path)
+		if err != nil {
+			return err
+		}
+	} else if !os.IsNotExist(err) {
+		return err
 	}
-	return err
+	return os.Mkdir(path, o.Mode)
 }
 
 func createFile(o *CreateOptions) error {

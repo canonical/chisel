@@ -3,10 +3,12 @@ package slicer
 import (
 	"archive/tar"
 	"bytes"
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"io"
 	"io/fs"
+	"maps"
 	"os"
 	"path"
 	"path/filepath"
@@ -32,6 +34,7 @@ type RunOptions struct {
 	Selection *setup.Selection
 	Archives  map[string]archive.Archive
 	TargetDir string
+	Manifest  *manifest.Manifest
 }
 
 type pathData struct {
@@ -91,6 +94,19 @@ func Run(options *RunOptions) error {
 			return fmt.Errorf("cannot obtain current directory: %w", err)
 		}
 		targetDir = filepath.Join(dir, targetDir)
+	}
+
+	var originalTargetDir string
+	if options.Manifest != nil {
+		tmpWorkDir, err := os.MkdirTemp(targetDir, "chisel-*")
+		if err != nil {
+			return fmt.Errorf("cannot create temporary working directory: %w", err)
+		}
+		originalTargetDir = targetDir
+		targetDir = tmpWorkDir
+		defer func() {
+			os.RemoveAll(tmpWorkDir)
+		}()
 	}
 
 	pkgArchive, err := selectPkgArchives(options.Archives, options.Selection)
@@ -350,7 +366,41 @@ func Run(options *RunOptions) error {
 		return err
 	}
 
-	return generateManifests(targetDir, options.Selection, report, pkgInfos)
+	err = generateManifests(targetDir, options.Selection, report, pkgInfos)
+	if err != nil {
+		return err
+	}
+
+	if options.Manifest != nil {
+		return upgrade(originalTargetDir, targetDir, report, options.Manifest)
+	}
+	return nil
+}
+
+// upgrade upgrades content in targetDir using content in tempDir.
+// Work on sorted list of content in tempDir
+func upgrade(targetDir string, tempDir string, newReport *manifestutil.Report, oldManifest *manifest.Manifest) error {
+	paths := slices.Sorted(maps.Keys(newReport.Entries))
+	for _, path := range paths {
+		entry := newReport.Entries[path]
+		var err error
+		switch entry.Mode & fs.ModeType {
+		case 0:
+			// rename file if hash different than same path in old manifest
+		case fs.ModeDir:
+			// create dir with proper mode
+			// or chmod existing dir
+		case fs.ModeSymlink:
+			// move symlink to dest
+		default:
+			err = fmt.Errorf("unsupported file type: %s", path)
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func generateManifests(targetDir string, selection *setup.Selection,
@@ -541,32 +591,10 @@ func selectPkgArchives(archives map[string]archive.Archive, selection *setup.Sel
 	return pkgArchive, nil
 }
 
-// Inspect examines and validates the targetDir. It returns, if found and valid
-// the manifest representing the content in the targetDir.
-func Inspect(targetDir string, release *setup.Release) (*manifest.Manifest, error) {
-	var mfest *manifest.Manifest
-	manifestPaths := manifestutil.FindPathsInRelease(release)
-	if len(manifestPaths) > 0 {
-		logf("Inspecting root directory...")
-		var err error
-		mfest, err = selectValidManifest(targetDir, manifestPaths)
-		if err != nil {
-			return nil, err
-		}
-		if mfest != nil {
-			err = checkRootDir(mfest, targetDir)
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-	return mfest, nil
-}
-
-// selectValidManifest returns, if found, a valid manifest with the latest
+// SelectValidManifest returns, if found, a valid manifest with the latest
 // schema. Consistency with all other manifests with the same schema is verified
 // so the selection is deterministic.
-func selectValidManifest(targetDir string, manifestPaths []string) (*manifest.Manifest, error) {
+func SelectValidManifest(targetDir string, release *setup.Release) (*manifest.Manifest, error) {
 	targetDir = filepath.Clean(targetDir)
 	if !filepath.IsAbs(targetDir) {
 		dir, err := os.Getwd()
@@ -574,6 +602,10 @@ func selectValidManifest(targetDir string, manifestPaths []string) (*manifest.Ma
 			return nil, fmt.Errorf("cannot obtain current directory: %w", err)
 		}
 		targetDir = filepath.Join(dir, targetDir)
+	}
+	manifestPaths := manifestutil.FindPathsInRelease(release)
+	if len(manifestPaths) == 0 {
+		return nil, nil
 	}
 
 	type manifestHash struct {
@@ -600,25 +632,26 @@ func selectValidManifest(targetDir string, manifestPaths []string) (*manifest.Ma
 			defer r.Close()
 			mfest, err := manifest.Read(r)
 			if err != nil {
-				return nil
+				return err
 			}
 			err = manifestutil.Validate(mfest)
 			if err != nil {
-				return nil
+				return err
+			}
+			// Verify consistency with other manifests with the same schema.
+			h, err := contentHash(mfestFullPath)
+			if err != nil {
+				return fmt.Errorf("cannot compute hash for %q: %w", mfestFullPath, err)
+			}
+			mfestHash := hex.EncodeToString(h)
+			refMfest, ok := schemaManifest[mfest.Schema()]
+			if !ok {
+				schemaManifest[mfest.Schema()] = manifestHash{mfestPath, mfestHash}
+			} else if refMfest.hash != mfestHash {
+				return fmt.Errorf("inconsistent manifests: %q and %q", refMfest.path, mfestPath)
 			}
 
 			if selected == nil || manifestutil.CompareSchemas(mfest.Schema(), selected.Schema()) > 0 {
-				h, err := contentHash(mfestFullPath)
-				if err != nil {
-					return fmt.Errorf("cannot compute hash for %q: %w", mfestFullPath, err)
-				}
-				mfestHash := hex.EncodeToString(h)
-				refMfest, ok := schemaManifest[mfest.Schema()]
-				if !ok {
-					schemaManifest[mfest.Schema()] = manifestHash{mfestPath, mfestHash}
-				} else if refMfest.hash != mfestHash {
-					return fmt.Errorf("inconsistent manifests: %q and %q", refMfest.path, mfestPath)
-				}
 				selected = mfest
 			}
 			return nil
@@ -628,4 +661,18 @@ func selectValidManifest(targetDir string, manifestPaths []string) (*manifest.Ma
 		}
 	}
 	return selected, nil
+}
+
+func contentHash(path string) ([]byte, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return nil, err
+	}
+	return h.Sum(nil), nil
 }
