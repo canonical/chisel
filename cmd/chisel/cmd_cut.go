@@ -79,7 +79,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 		return err
 	}
 	if mfest != nil {
-		mfest.IterateSlices("", func(slice *manifest.Slice) error {
+		err = mfest.IterateSlices("", func(slice *manifest.Slice) error {
 			sk, err := setup.ParseSliceKey(slice.Name)
 			if err != nil {
 				return err
@@ -87,6 +87,9 @@ func (cmd *cmdCut) Execute(args []string) error {
 			sliceKeys = append(sliceKeys, sk)
 			return nil
 		})
+		if err != nil {
+			return err
+		}
 	}
 
 	selection, err := setup.Select(release, sliceKeys, cmd.Arch)
