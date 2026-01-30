@@ -389,15 +389,12 @@ func absPath(root, relPath string) (string, error) {
 // upgrade upgrades content in targetDir using content in tempDir.
 func upgrade(targetDir string, tempDir string, newReport *manifestutil.Report, oldManifest *manifest.Manifest) error {
 	logf("Upgrading existing content...")
-	pathsToDelete := make([]string, 0)
-	oldPaths := make(map[string]*manifest.Path, 0)
+	missingPaths := make([]string, 0)
 	err := oldManifest.IteratePaths("", func(path *manifest.Path) error {
 		_, ok := newReport.Entries[path.Path]
 		if !ok {
-			pathsToDelete = append(pathsToDelete, path.Path)
-			return nil
+			missingPaths = append(missingPaths, path.Path)
 		}
-		oldPaths[path.Path] = path
 		return nil
 	})
 	if err != nil {
@@ -433,11 +430,11 @@ func upgrade(targetDir string, tempDir string, newReport *manifestutil.Report, o
 		}
 	}
 
-	// Delete old paths
-	slices.Sort(pathsToDelete)
-	slices.Reverse(pathsToDelete)
-	for _, pathToDelete := range pathsToDelete {
-		path, err := absPath(targetDir, pathToDelete)
+	// Remove missing paths
+	slices.Sort(missingPaths)
+	slices.Reverse(missingPaths)
+	for _, relPath := range missingPaths {
+		path, err := absPath(targetDir, relPath)
 		if err != nil {
 			return err
 		}
