@@ -141,7 +141,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 		Selection: selection,
 		Archives:  archives,
 		TargetDir: cmd.RootDir,
-		Manifest: mfest,
+		Manifest:  mfest,
 	})
 	return err
 }

@@ -393,7 +393,7 @@ func upgrade(targetDir string, tempDir string, newReport *manifestutil.Report, o
 	oldPaths := make(map[string]*manifest.Path, 0)
 	err := oldManifest.IteratePaths("", func(path *manifest.Path) error {
 		_, ok := newReport.Entries[path.Path]
-		if !ok && strings.HasSuffix(path.Path, "/") {
+		if !ok && !strings.HasSuffix(path.Path, "/") {
 			// Keep directories.
 			filesToDelete = append(filesToDelete, path)
 			return nil
@@ -437,7 +437,7 @@ func upgrade(targetDir string, tempDir string, newReport *manifestutil.Report, o
 
 	// Delete old files
 	for _, pathToDelete := range filesToDelete {
-		path, err := absPath(tempDir, pathToDelete.Path)
+		path, err := absPath(targetDir, pathToDelete.Path)
 		if err != nil {
 			return err
 		}
