@@ -377,21 +377,56 @@ func Run(options *RunOptions) error {
 	return nil
 }
 
+// absPath requires root to be a clean path that ends in "/".
+func absPath(root, relPath string) (string, error) {
+	path := filepath.Clean(filepath.Join(root, relPath))
+	if !strings.HasPrefix(path, root) {
+		return "", fmt.Errorf("cannot create path %s outside of root %s", path, root)
+	}
+	return path, nil
+}
+
 // upgrade upgrades content in targetDir using content in tempDir.
-// Work on sorted list of content in tempDir
 func upgrade(targetDir string, tempDir string, newReport *manifestutil.Report, oldManifest *manifest.Manifest) error {
+	logf("Upgrading existing content...")
+	filesToDelete := make([]*manifest.Path, 0)
+	oldPaths := make(map[string]*manifest.Path, 0)
+	err := oldManifest.IteratePaths("", func(path *manifest.Path) error {
+		_, ok := newReport.Entries[path.Path]
+		if !ok && strings.HasSuffix(path.Path, "/") {
+			// Keep directories.
+			filesToDelete = append(filesToDelete, path)
+			return nil
+		}
+		oldPaths[path.Path] = path
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
 	paths := slices.Sorted(maps.Keys(newReport.Entries))
 	for _, path := range paths {
+		srcPath, err := absPath(tempDir, path)
+		if err != nil {
+			return err
+		}
+		dstPath, err := absPath(targetDir, path)
+		if err != nil {
+			return err
+		}
+		if err := os.MkdirAll(filepath.Dir(dstPath), 0o755); err != nil {
+			return err
+		}
+
 		entry := newReport.Entries[path]
-		var err error
 		switch entry.Mode & fs.ModeType {
 		case 0:
-			// rename file if hash different than same path in old manifest
+			err = upgradeFile(srcPath, dstPath, &entry)
 		case fs.ModeDir:
-			// create dir with proper mode
-			// or chmod existing dir
+			err = upgradeDir(dstPath, &entry)
 		case fs.ModeSymlink:
-			// move symlink to dest
+			err = os.Rename(srcPath, dstPath)
 		default:
 			err = fmt.Errorf("unsupported file type: %s", path)
 		}
@@ -400,7 +435,59 @@ func upgrade(targetDir string, tempDir string, newReport *manifestutil.Report, o
 		}
 	}
 
+	// Delete old files
+	for _, pathToDelete := range filesToDelete {
+		path, err := absPath(tempDir, pathToDelete.Path)
+		if err != nil {
+			return err
+		}
+		err = os.Remove(path)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
+}
+
+func upgradeFile(srcPath string, dstPath string, entry *manifestutil.ReportEntry) error {
+	fileinfo, err := os.Lstat(dstPath)
+	if err == nil {
+		h, err := contentHash(dstPath)
+		if err != nil {
+			return fmt.Errorf("cannot compute hash for %q: %w", dstPath, err)
+		}
+		oldHash := hex.EncodeToString(h)
+		newHash := entry.SHA256
+		if newHash == "" {
+			newHash = entry.FinalSHA256
+		}
+		if oldHash == newHash && entry.Mode == fileinfo.Mode() {
+			// Same file, do nothing.
+			return nil
+		}
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+	return os.Rename(srcPath, dstPath)
+}
+
+func upgradeDir(path string, entry *manifestutil.ReportEntry) error {
+	fileinfo, err := os.Lstat(path)
+	if err == nil {
+		if fileinfo.IsDir() {
+			if fileinfo.Mode() != entry.Mode {
+				return os.Chmod(path, entry.Mode)
+			}
+			return nil
+		}
+		err = os.Remove(path)
+		if err != nil {
+			return err
+		}
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+	return os.Mkdir(path, entry.Mode)
 }
 
 func generateManifests(targetDir string, selection *setup.Selection,

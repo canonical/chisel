@@ -169,6 +169,9 @@ func createDir(o *CreateOptions) error {
 	fileinfo, err := os.Lstat(path)
 	if err == nil {
 		if fileinfo.IsDir() {
+			if fileinfo.Mode() != o.Mode && o.OverrideMode {
+				return os.Chmod(path, o.Mode)
+			}
 			return nil
 		}
 		err = os.Remove(path)
