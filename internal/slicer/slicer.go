@@ -389,13 +389,12 @@ func absPath(root, relPath string) (string, error) {
 // upgrade upgrades content in targetDir using content in tempDir.
 func upgrade(targetDir string, tempDir string, newReport *manifestutil.Report, oldManifest *manifest.Manifest) error {
 	logf("Upgrading existing content...")
-	filesToDelete := make([]*manifest.Path, 0)
+	pathsToDelete := make([]string, 0)
 	oldPaths := make(map[string]*manifest.Path, 0)
 	err := oldManifest.IteratePaths("", func(path *manifest.Path) error {
 		_, ok := newReport.Entries[path.Path]
-		if !ok && !strings.HasSuffix(path.Path, "/") {
-			// Keep directories.
-			filesToDelete = append(filesToDelete, path)
+		if !ok {
+			pathsToDelete = append(pathsToDelete, path.Path)
 			return nil
 		}
 		oldPaths[path.Path] = path
@@ -422,11 +421,10 @@ func upgrade(targetDir string, tempDir string, newReport *manifestutil.Report, o
 		entry := newReport.Entries[path]
 		switch entry.Mode & fs.ModeType {
 		case 0:
-			err = upgradeFile(srcPath, dstPath, &entry)
-		case fs.ModeDir:
-			err = upgradeDir(dstPath, &entry)
 		case fs.ModeSymlink:
 			err = os.Rename(srcPath, dstPath)
+		case fs.ModeDir:
+			err = upgradeDir(dstPath, &entry)
 		default:
 			err = fmt.Errorf("unsupported file type: %s", path)
 		}
@@ -435,40 +433,27 @@ func upgrade(targetDir string, tempDir string, newReport *manifestutil.Report, o
 		}
 	}
 
-	// Delete old files
-	for _, pathToDelete := range filesToDelete {
-		path, err := absPath(targetDir, pathToDelete.Path)
+	// Delete old paths
+	slices.Sort(pathsToDelete)
+	slices.Reverse(pathsToDelete)
+	for _, pathToDelete := range pathsToDelete {
+		path, err := absPath(targetDir, pathToDelete)
 		if err != nil {
 			return err
 		}
-		err = os.Remove(path)
-		if err != nil {
-			return err
+		if strings.HasSuffix(path, "/") {
+			err = syscall.Rmdir(path)
+			if err != nil && err != syscall.ENOTEMPTY {
+				return err
+			}
+		} else {
+			err = os.Remove(path)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
-}
-
-func upgradeFile(srcPath string, dstPath string, entry *manifestutil.ReportEntry) error {
-	fileinfo, err := os.Lstat(dstPath)
-	if err == nil {
-		h, err := contentHash(dstPath)
-		if err != nil {
-			return fmt.Errorf("cannot compute hash for %q: %w", dstPath, err)
-		}
-		oldHash := hex.EncodeToString(h)
-		newHash := entry.SHA256
-		if newHash == "" {
-			newHash = entry.FinalSHA256
-		}
-		if oldHash == newHash && entry.Mode == fileinfo.Mode() {
-			// Same file, do nothing.
-			return nil
-		}
-	} else if !os.IsNotExist(err) {
-		return err
-	}
-	return os.Rename(srcPath, dstPath)
 }
 
 func upgradeDir(path string, entry *manifestutil.ReportEntry) error {
