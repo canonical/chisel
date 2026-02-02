@@ -386,22 +386,10 @@ func absPath(root, relPath string) (string, error) {
 	return path, nil
 }
 
-// upgrade upgrades content in targetDir using content in tempDir.
-func upgrade(targetDir string, tempDir string, newReport *manifestutil.Report, oldManifest *manifest.Manifest) error {
-	logf("Upgrading existing content...")
-	missingPaths := make([]string, 0)
-	err := oldManifest.IteratePaths("", func(path *manifest.Path) error {
-		_, ok := newReport.Entries[path.Path]
-		if !ok {
-			missingPaths = append(missingPaths, path.Path)
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	paths := slices.Sorted(maps.Keys(newReport.Entries))
+// upgrade upgrades content in targetDir with content in tempDir.
+func upgrade(targetDir string, tempDir string, report *manifestutil.Report, mfest *manifest.Manifest) error {
+	logf("Upgrading content...")
+	paths := slices.Sorted(maps.Keys(report.Entries))
 	for _, path := range paths {
 		srcPath, err := absPath(tempDir, path)
 		if err != nil {
@@ -415,7 +403,7 @@ func upgrade(targetDir string, tempDir string, newReport *manifestutil.Report, o
 			return err
 		}
 
-		entry := newReport.Entries[path]
+		entry := report.Entries[path]
 		switch entry.Mode & fs.ModeType {
 		case 0:
 		case fs.ModeSymlink:
@@ -431,8 +419,18 @@ func upgrade(targetDir string, tempDir string, newReport *manifestutil.Report, o
 	}
 
 	// Remove missing paths
-	slices.Sort(missingPaths)
-	slices.Reverse(missingPaths)
+	missingPaths := make([]string, 0)
+	err := mfest.IteratePaths("", func(path *manifest.Path) error {
+		_, ok := report.Entries[path.Path]
+		if !ok {
+			missingPaths = append(missingPaths, path.Path)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	sort.Sort(sort.Reverse(sort.StringSlice(missingPaths)))
 	for _, relPath := range missingPaths {
 		path, err := absPath(targetDir, relPath)
 		if err != nil {
