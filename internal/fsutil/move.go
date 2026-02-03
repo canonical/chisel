@@ -55,8 +55,7 @@ func Move(options *MoveOptions) error {
 			Path:         o.Path,
 			Mode:         o.Mode,
 			OverrideMode: o.OverrideMode,
-		}
-)
+		})
 	default:
 		err = fmt.Errorf("unsupported file type: %s", o.Path)
 	}
