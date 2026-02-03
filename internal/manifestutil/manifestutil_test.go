@@ -110,10 +110,122 @@ func (s *S) TestFindPaths(c *C) {
 	}
 }
 
+var findPathsInReleaseTests = []struct {
+	summary  string
+	release  *setup.Release
+	expected []string
+}{{
+	summary: "Single package with single slice",
+	release: &setup.Release{
+		Packages: map[string]*setup.Package{
+			"package1": {
+				Name: "package1",
+				Slices: map[string]*setup.Slice{
+					"slice1": {
+						Name: "slice1",
+						Contents: map[string]setup.PathInfo{
+							"/folder/**": {
+								Kind:     "generate",
+								Generate: "manifest",
+							},
+						},
+					},
+				},
+			},
+		},
+	},
+	expected: []string{"/folder/manifest.wall"},
+}, {
+	summary: "No slices with generate:manifest",
+	release: &setup.Release{
+		Packages: map[string]*setup.Package{
+			"package1": {
+				Name: "package1",
+				Slices: map[string]*setup.Slice{
+					"slice1": {
+						Name:     "slice1",
+						Contents: map[string]setup.PathInfo{},
+					},
+				},
+			},
+		},
+	},
+	expected: []string{},
+}, {
+	summary: "Multiple packages with multiple slices",
+	release: &setup.Release{
+		Packages: map[string]*setup.Package{
+			"package1": {
+				Name: "package1",
+				Slices: map[string]*setup.Slice{
+					"slice1": {
+						Name: "slice1",
+						Contents: map[string]setup.PathInfo{
+							"/folder/**": {
+								Kind:     "generate",
+								Generate: "manifest",
+							},
+						},
+					},
+					"slice2": {
+						Name: "slice2",
+						Contents: map[string]setup.PathInfo{
+							"/folder/**": {
+								Kind:     "generate",
+								Generate: "manifest",
+							},
+						},
+					},
+				},
+			},
+			"package2": {
+				Name: "package2",
+				Slices: map[string]*setup.Slice{
+					"slice3": {
+						Name:     "slice3",
+						Contents: map[string]setup.PathInfo{},
+					},
+					"slice4": {
+						Name: "slice4",
+						Contents: map[string]setup.PathInfo{
+							"/other-folder/**": {
+								Kind:     "generate",
+								Generate: "manifest",
+							},
+						},
+					},
+				},
+			},
+		},
+	},
+	// Note: /folder/manifest.wall appears twice because both slice1 and slice2 declare it
+	expected: []string{"/folder/manifest.wall", "/folder/manifest.wall", "/other-folder/manifest.wall"},
+}, {
+	summary: "Empty release",
+	release: &setup.Release{
+		Packages: map[string]*setup.Package{},
+	},
+	expected: []string{},
+}}
+
+func (s *S) TestFindPathsInRelease(c *C) {
+	for _, test := range findPathsInReleaseTests {
+		c.Logf("Summary: %s", test.summary)
+
+		manifestPaths := manifestutil.FindPathsInRelease(test.release)
+
+		c.Assert(manifestPaths, HasLen, len(test.expected))
+		slices.Sort(manifestPaths)
+		slices.Sort(test.expected)
+		c.Assert(manifestPaths, DeepEquals, test.expected)
+	}
+}
+
 var slice1 = &setup.Slice{
 	Package: "package1",
 	Name:    "slice1",
 }
+
 var slice2 = &setup.Slice{
 	Package: "package2",
 	Name:    "slice2",
