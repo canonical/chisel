@@ -1,0 +1,86 @@
+package fsutil
+
+import (
+	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
+)
+
+type MoveOptions struct {
+	SrcRoot string
+	DstRoot string
+	// Path is relative to Root.
+	Path string
+	Mode fs.FileMode
+	// If MakeParents is true, missing parent directories of Path are
+	// created with permissions 0755.
+	MakeParents bool
+	// If OverrideMode is true and entry already exists, update the mode. Does
+	// not affect symlinks.
+	OverrideMode bool
+}
+
+// Move moves a filesystem entry according to the provided options.
+//
+// Move can return errors from the os package.
+func Move(options *MoveOptions) error {
+	o, err := getValidMoveOptions(options)
+	if err != nil {
+		return err
+	}
+
+	srcPath, err := absPath(options.SrcRoot, o.Path)
+	if err != nil {
+		return err
+	}
+	dstPath, err := absPath(options.DstRoot, o.Path)
+	if err != nil {
+		return err
+	}
+
+	if o.MakeParents {
+		if err := os.MkdirAll(filepath.Dir(dstPath), 0o755); err != nil {
+			return err
+		}
+	}
+
+	switch o.Mode & fs.ModeType {
+	case 0:
+	case fs.ModeSymlink:
+		err = os.Rename(srcPath, dstPath)
+	case fs.ModeDir:
+		createOptions := &CreateOptions{
+			Root:         o.DstRoot,
+			Path:         o.Path,
+			Mode:         o.Mode,
+			OverrideMode: o.OverrideMode,
+		}
+		err = createDir(createOptions)
+	default:
+		err = fmt.Errorf("unsupported file type: %s", o.Path)
+	}
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func getValidMoveOptions(options *MoveOptions) (*MoveOptions, error) {
+	optsCopy := *options
+	o := &optsCopy
+	if o.SrcRoot == "" {
+		return nil, fmt.Errorf("internal error: MoveOptions.SrcRoot is unset")
+	}
+	if o.DstRoot == "" {
+		return nil, fmt.Errorf("internal error: MoveOptions.DstRoot is unset")
+	}
+	if o.SrcRoot != "/" {
+		o.SrcRoot = filepath.Clean(o.SrcRoot) + "/"
+	}
+	if o.DstRoot != "/" {
+		o.DstRoot = filepath.Clean(o.DstRoot) + "/"
+	}
+	return o, nil
+}

@@ -377,42 +377,20 @@ func Run(options *RunOptions) error {
 	return nil
 }
 
-// absPath requires root to be a clean path that ends in "/".
-func absPath(root, relPath string) (string, error) {
-	path := filepath.Clean(filepath.Join(root, relPath))
-	if !strings.HasPrefix(path, root) {
-		return "", fmt.Errorf("cannot create path %s outside of root %s", path, root)
-	}
-	return path, nil
-}
-
 // upgrade upgrades content in targetDir with content in tempDir.
 func upgrade(targetDir string, tempDir string, report *manifestutil.Report, mfest *manifest.Manifest) error {
 	logf("Upgrading content...")
 	paths := slices.Sorted(maps.Keys(report.Entries))
 	for _, path := range paths {
-		srcPath, err := absPath(tempDir, path)
-		if err != nil {
-			return err
-		}
-		dstPath, err := absPath(targetDir, path)
-		if err != nil {
-			return err
-		}
-		if err := os.MkdirAll(filepath.Dir(dstPath), 0o755); err != nil {
-			return err
-		}
-
 		entry := report.Entries[path]
-		switch entry.Mode & fs.ModeType {
-		case 0:
-		case fs.ModeSymlink:
-			err = os.Rename(srcPath, dstPath)
-		case fs.ModeDir:
-			err = upgradeDir(dstPath, &entry)
-		default:
-			err = fmt.Errorf("unsupported file type: %s", path)
-		}
+		err := fsutil.Move(&fsutil.MoveOptions{
+			SrcRoot:      tempDir,
+			DstRoot:      targetDir,
+			Path:         path,
+			Mode:         entry.Mode,
+			MakeParents:  true,
+			OverrideMode: true,
+		})
 		if err != nil {
 			return err
 		}
@@ -432,42 +410,15 @@ func upgrade(targetDir string, tempDir string, report *manifestutil.Report, mfes
 	}
 	sort.Sort(sort.Reverse(sort.StringSlice(missingPaths)))
 	for _, relPath := range missingPaths {
-		path, err := absPath(targetDir, relPath)
+		err := fsutil.Remove(&fsutil.RemoveOptions{
+			Root: targetDir,
+			Path: relPath,
+		})
 		if err != nil {
 			return err
-		}
-		if strings.HasSuffix(path, "/") {
-			err = syscall.Rmdir(path)
-			if err != nil && err != syscall.ENOTEMPTY {
-				return err
-			}
-		} else {
-			err = os.Remove(path)
-			if err != nil {
-				return err
-			}
 		}
 	}
 	return nil
-}
-
-func upgradeDir(path string, entry *manifestutil.ReportEntry) error {
-	fileinfo, err := os.Lstat(path)
-	if err == nil {
-		if fileinfo.IsDir() {
-			if fileinfo.Mode() != entry.Mode {
-				return os.Chmod(path, entry.Mode)
-			}
-			return nil
-		}
-		err = os.Remove(path)
-		if err != nil {
-			return err
-		}
-	} else if !os.IsNotExist(err) {
-		return err
-	}
-	return os.Mkdir(path, entry.Mode)
 }
 
 func generateManifests(targetDir string, selection *setup.Selection,
