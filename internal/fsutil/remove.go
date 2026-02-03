@@ -27,14 +27,14 @@ func Remove(options *RemoveOptions) error {
 	if err != nil {
 		return err
 	}
-	if strings.HasSuffix(path, "/") {
+	if strings.HasSuffix(options.Path, "/") {
 		err = syscall.Rmdir(path)
-		if err != nil && err != syscall.ENOTEMPTY {
+		if err != nil && err != syscall.ENOTEMPTY && err != syscall.ENOENT {
 			return err
 		}
 	} else {
 		err = os.Remove(path)
-		if err != nil {
+		if err != nil && !os.IsNotExist(err) {
 			return err
 		}
 	}
@@ -46,6 +46,9 @@ func getValidRemoveOptions(options *RemoveOptions) (*RemoveOptions, error) {
 	o := &optsCopy
 	if o.Root == "" {
 		return nil, fmt.Errorf("internal error: RemoveOptions.Root is unset")
+	}
+	if o.Path == "" {
+		return nil, fmt.Errorf("internal error: RemoveOptions.Path is unset")
 	}
 	if o.Root != "/" {
 		o.Root = filepath.Clean(o.Root) + "/"

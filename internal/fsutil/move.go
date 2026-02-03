@@ -46,8 +46,7 @@ func Move(options *MoveOptions) error {
 	}
 
 	switch o.Mode & fs.ModeType {
-	case 0:
-	case fs.ModeSymlink:
+	case 0, fs.ModeSymlink:
 		err = os.Rename(srcPath, dstPath)
 	case fs.ModeDir:
 		err = createDir(&CreateOptions{

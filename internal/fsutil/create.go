@@ -268,7 +268,7 @@ func getValidCreateOptions(options *CreateOptions) (*CreateOptions, error) {
 func absPath(root, relPath string) (string, error) {
 	path := filepath.Clean(filepath.Join(root, relPath))
 	if !strings.HasPrefix(path, root) {
-		return "", fmt.Errorf("cannot create path %s outside of root %s", path, root)
+		return "", fmt.Errorf("cannot handle path %s outside of root %s", path, root)
 	}
 	return path, nil
 }

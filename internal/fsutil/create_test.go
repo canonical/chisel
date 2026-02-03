@@ -279,7 +279,7 @@ var createTests = []createTest{{
 		Mode: 0666,
 		Data: bytes.NewBufferString("hijacking system file"),
 	},
-	error: `cannot create path /file outside of root /root/`,
+	error: `cannot handle path /file outside of root /root/`,
 }, {
 	summary: "Hardlink cannot escape Root",
 	options: fsutil.CreateOptions{
@@ -410,7 +410,7 @@ var createWriterTests = []createWriterTest{{
 		Mode:        0644,
 		MakeParents: true,
 	},
-	error: `cannot create path /file outside of root /root/`,
+	error: `cannot handle path /file outside of root /root/`,
 }}
 
 func (s *S) TestCreateWriter(c *C) {
