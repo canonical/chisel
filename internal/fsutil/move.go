@@ -21,7 +21,7 @@ type MoveOptions struct {
 	OverrideMode bool
 }
 
-// Move moves a filesystem entry according to the provided options.
+// Move moves or create a filesystem entry according to the provided options.
 //
 // Move can return errors from the os package.
 func Move(options *MoveOptions) error {
@@ -50,13 +50,13 @@ func Move(options *MoveOptions) error {
 	case fs.ModeSymlink:
 		err = os.Rename(srcPath, dstPath)
 	case fs.ModeDir:
-		createOptions := &CreateOptions{
+		err = createDir(&CreateOptions{
 			Root:         o.DstRoot,
 			Path:         o.Path,
 			Mode:         o.Mode,
 			OverrideMode: o.OverrideMode,
 		}
-		err = createDir(createOptions)
+)
 	default:
 		err = fmt.Errorf("unsupported file type: %s", o.Path)
 	}

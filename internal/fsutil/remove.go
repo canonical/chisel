@@ -14,6 +14,10 @@ type RemoveOptions struct {
 	Path string
 }
 
+// Remove removes a filesystem entry according to the provided options.
+// Non-empty directories are not removed.
+//
+// Remove can return errors from the os and syscall packages.
 func Remove(options *RemoveOptions) error {
 	options, err := getValidRemoveOptions(options)
 	if err != nil {
