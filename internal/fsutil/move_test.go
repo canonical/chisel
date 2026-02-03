@@ -36,6 +36,35 @@ var moveTests = []moveTest{{
 		"/dst/bar": "file 0644 3a6eb079",
 	},
 }, {
+	summary: "Move a file when parent directory exists",
+	options: fsutil.MoveOptions{
+		Path: "bar",
+		Mode: 0o644,
+	},
+	hackopt: func(c *C, dir string, opts *fsutil.MoveOptions) {
+		c.Assert(os.WriteFile(filepath.Join(dir, "src/bar"), []byte("data"), 0o644), IsNil)
+	},
+	result: map[string]string{
+		"/src/":    "dir 0755",
+		"/dst/":    "dir 0755",
+		"/dst/bar": "file 0644 3a6eb079",
+	},
+}, {
+	summary: "Move an empty file",
+	options: fsutil.MoveOptions{
+		Path:        "empty",
+		Mode:        0o644,
+		MakeParents: true,
+	},
+	hackopt: func(c *C, dir string, opts *fsutil.MoveOptions) {
+		c.Assert(os.WriteFile(filepath.Join(dir, "src/empty"), []byte(""), 0o644), IsNil)
+	},
+	result: map[string]string{
+		"/src/":      "dir 0755",
+		"/dst/":      "dir 0755",
+		"/dst/empty": "file 0644 empty",
+	},
+}, {
 	summary: "Move a symlink",
 	options: fsutil.MoveOptions{
 		Path:        "foo",
@@ -190,6 +219,59 @@ var moveTests = []moveTest{{
 		Mode:    0o666,
 	},
 	error: `cannot handle path /file outside of root /rootsrc`,
+}, {
+	summary: "Path with ./ component",
+	options: fsutil.MoveOptions{
+		Path:        "./file",
+		Mode:        0o644,
+		MakeParents: true,
+	},
+	hackopt: func(c *C, dir string, opts *fsutil.MoveOptions) {
+		c.Assert(os.WriteFile(filepath.Join(dir, "src/file"), []byte("data"), 0o644), IsNil)
+	},
+	result: map[string]string{
+		"/src/":     "dir 0755",
+		"/dst/":     "dir 0755",
+		"/dst/file": "file 0644 3a6eb079",
+	},
+}, {
+	summary: "Path with ../ component normalizes correctly",
+	options: fsutil.MoveOptions{
+		Path:        "foo/../bar",
+		Mode:        0o644,
+		MakeParents: true,
+	},
+	hackopt: func(c *C, dir string, opts *fsutil.MoveOptions) {
+		c.Assert(os.WriteFile(filepath.Join(dir, "src/bar"), []byte("data"), 0o644), IsNil)
+	},
+	result: map[string]string{
+		"/src/":    "dir 0755",
+		"/dst/":    "dir 0755",
+		"/dst/bar": "file 0644 3a6eb079",
+	},
+}, {
+	summary: "Cannot move to a path where parent is a file",
+	options: fsutil.MoveOptions{
+		Path:        "file/subpath",
+		Mode:        0o644,
+		MakeParents: true,
+	},
+	hackopt: func(c *C, dir string, opts *fsutil.MoveOptions) {
+		c.Assert(os.WriteFile(filepath.Join(dir, "src/file"), []byte("data"), 0o644), IsNil)
+		c.Assert(os.WriteFile(filepath.Join(dir, "dst/file"), []byte("data"), 0o644), IsNil)
+	},
+	error: `mkdir .*/dst/file: not a directory`,
+}, {
+	summary: "Cannot move a file to overwrite a directory",
+	options: fsutil.MoveOptions{
+		Path: "target",
+		Mode: 0o644,
+	},
+	hackopt: func(c *C, dir string, opts *fsutil.MoveOptions) {
+		c.Assert(os.WriteFile(filepath.Join(dir, "src/target"), []byte("data"), 0o644), IsNil)
+		c.Assert(os.Mkdir(filepath.Join(dir, "dst/target"), 0o755), IsNil)
+	},
+	error: `rename .*/src/target .*/dst/target: file exists`,
 }, {
 	summary: "Cannot move inexistent file",
 	options: fsutil.MoveOptions{
