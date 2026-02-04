@@ -2017,6 +2017,118 @@ func (s *S) TestRun(c *C) {
 	runSlicerTests(s, c, v2FormatTests)
 }
 
+type selectValidManifestTest struct {
+	summary string
+	build   func() *setup.Release
+	setup   func(c *C, targetDir string, release *setup.Release)
+	noMatch bool
+	error   string
+}
+
+var selectValidManifestTests = []selectValidManifestTest{{
+	summary: "No manifest paths in release",
+	build: func() *setup.Release {
+		return &setup.Release{Packages: map[string]*setup.Package{}}
+	},
+	noMatch: true,
+}, {
+	summary: "Manifest path missing in target",
+	build: func() *setup.Release {
+		return buildReleaseWithManifestDirs("/chisel/**")
+	},
+	noMatch: true,
+}, {
+	summary: "Valid manifest selected",
+	build: func() *setup.Release {
+		return buildReleaseWithManifestDirs("/chisel/**")
+	},
+	setup: func(c *C, targetDir string, release *setup.Release) {
+		manifestPath := manifestPathForDir("/chisel/**")
+		writeManifest(c, targetDir, manifestPath, releaseManifestSlice(release), "hash1")
+	},
+}, {
+	summary: "Two consistent manifests are accepted",
+	build: func() *setup.Release {
+		return buildReleaseWithManifestDirs("/chisel-a/**", "/chisel-b/**")
+	},
+	setup: func(c *C, targetDir string, release *setup.Release) {
+		manifestPathA := manifestPathForDir("/chisel-a/**")
+		manifestPathB := manifestPathForDir("/chisel-b/**")
+		slice := releaseManifestSlice(release)
+		writeManifest(c, targetDir, manifestPathA, slice, "hash1")
+		writeManifest(c, targetDir, manifestPathB, slice, "hash1")
+	},
+}, {
+	summary: "Inconsistent manifests with same schema are rejected",
+	build: func() *setup.Release {
+		return buildReleaseWithManifestDirs("/chisel-a/**", "/chisel-b/**")
+	},
+	setup: func(c *C, targetDir string, release *setup.Release) {
+		manifestPathA := manifestPathForDir("/chisel-a/**")
+		manifestPathB := manifestPathForDir("/chisel-b/**")
+		slice := releaseManifestSlice(release)
+		writeManifest(c, targetDir, manifestPathA, slice, "hash1")
+		writeManifest(c, targetDir, manifestPathB, slice, "hash2")
+	},
+	error: `inconsistent manifests: ".*" and ".*"`,
+}, {
+	summary: "Invalid manifest data returns error",
+	build: func() *setup.Release {
+		return buildReleaseWithManifestDirs("/chisel/**")
+	},
+	setup: func(c *C, targetDir string, release *setup.Release) {
+		manifestPath := filepath.Join(targetDir, manifestPathForDir("/chisel/**"))
+		err := os.MkdirAll(filepath.Dir(manifestPath), 0o755)
+		c.Assert(err, IsNil)
+		err = os.WriteFile(manifestPath, []byte("not-a-zstd-manifest"), 0o644)
+		c.Assert(err, IsNil)
+	},
+	error: "cannot read manifest: invalid input: .*",
+}, {
+	summary: "Manifest validation error is returned",
+	build: func() *setup.Release {
+		return buildReleaseWithManifestDirs("/chisel/**")
+	},
+	setup: func(c *C, targetDir string, release *setup.Release) {
+		manifestPath := manifestPathForDir("/chisel/**")
+		writeInvalidManifest(c, targetDir, manifestPath)
+	},
+	error: `invalid manifest: path /file has no matching entry in contents`,
+}, {
+	summary: "Manifest read fails on invalid schema",
+	build: func() *setup.Release {
+		return buildReleaseWithManifestDirs("/chisel/**")
+	},
+	setup: func(c *C, targetDir string, release *setup.Release) {
+		manifestPath := manifestPathForDir("/chisel/**")
+		writeInvalidSchemaManifest(c, targetDir, manifestPath)
+	},
+	error: `cannot read manifest: unknown schema version "9.9"`,
+}}
+
+func (s *S) TestSelectValidManifest(c *C) {
+	for _, test := range selectValidManifestTests {
+		c.Logf("Summary: %s", test.summary)
+		release := test.build()
+		targetDir := c.MkDir()
+		if test.setup != nil {
+			test.setup(c, targetDir, release)
+		}
+		mfest, err := slicer.SelectValidManifest(targetDir, release)
+		if test.error != "" {
+			c.Assert(err, ErrorMatches, test.error)
+			continue
+		}
+		c.Assert(err, IsNil)
+		if test.noMatch {
+			c.Assert(mfest, IsNil)
+			continue
+		}
+		c.Assert(mfest, NotNil)
+		c.Assert(mfest.Schema(), Equals, manifest.Schema)
+	}
+}
+
 func runSlicerTests(s *S, c *C, tests []slicerTest) {
 	for _, test := range tests {
 		for _, testSlices := range testutil.Permutations(test.slices) {
@@ -2165,6 +2277,36 @@ func runSlicerTests(s *S, c *C, tests []slicerTest) {
 	}
 }
 
+func buildReleaseWithManifestDirs(dirs ...string) *setup.Release {
+	contents := map[string]setup.PathInfo{}
+	for _, dir := range dirs {
+		contents[dir] = setup.PathInfo{Kind: "generate", Generate: "manifest"}
+	}
+	return &setup.Release{
+		Packages: map[string]*setup.Package{
+			"test-package": {
+				Name: "test-package",
+				Slices: map[string]*setup.Slice{
+					"manifest": {
+						Package:  "test-package",
+						Name:     "manifest",
+						Contents: contents,
+					},
+				},
+			},
+		},
+	}
+}
+
+func releaseManifestSlice(release *setup.Release) *setup.Slice {
+	return release.Packages["test-package"].Slices["manifest"]
+}
+
+func manifestPathForDir(dir string) string {
+	base := strings.TrimSuffix(dir, "**")
+	return path.Join(base, manifestutil.DefaultFilename)
+}
+
 func treeDumpManifestPaths(mfest *manifest.Manifest) (map[string]string, error) {
 	result := make(map[string]string)
 	err := mfest.IteratePaths("", func(path *manifest.Path) error {
@@ -2240,4 +2382,68 @@ func readManifest(c *C, targetDir, manifestPath string) *manifest.Manifest {
 	c.Assert(err, IsNil)
 
 	return mfest
+}
+
+func writeManifest(c *C, targetDir, manifestPath string, slice *setup.Slice, hash string) {
+	mfestPath := filepath.Join(targetDir, manifestPath)
+	err := os.MkdirAll(filepath.Dir(mfestPath), 0o755)
+	c.Assert(err, IsNil)
+	f, err := os.Create(mfestPath)
+	c.Assert(err, IsNil)
+	zw, err := zstd.NewWriter(f)
+	c.Assert(err, IsNil)
+	options := &manifestutil.WriteOptions{
+		PackageInfo: []*archive.PackageInfo{{
+			Name:    slice.Package,
+			Version: "1.0",
+			Arch:    "amd64",
+			SHA256:  "pkg-hash",
+		}},
+		Selection: []*setup.Slice{slice},
+		Report: &manifestutil.Report{Root: "/", Entries: map[string]manifestutil.ReportEntry{
+			"/file": {
+				Path:   "/file",
+				Mode:   0o644,
+				SHA256: hash,
+				Size:   3,
+				Slices: map[*setup.Slice]bool{slice: true},
+			},
+		}},
+	}
+	err = manifestutil.Write(options, zw)
+	c.Assert(err, IsNil)
+	c.Assert(zw.Close(), IsNil)
+	c.Assert(f.Close(), IsNil)
+}
+
+func writeInvalidManifest(c *C, targetDir, manifestPath string) {
+	mfestPath := filepath.Join(targetDir, manifestPath)
+	err := os.MkdirAll(filepath.Dir(mfestPath), 0o755)
+	c.Assert(err, IsNil)
+	f, err := os.Create(mfestPath)
+	c.Assert(err, IsNil)
+	zw, err := zstd.NewWriter(f)
+	c.Assert(err, IsNil)
+	dbw := jsonwall.NewDBWriter(&jsonwall.DBWriterOptions{Schema: manifest.Schema})
+	err = dbw.Add(&manifest.Path{Kind: "path", Path: "/file", Mode: "0644"})
+	c.Assert(err, IsNil)
+	_, err = dbw.WriteTo(zw)
+	c.Assert(err, IsNil)
+	c.Assert(zw.Close(), IsNil)
+	c.Assert(f.Close(), IsNil)
+}
+
+func writeInvalidSchemaManifest(c *C, targetDir, manifestPath string) {
+	mfestPath := filepath.Join(targetDir, manifestPath)
+	err := os.MkdirAll(filepath.Dir(mfestPath), 0o755)
+	c.Assert(err, IsNil)
+	f, err := os.Create(mfestPath)
+	c.Assert(err, IsNil)
+	zw, err := zstd.NewWriter(f)
+	c.Assert(err, IsNil)
+	dbw := jsonwall.NewDBWriter(&jsonwall.DBWriterOptions{Schema: "9.9"})
+	_, err = dbw.WriteTo(zw)
+	c.Assert(err, IsNil)
+	c.Assert(zw.Close(), IsNil)
+	c.Assert(f.Close(), IsNil)
 }
