@@ -15,6 +15,7 @@ import (
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/chisel/internal/archive"
+	"github.com/canonical/chisel/internal/fsutil"
 	"github.com/canonical/chisel/internal/manifestutil"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/slicer"
@@ -34,6 +35,7 @@ type slicerTest struct {
 	pkgs          []*testutil.TestPackage
 	slices        []setup.SliceKey
 	hackopt       func(c *C, opts *slicer.RunOptions)
+	prefill       func(c *C, opts *slicer.RunOptions, release *setup.Release, manifestPath string)
 	filesystem    map[string]string
 	manifestPaths map[string]string
 	manifestPkgs  map[string]string
@@ -1979,6 +1981,147 @@ var slicerTests = []slicerTest{{
 	manifestPaths: map[string]string{
 		"/dir/file": "file 0644 cc55e2ec {test-package_third}",
 	},
+}, {
+	summary: "Recut removes obsolete paths when selection shrinks",
+	slices:  []setup.SliceKey{{"test-package", "slice2"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				slice1:
+					contents:
+						/foo: {text: data1}
+				slice2:
+					contents:
+						/bar: {text: data2}
+		`,
+	},
+	prefill: func(c *C, opts *slicer.RunOptions, release *setup.Release, manifestPath string) {
+		pkg := release.Packages["test-package"]
+		slice1 := pkg.Slices["slice1"]
+		slice2 := pkg.Slices["slice2"]
+		manifestSlice := pkg.Slices["manifest"]
+		writeFile(c, opts.TargetDir, "/foo", []byte("data1"), 0o644)
+		writeFile(c, opts.TargetDir, "/bar", []byte("data2"), 0o644)
+		report, err := manifestutil.NewReport(opts.TargetDir)
+		c.Assert(err, IsNil)
+		err = report.Add(slice1, &fsutil.Entry{
+			Path:   filepath.Join(report.Root, "/foo"),
+			Mode:   0o644,
+			SHA256: "5b41362b",
+			Size:   5,
+		})
+		c.Assert(err, IsNil)
+		err = report.Add(slice2, &fsutil.Entry{
+			Path:   filepath.Join(report.Root, "/bar"),
+			Mode:   0o644,
+			SHA256: "d98cf53e",
+			Size:   5,
+		})
+		c.Assert(err, IsNil)
+		err = report.Add(manifestSlice, &fsutil.Entry{
+			Path: filepath.Join(report.Root, manifestPath),
+			Mode: 0o644,
+		})
+		c.Assert(err, IsNil)
+		writeManifestReport(c, opts.TargetDir, manifestPath, pkg.Name, []*setup.Slice{slice1, slice2, manifestSlice}, report)
+		opts.Manifest = readManifest(c, opts.TargetDir, manifestPath)
+	},
+	filesystem: map[string]string{
+		"/bar": "file 0644 d98cf53e",
+	},
+	manifestPaths: map[string]string{
+		"/bar": "file 0644 d98cf53e {test-package_slice2}",
+	},
+}, {
+	summary: "Recut restores modified content and mode",
+	slices:  []setup.SliceKey{{"test-package", "slice1"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				slice1:
+					contents:
+						/file: {text: data1}
+		`,
+	},
+	prefill: func(c *C, opts *slicer.RunOptions, release *setup.Release, manifestPath string) {
+		pkg := release.Packages["test-package"]
+		slice1 := pkg.Slices["slice1"]
+		manifestSlice := pkg.Slices["manifest"]
+		writeFile(c, opts.TargetDir, "/file", []byte("data1"), 0o644)
+		report, err := manifestutil.NewReport(opts.TargetDir)
+		c.Assert(err, IsNil)
+		err = report.Add(slice1, &fsutil.Entry{
+			Path:   filepath.Join(report.Root, "/file"),
+			Mode:   0o644,
+			SHA256: "5b41362b",
+			Size:   5,
+		})
+		c.Assert(err, IsNil)
+		err = report.Add(manifestSlice, &fsutil.Entry{
+			Path: filepath.Join(report.Root, manifestPath),
+			Mode: 0o644,
+		})
+		c.Assert(err, IsNil)
+		writeManifestReport(c, opts.TargetDir, manifestPath, pkg.Name, []*setup.Slice{slice1, manifestSlice}, report)
+		modifiedPath := filepath.Join(opts.TargetDir, "file")
+		err = os.WriteFile(modifiedPath, []byte("data2"), 0o700)
+		c.Assert(err, IsNil)
+		opts.Manifest = readManifest(c, opts.TargetDir, manifestPath)
+	},
+	filesystem: map[string]string{
+		"/file": "file 0644 5b41362b",
+	},
+	manifestPaths: map[string]string{
+		"/file": "file 0644 5b41362b {test-package_slice1}",
+	},
+}, {
+	summary: "Recut keeps untracked files",
+	slices:  []setup.SliceKey{{"test-package", "slice1"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				slice1:
+					contents:
+						/file: {text: data1}
+		`,
+	},
+	prefill: func(c *C, opts *slicer.RunOptions, release *setup.Release, manifestPath string) {
+		pkg := release.Packages["test-package"]
+		slice1 := pkg.Slices["slice1"]
+		manifestSlice := pkg.Slices["manifest"]
+		writeFile(c, opts.TargetDir, "/file", []byte("data1"), 0o644)
+		report, err := manifestutil.NewReport(opts.TargetDir)
+		c.Assert(err, IsNil)
+		err = report.Add(slice1, &fsutil.Entry{
+			Path:   filepath.Join(report.Root, "/file"),
+			Mode:   0o644,
+			SHA256: "5b41362b",
+			Size:   5,
+		})
+		c.Assert(err, IsNil)
+		err = report.Add(manifestSlice, &fsutil.Entry{
+			Path: filepath.Join(report.Root, manifestPath),
+			Mode: 0o644,
+		})
+		c.Assert(err, IsNil)
+		writeManifestReport(c, opts.TargetDir, manifestPath, pkg.Name, []*setup.Slice{slice1, manifestSlice}, report)
+		err = os.MkdirAll(filepath.Join(opts.TargetDir, "extra"), 0o755)
+		c.Assert(err, IsNil)
+		err = os.WriteFile(filepath.Join(opts.TargetDir, "extra", "untracked"), []byte("data"), 0o644)
+		c.Assert(err, IsNil)
+		opts.Manifest = readManifest(c, opts.TargetDir, manifestPath)
+	},
+	filesystem: map[string]string{
+		"/extra/":          "dir 0755",
+		"/extra/untracked": "file 0644 3a6eb079",
+		"/file":            "file 0644 5b41362b",
+	},
+	manifestPaths: map[string]string{
+		"/file": "file 0644 5b41362b {test-package_slice1}",
+	},
 }}
 
 func (s *S) TestRun(c *C) {
@@ -2224,6 +2367,9 @@ func runSlicerTests(s *S, c *C, tests []slicerTest) {
 			if test.hackopt != nil {
 				test.hackopt(c, &options)
 			}
+			if test.prefill != nil {
+				test.prefill(c, &options, release, manifestPath)
+			}
 			err = slicer.Run(&options)
 			if test.error != "" {
 				c.Assert(err, ErrorMatches, test.error)
@@ -2415,6 +2561,32 @@ func writeManifest(c *C, targetDir, manifestPath string, slice *setup.Slice, has
 	c.Assert(err, IsNil)
 	c.Assert(zw.Close(), IsNil)
 	c.Assert(f.Close(), IsNil)
+	c.Assert(os.Chmod(mfestPath, 0o644), IsNil)
+}
+
+func writeManifestReport(c *C, targetDir, manifestPath, pkgName string, selection []*setup.Slice, report *manifestutil.Report) {
+	mfestPath := filepath.Join(targetDir, manifestPath)
+	err := os.MkdirAll(filepath.Dir(mfestPath), 0o755)
+	c.Assert(err, IsNil)
+	f, err := os.OpenFile(mfestPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
+	c.Assert(err, IsNil)
+	zw, err := zstd.NewWriter(f)
+	c.Assert(err, IsNil)
+	options := &manifestutil.WriteOptions{
+		PackageInfo: []*archive.PackageInfo{{
+			Name:    pkgName,
+			Version: "1.0",
+			Arch:    "amd64",
+			SHA256:  "pkg-hash",
+		}},
+		Selection: selection,
+		Report:    report,
+	}
+	err = manifestutil.Write(options, zw)
+	c.Assert(err, IsNil)
+	c.Assert(zw.Close(), IsNil)
+	c.Assert(f.Close(), IsNil)
+	c.Assert(os.Chmod(mfestPath, 0o644), IsNil)
 }
 
 func writeInvalidManifest(c *C, targetDir, manifestPath string) {
@@ -2447,4 +2619,12 @@ func writeInvalidSchemaManifest(c *C, targetDir, manifestPath string) {
 	c.Assert(err, IsNil)
 	c.Assert(zw.Close(), IsNil)
 	c.Assert(f.Close(), IsNil)
+}
+
+func writeFile(c *C, targetDir, relPath string, data []byte, mode fs.FileMode) {
+	path := filepath.Join(targetDir, relPath)
+	err := os.MkdirAll(filepath.Dir(path), 0o755)
+	c.Assert(err, IsNil)
+	err = os.WriteFile(path, data, mode)
+	c.Assert(err, IsNil)
 }
