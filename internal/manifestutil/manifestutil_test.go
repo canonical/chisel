@@ -150,7 +150,6 @@ var findPathsInReleaseTests = []struct {
 			},
 		},
 	},
-	expected: []string{},
 }, {
 	summary: "Multiple packages with multiple slices",
 	release: &setup.Release{
@@ -199,13 +198,12 @@ var findPathsInReleaseTests = []struct {
 		},
 	},
 	// Note: /folder/manifest.wall appears twice because both slice1 and slice2 declare it
-	expected: []string{"/folder/manifest.wall", "/folder/manifest.wall", "/other-folder/manifest.wall"},
+	expected: []string{"/folder/manifest.wall", "/other-folder/manifest.wall"},
 }, {
 	summary: "Empty release",
 	release: &setup.Release{
 		Packages: map[string]*setup.Package{},
 	},
-	expected: []string{},
 }}
 
 func (s *S) TestFindPathsInRelease(c *C) {
