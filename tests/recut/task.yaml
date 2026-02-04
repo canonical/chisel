@@ -1,4 +1,4 @@
-summary: Recut reuses manifest to restore previous slices
+summary: Recut relies on manifest to update existing content
 
 execute: |
   rootfs_folder=rootfs_${RELEASE}
@@ -19,7 +19,7 @@ execute: |
     slices:
       slice-a:
         contents:
-          /etc/hostname:
+          /etc/debian_version:
       slice-b:
         contents:
           /etc/issue:
@@ -39,12 +39,11 @@ execute: |
     $EXTRA_OPTIONS \
     base-files_slice-a base-files_manifest
 
-  test -s ${rootfs_folder}/etc/hostname
+  test -s ${rootfs_folder}/etc/debian_version
   test -f ${rootfs_folder}/chisel/manifest.wall
 
   # Remove a file from the first slice
-  rm -f ${rootfs_folder}/etc/hostname
-  test ! -e ${rootfs_folder}/etc/hostname
+  rm -f ${rootfs_folder}/etc/debian_version
 
   # Second cut only requests slice-b, slice-a should be restored via manifest
   chisel cut --release $chisel_release \
@@ -52,6 +51,6 @@ execute: |
     $EXTRA_OPTIONS \
     base-files_slice-b
 
-  test -s ${rootfs_folder}/etc/hostname
+  test -s ${rootfs_folder}/etc/debian_version
   test -s ${rootfs_folder}/etc/issue
   test -f ${rootfs_folder}/chisel/manifest.wall
