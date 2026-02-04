@@ -19,6 +19,7 @@ import (
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/slicer"
 	"github.com/canonical/chisel/internal/testutil"
+	"github.com/canonical/chisel/public/jsonwall"
 	"github.com/canonical/chisel/public/manifest"
 )
 
