@@ -23,31 +23,38 @@ type moveTest struct {
 var moveTests = []moveTest{{
 	summary: "Move a file and create its parent directory",
 	options: fsutil.MoveOptions{
-		Path:        "bar",
+		Path:        "foo/bar",
 		Mode:        0o644,
 		MakeParents: true,
 	},
 	hackopt: func(c *C, dir string, opts *fsutil.MoveOptions) {
-		c.Assert(os.WriteFile(filepath.Join(dir, "src/bar"), []byte("data"), 0o644), IsNil)
+		c.Assert(os.Mkdir(filepath.Join(dir, "src/foo/"), fs.ModeDir|0o755), IsNil)
+		c.Assert(os.WriteFile(filepath.Join(dir, "src/foo/bar"), []byte("data"), 0o644), IsNil)
 	},
 	result: map[string]string{
-		"/src/":    "dir 0755",
-		"/dst/":    "dir 0755",
-		"/dst/bar": "file 0644 3a6eb079",
+		"/src/":        "dir 0755",
+		"/src/foo/":    "dir 0755",
+		"/dst/":        "dir 0755",
+		"/dst/foo/":    "dir 0755",
+		"/dst/foo/bar": "file 0644 3a6eb079",
 	},
 }, {
 	summary: "Move a file when parent directory exists",
 	options: fsutil.MoveOptions{
-		Path: "bar",
+		Path: "foo/bar",
 		Mode: 0o644,
 	},
 	hackopt: func(c *C, dir string, opts *fsutil.MoveOptions) {
-		c.Assert(os.WriteFile(filepath.Join(dir, "src/bar"), []byte("data"), 0o644), IsNil)
+		c.Assert(os.Mkdir(filepath.Join(dir, "src/foo/"), fs.ModeDir|0o755), IsNil)
+		c.Assert(os.WriteFile(filepath.Join(dir, "src/foo/bar"), []byte("data"), 0o644), IsNil)
+		c.Assert(os.Mkdir(filepath.Join(dir, "dst/foo/"), fs.ModeDir|0o755), IsNil)
 	},
 	result: map[string]string{
-		"/src/":    "dir 0755",
-		"/dst/":    "dir 0755",
-		"/dst/bar": "file 0644 3a6eb079",
+		"/src/":        "dir 0755",
+		"/src/foo/":    "dir 0755",
+		"/dst/":        "dir 0755",
+		"/dst/foo/":    "dir 0755",
+		"/dst/foo/bar": "file 0644 3a6eb079",
 	},
 }, {
 	summary: "Move an empty file",
@@ -111,10 +118,10 @@ var moveTests = []moveTest{{
 	},
 	error: `mkdir /[^ ]*/foo/bar: no such file or directory`,
 }, {
-	summary: "Do not override mode of existing",
+	summary: "Do not override mode of existing directory",
 	options: fsutil.MoveOptions{
-		Path:         "foo",
-		Mode:         fs.ModeDir | 0o775,
+		Path: "foo",
+		Mode: fs.ModeDir | 0o775,
 	},
 	hackopt: func(c *C, dir string, opts *fsutil.MoveOptions) {
 		c.Assert(os.Mkdir(filepath.Join(dir, "dst/foo/"), fs.ModeDir|0o765), IsNil)
