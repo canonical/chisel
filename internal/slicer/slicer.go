@@ -389,14 +389,13 @@ func upgrade(targetDir string, tempDir string, report *manifestutil.Report, mfes
 			Path:         path,
 			Mode:         entry.Mode,
 			MakeParents:  true,
-			OverrideMode: true,
 		})
 		if err != nil {
 			return err
 		}
 	}
 
-	// Remove missing paths
+	// Remove missing paths.
 	missingPaths := make([]string, 0)
 	err := mfest.IteratePaths("", func(path *manifest.Path) error {
 		_, ok := report.Entries[path.Path]

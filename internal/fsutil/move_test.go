@@ -111,10 +111,10 @@ var moveTests = []moveTest{{
 	},
 	error: `mkdir /[^ ]*/foo/bar: no such file or directory`,
 }, {
-	summary: "Moving to an existing directory keeps the original mode",
+	summary: "Do not override mode of existing",
 	options: fsutil.MoveOptions{
-		Path: "foo",
-		Mode: fs.ModeDir | 0o775,
+		Path:         "foo",
+		Mode:         fs.ModeDir | 0o775,
 	},
 	hackopt: func(c *C, dir string, opts *fsutil.MoveOptions) {
 		c.Assert(os.Mkdir(filepath.Join(dir, "dst/foo/"), fs.ModeDir|0o765), IsNil)
@@ -124,22 +124,6 @@ var moveTests = []moveTest{{
 		"/dst/": "dir 0755",
 		// mode is not updated.
 		"/dst/foo/": "dir 0765",
-	},
-}, {
-	summary: "Moving to an existing directory overrides the mode is requested",
-	options: fsutil.MoveOptions{
-		Path:         "foo",
-		Mode:         fs.ModeDir | 0o775,
-		OverrideMode: true,
-	},
-	hackopt: func(c *C, dir string, opts *fsutil.MoveOptions) {
-		c.Assert(os.Mkdir(filepath.Join(dir, "dst/foo/"), fs.ModeDir|0o765), IsNil)
-	},
-	result: map[string]string{
-		"/src/": "dir 0755",
-		"/dst/": "dir 0755",
-		// mode is not updated.
-		"/dst/foo/": "dir 0775",
 	},
 }, {
 	summary: "Moving to an existing file overrides the original mode",

@@ -10,18 +10,15 @@ import (
 type MoveOptions struct {
 	SrcRoot string
 	DstRoot string
-	// Path is relative to Root.
+	// Path is relative to SrcRoot.
 	Path string
 	Mode fs.FileMode
 	// If MakeParents is true, missing parent directories of Path are
-	// created with permissions 0755.
+	// created with permissions 0755 in DstRoot.
 	MakeParents bool
-	// If OverrideMode is true and entry already exists, update the mode. Does
-	// not affect symlinks.
-	OverrideMode bool
 }
 
-// Move moves or create a filesystem entry according to the provided options.
+// Move moves or creates a filesystem entry according to the provided options.
 //
 // Move can return errors from the os package.
 func Move(options *MoveOptions) error {
@@ -53,7 +50,7 @@ func Move(options *MoveOptions) error {
 			Root:         o.DstRoot,
 			Path:         o.Path,
 			Mode:         o.Mode,
-			OverrideMode: o.OverrideMode,
+			OverrideMode: true,
 		})
 	default:
 		err = fmt.Errorf("unsupported file type: %s", o.Path)

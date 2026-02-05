@@ -1,10 +1,10 @@
 package fsutil
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"syscall"
 )
 
@@ -27,16 +27,9 @@ func Remove(options *RemoveOptions) error {
 	if err != nil {
 		return err
 	}
-	if strings.HasSuffix(options.Path, "/") {
-		err = syscall.Rmdir(path)
-		if err != nil && err != syscall.ENOTEMPTY && err != syscall.ENOENT {
-			return err
-		}
-	} else {
-		err = os.Remove(path)
-		if err != nil && !os.IsNotExist(err) {
-			return err
-		}
+	err = os.Remove(path)
+	if err != nil && !os.IsNotExist(err) && !errors.Is(err, syscall.ENOTEMPTY) {
+		return err
 	}
 	return nil
 }

@@ -166,22 +166,15 @@ func createDir(o *CreateOptions) error {
 	if err != nil {
 		return err
 	}
-	fileinfo, err := os.Lstat(path)
-	if err == nil {
-		if fileinfo.IsDir() {
-			if fileinfo.Mode() != o.Mode && o.OverrideMode {
-				return os.Chmod(path, o.Mode)
-			}
-			return nil
-		}
-		err = os.Remove(path)
-		if err != nil {
-			return err
-		}
-	} else if !os.IsNotExist(err) {
-		return err
+	err = os.Mkdir(path, o.Mode)
+	if os.IsExist(err) {
+		// TODO: Detect if existing content is a file. ErrExist is also returned
+		// if a file exists at this path, so returning nil here creates an
+		// inconsistency between our view of the content and the real content on
+		// disk.
+		return nil
 	}
-	return os.Mkdir(path, o.Mode)
+	return err
 }
 
 func createFile(o *CreateOptions) error {
