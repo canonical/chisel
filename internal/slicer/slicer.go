@@ -384,11 +384,11 @@ func upgrade(targetDir string, tempDir string, report *manifestutil.Report, mfes
 	for _, path := range paths {
 		entry := report.Entries[path]
 		err := fsutil.Move(&fsutil.MoveOptions{
-			SrcRoot:      tempDir,
-			DstRoot:      targetDir,
-			Path:         path,
-			Mode:         entry.Mode,
-			MakeParents:  true,
+			SrcRoot:     tempDir,
+			DstRoot:     targetDir,
+			Path:        path,
+			Mode:        entry.Mode,
+			MakeParents: true,
 		})
 		if err != nil {
 			return err
