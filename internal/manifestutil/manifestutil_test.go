@@ -197,7 +197,6 @@ var findPathsInReleaseTests = []struct {
 			},
 		},
 	},
-	// Note: /folder/manifest.wall appears twice because both slice1 and slice2 declare it
 	expected: []string{"/folder/manifest.wall", "/other-folder/manifest.wall"},
 }, {
 	summary: "Empty release",
