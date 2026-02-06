@@ -1809,7 +1809,7 @@ var slicerTests = []slicerTest{{
 						/**:
 		`,
 	},
-	error: `cannot extract from package "test-package": cannot handle path /[a-z0-9\-\/]*/file outside of root /[a-z0-9\-\/]*`,
+	error: `cannot extract from package "test-package": cannot create path /[a-z0-9\-\/]*/file outside of root /[a-z0-9\-\/]*`,
 }, {
 	summary: "Extract conflicting paths with prefer from proper package",
 	slices: []setup.SliceKey{

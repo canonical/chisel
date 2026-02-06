@@ -485,7 +485,7 @@ var extractTests = []extractTest{{
 			}},
 		},
 	},
-	error: `cannot extract from package "test-package": cannot handle path /[a-z0-9\-\/]*/file outside of root /[a-z0-9\-\/]*`,
+	error: `cannot extract from package "test-package": cannot create path /[a-z0-9\-\/]*/file outside of root /[a-z0-9\-\/]*`,
 }}
 
 func (s *S) TestExtract(c *C) {
