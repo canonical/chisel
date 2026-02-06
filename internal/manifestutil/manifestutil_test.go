@@ -150,6 +150,7 @@ var findPathsInReleaseTests = []struct {
 			},
 		},
 	},
+	expected: nil,
 }, {
 	summary: "Multiple packages with multiple slices",
 	release: &setup.Release{
@@ -203,6 +204,7 @@ var findPathsInReleaseTests = []struct {
 	release: &setup.Release{
 		Packages: map[string]*setup.Package{},
 	},
+	expected: nil,
 }}
 
 func (s *S) TestFindPathsInRelease(c *C) {

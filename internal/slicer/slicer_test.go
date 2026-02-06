@@ -1982,7 +1982,7 @@ var slicerTests = []slicerTest{{
 		"/dir/file": "file 0644 cc55e2ec {test-package_third}",
 	},
 }, {
-	summary: "Recut removes obsolete paths when selection shrinks",
+	summary: "Upgrade removes obsolete paths when selection shrinks",
 	slices:  []setup.SliceKey{{"test-package", "slice2"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
@@ -2034,7 +2034,7 @@ var slicerTests = []slicerTest{{
 		"/bar": "file 0644 d98cf53e {test-package_slice2}",
 	},
 }, {
-	summary: "Recut restores modified content and mode",
+	summary: "Upgrade restores modified content and mode",
 	slices:  []setup.SliceKey{{"test-package", "slice1"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
@@ -2049,11 +2049,11 @@ var slicerTests = []slicerTest{{
 		pkg := release.Packages["test-package"]
 		slice1 := pkg.Slices["slice1"]
 		manifestSlice := pkg.Slices["manifest"]
-		writeFile(c, opts.TargetDir, "/file", []byte("data1"), 0o644)
+		filename := "file"
 		report, err := manifestutil.NewReport(opts.TargetDir)
 		c.Assert(err, IsNil)
 		err = report.Add(slice1, &fsutil.Entry{
-			Path:   filepath.Join(report.Root, "/file"),
+			Path:   filepath.Join(report.Root, filename),
 			Mode:   0o644,
 			SHA256: "5b41362b",
 			Size:   5,
@@ -2065,7 +2065,7 @@ var slicerTests = []slicerTest{{
 		})
 		c.Assert(err, IsNil)
 		writeManifestReport(c, opts.TargetDir, manifestPath, pkg.Name, []*setup.Slice{slice1, manifestSlice}, report)
-		modifiedPath := filepath.Join(opts.TargetDir, "file")
+		modifiedPath := filepath.Join(opts.TargetDir, filename)
 		err = os.WriteFile(modifiedPath, []byte("data2"), 0o700)
 		c.Assert(err, IsNil)
 		opts.Manifest = readManifest(c, opts.TargetDir, manifestPath)
@@ -2077,7 +2077,7 @@ var slicerTests = []slicerTest{{
 		"/file": "file 0644 5b41362b {test-package_slice1}",
 	},
 }, {
-	summary: "Recut keeps untracked files",
+	summary: "Upgrade keeps untracked files",
 	slices:  []setup.SliceKey{{"test-package", "slice1"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
@@ -2121,6 +2121,277 @@ var slicerTests = []slicerTest{{
 	},
 	manifestPaths: map[string]string{
 		"/file": "file 0644 5b41362b {test-package_slice1}",
+	},
+}, {
+	summary: "Upgrade creates parent directory",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/foo/bar: {text: data}
+		`,
+	},
+	prefill: func(c *C, opts *slicer.RunOptions, release *setup.Release, manifestPath string) {
+		report, manifestSlice := newManifestReport(c, opts, release, manifestPath, "test-package")
+		writeManifestReport(c, opts.TargetDir, manifestPath, "test-package", []*setup.Slice{manifestSlice}, report)
+		opts.Manifest = readManifest(c, opts.TargetDir, manifestPath)
+	},
+	filesystem: map[string]string{
+		"/foo/":    "dir 0755",
+		"/foo/bar": "file 0644 3a6eb079",
+	},
+	manifestPaths: map[string]string{
+		"/foo/bar": "file 0644 3a6eb079 {test-package_myslice}",
+	},
+}, {
+	summary: "Upgrade creates symlink",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/baz: {text: data}
+						/foo: {symlink: baz}
+		`,
+	},
+	prefill: func(c *C, opts *slicer.RunOptions, release *setup.Release, manifestPath string) {
+		report, manifestSlice := newManifestReport(c, opts, release, manifestPath, "test-package")
+		writeManifestReport(c, opts.TargetDir, manifestPath, "test-package", []*setup.Slice{manifestSlice}, report)
+		opts.Manifest = readManifest(c, opts.TargetDir, manifestPath)
+	},
+	filesystem: map[string]string{
+		"/baz": "file 0644 3a6eb079",
+		"/foo": "symlink baz",
+	},
+	manifestPaths: map[string]string{
+		"/baz": "file 0644 3a6eb079 {test-package_myslice}",
+		"/foo": "symlink baz {test-package_myslice}",
+	},
+}, {
+	summary: "Upgrade does not override existing directory mode",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/dir/: {make: true, mode: 0775}
+		`,
+	},
+	prefill: func(c *C, opts *slicer.RunOptions, release *setup.Release, manifestPath string) {
+		err := os.Mkdir(filepath.Join(opts.TargetDir, "dir"), 0o700)
+		c.Assert(err, IsNil)
+		report, manifestSlice := newManifestReport(c, opts, release, manifestPath, "test-package")
+		writeManifestReport(c, opts.TargetDir, manifestPath, "test-package", []*setup.Slice{manifestSlice}, report)
+		opts.Manifest = readManifest(c, opts.TargetDir, manifestPath)
+	},
+	filesystem: map[string]string{
+		"/dir/": "dir 0700",
+	},
+	manifestPaths: map[string]string{
+		"/dir/": "dir 0775 {test-package_myslice}",
+	},
+}, {
+	summary: "Upgrade overwrites existing file mode",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/foo: {text: data}
+		`,
+	},
+	prefill: func(c *C, opts *slicer.RunOptions, release *setup.Release, manifestPath string) {
+		writeFile(c, opts.TargetDir, "/foo", []byte("data"), 0o600)
+		report, manifestSlice := newManifestReport(c, opts, release, manifestPath, "test-package")
+		writeManifestReport(c, opts.TargetDir, manifestPath, "test-package", []*setup.Slice{manifestSlice}, report)
+		opts.Manifest = readManifest(c, opts.TargetDir, manifestPath)
+	},
+	filesystem: map[string]string{
+		"/foo": "file 0644 3a6eb079",
+	},
+	manifestPaths: map[string]string{
+		"/foo": "file 0644 3a6eb079 {test-package_myslice}",
+	},
+}, {
+	summary: "Upgrade overwrites existing symlink",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/baz: {text: data}
+						/foo: {symlink: baz}
+		`,
+	},
+	prefill: func(c *C, opts *slicer.RunOptions, release *setup.Release, manifestPath string) {
+		writeFile(c, opts.TargetDir, "/bar", []byte("data"), 0o644)
+		c.Assert(os.Symlink("bar", filepath.Join(opts.TargetDir, "foo")), IsNil)
+		report, manifestSlice := newManifestReport(c, opts, release, manifestPath, "test-package")
+		writeManifestReport(c, opts.TargetDir, manifestPath, "test-package", []*setup.Slice{manifestSlice}, report)
+		opts.Manifest = readManifest(c, opts.TargetDir, manifestPath)
+	},
+	filesystem: map[string]string{
+		"/bar": "file 0644 3a6eb079",
+		"/baz": "file 0644 3a6eb079",
+		"/foo": "symlink baz",
+	},
+	manifestPaths: map[string]string{
+		"/baz": "file 0644 3a6eb079 {test-package_myslice}",
+		"/foo": "symlink baz {test-package_myslice}",
+	},
+}, {
+	summary: "Upgrade fails when parent is a file",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/dir/file: {text: data}
+		`,
+	},
+	prefill: func(c *C, opts *slicer.RunOptions, release *setup.Release, manifestPath string) {
+		writeFile(c, opts.TargetDir, "/dir", []byte("data"), 0o644)
+		report, manifestSlice := newManifestReport(c, opts, release, manifestPath, "test-package")
+		writeManifestReport(c, opts.TargetDir, manifestPath, "test-package", []*setup.Slice{manifestSlice}, report)
+		opts.Manifest = readManifest(c, opts.TargetDir, manifestPath)
+	},
+	error: `mkdir .*: not a directory`,
+}, {
+	summary: "Upgrade fails when target path is a directory",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/target: {text: data}
+		`,
+	},
+	prefill: func(c *C, opts *slicer.RunOptions, release *setup.Release, manifestPath string) {
+		c.Assert(os.MkdirAll(filepath.Join(opts.TargetDir, "target"), 0o755), IsNil)
+		report, manifestSlice := newManifestReport(c, opts, release, manifestPath, "test-package")
+		writeManifestReport(c, opts.TargetDir, manifestPath, "test-package", []*setup.Slice{manifestSlice}, report)
+		opts.Manifest = readManifest(c, opts.TargetDir, manifestPath)
+	},
+	error: `rename .*: (file exists|is a directory)`,
+}, {
+	summary: "Upgrade removes obsolete empty directory",
+	slices:  []setup.SliceKey{{"test-package", "new"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				old:
+					contents:
+						/old-dir/: {make: true}
+				new:
+					contents:
+						/new-file: {text: data1}
+		`,
+	},
+	prefill: func(c *C, opts *slicer.RunOptions, release *setup.Release, manifestPath string) {
+		c.Assert(os.MkdirAll(filepath.Join(opts.TargetDir, "old-dir"), 0o755), IsNil)
+		report, manifestSlice := newManifestReport(c, opts, release, manifestPath, "test-package")
+		oldSlice := release.Packages["test-package"].Slices["old"]
+		err := report.Add(oldSlice, &fsutil.Entry{
+			Path: filepath.Join(report.Root, "/old-dir"),
+			Mode: fs.ModeDir | 0o755,
+		})
+		c.Assert(err, IsNil)
+		writeManifestReport(c, opts.TargetDir, manifestPath, "test-package", []*setup.Slice{oldSlice, manifestSlice}, report)
+		opts.Manifest = readManifest(c, opts.TargetDir, manifestPath)
+	},
+	filesystem: map[string]string{
+		"/new-file": "file 0644 5b41362b",
+	},
+	manifestPaths: map[string]string{
+		"/new-file": "file 0644 5b41362b {test-package_new}",
+	},
+}, {
+	summary: "Upgrade keeps obsolete non-empty directory",
+	slices:  []setup.SliceKey{{"test-package", "new"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				old:
+					contents:
+						/old-dir/: {make: true}
+				new:
+					contents:
+						/new-file: {text: data1}
+		`,
+	},
+	prefill: func(c *C, opts *slicer.RunOptions, release *setup.Release, manifestPath string) {
+		c.Assert(os.MkdirAll(filepath.Join(opts.TargetDir, "old-dir"), 0o755), IsNil)
+		writeFile(c, opts.TargetDir, "/old-dir/file", []byte("data"), 0o644)
+		report, manifestSlice := newManifestReport(c, opts, release, manifestPath, "test-package")
+		oldSlice := release.Packages["test-package"].Slices["old"]
+		err := report.Add(oldSlice, &fsutil.Entry{
+			Path: filepath.Join(report.Root, "/old-dir"),
+			Mode: fs.ModeDir | 0o755,
+		})
+		c.Assert(err, IsNil)
+		writeManifestReport(c, opts.TargetDir, manifestPath, "test-package", []*setup.Slice{oldSlice, manifestSlice}, report)
+		opts.Manifest = readManifest(c, opts.TargetDir, manifestPath)
+	},
+	filesystem: map[string]string{
+		"/new-file":     "file 0644 5b41362b",
+		"/old-dir/":     "dir 0755",
+		"/old-dir/file": "file 0644 3a6eb079",
+	},
+	manifestPaths: map[string]string{
+		"/new-file": "file 0644 5b41362b {test-package_new}",
+	},
+}, {
+	summary: "Upgrade removes obsolete symlink only",
+	slices:  []setup.SliceKey{{"test-package", "new"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				old:
+					contents:
+						/link: {symlink: target}
+				new:
+					contents:
+						/new-file: {text: data1}
+		`,
+	},
+	prefill: func(c *C, opts *slicer.RunOptions, release *setup.Release, manifestPath string) {
+		writeFile(c, opts.TargetDir, "/target", []byte("data"), 0o644)
+		c.Assert(os.Symlink("target", filepath.Join(opts.TargetDir, "link")), IsNil)
+		report, manifestSlice := newManifestReport(c, opts, release, manifestPath, "test-package")
+		oldSlice := release.Packages["test-package"].Slices["old"]
+		err := report.Add(oldSlice, &fsutil.Entry{
+			Path: filepath.Join(report.Root, "/link"),
+			Mode: fs.ModeSymlink,
+			Link: "target",
+		})
+		c.Assert(err, IsNil)
+		writeManifestReport(c, opts.TargetDir, manifestPath, "test-package", []*setup.Slice{oldSlice, manifestSlice}, report)
+		opts.Manifest = readManifest(c, opts.TargetDir, manifestPath)
+	},
+	filesystem: map[string]string{
+		"/new-file": "file 0644 5b41362b",
+		"/target":   "file 0644 3a6eb079",
+	},
+	manifestPaths: map[string]string{
+		"/new-file": "file 0644 5b41362b {test-package_new}",
 	},
 }}
 
@@ -2529,6 +2800,18 @@ func readManifest(c *C, targetDir, manifestPath string) *manifest.Manifest {
 	c.Assert(err, IsNil)
 
 	return mfest
+}
+
+func newManifestReport(c *C, opts *slicer.RunOptions, release *setup.Release, manifestPath, pkgName string) (*manifestutil.Report, *setup.Slice) {
+	report, err := manifestutil.NewReport(opts.TargetDir)
+	c.Assert(err, IsNil)
+	manifestSlice := release.Packages[pkgName].Slices["manifest"]
+	err = report.Add(manifestSlice, &fsutil.Entry{
+		Path: filepath.Join(report.Root, manifestPath),
+		Mode: 0o644,
+	})
+	c.Assert(err, IsNil)
+	return report, manifestSlice
 }
 
 func writeManifest(c *C, targetDir, manifestPath string, slice *setup.Slice, hash string) {

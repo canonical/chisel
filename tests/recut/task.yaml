@@ -33,7 +33,7 @@ execute: |
     EXTRA_OPTIONS="--ignore=unmaintained "
   fi
 
-  # First cut generates manifest and installs slice-a
+  # First cut generates manifest and installs slice-a.
   chisel cut --release $chisel_release \
     --root $rootfs_folder \
     $EXTRA_OPTIONS \

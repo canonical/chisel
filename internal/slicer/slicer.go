@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -96,13 +97,12 @@ func Run(options *RunOptions) error {
 		targetDir = filepath.Join(dir, targetDir)
 	}
 
-	var originalTargetDir string
+	originalTargetDir := targetDir
 	if options.Manifest != nil {
 		tmpWorkDir, err := os.MkdirTemp(targetDir, "chisel-*")
 		if err != nil {
 			return fmt.Errorf("cannot create temporary working directory: %w", err)
 		}
-		originalTargetDir = targetDir
 		targetDir = tmpWorkDir
 		defer func() {
 			os.RemoveAll(tmpWorkDir)
@@ -366,15 +366,14 @@ func Run(options *RunOptions) error {
 		return err
 	}
 
-	err = generateManifests(targetDir, options.Selection, report, pkgInfos)
-	if err != nil {
-		return err
+	if options.Manifest != nil {
+		err = upgrade(originalTargetDir, targetDir, report, options.Manifest)
+		if err != nil {
+			return err
+		}
 	}
 
-	if options.Manifest != nil {
-		return upgrade(originalTargetDir, targetDir, report, options.Manifest)
-	}
-	return nil
+	return generateManifests(originalTargetDir, options.Selection, report, pkgInfos)
 }
 
 // upgrade upgrades content in targetDir with content in tempDir.
@@ -383,13 +382,23 @@ func upgrade(targetDir string, tempDir string, report *manifestutil.Report, mfes
 	paths := slices.Sorted(maps.Keys(report.Entries))
 	for _, path := range paths {
 		entry := report.Entries[path]
-		err := fsutil.Move(&fsutil.MoveOptions{
-			SrcRoot:     tempDir,
-			DstRoot:     targetDir,
-			Path:        path,
-			Mode:        entry.Mode,
-			MakeParents: true,
-		})
+		srcPath := filepath.Clean(filepath.Join(tempDir, path))
+		dstPath := filepath.Clean(filepath.Join(targetDir, path))
+		if err := os.MkdirAll(filepath.Dir(dstPath), 0o755); err != nil {
+			return err
+		}
+		var err error
+		switch entry.Mode & fs.ModeType {
+		case 0, fs.ModeSymlink:
+			err = os.Rename(srcPath, dstPath)
+		case fs.ModeDir:
+			mkdirErr := os.Mkdir(dstPath, entry.Mode)
+			if !os.IsExist(mkdirErr) {
+				err = mkdirErr
+			}
+		default:
+			err = fmt.Errorf("unsupported file type: %s", path)
+		}
 		if err != nil {
 			return err
 		}
@@ -409,14 +418,13 @@ func upgrade(targetDir string, tempDir string, report *manifestutil.Report, mfes
 	}
 	sort.Sort(sort.Reverse(sort.StringSlice(missingPaths)))
 	for _, relPath := range missingPaths {
-		err := fsutil.Remove(&fsutil.RemoveOptions{
-			Root: targetDir,
-			Path: relPath,
-		})
-		if err != nil {
+		path := filepath.Clean(filepath.Join(targetDir, relPath))
+		err = os.Remove(path)
+		if err != nil && !os.IsNotExist(err) && !errors.Is(err, syscall.ENOTEMPTY) {
 			return err
 		}
 	}
+	report.Root = targetDir
 	return nil
 }
 
