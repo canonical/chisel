@@ -42,7 +42,7 @@ type Entry struct {
 //
 // Create can return errors from the os package.
 func Create(options *CreateOptions) (*Entry, error) {
-	o, err := getValidCreateOptions(options)
+	o, err := getValidOptions(options)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +124,7 @@ func Create(options *CreateOptions) (*Entry, error) {
 // information recorded in Entry. The Hash and Size attributes are set on
 // calling Close() on the Writer.
 func CreateWriter(options *CreateOptions) (io.WriteCloser, *Entry, error) {
-	o, err := getValidCreateOptions(options)
+	o, err := getValidOptions(options)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -245,7 +245,7 @@ func createHardLink(o *CreateOptions) error {
 	return err
 }
 
-func getValidCreateOptions(options *CreateOptions) (*CreateOptions, error) {
+func getValidOptions(options *CreateOptions) (*CreateOptions, error) {
 	optsCopy := *options
 	o := &optsCopy
 	if o.Root == "" {
