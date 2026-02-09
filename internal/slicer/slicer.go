@@ -108,15 +108,34 @@ func Run(options *RunOptions) error {
 			os.RemoveAll(tmpWorkDir)
 		}()
 	}
+	optsCopy := *options
+	installOpts := &optsCopy
+	installOpts.TargetDir = targetDir
 
-	pkgArchive, err := selectPkgArchives(options.Archives, options.Selection)
+	report, pkgInfos, err := install(installOpts)
 	if err != nil {
 		return err
 	}
 
+	if options.Manifest != nil {
+		err = upgrade(originalTargetDir, targetDir, report, options.Manifest)
+		if err != nil {
+			return err
+		}
+	}
+
+	return generateManifests(originalTargetDir, options.Selection, report, pkgInfos)
+}
+
+func install(options *RunOptions) (*manifestutil.Report, []*archive.PackageInfo, error) {
+	pkgArchive, err := selectPkgArchives(options.Archives, options.Selection)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	prefers, err := options.Selection.Prefers()
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	// Build information to process the selection.
@@ -173,7 +192,7 @@ func Run(options *RunOptions) error {
 		}
 		reader, info, err := pkgArchive[slice.Package].Fetch(slice.Package)
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 		defer reader.Close()
 		packages[slice.Package] = reader
@@ -184,9 +203,9 @@ func Run(options *RunOptions) error {
 	// listed as until: mutate in all the slices that reference them.
 	knownPaths := map[string]pathData{}
 	addKnownPath(knownPaths, "/", pathData{})
-	report, err := manifestutil.NewReport(targetDir)
+	report, err := manifestutil.NewReport(options.TargetDir)
 	if err != nil {
-		return fmt.Errorf("internal error: cannot create report: %w", err)
+		return nil, nil, fmt.Errorf("internal error: cannot create report: %w", err)
 	}
 
 	// Record directories which are created but where not listed in the slice
@@ -202,7 +221,7 @@ func Run(options *RunOptions) error {
 			return err
 		}
 
-		relPath := filepath.Clean("/" + strings.TrimPrefix(o.Path, targetDir))
+		relPath := filepath.Clean("/" + strings.TrimPrefix(o.Path, options.TargetDir))
 		if o.Mode.IsDir() {
 			relPath = relPath + "/"
 		}
@@ -260,13 +279,13 @@ func Run(options *RunOptions) error {
 		err := deb.Extract(reader, &deb.ExtractOptions{
 			Package:   slice.Package,
 			Extract:   extract[slice.Package],
-			TargetDir: targetDir,
+			TargetDir: options.TargetDir,
 			Create:    create,
 		})
 		reader.Close()
 		packages[slice.Package] = nil
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 	}
 
@@ -322,9 +341,9 @@ func Run(options *RunOptions) error {
 			mutable: pathInfo.Mutable,
 		}
 		addKnownPath(knownPaths, relPath, data)
-		entry, err := createFile(targetDir, relPath, pathInfo)
+		entry, err := createFile(options.TargetDir, relPath, pathInfo)
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 
 		// Do not add paths with "until: mutate".
@@ -332,7 +351,7 @@ func Run(options *RunOptions) error {
 			for _, slice := range slices {
 				err = report.Add(slice, entry)
 				if err != nil {
-					return err
+					return nil, nil, err
 				}
 			}
 		}
@@ -342,7 +361,7 @@ func Run(options *RunOptions) error {
 	// dependencies must run before dependents.
 	checker := contentChecker{knownPaths}
 	content := &scripts.ContentValue{
-		RootDir:    targetDir,
+		RootDir:    options.TargetDir,
 		CheckWrite: checker.checkMutable,
 		CheckRead:  checker.checkKnown,
 		OnWrite:    report.Mutate,
@@ -357,23 +376,16 @@ func Run(options *RunOptions) error {
 		}
 		err := scripts.Run(&opts)
 		if err != nil {
-			return fmt.Errorf("slice %s: %w", slice, err)
+			return nil, nil, fmt.Errorf("slice %s: %w", slice, err)
 		}
 	}
 
-	err = removeAfterMutate(targetDir, knownPaths)
+	err = removeAfterMutate(options.TargetDir, knownPaths)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
-	if options.Manifest != nil {
-		err = upgrade(originalTargetDir, targetDir, report, options.Manifest)
-		if err != nil {
-			return err
-		}
-	}
-
-	return generateManifests(originalTargetDir, options.Selection, report, pkgInfos)
+	return report, pkgInfos, nil
 }
 
 // upgrade upgrades content in targetDir with content in tempDir.
