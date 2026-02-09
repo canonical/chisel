@@ -34,6 +34,7 @@ execute: |
   fi
 
   # First cut generates manifest and installs slice-a.
+  export CHISEL_RECUT=1
   chisel cut --release $chisel_release \
     --root $rootfs_folder \
     $EXTRA_OPTIONS \
