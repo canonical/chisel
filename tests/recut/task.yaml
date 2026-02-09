@@ -1,57 +1,32 @@
-summary: Recut relies on manifest to update existing content
+summary: Recut relies on manifest to upgrade existing content
+
+variants:
+  - noble
+
+environment:
+  ROOTFS: rootfs
 
 execute: |
-  rootfs_folder=rootfs_${RELEASE}
-  mkdir -p $rootfs_folder
+  mkdir -p ${ROOTFS}
 
-  chisel_release="./release_${RELEASE}"
-  mkdir -p ${chisel_release}/slices
-
-  ref_chisel_release="ref-chisel-release_${RELEASE}"
-  git clone --depth=1 -b ${OS}-${RELEASE} \
-    https://github.com/canonical/chisel-releases $ref_chisel_release
-
-  cp ${ref_chisel_release}/chisel.yaml ${chisel_release}/chisel.yaml
-
-  cat >${chisel_release}/slices/base-files.yaml <<'EOF'
-    package: base-files
-
-    slices:
-      slice-a:
-        contents:
-          /etc/debian_version:
-      slice-b:
-        contents:
-          /etc/issue:
-      manifest:
-        contents:
-          /chisel/**: {generate: manifest}
-  EOF
-
-  EXTRA_OPTIONS=""
-  if [ "$RELEASE" = "23.10" -o "$RELEASE" = "20.04" ]; then
-    EXTRA_OPTIONS="--ignore=unmaintained "
-  fi
-
-  # First cut generates manifest and installs slice-a.
+  # TODO: remove this env var when final upgrade strategy is in place.
   export CHISEL_RECUT=1
-  chisel cut --release $chisel_release \
-    --root $rootfs_folder \
-    $EXTRA_OPTIONS \
+  # First cut generates manifest and installs slice-a.
+  chisel cut --release ./chisel-releases/ \
+    --root ${ROOTFS} \
     base-files_slice-a base-files_manifest
 
-  test -s ${rootfs_folder}/etc/debian_version
-  test -f ${rootfs_folder}/chisel/manifest.wall
+  test -s ${ROOTFS}/etc/debian_version
+  test -f ${ROOTFS}/chisel/manifest.wall
 
-  # Remove a file from the first slice
-  rm -f ${rootfs_folder}/etc/debian_version
+  # Remove a file installed from slice-a.
+  rm -f ${ROOTFS}/etc/debian_version
 
-  # Second cut only requests slice-b, slice-a should be restored via manifest
-  chisel cut --release $chisel_release \
-    --root $rootfs_folder \
-    $EXTRA_OPTIONS \
+  # Second cut, only requesting slice-b. slice-a should be restored via manifest.
+  chisel cut --release ./chisel-releases/ \
+    --root ${ROOTFS} \
     base-files_slice-b
 
-  test -s ${rootfs_folder}/etc/debian_version
-  test -s ${rootfs_folder}/etc/issue
-  test -f ${rootfs_folder}/chisel/manifest.wall
+  test -s ${ROOTFS}/etc/debian_version
+  test -s ${ROOTFS}/etc/issue
+  test -f ${ROOTFS}/chisel/manifest.wall
