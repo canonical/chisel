@@ -7,6 +7,10 @@ environment:
   ROOTFS: rootfs
 
 execute: |
+  # Install yq.
+  wget -q https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq &&\
+    chmod +x /usr/bin/yq
+
   mkdir -p ${ROOTFS}
 
   # TODO: remove this env var when final upgrade strategy is in place.
@@ -17,16 +21,19 @@ execute: |
     base-files_slice-a base-files_manifest
 
   test -s ${ROOTFS}/etc/debian_version
+  test -s ${ROOTFS}/etc/foo
+  cat ${ROOTFS}/etc/foo | grep "bar"
   test -f ${ROOTFS}/chisel/manifest.wall
 
-  # Remove a file installed from slice-a.
-  rm -f ${ROOTFS}/etc/debian_version
+  # Update slice-a definition.
+  yq -i '.slices.slice-a.contents./etc/foo.text = "qux"' ./chisel-releases/slices/base-files.yaml
 
-  # Second cut, only requesting slice-b. slice-a should be restored via manifest.
+  # Second cut, only requesting slice-b.
   chisel cut --release ./chisel-releases/ \
     --root ${ROOTFS} \
     base-files_slice-b
 
   test -s ${ROOTFS}/etc/debian_version
   test -s ${ROOTFS}/etc/issue
+  cat ${ROOTFS}/etc/foo | grep "qux"
   test -f ${ROOTFS}/chisel/manifest.wall
