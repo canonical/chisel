@@ -628,9 +628,8 @@ func selectPkgArchives(archives map[string]archive.Archive, selection *setup.Sel
 	return pkgArchive, nil
 }
 
-// SelectValidManifest returns, if found, a valid manifest with the latest
-// schema. Consistency with all other manifests with the same schema is verified
-// so the selection is deterministic.
+// SelectValidManifest returns, if found, a valid manifest. Consistency with
+// other manifests is verified so the selection is deterministic.
 func SelectValidManifest(targetDir string, release *setup.Release) (*manifest.Manifest, error) {
 	targetDir = filepath.Clean(targetDir)
 	if !filepath.IsAbs(targetDir) {
@@ -645,56 +644,43 @@ func SelectValidManifest(targetDir string, release *setup.Release) (*manifest.Ma
 		return nil, nil
 	}
 
-	type manifestHash struct {
-		path string
-		hash string
-	}
 	var selected *manifest.Manifest
-	schemaManifest := make(map[string]manifestHash)
+	var selectedHash string
+	var selectedPath string
 	for _, mfestPath := range manifestPaths {
-		err := func() error {
-			mfestFullPath := path.Join(targetDir, mfestPath)
-			f, err := os.Open(mfestFullPath)
-			if err != nil {
-				if os.IsNotExist(err) {
-					return nil
-				}
-				return err
+		mfestFullPath := path.Join(targetDir, mfestPath)
+		f, err := os.Open(mfestFullPath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
 			}
-			defer f.Close()
-			r, err := zstd.NewReader(f)
-			if err != nil {
-				return err
-			}
-			defer r.Close()
-			mfest, err := manifest.Read(r)
-			if err != nil {
-				return err
-			}
-			err = manifestutil.Validate(mfest)
-			if err != nil {
-				return err
-			}
-			// Verify consistency with other manifests with the same schema.
-			h, err := contentHash(mfestFullPath)
-			if err != nil {
-				return fmt.Errorf("cannot compute hash for %q: %w", mfestFullPath, err)
-			}
-			mfestHash := hex.EncodeToString(h)
-			refMfest, ok := schemaManifest[mfest.Schema()]
-			if !ok {
-				schemaManifest[mfest.Schema()] = manifestHash{mfestPath, mfestHash}
-			} else if refMfest.hash != mfestHash {
-				return fmt.Errorf("inconsistent manifests: %q and %q", refMfest.path, mfestPath)
-			}
-
-			if selected == nil || manifestutil.CompareSchemas(mfest.Schema(), selected.Schema()) > 0 {
-				selected = mfest
-			}
-			return nil
-		}()
+			return nil, err
+		}
+		defer f.Close()
+		r, err := zstd.NewReader(f)
 		if err != nil {
 			return nil, err
+		}
+		defer r.Close()
+		mfest, err := manifest.Read(r)
+		if err != nil {
+			return nil, err
+		}
+		err = manifestutil.Validate(mfest)
+		if err != nil {
+			return nil, err
+		}
+		h, err := contentHash(mfestFullPath)
+		if err != nil {
+			return nil, fmt.Errorf("cannot compute hash for %q: %w", mfestFullPath, err)
+		}
+		mfestHash := hex.EncodeToString(h)
+		if selected == nil {
+			selected = mfest
+			selectedHash = mfestHash
+			selectedPath = mfestPath
+		} else if selectedHash != mfestHash {
+			return nil, fmt.Errorf("inconsistent manifests: %q and %q", selectedPath, mfestPath)
 		}
 	}
 	return selected, nil
