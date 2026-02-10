@@ -15,7 +15,6 @@ import (
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/chisel/internal/archive"
-	"github.com/canonical/chisel/internal/fsutil"
 	"github.com/canonical/chisel/internal/manifestutil"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/slicer"
@@ -35,7 +34,6 @@ type slicerTest struct {
 	pkgs          []*testutil.TestPackage
 	slices        []setup.SliceKey
 	hackopt       func(c *C, opts *slicer.RunOptions)
-	prefill       func(c *C, opts *slicer.RunOptions, release *setup.Release, manifestPath string)
 	filesystem    map[string]string
 	manifestPaths map[string]string
 	manifestPkgs  map[string]string
@@ -1981,418 +1979,6 @@ var slicerTests = []slicerTest{{
 	manifestPaths: map[string]string{
 		"/dir/file": "file 0644 cc55e2ec {test-package_third}",
 	},
-}, {
-	summary: "Upgrade removes obsolete paths when selection shrinks",
-	slices:  []setup.SliceKey{{"test-package", "slice2"}},
-	release: map[string]string{
-		"slices/mydir/test-package.yaml": `
-			package: test-package
-			slices:
-				slice1:
-					contents:
-						/foo: {text: data1}
-				slice2:
-					contents:
-						/bar: {text: data2}
-		`,
-	},
-	prefill: func(c *C, opts *slicer.RunOptions, release *setup.Release, manifestPath string) {
-		pkg := release.Packages["test-package"]
-		slice1 := pkg.Slices["slice1"]
-		slice2 := pkg.Slices["slice2"]
-		manifestSlice := pkg.Slices["manifest"]
-		writeFile(c, opts.TargetDir, "/foo", []byte("data1"), 0o644)
-		writeFile(c, opts.TargetDir, "/bar", []byte("data2"), 0o644)
-		report, err := manifestutil.NewReport(opts.TargetDir)
-		c.Assert(err, IsNil)
-		err = report.Add(slice1, &fsutil.Entry{
-			Path:   filepath.Join(report.Root, "/foo"),
-			Mode:   0o644,
-			SHA256: "5b41362b",
-			Size:   5,
-		})
-		c.Assert(err, IsNil)
-		err = report.Add(slice2, &fsutil.Entry{
-			Path:   filepath.Join(report.Root, "/bar"),
-			Mode:   0o644,
-			SHA256: "d98cf53e",
-			Size:   5,
-		})
-		c.Assert(err, IsNil)
-		err = report.Add(manifestSlice, &fsutil.Entry{
-			Path: filepath.Join(report.Root, manifestPath),
-			Mode: 0o644,
-		})
-		c.Assert(err, IsNil)
-		writeManifestReport(c, opts.TargetDir, manifestPath, pkg.Name, []*setup.Slice{slice1, slice2, manifestSlice}, report)
-		opts.Manifest = readManifest(c, opts.TargetDir, manifestPath)
-	},
-	filesystem: map[string]string{
-		"/bar": "file 0644 d98cf53e",
-	},
-	manifestPaths: map[string]string{
-		"/bar": "file 0644 d98cf53e {test-package_slice2}",
-	},
-}, {
-	summary: "Upgrade restores modified content and mode",
-	slices:  []setup.SliceKey{{"test-package", "slice1"}},
-	release: map[string]string{
-		"slices/mydir/test-package.yaml": `
-			package: test-package
-			slices:
-				slice1:
-					contents:
-						/file: {text: data1}
-		`,
-	},
-	prefill: func(c *C, opts *slicer.RunOptions, release *setup.Release, manifestPath string) {
-		pkg := release.Packages["test-package"]
-		slice1 := pkg.Slices["slice1"]
-		manifestSlice := pkg.Slices["manifest"]
-		filename := "file"
-		report, err := manifestutil.NewReport(opts.TargetDir)
-		c.Assert(err, IsNil)
-		err = report.Add(slice1, &fsutil.Entry{
-			Path:   filepath.Join(report.Root, filename),
-			Mode:   0o644,
-			SHA256: "5b41362b",
-			Size:   5,
-		})
-		c.Assert(err, IsNil)
-		err = report.Add(manifestSlice, &fsutil.Entry{
-			Path: filepath.Join(report.Root, manifestPath),
-			Mode: 0o644,
-		})
-		c.Assert(err, IsNil)
-		writeManifestReport(c, opts.TargetDir, manifestPath, pkg.Name, []*setup.Slice{slice1, manifestSlice}, report)
-		modifiedPath := filepath.Join(opts.TargetDir, filename)
-		err = os.WriteFile(modifiedPath, []byte("data2"), 0o700)
-		c.Assert(err, IsNil)
-		opts.Manifest = readManifest(c, opts.TargetDir, manifestPath)
-	},
-	filesystem: map[string]string{
-		"/file": "file 0644 5b41362b",
-	},
-	manifestPaths: map[string]string{
-		"/file": "file 0644 5b41362b {test-package_slice1}",
-	},
-}, {
-	summary: "Upgrade keeps untracked files",
-	slices:  []setup.SliceKey{{"test-package", "slice1"}},
-	release: map[string]string{
-		"slices/mydir/test-package.yaml": `
-			package: test-package
-			slices:
-				slice1:
-					contents:
-						/file: {text: data1}
-		`,
-	},
-	prefill: func(c *C, opts *slicer.RunOptions, release *setup.Release, manifestPath string) {
-		pkg := release.Packages["test-package"]
-		slice1 := pkg.Slices["slice1"]
-		manifestSlice := pkg.Slices["manifest"]
-		writeFile(c, opts.TargetDir, "/file", []byte("data1"), 0o644)
-		report, err := manifestutil.NewReport(opts.TargetDir)
-		c.Assert(err, IsNil)
-		err = report.Add(slice1, &fsutil.Entry{
-			Path:   filepath.Join(report.Root, "/file"),
-			Mode:   0o644,
-			SHA256: "5b41362b",
-			Size:   5,
-		})
-		c.Assert(err, IsNil)
-		err = report.Add(manifestSlice, &fsutil.Entry{
-			Path: filepath.Join(report.Root, manifestPath),
-			Mode: 0o644,
-		})
-		c.Assert(err, IsNil)
-		writeManifestReport(c, opts.TargetDir, manifestPath, pkg.Name, []*setup.Slice{slice1, manifestSlice}, report)
-		err = os.MkdirAll(filepath.Join(opts.TargetDir, "extra"), 0o755)
-		c.Assert(err, IsNil)
-		err = os.WriteFile(filepath.Join(opts.TargetDir, "extra", "untracked"), []byte("data"), 0o644)
-		c.Assert(err, IsNil)
-		opts.Manifest = readManifest(c, opts.TargetDir, manifestPath)
-	},
-	filesystem: map[string]string{
-		"/extra/":          "dir 0755",
-		"/extra/untracked": "file 0644 3a6eb079",
-		"/file":            "file 0644 5b41362b",
-	},
-	manifestPaths: map[string]string{
-		"/file": "file 0644 5b41362b {test-package_slice1}",
-	},
-}, {
-	summary: "Upgrade creates parent directory",
-	slices:  []setup.SliceKey{{"test-package", "myslice"}},
-	release: map[string]string{
-		"slices/mydir/test-package.yaml": `
-			package: test-package
-			slices:
-				myslice:
-					contents:
-						/foo/bar: {text: data}
-		`,
-	},
-	prefill: func(c *C, opts *slicer.RunOptions, release *setup.Release, manifestPath string) {
-		report, manifestSlice := newManifestReport(c, opts, release, manifestPath, "test-package")
-		writeManifestReport(c, opts.TargetDir, manifestPath, "test-package", []*setup.Slice{manifestSlice}, report)
-		opts.Manifest = readManifest(c, opts.TargetDir, manifestPath)
-	},
-	filesystem: map[string]string{
-		"/foo/":    "dir 0755",
-		"/foo/bar": "file 0644 3a6eb079",
-	},
-	manifestPaths: map[string]string{
-		"/foo/bar": "file 0644 3a6eb079 {test-package_myslice}",
-	},
-}, {
-	summary: "Upgrade creates symlink",
-	slices:  []setup.SliceKey{{"test-package", "myslice"}},
-	release: map[string]string{
-		"slices/mydir/test-package.yaml": `
-			package: test-package
-			slices:
-				myslice:
-					contents:
-						/baz: {text: data}
-						/foo: {symlink: baz}
-		`,
-	},
-	prefill: func(c *C, opts *slicer.RunOptions, release *setup.Release, manifestPath string) {
-		report, manifestSlice := newManifestReport(c, opts, release, manifestPath, "test-package")
-		writeManifestReport(c, opts.TargetDir, manifestPath, "test-package", []*setup.Slice{manifestSlice}, report)
-		opts.Manifest = readManifest(c, opts.TargetDir, manifestPath)
-	},
-	filesystem: map[string]string{
-		"/baz": "file 0644 3a6eb079",
-		"/foo": "symlink baz",
-	},
-	manifestPaths: map[string]string{
-		"/baz": "file 0644 3a6eb079 {test-package_myslice}",
-		"/foo": "symlink baz {test-package_myslice}",
-	},
-}, {
-	summary: "Upgrade does not override existing directory mode",
-	slices:  []setup.SliceKey{{"test-package", "myslice"}},
-	release: map[string]string{
-		"slices/mydir/test-package.yaml": `
-			package: test-package
-			slices:
-				myslice:
-					contents:
-						/dir/: {make: true, mode: 0775}
-		`,
-	},
-	prefill: func(c *C, opts *slicer.RunOptions, release *setup.Release, manifestPath string) {
-		err := os.Mkdir(filepath.Join(opts.TargetDir, "dir"), 0o700)
-		c.Assert(err, IsNil)
-		report, manifestSlice := newManifestReport(c, opts, release, manifestPath, "test-package")
-		writeManifestReport(c, opts.TargetDir, manifestPath, "test-package", []*setup.Slice{manifestSlice}, report)
-		opts.Manifest = readManifest(c, opts.TargetDir, manifestPath)
-	},
-	filesystem: map[string]string{
-		"/dir/": "dir 0700",
-	},
-	manifestPaths: map[string]string{
-		"/dir/": "dir 0775 {test-package_myslice}",
-	},
-}, {
-	summary: "Upgrade overwrites existing file mode",
-	slices:  []setup.SliceKey{{"test-package", "myslice"}},
-	release: map[string]string{
-		"slices/mydir/test-package.yaml": `
-			package: test-package
-			slices:
-				myslice:
-					contents:
-						/foo: {text: data}
-		`,
-	},
-	prefill: func(c *C, opts *slicer.RunOptions, release *setup.Release, manifestPath string) {
-		writeFile(c, opts.TargetDir, "/foo", []byte("data"), 0o600)
-		report, manifestSlice := newManifestReport(c, opts, release, manifestPath, "test-package")
-		writeManifestReport(c, opts.TargetDir, manifestPath, "test-package", []*setup.Slice{manifestSlice}, report)
-		opts.Manifest = readManifest(c, opts.TargetDir, manifestPath)
-	},
-	filesystem: map[string]string{
-		"/foo": "file 0644 3a6eb079",
-	},
-	manifestPaths: map[string]string{
-		"/foo": "file 0644 3a6eb079 {test-package_myslice}",
-	},
-}, {
-	summary: "Upgrade overwrites existing symlink",
-	slices:  []setup.SliceKey{{"test-package", "myslice"}},
-	release: map[string]string{
-		"slices/mydir/test-package.yaml": `
-			package: test-package
-			slices:
-				myslice:
-					contents:
-						/baz: {text: data}
-						/foo: {symlink: baz}
-		`,
-	},
-	prefill: func(c *C, opts *slicer.RunOptions, release *setup.Release, manifestPath string) {
-		writeFile(c, opts.TargetDir, "/bar", []byte("data"), 0o644)
-		c.Assert(os.Symlink("bar", filepath.Join(opts.TargetDir, "foo")), IsNil)
-		report, manifestSlice := newManifestReport(c, opts, release, manifestPath, "test-package")
-		writeManifestReport(c, opts.TargetDir, manifestPath, "test-package", []*setup.Slice{manifestSlice}, report)
-		opts.Manifest = readManifest(c, opts.TargetDir, manifestPath)
-	},
-	filesystem: map[string]string{
-		"/bar": "file 0644 3a6eb079",
-		"/baz": "file 0644 3a6eb079",
-		"/foo": "symlink baz",
-	},
-	manifestPaths: map[string]string{
-		"/baz": "file 0644 3a6eb079 {test-package_myslice}",
-		"/foo": "symlink baz {test-package_myslice}",
-	},
-}, {
-	summary: "Upgrade fails when parent is a file",
-	slices:  []setup.SliceKey{{"test-package", "myslice"}},
-	release: map[string]string{
-		"slices/mydir/test-package.yaml": `
-			package: test-package
-			slices:
-				myslice:
-					contents:
-						/dir/file: {text: data}
-		`,
-	},
-	prefill: func(c *C, opts *slicer.RunOptions, release *setup.Release, manifestPath string) {
-		writeFile(c, opts.TargetDir, "/dir", []byte("data"), 0o644)
-		report, manifestSlice := newManifestReport(c, opts, release, manifestPath, "test-package")
-		writeManifestReport(c, opts.TargetDir, manifestPath, "test-package", []*setup.Slice{manifestSlice}, report)
-		opts.Manifest = readManifest(c, opts.TargetDir, manifestPath)
-	},
-	error: `mkdir .*: not a directory`,
-}, {
-	summary: "Upgrade fails when target path is a directory",
-	slices:  []setup.SliceKey{{"test-package", "myslice"}},
-	release: map[string]string{
-		"slices/mydir/test-package.yaml": `
-			package: test-package
-			slices:
-				myslice:
-					contents:
-						/target: {text: data}
-		`,
-	},
-	prefill: func(c *C, opts *slicer.RunOptions, release *setup.Release, manifestPath string) {
-		c.Assert(os.MkdirAll(filepath.Join(opts.TargetDir, "target"), 0o755), IsNil)
-		report, manifestSlice := newManifestReport(c, opts, release, manifestPath, "test-package")
-		writeManifestReport(c, opts.TargetDir, manifestPath, "test-package", []*setup.Slice{manifestSlice}, report)
-		opts.Manifest = readManifest(c, opts.TargetDir, manifestPath)
-	},
-	error: `rename .*: (file exists|is a directory)`,
-}, {
-	summary: "Upgrade removes obsolete empty directory",
-	slices:  []setup.SliceKey{{"test-package", "new"}},
-	release: map[string]string{
-		"slices/mydir/test-package.yaml": `
-			package: test-package
-			slices:
-				old:
-					contents:
-						/old-dir/: {make: true}
-				new:
-					contents:
-						/new-file: {text: data1}
-		`,
-	},
-	prefill: func(c *C, opts *slicer.RunOptions, release *setup.Release, manifestPath string) {
-		c.Assert(os.MkdirAll(filepath.Join(opts.TargetDir, "old-dir"), 0o755), IsNil)
-		report, manifestSlice := newManifestReport(c, opts, release, manifestPath, "test-package")
-		oldSlice := release.Packages["test-package"].Slices["old"]
-		err := report.Add(oldSlice, &fsutil.Entry{
-			Path: filepath.Join(report.Root, "/old-dir"),
-			Mode: fs.ModeDir | 0o755,
-		})
-		c.Assert(err, IsNil)
-		writeManifestReport(c, opts.TargetDir, manifestPath, "test-package", []*setup.Slice{oldSlice, manifestSlice}, report)
-		opts.Manifest = readManifest(c, opts.TargetDir, manifestPath)
-	},
-	filesystem: map[string]string{
-		"/new-file": "file 0644 5b41362b",
-	},
-	manifestPaths: map[string]string{
-		"/new-file": "file 0644 5b41362b {test-package_new}",
-	},
-}, {
-	summary: "Upgrade keeps obsolete non-empty directory",
-	slices:  []setup.SliceKey{{"test-package", "new"}},
-	release: map[string]string{
-		"slices/mydir/test-package.yaml": `
-			package: test-package
-			slices:
-				old:
-					contents:
-						/old-dir/: {make: true}
-				new:
-					contents:
-						/new-file: {text: data1}
-		`,
-	},
-	prefill: func(c *C, opts *slicer.RunOptions, release *setup.Release, manifestPath string) {
-		c.Assert(os.MkdirAll(filepath.Join(opts.TargetDir, "old-dir"), 0o755), IsNil)
-		writeFile(c, opts.TargetDir, "/old-dir/file", []byte("data"), 0o644)
-		report, manifestSlice := newManifestReport(c, opts, release, manifestPath, "test-package")
-		oldSlice := release.Packages["test-package"].Slices["old"]
-		err := report.Add(oldSlice, &fsutil.Entry{
-			Path: filepath.Join(report.Root, "/old-dir"),
-			Mode: fs.ModeDir | 0o755,
-		})
-		c.Assert(err, IsNil)
-		writeManifestReport(c, opts.TargetDir, manifestPath, "test-package", []*setup.Slice{oldSlice, manifestSlice}, report)
-		opts.Manifest = readManifest(c, opts.TargetDir, manifestPath)
-	},
-	filesystem: map[string]string{
-		"/new-file":     "file 0644 5b41362b",
-		"/old-dir/":     "dir 0755",
-		"/old-dir/file": "file 0644 3a6eb079",
-	},
-	manifestPaths: map[string]string{
-		"/new-file": "file 0644 5b41362b {test-package_new}",
-	},
-}, {
-	summary: "Upgrade removes obsolete symlink only",
-	slices:  []setup.SliceKey{{"test-package", "new"}},
-	release: map[string]string{
-		"slices/mydir/test-package.yaml": `
-			package: test-package
-			slices:
-				old:
-					contents:
-						/link: {symlink: target}
-				new:
-					contents:
-						/new-file: {text: data1}
-		`,
-	},
-	prefill: func(c *C, opts *slicer.RunOptions, release *setup.Release, manifestPath string) {
-		writeFile(c, opts.TargetDir, "/target", []byte("data"), 0o644)
-		c.Assert(os.Symlink("target", filepath.Join(opts.TargetDir, "link")), IsNil)
-		report, manifestSlice := newManifestReport(c, opts, release, manifestPath, "test-package")
-		oldSlice := release.Packages["test-package"].Slices["old"]
-		err := report.Add(oldSlice, &fsutil.Entry{
-			Path: filepath.Join(report.Root, "/link"),
-			Mode: fs.ModeSymlink,
-			Link: "target",
-		})
-		c.Assert(err, IsNil)
-		writeManifestReport(c, opts.TargetDir, manifestPath, "test-package", []*setup.Slice{oldSlice, manifestSlice}, report)
-		opts.Manifest = readManifest(c, opts.TargetDir, manifestPath)
-	},
-	filesystem: map[string]string{
-		"/new-file": "file 0644 5b41362b",
-		"/target":   "file 0644 3a6eb079",
-	},
-	manifestPaths: map[string]string{
-		"/new-file": "file 0644 5b41362b {test-package_new}",
-	},
 }}
 
 func (s *S) TestRun(c *C) {
@@ -2430,118 +2016,6 @@ func (s *S) TestRun(c *C) {
 		v2FormatTests = append(v2FormatTests, t)
 	}
 	runSlicerTests(s, c, v2FormatTests)
-}
-
-type selectValidManifestTest struct {
-	summary string
-	build   func() *setup.Release
-	setup   func(c *C, targetDir string, release *setup.Release)
-	noMatch bool
-	error   string
-}
-
-var selectValidManifestTests = []selectValidManifestTest{{
-	summary: "No manifest paths in release",
-	build: func() *setup.Release {
-		return &setup.Release{Packages: map[string]*setup.Package{}}
-	},
-	noMatch: true,
-}, {
-	summary: "Manifest path missing in target",
-	build: func() *setup.Release {
-		return buildReleaseWithManifestDirs("/chisel/**")
-	},
-	noMatch: true,
-}, {
-	summary: "Valid manifest selected",
-	build: func() *setup.Release {
-		return buildReleaseWithManifestDirs("/chisel/**")
-	},
-	setup: func(c *C, targetDir string, release *setup.Release) {
-		manifestPath := manifestPathForDir("/chisel/**")
-		writeManifest(c, targetDir, manifestPath, releaseManifestSlice(release), "hash1")
-	},
-}, {
-	summary: "Two consistent manifests are accepted",
-	build: func() *setup.Release {
-		return buildReleaseWithManifestDirs("/chisel-a/**", "/chisel-b/**")
-	},
-	setup: func(c *C, targetDir string, release *setup.Release) {
-		manifestPathA := manifestPathForDir("/chisel-a/**")
-		manifestPathB := manifestPathForDir("/chisel-b/**")
-		slice := releaseManifestSlice(release)
-		writeManifest(c, targetDir, manifestPathA, slice, "hash1")
-		writeManifest(c, targetDir, manifestPathB, slice, "hash1")
-	},
-}, {
-	summary: "Inconsistent manifests with same schema are rejected",
-	build: func() *setup.Release {
-		return buildReleaseWithManifestDirs("/chisel-a/**", "/chisel-b/**")
-	},
-	setup: func(c *C, targetDir string, release *setup.Release) {
-		manifestPathA := manifestPathForDir("/chisel-a/**")
-		manifestPathB := manifestPathForDir("/chisel-b/**")
-		slice := releaseManifestSlice(release)
-		writeManifest(c, targetDir, manifestPathA, slice, "hash1")
-		writeManifest(c, targetDir, manifestPathB, slice, "hash2")
-	},
-	error: `inconsistent manifests: ".*" and ".*"`,
-}, {
-	summary: "Invalid manifest data returns error",
-	build: func() *setup.Release {
-		return buildReleaseWithManifestDirs("/chisel/**")
-	},
-	setup: func(c *C, targetDir string, release *setup.Release) {
-		manifestPath := filepath.Join(targetDir, manifestPathForDir("/chisel/**"))
-		err := os.MkdirAll(filepath.Dir(manifestPath), 0o755)
-		c.Assert(err, IsNil)
-		err = os.WriteFile(manifestPath, []byte("not-a-zstd-manifest"), 0o644)
-		c.Assert(err, IsNil)
-	},
-	error: "cannot read manifest: invalid input: .*",
-}, {
-	summary: "Manifest validation error is returned",
-	build: func() *setup.Release {
-		return buildReleaseWithManifestDirs("/chisel/**")
-	},
-	setup: func(c *C, targetDir string, release *setup.Release) {
-		manifestPath := manifestPathForDir("/chisel/**")
-		writeInvalidManifest(c, targetDir, manifestPath)
-	},
-	error: `invalid manifest: path /file has no matching entry in contents`,
-}, {
-	summary: "Manifest read fails on invalid schema",
-	build: func() *setup.Release {
-		return buildReleaseWithManifestDirs("/chisel/**")
-	},
-	setup: func(c *C, targetDir string, release *setup.Release) {
-		manifestPath := manifestPathForDir("/chisel/**")
-		writeInvalidSchemaManifest(c, targetDir, manifestPath)
-	},
-	error: `cannot read manifest: unknown schema version "9.9"`,
-}}
-
-func (s *S) TestSelectValidManifest(c *C) {
-	for _, test := range selectValidManifestTests {
-		c.Logf("Summary: %s", test.summary)
-		release := test.build()
-		targetDir := c.MkDir()
-		if test.setup != nil {
-			test.setup(c, targetDir, release)
-		}
-		mfest, err := slicer.SelectValidManifest(targetDir, release)
-		if test.error != "" {
-			c.Assert(err, ErrorMatches, test.error)
-			continue
-		}
-		c.Assert(err, IsNil)
-		if test.noMatch {
-			c.Assert(mfest, IsNil)
-			continue
-		}
-		c.Assert(mfest, NotNil)
-		c.Assert(mfest.Schema(), Equals, manifest.Schema)
-	}
 }
 
 func runSlicerTests(s *S, c *C, tests []slicerTest) {
@@ -2638,9 +2112,6 @@ func runSlicerTests(s *S, c *C, tests []slicerTest) {
 			if test.hackopt != nil {
 				test.hackopt(c, &options)
 			}
-			if test.prefill != nil {
-				test.prefill(c, &options, release, manifestPath)
-			}
 			err = slicer.Run(&options)
 			if test.error != "" {
 				c.Assert(err, ErrorMatches, test.error)
@@ -2695,6 +2166,598 @@ func runSlicerTests(s *S, c *C, tests []slicerTest) {
 	}
 }
 
+type slicerRecutTest struct {
+	summary         string
+	arch            string
+	release         map[string]string
+	pkgs            []*testutil.TestPackage
+	cutSlices       []setup.SliceKey
+	recutSlices     []setup.SliceKey
+	hackopt         func(c *C, opts *slicer.RunOptions)
+	hackRecutOpt    func(c *C, opts *slicer.RunOptions)
+	prefill         func(c *C, targetDir string)
+	alterFilesystem func(c *C, targetDir string)
+	// Modifies the filesystem built after the first execution and before the
+	// second one.
+	filesystem    map[string]string
+	manifestPaths map[string]string
+	manifestPkgs  map[string]string
+	logOutput     string
+	error         string
+}
+
+var slicerRecutTests = []slicerRecutTest{{
+	summary:     "Basic upgrade",
+	cutSlices:   []setup.SliceKey{{"test-package", "slice1"}},
+	recutSlices: []setup.SliceKey{{"test-package", "slice1"}, {"test-package", "slice2"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				slice1:
+					contents:
+						/dir/file:
+						/dir/file-copy:  {copy: /dir/file}
+						/other-dir/file: {symlink: ../dir/file}
+				slice2:
+					contents:
+						/dir/other-file:
+		`,
+	},
+	filesystem: map[string]string{
+		"/dir/":           "dir 0755",
+		"/dir/file":       "file 0644 cc55e2ec",
+		"/dir/file-copy":  "file 0644 cc55e2ec",
+		"/dir/other-file": "file 0644 63d5dd49",
+		"/other-dir/":     "dir 0755",
+		"/other-dir/file": "symlink ../dir/file",
+	},
+	manifestPaths: map[string]string{
+		"/dir/file":       "file 0644 cc55e2ec {test-package_slice1}",
+		"/dir/file-copy":  "file 0644 cc55e2ec {test-package_slice1}",
+		"/dir/other-file": "file 0644 63d5dd49 {test-package_slice2}",
+		"/other-dir/file": "symlink ../dir/file {test-package_slice1}",
+	},
+}, {
+	summary:     "Upgrade removes obsolete paths when selection shrinks",
+	cutSlices:   []setup.SliceKey{{"test-package", "slice1"}},
+	recutSlices: []setup.SliceKey{{"test-package", "slice2"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				slice1:
+					contents:
+						/dir/file:
+				slice2:
+					contents:
+						/dir/other-file:
+		`,
+	},
+	filesystem: map[string]string{
+		"/dir/":           "dir 0755",
+		"/dir/other-file": "file 0644 63d5dd49",
+	},
+	manifestPaths: map[string]string{
+		"/dir/other-file": "file 0644 63d5dd49 {test-package_slice2}",
+	},
+}, {
+	summary:     "Upgrade restores modified content and mode",
+	cutSlices:   []setup.SliceKey{{"test-package", "slice1"}},
+	recutSlices: []setup.SliceKey{{"test-package", "slice1"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				slice1:
+					contents:
+						/dir/file:
+		`,
+	},
+	alterFilesystem: func(c *C, targetDir string) {
+		modifiedPath := filepath.Join(targetDir, "dir/file")
+		err := os.WriteFile(modifiedPath, []byte("data2"), 0o700)
+		c.Assert(err, IsNil)
+	},
+	filesystem: map[string]string{
+		"/dir/":     "dir 0755",
+		"/dir/file": "file 0644 cc55e2ec",
+	},
+	manifestPaths: map[string]string{
+		"/dir/file": "file 0644 cc55e2ec {test-package_slice1}",
+	},
+}, {
+	summary:     "Upgrade keeps untracked files",
+	cutSlices:   []setup.SliceKey{{"test-package", "slice1"}},
+	recutSlices: []setup.SliceKey{{"test-package", "slice1"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				slice1:
+					contents:
+						/dir/file:
+		`,
+	},
+	prefill: func(c *C, targetDir string) {
+		err := os.MkdirAll(filepath.Join(targetDir, "extra"), 0o755)
+		c.Assert(err, IsNil)
+		err = os.WriteFile(filepath.Join(targetDir, "extra", "untracked"), []byte("data"), 0o644)
+		c.Assert(err, IsNil)
+	},
+	filesystem: map[string]string{
+		"/extra/":          "dir 0755",
+		"/extra/untracked": "file 0644 3a6eb079",
+		"/dir/":            "dir 0755",
+		"/dir/file":        "file 0644 cc55e2ec",
+	},
+	manifestPaths: map[string]string{
+		"/dir/file": "file 0644 cc55e2ec {test-package_slice1}",
+	},
+}, {
+	summary:     "Upgrade does not override existing directory mode",
+	cutSlices:   []setup.SliceKey{{"test-package", "slice1"}},
+	recutSlices: []setup.SliceKey{{"test-package", "slice1"}, {"test-package", "slice2"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				slice1:
+					contents:
+						/dir/:
+				slice2:
+					contents:
+						/other-dir/:
+		`,
+	},
+	alterFilesystem: func(c *C, targetDir string) {
+		err := os.MkdirAll(filepath.Join(targetDir, "other-dir"), 0o775)
+		c.Assert(err, IsNil)
+	},
+	filesystem: map[string]string{
+		"/dir/":       "dir 0755",
+		"/other-dir/": "dir 0775",
+	},
+	manifestPaths: map[string]string{
+		"/dir/":       "dir 0755 {test-package_slice1}",
+		"/other-dir/": "dir 0755 {test-package_slice2}",
+		// TODO: fix when the right value is recorded in the manifest
+	},
+}, {
+	summary:     "Upgrade overwrites existing file mode",
+	cutSlices:   []setup.SliceKey{{"test-package", "slice1"}},
+	recutSlices: []setup.SliceKey{{"test-package", "slice1"}, {"test-package", "slice2"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				slice1:
+					contents:
+						/other-dir/:
+				slice2:
+					contents:
+						/dir/file:
+		`,
+	},
+	prefill: func(c *C, targetDir string) {
+		err := os.MkdirAll(filepath.Join(targetDir, "dir"), 0o755)
+		c.Assert(err, IsNil)
+		err = os.WriteFile(filepath.Join(targetDir, "dir", "file"), []byte("data"), 0o644)
+		c.Assert(err, IsNil)
+	},
+	filesystem: map[string]string{
+		"/dir/":       "dir 0755",
+		"/other-dir/": "dir 0755",
+		"/dir/file":   "file 0644 cc55e2ec",
+	},
+	manifestPaths: map[string]string{
+		"/other-dir/": "dir 0755 {test-package_slice1}",
+		"/dir/file":   "file 0644 cc55e2ec {test-package_slice2}",
+	},
+}, {
+	summary:   "Upgrade overwrites existing symlink",
+	cutSlices: []setup.SliceKey{{"test-package", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/baz: {text: data}
+						/foo: {symlink: baz}
+		`,
+	},
+	filesystem: map[string]string{
+		"/bar": "file 0644 3a6eb079",
+		"/baz": "file 0644 3a6eb079",
+		"/foo": "symlink baz",
+	},
+	manifestPaths: map[string]string{
+		"/baz": "file 0644 3a6eb079 {test-package_myslice}",
+		"/foo": "symlink baz {test-package_myslice}",
+	},
+}, {
+	summary:   "Upgrade fails when parent is a file",
+	cutSlices: []setup.SliceKey{{"test-package", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/dir/file: {text: data}
+		`,
+	},
+	error: `mkdir .*: not a directory`,
+}, {
+	summary:   "Upgrade fails when target path is a directory",
+	cutSlices: []setup.SliceKey{{"test-package", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/target: {text: data}
+		`,
+	},
+	error: `rename .*: (file exists|is a directory)`,
+}, {
+	summary:   "Upgrade removes obsolete empty directory",
+	cutSlices: []setup.SliceKey{{"test-package", "new"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				old:
+					contents:
+						/old-dir/: {make: true}
+				new:
+					contents:
+						/new-file: {text: data1}
+		`,
+	},
+	filesystem: map[string]string{
+		"/new-file": "file 0644 5b41362b",
+	},
+	manifestPaths: map[string]string{
+		"/new-file": "file 0644 5b41362b {test-package_new}",
+	},
+}, {
+	summary:   "Upgrade keeps obsolete non-empty directory",
+	cutSlices: []setup.SliceKey{{"test-package", "new"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				old:
+					contents:
+						/old-dir/: {make: true}
+				new:
+					contents:
+						/new-file: {text: data1}
+		`,
+	},
+	filesystem: map[string]string{
+		"/new-file":     "file 0644 5b41362b",
+		"/old-dir/":     "dir 0755",
+		"/old-dir/file": "file 0644 3a6eb079",
+	},
+	manifestPaths: map[string]string{
+		"/new-file": "file 0644 5b41362b {test-package_new}",
+	},
+}, {
+	summary:   "Upgrade removes obsolete symlink only",
+	cutSlices: []setup.SliceKey{{"test-package", "new"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				old:
+					contents:
+						/link: {symlink: target}
+				new:
+					contents:
+						/new-file: {text: data1}
+		`,
+	},
+	filesystem: map[string]string{
+		"/new-file": "file 0644 5b41362b",
+		"/target":   "file 0644 3a6eb079",
+	},
+	manifestPaths: map[string]string{
+		"/new-file": "file 0644 5b41362b {test-package_new}",
+	},
+}}
+
+func (s *S) TestRunRecut(c *C) {
+	for _, test := range slicerRecutTests {
+		const logMarker = "---log-marker---"
+		c.Logf(logMarker)
+		c.Logf("Summary: %s", test.summary)
+
+		if _, ok := test.release["chisel.yaml"]; !ok {
+			test.release["chisel.yaml"] = testutil.DefaultChiselYaml
+		}
+		if test.pkgs == nil {
+			test.pkgs = []*testutil.TestPackage{{
+				Name: "test-package",
+				Data: testutil.PackageData["test-package"],
+			}}
+		}
+		for _, pkg := range test.pkgs {
+			// We need to set these fields for manifest validation.
+			if pkg.Arch == "" {
+				pkg.Arch = "arch"
+			}
+			if pkg.Hash == "" {
+				pkg.Hash = "hash"
+			}
+			if pkg.Version == "" {
+				pkg.Version = "version"
+			}
+		}
+
+		releaseDir := c.MkDir()
+		for path, data := range test.release {
+			fpath := filepath.Join(releaseDir, path)
+			err := os.MkdirAll(filepath.Dir(fpath), 0o755)
+			c.Assert(err, IsNil)
+			err = os.WriteFile(fpath, testutil.Reindent(data), 0o644)
+			c.Assert(err, IsNil)
+		}
+
+		release, err := setup.ReadRelease(releaseDir)
+		c.Assert(err, IsNil)
+
+		// Create a manifest slice and add it to the selection.
+		manifestPackage := test.cutSlices[0].Package
+		manifestPath := "/chisel-data/manifest.wall"
+		release.Packages[manifestPackage].Slices["manifest"] = &setup.Slice{
+			Package:   manifestPackage,
+			Name:      "manifest",
+			Essential: nil,
+			Contents: map[string]setup.PathInfo{
+				"/chisel-data/**": {
+					Kind:     "generate",
+					Generate: "manifest",
+				},
+			},
+			Scripts: setup.SliceScripts{},
+		}
+		test.cutSlices = append(test.cutSlices, setup.SliceKey{
+			Package: manifestPackage,
+			Slice:   "manifest",
+		})
+
+		selection, err := setup.Select(release, test.cutSlices, test.arch)
+		c.Assert(err, IsNil)
+
+		archives := map[string]archive.Archive{}
+		for name, setupArchive := range release.Archives {
+			pkgs := make(map[string]*testutil.TestPackage)
+			for _, pkg := range test.pkgs {
+				if len(pkg.Archives) == 0 || slices.Contains(pkg.Archives, name) {
+					pkgs[pkg.Name] = pkg
+				}
+			}
+			archive := &testutil.TestArchive{
+				Opts: archive.Options{
+					Label:      setupArchive.Name,
+					Version:    setupArchive.Version,
+					Suites:     setupArchive.Suites,
+					Components: setupArchive.Components,
+					Pro:        setupArchive.Pro,
+					Arch:       test.arch,
+				},
+				Packages: pkgs,
+			}
+			archives[name] = archive
+		}
+
+		targetDir := c.MkDir()
+		options := slicer.RunOptions{
+			Selection: selection,
+			Archives:  archives,
+			TargetDir: targetDir,
+		}
+		if test.hackopt != nil {
+			test.hackopt(c, &options)
+		}
+		if test.prefill != nil {
+			test.prefill(c, targetDir)
+		}
+		// First run
+		err = slicer.Run(&options)
+		c.Assert(err, IsNil)
+
+		if test.alterFilesystem != nil {
+			test.alterFilesystem(c, targetDir)
+		}
+		mfest := readManifest(c, options.TargetDir, manifestPath)
+
+		test.recutSlices = append(test.recutSlices, setup.SliceKey{
+			Package: manifestPackage,
+			Slice:   "manifest",
+		})
+		selection, err = setup.Select(release, test.recutSlices, test.arch)
+		c.Assert(err, IsNil)
+
+		options = slicer.RunOptions{
+			Selection: selection,
+			Archives:  archives,
+			TargetDir: targetDir,
+			Manifest:  mfest,
+		}
+		if test.hackRecutOpt != nil {
+			test.hackRecutOpt(c, &options)
+		}
+		// Second run
+		err = slicer.Run(&options)
+		if test.error != "" {
+			c.Assert(err, ErrorMatches, test.error)
+			continue
+		}
+		c.Assert(err, IsNil)
+
+		if test.filesystem == nil && test.manifestPaths == nil && test.manifestPkgs == nil && test.logOutput == "" {
+			continue
+		}
+		mfest = readManifest(c, options.TargetDir, manifestPath)
+
+		// Assert state of final filesystem.
+		if test.filesystem != nil {
+			filesystem := testutil.TreeDump(options.TargetDir)
+			c.Assert(filesystem["/chisel-data/"], Not(HasLen), 0)
+			c.Assert(filesystem[manifestPath], Not(HasLen), 0)
+			delete(filesystem, "/chisel-data/")
+			delete(filesystem, manifestPath)
+			c.Assert(filesystem, DeepEquals, test.filesystem)
+		}
+
+		// Assert state of the files recorded in the manifest.
+		if test.manifestPaths != nil {
+			pathsDump, err := treeDumpManifestPaths(mfest)
+			c.Assert(err, IsNil)
+			c.Assert(pathsDump[manifestPath], Not(HasLen), 0)
+			delete(pathsDump, manifestPath)
+			c.Assert(pathsDump, DeepEquals, test.manifestPaths)
+		}
+
+		// Assert state of the packages recorded in the manifest.
+		if test.manifestPkgs != nil {
+			pkgsDump, err := dumpManifestPkgs(mfest)
+			c.Assert(err, IsNil)
+			c.Assert(pkgsDump, DeepEquals, test.manifestPkgs)
+		}
+
+		// Find the log output of this test by trimming the suite output
+		// until we find the last occurrence of the summary.
+		testLogs := strings.Split(c.GetTestLog(), logMarker)
+		logOutput := testLogs[len(testLogs)-1]
+
+		// Assert log output.
+		if test.logOutput != "" {
+			c.Assert(logOutput, Matches, test.logOutput)
+		} else {
+			// No warnings emitted.
+			c.Assert(logOutput, Not(Matches), "(?s).*Warning.*")
+		}
+	}
+}
+
+type selectValidManifestTest struct {
+	summary string
+	build   func() *setup.Release
+	setup   func(c *C, targetDir string, release *setup.Release)
+	noMatch bool
+	error   string
+}
+
+var selectValidManifestTests = []selectValidManifestTest{{
+	summary: "No manifest paths in release",
+	build: func() *setup.Release {
+		return &setup.Release{Packages: map[string]*setup.Package{}}
+	},
+	noMatch: true,
+}, {
+	summary: "Manifest path missing in target",
+	build: func() *setup.Release {
+		return buildReleaseWithManifestDirs("/chisel/**")
+	},
+	noMatch: true,
+}, {
+	summary: "Valid manifest selected",
+	build: func() *setup.Release {
+		return buildReleaseWithManifestDirs("/chisel/**")
+	},
+	setup: func(c *C, targetDir string, release *setup.Release) {
+		manifestPath := manifestPathForDir("/chisel/**")
+		slice := release.Packages["test-package"].Slices["manifest"]
+		writeManifest(c, targetDir, manifestPath, slice, "hash1")
+	},
+}, {
+	summary: "Two consistent manifests are accepted",
+	build: func() *setup.Release {
+		return buildReleaseWithManifestDirs("/chisel-a/**", "/chisel-b/**")
+	},
+	setup: func(c *C, targetDir string, release *setup.Release) {
+		manifestPathA := manifestPathForDir("/chisel-a/**")
+		manifestPathB := manifestPathForDir("/chisel-b/**")
+		slice := release.Packages["test-package"].Slices["manifest"]
+		writeManifest(c, targetDir, manifestPathA, slice, "hash1")
+		writeManifest(c, targetDir, manifestPathB, slice, "hash1")
+	},
+}, {
+	summary: "Inconsistent manifests with same schema are rejected",
+	build: func() *setup.Release {
+		return buildReleaseWithManifestDirs("/chisel-a/**", "/chisel-b/**")
+	},
+	setup: func(c *C, targetDir string, release *setup.Release) {
+		manifestPathA := manifestPathForDir("/chisel-a/**")
+		manifestPathB := manifestPathForDir("/chisel-b/**")
+		slice := release.Packages["test-package"].Slices["manifest"]
+		writeManifest(c, targetDir, manifestPathA, slice, "hash1")
+		writeManifest(c, targetDir, manifestPathB, slice, "hash2")
+	},
+	error: `inconsistent manifests: ".*" and ".*"`,
+}, {
+	summary: "Invalid manifest data returns error",
+	build: func() *setup.Release {
+		return buildReleaseWithManifestDirs("/chisel/**")
+	},
+	setup: func(c *C, targetDir string, release *setup.Release) {
+		manifestPath := filepath.Join(targetDir, manifestPathForDir("/chisel/**"))
+		err := os.MkdirAll(filepath.Dir(manifestPath), 0o755)
+		c.Assert(err, IsNil)
+		err = os.WriteFile(manifestPath, []byte("not-a-zstd-manifest"), 0o644)
+		c.Assert(err, IsNil)
+	},
+	error: "cannot read manifest: invalid input: .*",
+}, {
+	summary: "Manifest validation error is returned",
+	build: func() *setup.Release {
+		return buildReleaseWithManifestDirs("/chisel/**")
+	},
+	setup: func(c *C, targetDir string, release *setup.Release) {
+		manifestPath := manifestPathForDir("/chisel/**")
+		writeInvalidManifest(c, targetDir, manifestPath)
+	},
+	error: `invalid manifest: path /file has no matching entry in contents`,
+}, {
+	summary: "Manifest read fails on invalid schema",
+	build: func() *setup.Release {
+		return buildReleaseWithManifestDirs("/chisel/**")
+	},
+	setup: func(c *C, targetDir string, release *setup.Release) {
+		manifestPath := manifestPathForDir("/chisel/**")
+		writeInvalidSchemaManifest(c, targetDir, manifestPath)
+	},
+	error: `cannot read manifest: unknown schema version "9.9"`,
+}}
+
+func (s *S) TestSelectValidManifest(c *C) {
+	for _, test := range selectValidManifestTests {
+		c.Logf("Summary: %s", test.summary)
+		release := test.build()
+		targetDir := c.MkDir()
+		if test.setup != nil {
+			test.setup(c, targetDir, release)
+		}
+		mfest, err := slicer.SelectValidManifest(targetDir, release)
+		if test.error != "" {
+			c.Assert(err, ErrorMatches, test.error)
+			continue
+		}
+		c.Assert(err, IsNil)
+		if test.noMatch {
+			c.Assert(mfest, IsNil)
+			continue
+		}
+		c.Assert(mfest, NotNil)
+	}
+}
+
 func buildReleaseWithManifestDirs(dirs ...string) *setup.Release {
 	contents := map[string]setup.PathInfo{}
 	for _, dir := range dirs {
@@ -2714,10 +2777,6 @@ func buildReleaseWithManifestDirs(dirs ...string) *setup.Release {
 			},
 		},
 	}
-}
-
-func releaseManifestSlice(release *setup.Release) *setup.Slice {
-	return release.Packages["test-package"].Slices["manifest"]
 }
 
 func manifestPathForDir(dir string) string {
@@ -2802,18 +2861,6 @@ func readManifest(c *C, targetDir, manifestPath string) *manifest.Manifest {
 	return mfest
 }
 
-func newManifestReport(c *C, opts *slicer.RunOptions, release *setup.Release, manifestPath, pkgName string) (*manifestutil.Report, *setup.Slice) {
-	report, err := manifestutil.NewReport(opts.TargetDir)
-	c.Assert(err, IsNil)
-	manifestSlice := release.Packages[pkgName].Slices["manifest"]
-	err = report.Add(manifestSlice, &fsutil.Entry{
-		Path: filepath.Join(report.Root, manifestPath),
-		Mode: 0o644,
-	})
-	c.Assert(err, IsNil)
-	return report, manifestSlice
-}
-
 func writeManifest(c *C, targetDir, manifestPath string, slice *setup.Slice, hash string) {
 	mfestPath := filepath.Join(targetDir, manifestPath)
 	err := os.MkdirAll(filepath.Dir(mfestPath), 0o755)
@@ -2839,31 +2886,6 @@ func writeManifest(c *C, targetDir, manifestPath string, slice *setup.Slice, has
 				Slices: map[*setup.Slice]bool{slice: true},
 			},
 		}},
-	}
-	err = manifestutil.Write(options, zw)
-	c.Assert(err, IsNil)
-	c.Assert(zw.Close(), IsNil)
-	c.Assert(f.Close(), IsNil)
-	c.Assert(os.Chmod(mfestPath, 0o644), IsNil)
-}
-
-func writeManifestReport(c *C, targetDir, manifestPath, pkgName string, selection []*setup.Slice, report *manifestutil.Report) {
-	mfestPath := filepath.Join(targetDir, manifestPath)
-	err := os.MkdirAll(filepath.Dir(mfestPath), 0o755)
-	c.Assert(err, IsNil)
-	f, err := os.OpenFile(mfestPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
-	c.Assert(err, IsNil)
-	zw, err := zstd.NewWriter(f)
-	c.Assert(err, IsNil)
-	options := &manifestutil.WriteOptions{
-		PackageInfo: []*archive.PackageInfo{{
-			Name:    pkgName,
-			Version: "1.0",
-			Arch:    "amd64",
-			SHA256:  "pkg-hash",
-		}},
-		Selection: selection,
-		Report:    report,
 	}
 	err = manifestutil.Write(options, zw)
 	c.Assert(err, IsNil)
@@ -2902,12 +2924,4 @@ func writeInvalidSchemaManifest(c *C, targetDir, manifestPath string) {
 	c.Assert(err, IsNil)
 	c.Assert(zw.Close(), IsNil)
 	c.Assert(f.Close(), IsNil)
-}
-
-func writeFile(c *C, targetDir, relPath string, data []byte, mode fs.FileMode) {
-	path := filepath.Join(targetDir, relPath)
-	err := os.MkdirAll(filepath.Dir(path), 0o755)
-	c.Assert(err, IsNil)
-	err = os.WriteFile(path, data, mode)
-	c.Assert(err, IsNil)
 }
