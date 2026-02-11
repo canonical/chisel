@@ -2175,7 +2175,6 @@ type slicerRecutTest struct {
 	recutSlices     []setup.SliceKey
 	hackopt         func(c *C, opts *slicer.RunOptions)
 	hackRecutOpt    func(c *C, opts *slicer.RunOptions)
-	prefill         func(c *C, targetDir string)
 	alterFilesystem func(c *C, targetDir string)
 	// Modifies the filesystem built after the first execution and before the
 	// second one.
@@ -2279,7 +2278,7 @@ var slicerRecutTests = []slicerRecutTest{{
 						/dir/file:
 		`,
 	},
-	prefill: func(c *C, targetDir string) {
+	alterFilesystem: func(c *C, targetDir string) {
 		err := os.MkdirAll(filepath.Join(targetDir, "extra"), 0o755)
 		c.Assert(err, IsNil)
 		err = os.WriteFile(filepath.Join(targetDir, "extra", "untracked"), []byte("data"), 0o644)
@@ -2545,9 +2544,6 @@ func (s *S) TestRunRecut(c *C) {
 		}
 		if test.hackopt != nil {
 			test.hackopt(c, &options)
-		}
-		if test.prefill != nil {
-			test.prefill(c, targetDir)
 		}
 		// First run
 		err = slicer.Run(&options)
