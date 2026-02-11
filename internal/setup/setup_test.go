@@ -79,6 +79,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
+		Format: "v1",
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -125,6 +126,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
+		Format: "v1",
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -189,6 +191,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
+		Format: "v1",
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -452,6 +455,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
+		Format: "v1",
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -669,6 +673,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
+		Format: "v1",
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -711,6 +716,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
+		Format: "v1",
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -754,6 +760,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
+		Format: "v1",
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -816,6 +823,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
+		Format: "v1",
 		Archives: map[string]*setup.Archive{
 			"foo": {
 				Name:       "foo",
@@ -1031,6 +1039,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
+		Format: "v1",
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -1095,6 +1104,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
+		Format: "v1",
 		Archives: map[string]*setup.Archive{
 			"foo": {
 				Name:       "foo",
@@ -1217,6 +1227,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
+		Format: "v1",
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -1327,6 +1338,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
+		Format: "v1",
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -1399,6 +1411,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
+		Format: "v1",
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -1477,7 +1490,7 @@ var setupTests = []setupTest{{
 						- mypkg_slice1
 		`,
 	},
-	relerror: `cannot add slice to itself as essential "mypkg_slice1" in slices/mydir/mypkg.yaml`,
+	relerror: `cannot add slice to itself as essential mypkg_slice1 in slices/mydir/mypkg.yaml`,
 }, {
 	summary: "Package essentials clashes with slice essentials",
 	input: map[string]string{
@@ -1506,7 +1519,7 @@ var setupTests = []setupTest{{
 				slice2:
 		`,
 	},
-	relerror: `slice mypkg_slice1 repeats mypkg_slice2 in essential fields`,
+	relerror: `cannot parse package "mypkg" slice definitions: repeats mypkg_slice2 in essential fields`,
 }, {
 	summary: "Duplicated package essentials",
 	input: map[string]string{
@@ -1520,7 +1533,7 @@ var setupTests = []setupTest{{
 				slice2:
 		`,
 	},
-	relerror: `package "mypkg" repeats mypkg_slice1 in essential fields`,
+	relerror: `cannot parse package "mypkg" slice definitions: repeats mypkg_slice1 in essential fields`,
 }, {
 	summary: "Bad slice reference in slice essential",
 	input: map[string]string{
@@ -1581,6 +1594,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
+		Format: "v1",
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -1633,6 +1647,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
+		Format: "v1",
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -1727,6 +1742,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
+		Format: "v1",
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -1826,7 +1842,7 @@ var setupTests = []setupTest{{
 	},
 	relerror: `slice mypkg_myslice path /path/\*\* has invalid generate options`,
 }, {
-	summary: "chisel-v1 is deprecated",
+	summary: "chisel-v1 is obsolete",
 	input: map[string]string{
 		"chisel.yaml": `
 			format: chisel-v1
@@ -1878,6 +1894,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
+		Format: "v1",
 		Archives: map[string]*setup.Archive{
 			"default": {
 				Name:       "default",
@@ -1981,6 +1998,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
+		Format: "v1",
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -2078,6 +2096,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
+		Format: "v1",
 		Archives: map[string]*setup.Archive{
 			"default": {
 				Name:       "default",
@@ -2171,6 +2190,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
+		Format: "v1",
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -2307,6 +2327,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
+		Format: "v1",
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -2690,7 +2711,7 @@ var setupTests = []setupTest{{
 			package: mypkg
 		`,
 	},
-	relerror: `chisel.yaml: archive "ubuntu" has 'default' field which is deprecated since format v2`,
+	relerror: `chisel.yaml: archive "ubuntu" has 'default' field which is obsolete since format v2`,
 }, {
 	summary: "Format v2 does not support v2-archives",
 	input: map[string]string{
@@ -2713,7 +2734,7 @@ var setupTests = []setupTest{{
 			package: mypkg
 		`,
 	},
-	relerror: `chisel.yaml: v2-archives is deprecated since format v2`,
+	relerror: `chisel.yaml: v2-archives is obsolete since format v2`,
 }, {
 	summary: "Maintenance all dates",
 	input: map[string]string{
@@ -2740,6 +2761,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
+		Format: "v1",
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -2789,6 +2811,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
+		Format: "v1",
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -2936,6 +2959,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
+		Format: "v1",
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -3057,6 +3081,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
+		Format: "v1",
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -3178,6 +3203,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
+		Format: "v1",
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -3299,6 +3325,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
+		Format: "v1",
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -3418,6 +3445,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
+		Format: "v1",
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -3502,6 +3530,7 @@ var setupTests = []setupTest{{
 		`,
 	},
 	release: &setup.Release{
+		Format: "v1",
 		Archives: map[string]*setup.Archive{
 			"ubuntu": {
 				Name:       "ubuntu",
@@ -3629,6 +3658,90 @@ var setupTests = []setupTest{{
 		`,
 	},
 	relerror: "essential loop detected: mypkg1_myslice, mypkg2_myslice",
+}, {
+	summary: "Format v3 expects a map in 'essential' (pkg)",
+	input: map[string]string{
+		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYaml, "format: v1", "format: v3"),
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			essential:
+				- mypkg_myslice2
+			slices:
+				myslice1:
+				myslice2:
+		`,
+	},
+	relerror: `cannot parse package "mypkg": essential expects a map`,
+}, {
+	summary: "Format v3 expects a map in 'essential' (slice)",
+	input: map[string]string{
+		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYaml, "format: v1", "format: v3"),
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice1:
+					essential:
+						- mypkg_myslice2
+				myslice2:
+		`,
+	},
+	relerror: `cannot parse slice mypkg_myslice1: essential expects a map`,
+}, {
+	summary: "In format v3 'v3-essential' is not supported (pkg)",
+	input: map[string]string{
+		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYaml, "format: v1", "format: v3"),
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			v3-essential:
+				mypkg_myslice2:
+			slices:
+				myslice1:
+				myslice2:
+		`,
+	},
+	relerror: `cannot parse package "mypkg": v3-essential is obsolete since format v3`,
+}, {
+	summary: "In format v3 'v3-essential' is not supported (slice)",
+	input: map[string]string{
+		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYaml, "format: v1", "format: v3"),
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice1:
+					v3-essential:
+						mypkg_myslice2:
+				myslice2:
+		`,
+	},
+	relerror: `cannot parse slice mypkg_myslice1: v3-essential is obsolete since format v3`,
+}, {
+	summary: "Format v1/v2 expect a list in 'essential' (pkg)",
+	input: map[string]string{
+		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYaml, "format: v1", "format: v2"),
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			essential:
+				mypkg_myslice2: {}
+			slices:
+				myslice1:
+				myslice2:
+		`,
+	},
+	relerror: `cannot parse package "mypkg": essential expects a list`,
+}, {
+	summary: "Format v1/v2 expect a list in 'essential' (slice)",
+	input: map[string]string{
+		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYaml, "format: v1", "format: v2"),
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice1:
+					essential:
+						mypkg_myslice2: {}
+				myslice2:
+		`,
+	},
+	relerror: `cannot parse slice mypkg_myslice1: essential expects a list`,
 }}
 
 func (s *S) TestParseRelease(c *C) {
@@ -3641,7 +3754,7 @@ func (s *S) TestParseRelease(c *C) {
 		m := make(map[string]string)
 		for k, v := range t.input {
 			if !strings.Contains(v, "v2-archives:") && strings.Contains(v, "format: v1") {
-				v = strings.Replace(v, "archives:", "v2-archives:", -1)
+				v = strings.ReplaceAll(v, "archives:", "v2-archives:")
 			}
 			m[k] = v
 		}
@@ -3653,19 +3766,68 @@ func (s *S) TestParseRelease(c *C) {
 	// Run tests for "v2" format.
 	v2FormatTests := make([]setupTest, 0, len(setupTests))
 	for _, t := range setupTests {
+		t.summary += " (v2)"
 		m := make(map[string]string)
+		skip := false
 		for k, v := range t.input {
-			if strings.Contains(v, "format: v1") &&
-				!strings.Contains(v, "v2-archives:") &&
-				!strings.Contains(v, "default: true") {
-				v = strings.Replace(v, "format: v1", "format: v2", -1)
+			if strings.Contains(v, "format: v2") ||
+				strings.Contains(v, "format: v3") ||
+				strings.Contains(v, "v2-archives:") ||
+				strings.Contains(v, "default: true") {
+				skip = true
+				break
 			}
+			v = strings.ReplaceAll(v, "format: v1", "format: v2")
 			m[k] = v
 		}
+		if skip {
+			// Test was not affected, no need to re-run.
+			continue
+		}
 		t.input = m
+		if t.release != nil {
+			t.release.Format = "v2"
+		}
 		v2FormatTests = append(v2FormatTests, t)
 	}
 	runParseReleaseTests(c, v2FormatTests)
+
+	// Run tests for "v3" format.
+	v3FormatTests := make([]setupTest, 0, len(setupTests))
+	for _, t := range setupTests {
+		t.summary += " (v3)"
+		m := make(map[string]string)
+		skip := false
+		if strings.Contains(t.relerror, "essential expects a list") {
+			// The incorrect format for v1/v2 is the correct one for v3, it
+			// won't produce an error.
+			continue
+		}
+		for k, v := range t.input {
+			if strings.Contains(v, "format: v3") ||
+				strings.Contains(v, "v2-archives:") ||
+				strings.Contains(v, "default: true") {
+				skip = true
+				break
+			}
+			v, skip = oldEssentialToV3(c, testutil.Reindent(v))
+			if skip {
+				break
+			}
+			v = strings.ReplaceAll(v, "format: v1", "format: v3")
+			m[k] = v
+		}
+		if skip {
+			// Test was not affected, or it is not meaningful, no need to re-run.
+			continue
+		}
+		t.input = m
+		if t.release != nil {
+			t.release.Format = "v3"
+		}
+		v3FormatTests = append(v3FormatTests, t)
+	}
+	runParseReleaseTests(c, v3FormatTests)
 }
 
 func runParseReleaseTests(c *C, tests []setupTest) {
@@ -3848,16 +4010,16 @@ func (s *S) TestPackageYAMLFormat(c *C) {
 				archive: ubuntu
 				slices:
 					myslice1:
-						contents:
-							/dir/file1: {}
-						v3-essential:
+						essential:
 							mypkg_myslice2: {arch: i386}
 							mypkg_myslice3: {}
+						contents:
+							/dir/file1: {}
 					myslice2:
+						essential:
+							mypkg_myslice3: {}
 						contents:
 							/dir/file2: {}
-						v3-essential:
-							mypkg_myslice3: {}
 					myslice3:
 						contents:
 							/dir/file3: {}
@@ -3881,6 +4043,39 @@ func (s *S) TestPackageYAMLFormat(c *C) {
 					myslice:
 						contents:
 							/dir/prefer: {}
+			`,
+		},
+	}, {
+		summary: "Format v3",
+		input: map[string]string{
+			"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYaml, "format: v1", "format: v3"),
+			"slices/mypkg.yaml": `
+				package: mypkg
+				archive: ubuntu
+				essential:
+					mypkg_three: {arch: i386}
+				slices:
+					one:
+						essential:
+							mypkg_two: {arch: [amd64, aarch64]}
+					two:
+					three:
+			`,
+		},
+		expected: map[string]string{
+			"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYaml, "format: v1", "format: v3"),
+			"slices/mypkg.yaml": `
+				package: mypkg
+				archive: ubuntu
+				slices:
+					one:
+						essential:
+							mypkg_three: {arch: i386}
+							mypkg_two: {arch: [amd64, aarch64]}
+					three: {}
+					two:
+						essential:
+							mypkg_three: {arch: i386}
 			`,
 		},
 	}}
@@ -3993,4 +4188,70 @@ func (s *S) TestSelectEmptyArch(c *C) {
 	}
 	expected := []string{"myotherslice", "myslice"}
 	c.Assert(sliceNames, DeepEquals, expected)
+}
+
+// oldEssentialToV3 converts the essentials in v1 and v2, both 'essential', and
+// 'v3-essential' to the shape expected by the v3 format.
+// skip is set to true when an accurate translation of the test is not
+// possible, for example having duplicates in the list.
+func oldEssentialToV3(c *C, input []byte) (out string, skip bool) {
+	var raw map[string]any
+	err := yaml.Unmarshal(input, &raw)
+	c.Assert(err, IsNil)
+
+	if slices, ok := raw["slices"].(map[string]any); ok {
+		for _, rawSlice := range slices {
+			if slice, ok := rawSlice.(map[string]any); ok {
+				newEssential := make(map[string]any)
+				if oldEssential, ok := slice["essential"].([]any); ok {
+					for _, value := range oldEssential {
+						s := value.(string)
+						if _, ok := newEssential[s]; ok {
+							// Duplicated entries are impossible in v3.
+							return "", true
+						}
+						newEssential[s] = nil
+					}
+				}
+				if oldEssential, ok := slice["v3-essential"].(map[string]any); ok {
+					for key, value := range oldEssential {
+						if _, ok := newEssential[key]; ok {
+							return "", true
+						}
+						newEssential[key] = value
+					}
+					delete(slice, "v3-essential")
+				}
+				slice["essential"] = newEssential
+			}
+		}
+	}
+
+	newEssential := make(map[string]any)
+	if oldEssential, ok := raw["essential"].([]any); ok {
+		for _, item := range oldEssential {
+			s := item.(string)
+			if _, ok := newEssential[s]; ok {
+				// Duplicated entries are impossible in v3.
+				return "", true
+			}
+			newEssential[s] = nil
+		}
+	}
+	if oldEssential, ok := raw["v3-essential"].(map[string]any); ok {
+		for key, value := range oldEssential {
+			if _, ok := newEssential[key]; ok {
+				// Duplicated entries are impossible in v3.
+				return "", true
+			}
+			newEssential[key] = value
+		}
+		delete(raw, "v3-essential")
+	}
+	raw["essential"] = newEssential
+
+	bs, err := yaml.Marshal(raw)
+	c.Assert(err, IsNil)
+	// Maintenance dates get marshaled as <date>T00:00:00Z by default.
+	return strings.ReplaceAll(string(bs), "T00:00:00Z", ""), false
 }

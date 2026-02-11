@@ -54,7 +54,7 @@ var infoTests = []infoTest{{
 					/dir/file: {}
 			myslice2:
 				hint: Hint for mypkg1_myslice2
-				v3-essential:
+				essential:
 					mypkg1_myslice1: {}
 					mypkg2_myslice: {arch: amd64}
 	`,
@@ -70,7 +70,7 @@ var infoTests = []infoTest{{
 					/dir/file: {}
 			myslice2:
 				hint: Hint for mypkg1_myslice2
-				v3-essential:
+				essential:
 					mypkg1_myslice1: {}
 					mypkg2_myslice: {arch: amd64}
 		---
@@ -93,7 +93,7 @@ var infoTests = []infoTest{{
 					/dir/file: {}
 			myslice2:
 				hint: Hint for mypkg1_myslice2
-				v3-essential:
+				essential:
 					mypkg1_myslice1: {}
 					mypkg2_myslice: {arch: amd64}
 	`,
@@ -143,7 +143,7 @@ var infoTests = []infoTest{{
 }}
 
 var infoRelease = map[string]string{
-	"chisel.yaml": string(testutil.DefaultChiselYaml),
+	"chisel.yaml": testutil.DefaultChiselYaml,
 	"slices/mypkg1.yaml": `
 		package: mypkg1
 		essential:
