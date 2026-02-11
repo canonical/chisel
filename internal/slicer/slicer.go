@@ -664,6 +664,9 @@ func SelectValidManifest(targetDir string, release *setup.Release) (*manifest.Ma
 		defer r.Close()
 		mfest, err := manifest.Read(r)
 		if err != nil {
+			if errors.Is(err, manifest.ErrUnknownSchema) {
+				continue
+			}
 			return nil, err
 		}
 		err = manifestutil.Validate(mfest)

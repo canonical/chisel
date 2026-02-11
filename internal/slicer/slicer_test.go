@@ -2667,6 +2667,16 @@ var selectValidManifestTests = []selectValidManifestTest{{
 	},
 	noMatch: true,
 }, {
+	summary: "Unknown schema error ignored",
+	build: func() *setup.Release {
+		return buildReleaseWithManifestDirs("/chisel/**")
+	},
+	setup: func(c *C, targetDir string, release *setup.Release) {
+		manifestPath := manifestPathForDir("/chisel/**")
+		writeInvalidSchemaManifest(c, targetDir, manifestPath)
+	},
+	noMatch: true,
+}, {
 	summary: "Valid manifest selected",
 	build: func() *setup.Release {
 		return buildReleaseWithManifestDirs("/chisel/**")
