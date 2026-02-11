@@ -112,7 +112,7 @@ func Run(options *RunOptions) error {
 	installOpts := &optsCopy
 	installOpts.TargetDir = targetDir
 
-	report, pkgInfos, err := install(installOpts)
+	report, err := install(installOpts)
 	if err != nil {
 		return err
 	}
@@ -124,18 +124,18 @@ func Run(options *RunOptions) error {
 		}
 	}
 
-	return generateManifests(originalTargetDir, options.Selection, report, pkgInfos)
+	return nil
 }
 
-func install(options *RunOptions) (*manifestutil.Report, []*archive.PackageInfo, error) {
+func install(options *RunOptions) (*manifestutil.Report, error) {
 	pkgArchive, err := selectPkgArchives(options.Archives, options.Selection)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	prefers, err := options.Selection.Prefers()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// Build information to process the selection.
@@ -192,7 +192,7 @@ func install(options *RunOptions) (*manifestutil.Report, []*archive.PackageInfo,
 		}
 		reader, info, err := pkgArchive[slice.Package].Fetch(slice.Package)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		defer reader.Close()
 		packages[slice.Package] = reader
@@ -205,7 +205,7 @@ func install(options *RunOptions) (*manifestutil.Report, []*archive.PackageInfo,
 	addKnownPath(knownPaths, "/", pathData{})
 	report, err := manifestutil.NewReport(options.TargetDir)
 	if err != nil {
-		return nil, nil, fmt.Errorf("internal error: cannot create report: %w", err)
+		return nil, fmt.Errorf("internal error: cannot create report: %w", err)
 	}
 
 	// Record directories which are created but where not listed in the slice
@@ -285,7 +285,7 @@ func install(options *RunOptions) (*manifestutil.Report, []*archive.PackageInfo,
 		reader.Close()
 		packages[slice.Package] = nil
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 
@@ -343,7 +343,7 @@ func install(options *RunOptions) (*manifestutil.Report, []*archive.PackageInfo,
 		addKnownPath(knownPaths, relPath, data)
 		entry, err := createFile(options.TargetDir, relPath, pathInfo)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
 		// Do not add paths with "until: mutate".
@@ -351,7 +351,7 @@ func install(options *RunOptions) (*manifestutil.Report, []*archive.PackageInfo,
 			for _, slice := range slices {
 				err = report.Add(slice, entry)
 				if err != nil {
-					return nil, nil, err
+					return nil, err
 				}
 			}
 		}
@@ -376,16 +376,21 @@ func install(options *RunOptions) (*manifestutil.Report, []*archive.PackageInfo,
 		}
 		err := scripts.Run(&opts)
 		if err != nil {
-			return nil, nil, fmt.Errorf("slice %s: %w", slice, err)
+			return nil, fmt.Errorf("slice %s: %w", slice, err)
 		}
 	}
 
 	err = removeAfterMutate(options.TargetDir, knownPaths)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return report, pkgInfos, nil
+	err = generateManifests(options.TargetDir, options.Selection, report, pkgInfos)
+	if err != nil {
+		return nil, err
+	}
+
+	return report, nil
 }
 
 // upgrade upgrades content in targetDir with content in tempDir.
@@ -402,12 +407,9 @@ func upgrade(targetDir string, tempDir string, report *manifestutil.Report, mfes
 		var err error
 		switch entry.Mode & fs.ModeType {
 		case 0, fs.ModeSymlink:
-			err = os.Rename(srcPath, dstPath)
+			err = upgradeFile(srcPath, dstPath)
 		case fs.ModeDir:
-			mkdirErr := os.Mkdir(dstPath, entry.Mode)
-			if !os.IsExist(mkdirErr) {
-				err = mkdirErr
-			}
+			err = upgradeDir(dstPath, entry)
 		default:
 			err = fmt.Errorf("unsupported file type: %s", path)
 		}
@@ -429,6 +431,9 @@ func upgrade(targetDir string, tempDir string, report *manifestutil.Report, mfes
 		return err
 	}
 	sort.Sort(sort.Reverse(sort.StringSlice(missingPaths)))
+	// Go through the list in reverse order to empty directories before removing
+	// them. Any ENOTEMPTY error encountered means user content is in the directory
+	// and Chisel does not manage it anymore.
 	for _, relPath := range missingPaths {
 		path := filepath.Clean(filepath.Join(targetDir, relPath))
 		err = os.Remove(path)
@@ -436,7 +441,44 @@ func upgrade(targetDir string, tempDir string, report *manifestutil.Report, mfes
 			return err
 		}
 	}
-	report.Root = targetDir
+	return nil
+}
+
+func upgradeDir(path string, entry manifestutil.ReportEntry) error {
+	err := os.Mkdir(path, entry.Mode)
+	if err != nil {
+		if !os.IsExist(err) {
+			return err
+		}
+		fileinfo, err := os.Lstat(path)
+		if err != nil {
+			return err
+		}
+		if fileinfo.IsDir() {
+			return os.Chmod(path, entry.Mode)
+		}
+		err = os.RemoveAll(path)
+		if err != nil {
+			return err
+		}
+
+		return os.Mkdir(path, entry.Mode)
+	}
+	return nil
+}
+
+func upgradeFile(srcPath string, dstPath string) error {
+	err := os.Rename(srcPath, dstPath)
+	if err != nil {
+		if !os.IsExist(err) {
+			return err
+		}
+		err = os.RemoveAll(dstPath)
+		if err != nil {
+			return err
+		}
+		return os.Rename(srcPath, dstPath)
+	}
 	return nil
 }
 

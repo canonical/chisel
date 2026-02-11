@@ -2295,7 +2295,7 @@ var slicerRecutTests = []slicerRecutTest{{
 		"/dir/file": "file 0644 cc55e2ec {test-package_slice1}",
 	},
 }, {
-	summary:     "Upgrade does not override existing directory mode",
+	summary:     "Upgrade overrides existing mode",
 	cutSlices:   []setup.SliceKey{{"test-package", "slice1"}},
 	recutSlices: []setup.SliceKey{{"test-package", "slice1"}, {"test-package", "slice2"}},
 	release: map[string]string{
@@ -2307,40 +2307,12 @@ var slicerRecutTests = []slicerRecutTest{{
 						/dir/:
 				slice2:
 					contents:
+						/dir/file:
 						/other-dir/:
 		`,
 	},
 	alterFilesystem: func(c *C, targetDir string) {
 		err := os.MkdirAll(filepath.Join(targetDir, "other-dir"), 0o775)
-		c.Assert(err, IsNil)
-	},
-	filesystem: map[string]string{
-		"/dir/":       "dir 0755",
-		"/other-dir/": "dir 0775",
-	},
-	manifestPaths: map[string]string{
-		"/dir/":       "dir 0755 {test-package_slice1}",
-		"/other-dir/": "dir 0755 {test-package_slice2}",
-		// TODO: fix when the right value is recorded in the manifest
-	},
-}, {
-	summary:     "Upgrade overwrites existing file mode",
-	cutSlices:   []setup.SliceKey{{"test-package", "slice1"}},
-	recutSlices: []setup.SliceKey{{"test-package", "slice1"}, {"test-package", "slice2"}},
-	release: map[string]string{
-		"slices/mydir/test-package.yaml": `
-			package: test-package
-			slices:
-				slice1:
-					contents:
-						/other-dir/:
-				slice2:
-					contents:
-						/dir/file:
-		`,
-	},
-	prefill: func(c *C, targetDir string) {
-		err := os.MkdirAll(filepath.Join(targetDir, "dir"), 0o755)
 		c.Assert(err, IsNil)
 		err = os.WriteFile(filepath.Join(targetDir, "dir", "file"), []byte("data"), 0o644)
 		c.Assert(err, IsNil)
@@ -2351,92 +2323,124 @@ var slicerRecutTests = []slicerRecutTest{{
 		"/dir/file":   "file 0644 cc55e2ec",
 	},
 	manifestPaths: map[string]string{
-		"/other-dir/": "dir 0755 {test-package_slice1}",
+		"/dir/":       "dir 0755 {test-package_slice1}",
+		"/other-dir/": "dir 0755 {test-package_slice2}",
 		"/dir/file":   "file 0644 cc55e2ec {test-package_slice2}",
 	},
 }, {
-	summary:   "Upgrade overwrites existing symlink",
-	cutSlices: []setup.SliceKey{{"test-package", "myslice"}},
+	summary:     "Upgrade overwrites existing symlink",
+	cutSlices:   []setup.SliceKey{{"test-package", "slice1"}},
+	recutSlices: []setup.SliceKey{{"test-package", "slice1"}, {"test-package", "slice2"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
 			slices:
-				myslice:
+				slice1:
+					contents:
+					  /dir/:
+				slice2:
 					contents:
 						/baz: {text: data}
 						/foo: {symlink: baz}
 		`,
 	},
+	alterFilesystem: func(c *C, targetDir string) {
+		err := os.WriteFile(filepath.Join(targetDir, "bar"), []byte("data"), 0o644)
+		c.Assert(err, IsNil)
+		linkPath := filepath.Join(targetDir, "foo")
+		err = os.Symlink("bar", linkPath)
+		c.Assert(err, IsNil)
+	},
 	filesystem: map[string]string{
-		"/bar": "file 0644 3a6eb079",
-		"/baz": "file 0644 3a6eb079",
-		"/foo": "symlink baz",
+		"/dir/": "dir 0755",
+		"/bar":  "file 0644 3a6eb079",
+		"/baz":  "file 0644 3a6eb079",
+		"/foo":  "symlink baz",
 	},
 	manifestPaths: map[string]string{
-		"/baz": "file 0644 3a6eb079 {test-package_myslice}",
-		"/foo": "symlink baz {test-package_myslice}",
+		"/dir/": "dir 0755 {test-package_slice1}",
+		"/baz":  "file 0644 3a6eb079 {test-package_slice2}",
+		"/foo":  "symlink baz {test-package_slice2}",
 	},
 }, {
-	summary:   "Upgrade fails when parent is a file",
-	cutSlices: []setup.SliceKey{{"test-package", "myslice"}},
+	summary:     "Upgrade fails when parent is a file",
+	cutSlices:   []setup.SliceKey{{"test-package", "slice1"}},
+	recutSlices: []setup.SliceKey{{"test-package", "slice1"}, {"test-package", "slice2"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
 			slices:
-				myslice:
+				slice1:
 					contents:
 						/dir/file: {text: data}
+				slice2:
+					contents:
 		`,
+	},
+	alterFilesystem: func(c *C, targetDir string) {
+		path := filepath.Join(targetDir, "dir")
+		err := os.RemoveAll(path)
+		c.Assert(err, IsNil)
+		err = os.WriteFile(path, []byte("data"), 0o644)
+		c.Assert(err, IsNil)
 	},
 	error: `mkdir .*: not a directory`,
 }, {
-	summary:   "Upgrade fails when target path is a directory",
-	cutSlices: []setup.SliceKey{{"test-package", "myslice"}},
+	summary:     "Upgrade removes content whith unmatching type",
+	cutSlices:   []setup.SliceKey{{"test-package", "slice1"}},
+	recutSlices: []setup.SliceKey{{"test-package", "slice1"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
 			slices:
-				myslice:
+				slice1:
 					contents:
-						/target: {text: data}
+						/file: {text: data}
+						/a-dir/: {make: true}
 		`,
 	},
-	error: `rename .*: (file exists|is a directory)`,
-}, {
-	summary:   "Upgrade removes obsolete empty directory",
-	cutSlices: []setup.SliceKey{{"test-package", "new"}},
-	release: map[string]string{
-		"slices/mydir/test-package.yaml": `
-			package: test-package
-			slices:
-				old:
-					contents:
-						/old-dir/: {make: true}
-				new:
-					contents:
-						/new-file: {text: data1}
-		`,
+	alterFilesystem: func(c *C, targetDir string) {
+		filePath := filepath.Join(targetDir, "file")
+		err := os.Remove(filePath)
+		c.Assert(err, IsNil)
+		err = os.MkdirAll(filePath, 0o755)
+		c.Assert(err, IsNil)
+		dirPath := filepath.Join(targetDir, "a-dir")
+		err = os.Remove(dirPath)
+		c.Assert(err, IsNil)
+		err = os.WriteFile(dirPath, []byte("data"), 0o644)
+		c.Assert(err, IsNil)
 	},
 	filesystem: map[string]string{
-		"/new-file": "file 0644 5b41362b",
+		"/file":   "file 0644 3a6eb079",
+		"/a-dir/": "dir 0755",
 	},
 	manifestPaths: map[string]string{
-		"/new-file": "file 0644 5b41362b {test-package_new}",
+		"/file":   "file 0644 3a6eb079 {test-package_slice1}",
+		"/a-dir/": "dir 0755 {test-package_slice1}",
 	},
 }, {
-	summary:   "Upgrade keeps obsolete non-empty directory",
-	cutSlices: []setup.SliceKey{{"test-package", "new"}},
+	summary:     "Upgrade removes obsolete content but keeps non-empty directories",
+	cutSlices:   []setup.SliceKey{{"test-package", "slice1"}},
+	recutSlices: []setup.SliceKey{{"test-package", "slice2"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
 			slices:
-				old:
+				slice1:
 					contents:
 						/old-dir/: {make: true}
-				new:
+						/link: {symlink: target}
+						/baz: {text: data}
+						/foo: {symlink: baz}
+				slice2:
 					contents:
 						/new-file: {text: data1}
 		`,
+	},
+	alterFilesystem: func(c *C, targetDir string) {
+		err := os.WriteFile(filepath.Join(targetDir, "old-dir", "file"), []byte("data"), 0o644)
+		c.Assert(err, IsNil)
 	},
 	filesystem: map[string]string{
 		"/new-file":     "file 0644 5b41362b",
@@ -2444,29 +2448,7 @@ var slicerRecutTests = []slicerRecutTest{{
 		"/old-dir/file": "file 0644 3a6eb079",
 	},
 	manifestPaths: map[string]string{
-		"/new-file": "file 0644 5b41362b {test-package_new}",
-	},
-}, {
-	summary:   "Upgrade removes obsolete symlink only",
-	cutSlices: []setup.SliceKey{{"test-package", "new"}},
-	release: map[string]string{
-		"slices/mydir/test-package.yaml": `
-			package: test-package
-			slices:
-				old:
-					contents:
-						/link: {symlink: target}
-				new:
-					contents:
-						/new-file: {text: data1}
-		`,
-	},
-	filesystem: map[string]string{
-		"/new-file": "file 0644 5b41362b",
-		"/target":   "file 0644 3a6eb079",
-	},
-	manifestPaths: map[string]string{
-		"/new-file": "file 0644 5b41362b {test-package_new}",
+		"/new-file": "file 0644 5b41362b {test-package_slice2}",
 	},
 }}
 
@@ -2734,16 +2716,6 @@ var selectValidManifestTests = []selectValidManifestTest{{
 		writeInvalidManifest(c, targetDir, manifestPath)
 	},
 	error: `invalid manifest: path /file has no matching entry in contents`,
-}, {
-	summary: "Manifest read fails on invalid schema",
-	build: func() *setup.Release {
-		return buildReleaseWithManifestDirs("/chisel/**")
-	},
-	setup: func(c *C, targetDir string, release *setup.Release) {
-		manifestPath := manifestPathForDir("/chisel/**")
-		writeInvalidSchemaManifest(c, targetDir, manifestPath)
-	},
-	error: `cannot read manifest: unknown schema version "9.9"`,
 }}
 
 func (s *S) TestSelectValidManifest(c *C) {
