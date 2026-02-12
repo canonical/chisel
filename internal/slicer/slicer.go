@@ -97,20 +97,19 @@ func Run(options *RunOptions) error {
 		targetDir = filepath.Join(dir, targetDir)
 	}
 
-	originalTargetDir := targetDir
+	optsCopy := *options
+	installOpts := &optsCopy
+	installOpts.TargetDir = targetDir
 	if options.Manifest != nil {
 		tmpWorkDir, err := os.MkdirTemp(targetDir, "chisel-*")
 		if err != nil {
 			return fmt.Errorf("cannot create temporary working directory: %w", err)
 		}
-		targetDir = tmpWorkDir
+		installOpts.TargetDir = tmpWorkDir
 		defer func() {
 			os.RemoveAll(tmpWorkDir)
 		}()
 	}
-	optsCopy := *options
-	installOpts := &optsCopy
-	installOpts.TargetDir = targetDir
 
 	report, err := install(installOpts)
 	if err != nil {
@@ -118,7 +117,7 @@ func Run(options *RunOptions) error {
 	}
 
 	if options.Manifest != nil {
-		err = upgrade(originalTargetDir, targetDir, report, options.Manifest)
+		err = upgrade(targetDir, installOpts.TargetDir, report, options.Manifest)
 		if err != nil {
 			return err
 		}
