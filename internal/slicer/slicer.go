@@ -456,7 +456,8 @@ func upgradeDir(path string, entry manifestutil.ReportEntry) error {
 		if fileinfo.IsDir() {
 			return os.Chmod(path, entry.Mode)
 		}
-		err = os.RemoveAll(path)
+		// Path is a regular file or symlink, remove it.
+		err = os.Remove(path)
 		if err != nil {
 			return err
 		}
