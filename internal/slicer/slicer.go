@@ -101,7 +101,7 @@ func Run(options *RunOptions) error {
 	installOpts := &optsCopy
 	installOpts.TargetDir = targetDir
 	if options.Manifest != nil {
-		tmpWorkDir, err := os.MkdirTemp(targetDir, "chisel-*")
+		tmpWorkDir, err := os.MkdirTemp(targetDir, "chisel-workdir-*")
 		if err != nil {
 			return fmt.Errorf("cannot create temporary working directory: %w", err)
 		}
