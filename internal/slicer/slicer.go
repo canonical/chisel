@@ -707,6 +707,7 @@ func SelectValidManifest(targetDir string, release *setup.Release) (*manifest.Ma
 		mfest, err := manifest.Read(r)
 		if err != nil {
 			if errors.Is(err, manifest.ErrUnknownSchema) {
+				// Ignore manifests with unknown (potentially future) schema versions.
 				continue
 			}
 			return nil, err
@@ -717,7 +718,7 @@ func SelectValidManifest(targetDir string, release *setup.Release) (*manifest.Ma
 		}
 		h, err := contentHash(mfestFullPath)
 		if err != nil {
-			return nil, fmt.Errorf("cannot compute hash for %q: %w", mfestFullPath, err)
+			return nil, fmt.Errorf("cannot compute hash for %q: %s", mfestFullPath, err)
 		}
 		mfestHash := hex.EncodeToString(h)
 		if selected == nil {
@@ -725,7 +726,7 @@ func SelectValidManifest(targetDir string, release *setup.Release) (*manifest.Ma
 			selectedHash = mfestHash
 			selectedPath = mfestPath
 		} else if selectedHash != mfestHash {
-			return nil, fmt.Errorf("inconsistent manifests: %q and %q", selectedPath, mfestPath)
+			return nil, fmt.Errorf("cannot select a manifest: %q and %q are inconsistent", selectedPath, mfestPath)
 		}
 	}
 	return selected, nil

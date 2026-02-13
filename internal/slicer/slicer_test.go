@@ -2175,9 +2175,9 @@ type slicerRecutTest struct {
 	recutSlices     []setup.SliceKey
 	hackopt         func(c *C, opts *slicer.RunOptions)
 	hackRecutOpt    func(c *C, opts *slicer.RunOptions)
-	alterFilesystem func(c *C, targetDir string)
 	// Modifies the filesystem built after the first execution and before the
 	// second one.
+	alterFilesystem func(c *C, targetDir string)
 	filesystem    map[string]string
 	manifestPaths map[string]string
 	manifestPkgs  map[string]string
@@ -2688,7 +2688,7 @@ var selectValidManifestTests = []selectValidManifestTest{{
 		writeManifest(c, targetDir, manifestPathA, slice, "hash1")
 		writeManifest(c, targetDir, manifestPathB, slice, "hash2")
 	},
-	error: `inconsistent manifests: ".*" and ".*"`,
+	error: `cannot select a manifest: ".*" and ".*" are inconsistent`,
 }, {
 	summary: "Invalid manifest data returns error",
 	build: func() *setup.Release {
