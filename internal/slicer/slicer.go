@@ -403,15 +403,21 @@ func upgrade(targetDir string, tempDir string, report *manifestutil.Report, mfes
 
 		// Create parent directories, removing any file on the way up.
 		if err := mkParentAll(dstPath); err != nil {
-			return err
+			return fmt.Errorf("cannot create parent directory for %q: %s", path, err)
 		}
 
 		var err error
 		switch entry.Mode & fs.ModeType {
 		case 0, fs.ModeSymlink:
 			err = upgradeFile(srcPath, dstPath)
+			if err != nil {
+				err = fmt.Errorf("cannot upgrade file at %q: %s", path, err)
+			}
 		case fs.ModeDir:
 			err = upgradeDir(dstPath, entry)
+			if err != nil {
+				err = fmt.Errorf("cannot upgrade directory at %q: %s", path, err)
+			}
 		default:
 			err = fmt.Errorf("unsupported file type: %s", path)
 		}
