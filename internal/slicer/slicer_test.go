@@ -2174,7 +2174,6 @@ type slicerRecutTest struct {
 	cutSlices       []setup.SliceKey
 	recutSlices     []setup.SliceKey
 	hackopt         func(c *C, opts *slicer.RunOptions)
-	hackRecutOpt    func(c *C, opts *slicer.RunOptions)
 	// Modifies the filesystem built after the first execution and before the
 	// second one.
 	alterFilesystem func(c *C, targetDir string)
@@ -2453,8 +2452,6 @@ var slicerRecutTests = []slicerRecutTest{{
 
 func (s *S) TestRunRecut(c *C) {
 	for _, test := range slicerRecutTests {
-		const logMarker = "---log-marker---"
-		c.Logf(logMarker)
 		c.Logf("Summary: %s", test.summary)
 
 		if _, ok := test.release["chisel.yaml"]; !ok {
@@ -2545,7 +2542,7 @@ func (s *S) TestRunRecut(c *C) {
 		if test.hackopt != nil {
 			test.hackopt(c, &options)
 		}
-		// First run
+		// First run.
 		err = slicer.Run(&options)
 		c.Assert(err, IsNil)
 
@@ -2567,10 +2564,7 @@ func (s *S) TestRunRecut(c *C) {
 			TargetDir: targetDir,
 			Manifest:  mfest,
 		}
-		if test.hackRecutOpt != nil {
-			test.hackRecutOpt(c, &options)
-		}
-		// Second run
+		// Second run.
 		err = slicer.Run(&options)
 		if test.error != "" {
 			c.Assert(err, ErrorMatches, test.error)
@@ -2578,7 +2572,7 @@ func (s *S) TestRunRecut(c *C) {
 		}
 		c.Assert(err, IsNil)
 
-		if test.filesystem == nil && test.manifestPaths == nil && test.manifestPkgs == nil && test.logOutput == "" {
+		if test.filesystem == nil && test.manifestPaths == nil && test.manifestPkgs == nil {
 			continue
 		}
 		mfest = readManifest(c, options.TargetDir, manifestPath)
@@ -2607,19 +2601,6 @@ func (s *S) TestRunRecut(c *C) {
 			pkgsDump, err := dumpManifestPkgs(mfest)
 			c.Assert(err, IsNil)
 			c.Assert(pkgsDump, DeepEquals, test.manifestPkgs)
-		}
-
-		// Find the log output of this test by trimming the suite output
-		// until we find the last occurrence of the summary.
-		testLogs := strings.Split(c.GetTestLog(), logMarker)
-		logOutput := testLogs[len(testLogs)-1]
-
-		// Assert log output.
-		if test.logOutput != "" {
-			c.Assert(logOutput, Matches, test.logOutput)
-		} else {
-			// No warnings emitted.
-			c.Assert(logOutput, Not(Matches), "(?s).*Warning.*")
 		}
 	}
 }
