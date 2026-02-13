@@ -2180,7 +2180,6 @@ type slicerRecutTest struct {
 	filesystem      map[string]string
 	manifestPaths   map[string]string
 	manifestPkgs    map[string]string
-	logOutput       string
 	error           string
 }
 
