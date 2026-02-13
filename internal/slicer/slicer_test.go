@@ -2672,7 +2672,7 @@ var selectValidManifestTests = []selectValidManifestTest{{
 		writeManifest(c, targetDir, manifestPathA, slice, "hash1")
 		writeManifest(c, targetDir, manifestPathB, slice, "hash2")
 	},
-	error: `cannot select a manifest: ".*" and ".*" are inconsistent`,
+	error: `cannot select a manifest: "/chisel-a/manifest.wall" and "/chisel-b/manifest.wall" are inconsistent`,
 }, {
 	summary: "Invalid manifest data returns error",
 	build: func() *setup.Release {
