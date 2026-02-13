@@ -402,28 +402,7 @@ func upgrade(targetDir string, tempDir string, report *manifestutil.Report, mfes
 		dstPath := filepath.Clean(filepath.Join(targetDir, path))
 
 		// Create parent directories, removing any file on the way up.
-		var mkParent func(path string) error
-		mkParent = func(path string) error {
-			parent := filepath.Dir(path)
-			err := os.MkdirAll(parent, 0o755)
-			if err != nil {
-				e, ok := err.(*os.PathError)
-				if ok && errors.Is(e.Unwrap(), syscall.ENOTDIR) {
-					err := os.Remove(parent)
-					if err != nil {
-						return err
-					}
-					err = os.MkdirAll(parent, 0o755)
-					if err != nil {
-						return mkParent(parent)
-					}
-					return nil
-				}
-				return err
-			}
-			return nil
-		}
-		if err := mkParent(dstPath); err != nil {
+		if err := mkParentAll(dstPath); err != nil {
 			return err
 		}
 
@@ -463,6 +442,27 @@ func upgrade(targetDir string, tempDir string, report *manifestutil.Report, mfes
 		if err != nil && !os.IsNotExist(err) && !errors.Is(err, syscall.ENOTEMPTY) {
 			return err
 		}
+	}
+	return nil
+}
+
+func mkParentAll(path string) error {
+	parent := filepath.Dir(path)
+	err := os.MkdirAll(parent, 0o755)
+	if err == nil {
+		return nil
+	}
+	e, ok := err.(*os.PathError)
+	if !ok || !errors.Is(e.Unwrap(), syscall.ENOTDIR) {
+		return err
+	}
+	err = os.Remove(parent)
+	if err != nil {
+		return err
+	}
+	err = os.MkdirAll(parent, 0o755)
+	if err != nil {
+		return mkParentAll(parent)
 	}
 	return nil
 }
