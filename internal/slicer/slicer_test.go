@@ -2629,7 +2629,19 @@ var selectValidManifestTests = []selectValidManifestTest{{
 	},
 	noMatch: true,
 }, {
-	summary: "Unknown schema error ignored",
+	summary: "Unknown schema error ignored when other valid found",
+	build: func() *setup.Release {
+		return buildReleaseWithManifestDirs("/chisel-a/**", "/chisel-b/**")
+	},
+	setup: func(c *C, targetDir string, release *setup.Release) {
+		manifestPathA := manifestPathForDir("/chisel-a/**")
+		manifestPathB := manifestPathForDir("/chisel-b/**")
+		slice := release.Packages["test-package"].Slices["manifest"]
+		writeManifest(c, targetDir, manifestPathA, slice, "hash1")
+		writeInvalidSchemaManifest(c, targetDir, manifestPathB)
+	},
+}, {
+	summary: "Unknown schema error raised when no other valid found",
 	build: func() *setup.Release {
 		return buildReleaseWithManifestDirs("/chisel/**")
 	},
@@ -2637,7 +2649,7 @@ var selectValidManifestTests = []selectValidManifestTest{{
 		manifestPath := manifestPathForDir("/chisel/**")
 		writeInvalidSchemaManifest(c, targetDir, manifestPath)
 	},
-	noMatch: true,
+	error: `cannot select a manifest: manifest\(s\) found use unknown schema`,
 }, {
 	summary: "Valid manifest selected",
 	build: func() *setup.Release {

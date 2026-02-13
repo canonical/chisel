@@ -713,6 +713,7 @@ func SelectValidManifest(targetDir string, release *setup.Release) (*manifest.Ma
 	var selected *manifest.Manifest
 	var selectedHash string
 	var selectedPath string
+	foundUnknownSchema := false
 	for _, mfestPath := range manifestPaths {
 		mfestFullPath := path.Join(targetDir, mfestPath)
 		f, err := os.Open(mfestFullPath)
@@ -731,6 +732,7 @@ func SelectValidManifest(targetDir string, release *setup.Release) (*manifest.Ma
 		mfest, err := manifest.Read(r)
 		if err != nil {
 			if errors.Is(err, manifest.ErrUnknownSchema) {
+				foundUnknownSchema = true
 				// Ignore manifests with unknown (potentially future) schema versions.
 				continue
 			}
@@ -752,6 +754,9 @@ func SelectValidManifest(targetDir string, release *setup.Release) (*manifest.Ma
 		} else if selectedHash != mfestHash {
 			return nil, fmt.Errorf("cannot select a manifest: %q and %q are inconsistent", selectedPath, mfestPath)
 		}
+	}
+	if foundUnknownSchema && selected == nil {
+		return nil, fmt.Errorf("cannot select a manifest: manifest(s) found use unknown schema")
 	}
 	return selected, nil
 }
