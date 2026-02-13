@@ -400,9 +400,33 @@ func upgrade(targetDir string, tempDir string, report *manifestutil.Report, mfes
 		entry := report.Entries[path]
 		srcPath := filepath.Clean(filepath.Join(tempDir, path))
 		dstPath := filepath.Clean(filepath.Join(targetDir, path))
-		if err := os.MkdirAll(filepath.Dir(dstPath), 0o755); err != nil {
+
+		// Create parent directories, removing any file on the way up.
+		var mkParent func(path string) error
+		mkParent = func(path string) error {
+			parent := filepath.Dir(path)
+			err := os.MkdirAll(parent, 0o755)
+			if err != nil {
+				e, ok := err.(*os.PathError)
+				if ok && errors.Is(e.Unwrap(), syscall.ENOTDIR) {
+					err := os.Remove(parent)
+					if err != nil {
+						return err
+					}
+					err = os.MkdirAll(parent, 0o755)
+					if err != nil {
+						return mkParent(parent)
+					}
+					return nil
+				}
+				return err
+			}
+			return nil
+		}
+		if err := mkParent(dstPath); err != nil {
 			return err
 		}
+
 		var err error
 		switch entry.Mode & fs.ModeType {
 		case 0, fs.ModeSymlink:

@@ -2167,21 +2167,21 @@ func runSlicerTests(s *S, c *C, tests []slicerTest) {
 }
 
 type slicerRecutTest struct {
-	summary         string
-	arch            string
-	release         map[string]string
-	pkgs            []*testutil.TestPackage
-	cutSlices       []setup.SliceKey
-	recutSlices     []setup.SliceKey
-	hackopt         func(c *C, opts *slicer.RunOptions)
+	summary     string
+	arch        string
+	release     map[string]string
+	pkgs        []*testutil.TestPackage
+	cutSlices   []setup.SliceKey
+	recutSlices []setup.SliceKey
+	hackopt     func(c *C, opts *slicer.RunOptions)
 	// Modifies the filesystem built after the first execution and before the
 	// second one.
 	alterFilesystem func(c *C, targetDir string)
-	filesystem    map[string]string
-	manifestPaths map[string]string
-	manifestPkgs  map[string]string
-	logOutput     string
-	error         string
+	filesystem      map[string]string
+	manifestPaths   map[string]string
+	manifestPkgs    map[string]string
+	logOutput       string
+	error           string
 }
 
 var slicerRecutTests = []slicerRecutTest{{
@@ -2343,15 +2343,12 @@ var slicerRecutTests = []slicerRecutTest{{
 		`,
 	},
 	alterFilesystem: func(c *C, targetDir string) {
-		err := os.WriteFile(filepath.Join(targetDir, "bar"), []byte("data"), 0o644)
-		c.Assert(err, IsNil)
 		linkPath := filepath.Join(targetDir, "foo")
-		err = os.Symlink("bar", linkPath)
+		err := os.Symlink("bar", linkPath)
 		c.Assert(err, IsNil)
 	},
 	filesystem: map[string]string{
 		"/dir/": "dir 0755",
-		"/bar":  "file 0644 3a6eb079",
 		"/baz":  "file 0644 3a6eb079",
 		"/foo":  "symlink baz",
 	},
@@ -2361,7 +2358,7 @@ var slicerRecutTests = []slicerRecutTest{{
 		"/foo":  "symlink baz {test-package_slice2}",
 	},
 }, {
-	summary:     "Upgrade fails when parent is a file",
+	summary:     "Upgrade removes content to create parent dirs",
 	cutSlices:   []setup.SliceKey{{"test-package", "slice1"}},
 	recutSlices: []setup.SliceKey{{"test-package", "slice1"}, {"test-package", "slice2"}},
 	release: map[string]string{
@@ -2382,7 +2379,13 @@ var slicerRecutTests = []slicerRecutTest{{
 		err = os.WriteFile(path, []byte("data"), 0o644)
 		c.Assert(err, IsNil)
 	},
-	error: `mkdir .*: not a directory`,
+	filesystem: map[string]string{
+		"/dir/":     "dir 0755",
+		"/dir/file": "file 0644 3a6eb079",
+	},
+	manifestPaths: map[string]string{
+		"/dir/file": "file 0644 3a6eb079 {test-package_slice1}",
+	},
 }, {
 	summary:     "Upgrade removes content whith unmatching type",
 	cutSlices:   []setup.SliceKey{{"test-package", "slice1"}},
@@ -2401,7 +2404,7 @@ var slicerRecutTests = []slicerRecutTest{{
 		filePath := filepath.Join(targetDir, "file")
 		err := os.Remove(filePath)
 		c.Assert(err, IsNil)
-		err = os.MkdirAll(filePath, 0o755)
+		err = os.Mkdir(filePath, 0o755)
 		c.Assert(err, IsNil)
 		dirPath := filepath.Join(targetDir, "a-dir")
 		err = os.Remove(dirPath)
