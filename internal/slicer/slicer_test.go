@@ -2648,7 +2648,7 @@ var selectValidManifestTests = []selectValidManifestTest{{
 		manifestPath := manifestPathForDir("/chisel/**")
 		writeInvalidSchemaManifest(c, targetDir, manifestPath)
 	},
-	error: `cannot select a manifest: manifest\(s\) found use unknown schema`,
+	error: `cannot select a manifest: all manifests found use unknown schema`,
 }, {
 	summary: "Valid manifest selected",
 	build: func() *setup.Release {

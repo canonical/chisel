@@ -762,7 +762,7 @@ func SelectValidManifest(targetDir string, release *setup.Release) (*manifest.Ma
 		}
 	}
 	if foundUnknownSchema && selected == nil {
-		return nil, fmt.Errorf("cannot select a manifest: manifest(s) found use unknown schema")
+		return nil, fmt.Errorf("cannot select a manifest: all manifests found use unknown schema")
 	}
 	return selected, nil
 }
