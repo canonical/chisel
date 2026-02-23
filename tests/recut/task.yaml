@@ -18,10 +18,11 @@ execute: |
   # First cut generates manifest and installs slice-a.
   chisel cut --release ./chisel-releases/ \
     --root ${ROOTFS} \
-    base-files_slice-a base-files_manifest
+    base-files_slice-a hello_bins base-files_manifest
 
   test -s ${ROOTFS}/etc/debian_version
   test -s ${ROOTFS}/etc/foo
+  test -s ${ROOTFS}/usr/bin/hello
   cat ${ROOTFS}/etc/foo | grep "bar"
   test -f ${ROOTFS}/chisel/manifest.wall
 
@@ -37,3 +38,7 @@ execute: |
   test -s ${ROOTFS}/etc/issue
   cat ${ROOTFS}/etc/foo | grep "qux"
   test -f ${ROOTFS}/chisel/manifest.wall
+  zstd -d ${ROOTFS}/chisel/manifest.wall -o ${ROOTFS}/chisel/manifest.jsonwall
+  packages=$(jq -r 'select(.kind == "package") | .name' ${ROOTFS}/chisel/manifest.jsonwall)
+  echo $packages | MATCH "base-files"
+  echo $packages | MATCH "hello"
