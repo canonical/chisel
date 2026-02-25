@@ -108,16 +108,17 @@ var _ yaml.Marshaler = yamlEssentialListMap{}
 var _ yaml.Unmarshaler = (*yamlEssentialListMap)(nil)
 
 type yamlPath struct {
-	Dir      bool         `yaml:"make,omitempty"`
-	Mode     yamlMode     `yaml:"mode,omitempty"`
-	Copy     string       `yaml:"copy,omitempty"`
-	Text     *string      `yaml:"text,omitempty"`
-	Symlink  string       `yaml:"symlink,omitempty"`
-	Mutable  bool         `yaml:"mutable,omitempty"`
-	Until    PathUntil    `yaml:"until,omitempty"`
-	Arch     yamlArch     `yaml:"arch,omitempty"`
-	Generate GenerateKind `yaml:"generate,omitempty"`
-	Prefer   string       `yaml:"prefer,omitempty"`
+	Dir          bool              `yaml:"make,omitempty"`
+	Mode         yamlMode          `yaml:"mode,omitempty"`
+	Copy         string            `yaml:"copy,omitempty"`
+	Text         *string           `yaml:"text,omitempty"`
+	Symlink      string            `yaml:"symlink,omitempty"`
+	Mutable      bool              `yaml:"mutable,omitempty"`
+	Until        PathUntil         `yaml:"until,omitempty"`
+	Arch         yamlArch          `yaml:"arch,omitempty"`
+	Generate     GenerateKind      `yaml:"generate,omitempty"`
+	Prefer       string            `yaml:"prefer,omitempty"`
+	SpecialGlobs map[string]string `yaml:"special-globs,omitempty"`
 }
 
 func (yp *yamlPath) MarshalYAML() (any, error) {
@@ -512,6 +513,26 @@ func parsePackage(format, pkgName, pkgPath string, data []byte) (*Package, error
 			var arch []string
 			var generate GenerateKind
 			var prefer string
+			var specialGlobs map[rune]string
+
+			// Parse special-globs first if present
+			if yamlPath != nil && len(yamlPath.SpecialGlobs) > 0 {
+				specialGlobs = make(map[rune]string)
+				for key, pattern := range yamlPath.SpecialGlobs {
+					// Ensure key is a single rune
+					runes := []rune(key)
+					if len(runes) != 1 {
+						return nil, fmt.Errorf("slice %s_%s path %s special-globs key must be a single character: %q", pkgName, sliceName, contPath, key)
+					}
+					r := runes[0]
+					// Disallow conflicts with basic glob tokens
+					if r == '*' || r == '?' || r == '/' {
+						return nil, fmt.Errorf("slice %s_%s path %s special-globs key cannot be a standard glob character: %q", pkgName, sliceName, contPath, key)
+					}
+					specialGlobs[r] = pattern
+				}
+			}
+
 			if yamlPath != nil && yamlPath.Generate != "" {
 				zeroPathGenerate := zeroPath
 				zeroPathGenerate.Generate = yamlPath.Generate
@@ -523,7 +544,7 @@ func parsePackage(format, pkgName, pkgPath string, data []byte) (*Package, error
 					return nil, fmt.Errorf("slice %s_%s has invalid generate path: %s", pkgName, sliceName, err)
 				}
 				kinds = append(kinds, GeneratePath)
-			} else if strings.ContainsAny(contPath, "*?") {
+			} else if strings.ContainsAny(contPath, "*?") || hasSpecialGlobChar(contPath, specialGlobs) {
 				if yamlPath != nil {
 					if !yamlPath.SameContent(&zeroPath) || yamlPath.Prefer != "" {
 						return nil, fmt.Errorf("slice %s_%s path %s has invalid wildcard options",
@@ -589,14 +610,15 @@ func parsePackage(format, pkgName, pkgPath string, data []byte) (*Package, error
 				return nil, fmt.Errorf("slice %s_%s mutable is not a regular file: %s", pkgName, sliceName, contPath)
 			}
 			slice.Contents[contPath] = PathInfo{
-				Kind:     kinds[0],
-				Info:     info,
-				Mode:     mode,
-				Mutable:  mutable,
-				Until:    until,
-				Arch:     arch,
-				Generate: generate,
-				Prefer:   prefer,
+				Kind:         kinds[0],
+				Info:         info,
+				Mode:         mode,
+				Mutable:      mutable,
+				Until:        until,
+				Arch:         arch,
+				Generate:     generate,
+				Prefer:       prefer,
+				SpecialGlobs: specialGlobs,
 			}
 		}
 
@@ -622,6 +644,19 @@ func validateGeneratePath(path string) (string, error) {
 	return dirPath, nil
 }
 
+// hasSpecialGlobChar checks if path contains any runes defined in specialGlobs
+func hasSpecialGlobChar(path string, specialGlobs map[rune]string) bool {
+	if len(specialGlobs) == 0 {
+		return false
+	}
+	for _, r := range path {
+		if _, ok := specialGlobs[r]; ok {
+			return true
+		}
+	}
+	return false
+}
+
 // pathInfoToYAML converts a PathInfo object to a yamlPath object.
 // The returned object takes pointers to the given PathInfo object.
 func pathInfoToYAML(pi *PathInfo) (*yamlPath, error) {
@@ -632,6 +667,13 @@ func pathInfoToYAML(pi *PathInfo) (*yamlPath, error) {
 		Arch:     yamlArch{List: pi.Arch},
 		Generate: pi.Generate,
 		Prefer:   pi.Prefer,
+	}
+	// Convert special globs back to yaml format
+	if len(pi.SpecialGlobs) > 0 {
+		path.SpecialGlobs = make(map[string]string)
+		for r, pattern := range pi.SpecialGlobs {
+			path.SpecialGlobs[string(r)] = pattern
+		}
 	}
 	switch pi.Kind {
 	case DirPath:

@@ -513,6 +513,73 @@ var setupTests = []setupTest{{
 	},
 	relerror: `slices mypkg1_myslice and mypkg2_myslice conflict on /file/f\*obar and /file/foob\*r`,
 }, {
+	summary: "Special globs",
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice:
+					contents:
+						/file/f🎄obar:
+							special-globs:
+								🎄: '[^o]'
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+			slices:
+				myslice:
+					contents:
+						/file/foob*r:
+		`,
+	},
+	release: &setup.Release{
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"mypkg1": {
+				Name: "mypkg1",
+				Path: "slices/mydir/mypkg1.yaml",
+				Slices: map[string]*setup.Slice{
+					"myslice": {
+						Package: "mypkg1",
+						Name:    "myslice",
+						Contents: map[string]setup.PathInfo{
+							"/file/f🎄obar": {
+								Kind:         "glob",
+								SpecialGlobs: map[rune]string{'🎄': "[^o]"},
+							},
+						},
+					},
+				},
+			},
+			"mypkg2": {
+				Name: "mypkg2",
+				Path: "slices/mydir/mypkg2.yaml",
+				Slices: map[string]*setup.Slice{
+					"myslice": {
+						Package: "mypkg2",
+						Name:    "myslice",
+						Contents: map[string]setup.PathInfo{
+							"/file/foob*r": {Kind: "glob"},
+						},
+					},
+				},
+			},
+		},
+		Maintenance: &setup.Maintenance{
+			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
+		},
+	},
+}, {
 	summary: "Conflicting globs and plain copies",
 	input: map[string]string{
 		"slices/mydir/mypkg1.yaml": `
@@ -589,6 +656,62 @@ var setupTests = []setupTest{{
 						/file/foob*r: {until: mutate}
 		`,
 	},
+}, {
+	summary: "Special globs with multi-character key is invalid",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+					contents:
+						/file/fXYobar:
+							special-globs:
+								XY: '[a-z]'
+		`,
+	},
+	relerror: `slice mypkg_myslice path /file/fXYobar special-globs key must be a single character: "XY"`,
+}, {
+	summary: "Special globs cannot use standard glob characters",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+					contents:
+						/file/f*obar:
+							special-globs:
+								'*': '[a-z]'
+		`,
+	},
+	relerror: `slice mypkg_myslice path /file/f\*obar special-globs key cannot be a standard glob character: "\*"`,
+}, {
+	summary: "Special globs cannot use slash",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+					contents:
+						/file/f/obar:
+							special-globs:
+								'/': '[a-z]'
+		`,
+	},
+	relerror: `slice mypkg_myslice path /file/f/obar special-globs key cannot be a standard glob character: "/"`,
+}, {
+	summary: "Special globs with invalid regex pattern",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+					contents:
+						/file/fXobar:
+							special-globs:
+								X: '[invalid'
+		`,
+	},
+	relerror: `slice mypkg_myslice path /file/fXobar has invalid special-glob: special-glob "X" has invalid regex pattern "\[invalid": error parsing regexp: missing closing \]: ` + "`" + `\[invalid\$` + "`",
 }, {
 	summary: "Mutable does not work for directories extractions",
 	input: map[string]string{

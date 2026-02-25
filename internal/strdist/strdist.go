@@ -2,8 +2,23 @@ package strdist
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
+
+// ValidateSpecialGlob validates that a special glob character and its pattern are valid
+func ValidateSpecialGlob(char rune, pattern string) error {
+	// Validate that char is not a standard glob character
+	if char == '*' || char == '?' || char == '/' {
+		return fmt.Errorf("special-glob %q cannot be a standard glob character", string(char))
+	}
+	// Validate regex compiles
+	_, err := regexp.Compile("^" + pattern + "$")
+	if err != nil {
+		return fmt.Errorf("special-glob %q has invalid regex pattern %q: %w", string(char), pattern, err)
+	}
+	return nil
+}
 
 type CostInt int64
 
@@ -105,18 +120,92 @@ func Distance(a, b string, f CostFunc, cut int64) int64 {
 //	*  - Any zero or more characters, except for /
 //	** - Any zero or more characters, including /
 func GlobPath(a, b string) bool {
-	if !wildcardPrefixMatch(a, b) {
+	return GlobPathWithSpecial(a, b, nil, nil)
+}
+
+// GlobPathWithSpecial returns true if a and b match using supported wildcards
+// and optional special glob characters defined in aSpecial and bSpecial.
+// Special globs are custom single-character wildcards with regex patterns.
+func GlobPathWithSpecial(a, b string, aSpecial, bSpecial map[rune]string) bool {
+	if !wildcardPrefixMatchWithSpecial(a, b, aSpecial, bSpecial) {
 		// Fast path.
 		return false
 	}
-	if !wildcardSuffixMatch(a, b) {
+	if !wildcardSuffixMatchWithSpecial(a, b, aSpecial, bSpecial) {
 		// Fast path.
 		return false
 	}
 
 	a = strings.ReplaceAll(a, "**", "⁑")
 	b = strings.ReplaceAll(b, "**", "⁑")
-	return Distance(a, b, globCost, 1) == 0
+
+	costFunc := makeGlobCostFunc(aSpecial, bSpecial)
+	return Distance(a, b, costFunc, 1) == 0
+}
+
+func makeGlobCostFunc(aSpecial, bSpecial map[rune]string) CostFunc {
+	// Compile regex patterns once
+	aRegex := make(map[rune]*regexp.Regexp)
+	bRegex := make(map[rune]*regexp.Regexp)
+
+	for r, pattern := range aSpecial {
+		re, err := regexp.Compile("^" + pattern + "$")
+		if err == nil {
+			aRegex[r] = re
+		}
+	}
+	for r, pattern := range bSpecial {
+		re, err := regexp.Compile("^" + pattern + "$")
+		if err == nil {
+			bRegex[r] = re
+		}
+	}
+
+	return func(ar, br rune) Cost {
+		// Handle standard wildcards first
+		if ar == '⁑' || br == '⁑' {
+			return Cost{SwapAB: 0, DeleteA: 0, InsertB: 0}
+		}
+		if ar == '/' || br == '/' {
+			return Cost{SwapAB: Inhibit, DeleteA: Inhibit, InsertB: Inhibit}
+		}
+		if ar == '*' || br == '*' {
+			return Cost{SwapAB: 0, DeleteA: 0, InsertB: 0}
+		}
+		if ar == '?' || br == '?' {
+			return Cost{SwapAB: 0, DeleteA: 1, InsertB: 1}
+		}
+
+		// Handle special globs
+		if re, ok := aRegex[ar]; ok {
+			// ar is a special glob from a
+			if br == '/' {
+				// Special globs cannot match / unless explicitly allowed
+				if !re.MatchString("/") {
+					return Cost{SwapAB: Inhibit, DeleteA: 1, InsertB: Inhibit}
+				}
+			}
+			// Special glob matches any single character matching its pattern
+			if re.MatchString(string(br)) {
+				return Cost{SwapAB: 0, DeleteA: 1, InsertB: Inhibit}
+			}
+			return Cost{SwapAB: Inhibit, DeleteA: 1, InsertB: Inhibit}
+		}
+		if re, ok := bRegex[br]; ok {
+			// br is a special glob from b
+			if ar == '/' {
+				if !re.MatchString("/") {
+					return Cost{SwapAB: Inhibit, DeleteA: Inhibit, InsertB: 1}
+				}
+			}
+			if re.MatchString(string(ar)) {
+				return Cost{SwapAB: 0, DeleteA: Inhibit, InsertB: 1}
+			}
+			return Cost{SwapAB: Inhibit, DeleteA: Inhibit, InsertB: 1}
+		}
+
+		return Cost{SwapAB: 1, DeleteA: 1, InsertB: 1}
+	}
 }
 
 func globCost(ar, br rune) Cost {
@@ -138,9 +227,13 @@ func globCost(ar, br rune) Cost {
 // wildcardPrefixMatch compares whether the prefixes of a and b are equal up
 // to the shortest one. The prefix is defined as the longest substring that
 // starts at index 0 and does not contain a wildcard.
-func wildcardPrefixMatch(a, b string) bool {
-	ai := strings.IndexAny(a, "*?")
-	bi := strings.IndexAny(b, "*?")
+func wildcardPrefixMatch(a, b string) bool { //nolint:all
+	return wildcardPrefixMatchWithSpecial(a, b, nil, nil)
+}
+
+func wildcardPrefixMatchWithSpecial(a, b string, aSpecial, bSpecial map[rune]string) bool {
+	ai := indexAnyWildcard(a, aSpecial)
+	bi := indexAnyWildcard(b, bSpecial)
 	if ai == -1 {
 		ai = len(a)
 	}
@@ -154,17 +247,54 @@ func wildcardPrefixMatch(a, b string) bool {
 // wildcardSuffixMatch compares whether the suffixes of a and b are equal up
 // to the shortest one. The suffix is defined as the longest substring that ends
 // at the string length and does not contain a wildcard.
-func wildcardSuffixMatch(a, b string) bool {
-	ai := strings.LastIndexAny(a, "*?")
+func wildcardSuffixMatch(a, b string) bool { //nolint:all
+	return wildcardSuffixMatchWithSpecial(a, b, nil, nil)
+}
+
+func wildcardSuffixMatchWithSpecial(a, b string, aSpecial, bSpecial map[rune]string) bool {
+	ai := lastIndexAnyWildcard(a, aSpecial)
 	la := 0
 	if ai != -1 {
 		la = len(a) - ai - 1
 	}
 	lb := 0
-	bi := strings.LastIndexAny(b, "*?")
+	bi := lastIndexAnyWildcard(b, bSpecial)
 	if bi != -1 {
 		lb = len(b) - bi - 1
 	}
 	minl := min(la, lb)
 	return a[len(a)-minl:] == b[len(b)-minl:]
+}
+
+// indexAnyWildcard returns the index of the first wildcard in s
+func indexAnyWildcard(s string, special map[rune]string) int {
+	for i, r := range s {
+		if r == '*' || r == '?' {
+			return i
+		}
+		if special != nil {
+			if _, ok := special[r]; ok {
+				return i
+			}
+		}
+	}
+	return -1
+}
+
+// lastIndexAnyWildcard returns the index of the last wildcard in s
+func lastIndexAnyWildcard(s string, special map[rune]string) int {
+	runes := []rune(s)
+	for i := len(runes) - 1; i >= 0; i-- {
+		r := runes[i]
+		if r == '*' || r == '?' {
+			// Calculate byte position
+			return len(string(runes[:i]))
+		}
+		if special != nil {
+			if _, ok := special[r]; ok {
+				return len(string(runes[:i]))
+			}
+		}
+	}
+	return -1
 }
