@@ -2173,7 +2173,6 @@ type slicerRecutTest struct {
 	pkgs        []*testutil.TestPackage
 	cutSlices   []setup.SliceKey
 	recutSlices []setup.SliceKey
-	hackopt     func(c *C, opts *slicer.RunOptions)
 	// Modifies the filesystem built after the first execution and before the
 	// second one.
 	alterFilesystem func(c *C, targetDir string)
@@ -2186,7 +2185,20 @@ type slicerRecutTest struct {
 var slicerRecutTests = []slicerRecutTest{{
 	summary:     "Basic upgrade",
 	cutSlices:   []setup.SliceKey{{"test-package", "slice1"}},
-	recutSlices: []setup.SliceKey{{"test-package", "slice1"}, {"test-package", "slice2"}},
+	recutSlices: []setup.SliceKey{{"test-package", "slice1"}, {"test-package", "slice2"}, {"other-package", "slice1"}},
+	pkgs: []*testutil.TestPackage{{
+		Name:    "test-package",
+		Hash:    "h1",
+		Version: "v1",
+		Arch:    "a1",
+		Data:    testutil.PackageData["test-package"],
+	}, {
+		Name:    "other-package",
+		Hash:    "h2",
+		Version: "v2",
+		Arch:    "a2",
+		Data:    testutil.PackageData["other-package"],
+	}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -2201,12 +2213,20 @@ var slicerRecutTests = []slicerRecutTest{{
 						/dir/other-file:
 						/parent/permissions/file:
 		`,
+		"slices/mydir/other-package.yaml": `
+			package: other-package
+			slices:
+				slice1:
+					contents:
+						/file:
+		`,
 	},
 	filesystem: map[string]string{
 		"/dir/":                    "dir 0755",
 		"/dir/file":                "file 0644 cc55e2ec",
 		"/dir/file-copy":           "file 0644 cc55e2ec",
 		"/dir/other-file":          "file 0644 63d5dd49",
+		"/file":                    "file 0644 fc02ca0e",
 		"/other-dir/":              "dir 0755",
 		"/other-dir/file":          "symlink ../dir/file",
 		"/parent/":                 "dir 01777",
@@ -2219,6 +2239,11 @@ var slicerRecutTests = []slicerRecutTest{{
 		"/dir/other-file":          "file 0644 63d5dd49 {test-package_slice2}",
 		"/other-dir/file":          "symlink ../dir/file {test-package_slice1}",
 		"/parent/permissions/file": "file 0755 722c14b3 {test-package_slice2}",
+		"/file":                    "file 0644 fc02ca0e {other-package_slice1}",
+	},
+	manifestPkgs: map[string]string{
+		"test-package":  "test-package v1 a1 h1",
+		"other-package": "other-package v2 a2 h2",
 	},
 }, {
 	summary:     "Upgrade removes obsolete paths when selection shrinks",
@@ -2553,9 +2578,6 @@ func (s *S) TestRunRecut(c *C) {
 			Selection: selection,
 			Archives:  archives,
 			TargetDir: targetDir,
-		}
-		if test.hackopt != nil {
-			test.hackopt(c, &options)
 		}
 		// First run.
 		err = slicer.Run(&options)
