@@ -40,5 +40,9 @@ execute: |
   test -f ${ROOTFS}/chisel/manifest.wall
   zstd -d ${ROOTFS}/chisel/manifest.wall -o ${ROOTFS}/chisel/manifest.jsonwall
   packages=$(jq -r 'select(.kind == "package") | .name' ${ROOTFS}/chisel/manifest.jsonwall)
-  echo $packages | MATCH "base-files"
-  echo $packages | MATCH "hello"
+  expected=$(cat <<EOF
+  base-files
+  hello
+  EOF
+  )
+  diff <(echo $expected) <(echo $packages)
