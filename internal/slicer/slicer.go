@@ -401,8 +401,7 @@ func upgrade(targetDir string, tempDir string, report *manifestutil.Report, mfes
 		srcPath := filepath.Clean(filepath.Join(tempDir, path))
 		dstPath := filepath.Clean(filepath.Join(targetDir, path))
 
-		// Create parent directories, removing any file on the way up.
-		if err := mkParentAll(dstPath); err != nil {
+		if err := upgradeParentDirs(tempDir, targetDir, path); err != nil {
 			return fmt.Errorf("cannot create parent directory for %q: %s", path, err)
 		}
 
@@ -414,7 +413,7 @@ func upgrade(targetDir string, tempDir string, report *manifestutil.Report, mfes
 				err = fmt.Errorf("cannot upgrade file at %q: %s", path, err)
 			}
 		case fs.ModeDir:
-			err = upgradeDir(dstPath, entry)
+			err = upgradeDir(dstPath, entry.Mode)
 			if err != nil {
 				err = fmt.Errorf("cannot upgrade directory at %q: %s", path, err)
 			}
@@ -452,29 +451,43 @@ func upgrade(targetDir string, tempDir string, report *manifestutil.Report, mfes
 	return nil
 }
 
-func mkParentAll(path string) error {
-	parent := filepath.Dir(path)
-	err := os.MkdirAll(parent, 0o755)
-	if err == nil {
-		return nil
-	}
-	e, ok := err.(*os.PathError)
-	if !ok || !errors.Is(e.Unwrap(), syscall.ENOTDIR) {
-		return err
-	}
-	err = os.Remove(parent)
-	if err != nil {
-		return err
-	}
-	err = os.MkdirAll(parent, 0o755)
-	if err != nil {
-		return mkParentAll(parent)
+// upgradeParentDirs replicates the parent directories of targetPath in dstRoot,
+// removing any non-directory on the way.
+func upgradeParentDirs(srcRoot string, dstRoot string, targetPath string) error {
+	parents := parentDirs(targetPath)
+	for _, path := range parents {
+		if path == "/" {
+			continue
+		}
+		srcPath := filepath.Clean(filepath.Join(srcRoot, path))
+		srcInfo, err := os.Stat(srcPath)
+		if err != nil {
+			return err
+		}
+		dstPath := filepath.Clean(filepath.Join(dstRoot, path))
+		err = upgradeDir(dstPath, srcInfo.Mode())
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func upgradeDir(path string, entry manifestutil.ReportEntry) error {
-	err := os.Mkdir(path, entry.Mode)
+func parentDirs(path string) []string {
+	path = filepath.Clean(path)
+	parents := make([]string, strings.Count(path, "/"))
+	count := 0
+	for i, c := range path {
+		if c == '/' {
+			parents[count] = path[:i+1]
+			count++
+		}
+	}
+	return parents
+}
+
+func upgradeDir(path string, mode fs.FileMode) error {
+	err := os.Mkdir(path, mode)
 	if err != nil {
 		if !os.IsExist(err) {
 			return err
@@ -484,7 +497,7 @@ func upgradeDir(path string, entry manifestutil.ReportEntry) error {
 			return err
 		}
 		if fileinfo.IsDir() {
-			return os.Chmod(path, entry.Mode)
+			return os.Chmod(path, mode)
 		}
 		// Path is a regular file or symlink, remove it.
 		err = os.Remove(path)
@@ -492,7 +505,7 @@ func upgradeDir(path string, entry manifestutil.ReportEntry) error {
 			return err
 		}
 
-		return os.Mkdir(path, entry.Mode)
+		return os.Mkdir(path, mode)
 	}
 	return nil
 }

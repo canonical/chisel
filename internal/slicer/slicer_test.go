@@ -2199,21 +2199,26 @@ var slicerRecutTests = []slicerRecutTest{{
 				slice2:
 					contents:
 						/dir/other-file:
+						/parent/permissions/file:
 		`,
 	},
 	filesystem: map[string]string{
-		"/dir/":           "dir 0755",
-		"/dir/file":       "file 0644 cc55e2ec",
-		"/dir/file-copy":  "file 0644 cc55e2ec",
-		"/dir/other-file": "file 0644 63d5dd49",
-		"/other-dir/":     "dir 0755",
-		"/other-dir/file": "symlink ../dir/file",
+		"/dir/":                    "dir 0755",
+		"/dir/file":                "file 0644 cc55e2ec",
+		"/dir/file-copy":           "file 0644 cc55e2ec",
+		"/dir/other-file":          "file 0644 63d5dd49",
+		"/other-dir/":              "dir 0755",
+		"/other-dir/file":          "symlink ../dir/file",
+		"/parent/":                 "dir 01777",
+		"/parent/permissions/":     "dir 0764",
+		"/parent/permissions/file": "file 0755 722c14b3",
 	},
 	manifestPaths: map[string]string{
-		"/dir/file":       "file 0644 cc55e2ec {test-package_slice1}",
-		"/dir/file-copy":  "file 0644 cc55e2ec {test-package_slice1}",
-		"/dir/other-file": "file 0644 63d5dd49 {test-package_slice2}",
-		"/other-dir/file": "symlink ../dir/file {test-package_slice1}",
+		"/dir/file":                "file 0644 cc55e2ec {test-package_slice1}",
+		"/dir/file-copy":           "file 0644 cc55e2ec {test-package_slice1}",
+		"/dir/other-file":          "file 0644 63d5dd49 {test-package_slice2}",
+		"/other-dir/file":          "symlink ../dir/file {test-package_slice1}",
+		"/parent/permissions/file": "file 0755 722c14b3 {test-package_slice2}",
 	},
 }, {
 	summary:     "Upgrade removes obsolete paths when selection shrinks",
@@ -2357,7 +2362,7 @@ var slicerRecutTests = []slicerRecutTest{{
 		"/foo":  "symlink baz {test-package_slice2}",
 	},
 }, {
-	summary:     "Upgrade removes content to create parent dirs",
+	summary:     "Upgrade removes and change mode of content to create parent dirs",
 	cutSlices:   []setup.SliceKey{{"test-package", "slice1"}},
 	recutSlices: []setup.SliceKey{{"test-package", "slice1"}, {"test-package", "slice2"}},
 	release: map[string]string{
@@ -2369,6 +2374,7 @@ var slicerRecutTests = []slicerRecutTest{{
 						/dir/file: {text: data}
 				slice2:
 					contents:
+						/parent/permissions/file:
 		`,
 	},
 	alterFilesystem: func(c *C, targetDir string) {
@@ -2377,13 +2383,20 @@ var slicerRecutTests = []slicerRecutTest{{
 		c.Assert(err, IsNil)
 		err = os.WriteFile(path, []byte("data"), 0o644)
 		c.Assert(err, IsNil)
+		newDirPath := filepath.Join(targetDir, "parent/permissions/")
+		err = os.MkdirAll(newDirPath, 0o755)
+		c.Assert(err, IsNil)
 	},
 	filesystem: map[string]string{
-		"/dir/":     "dir 0755",
-		"/dir/file": "file 0644 3a6eb079",
+		"/dir/":                    "dir 0755",
+		"/dir/file":                "file 0644 3a6eb079",
+		"/parent/":                 "dir 01777",
+		"/parent/permissions/":     "dir 0764",
+		"/parent/permissions/file": "file 0755 722c14b3",
 	},
 	manifestPaths: map[string]string{
-		"/dir/file": "file 0644 3a6eb079 {test-package_slice1}",
+		"/dir/file":                "file 0644 3a6eb079 {test-package_slice1}",
+		"/parent/permissions/file": "file 0755 722c14b3 {test-package_slice2}",
 	},
 }, {
 	summary:     "Upgrade removes content whith unmatching type",
