@@ -392,7 +392,7 @@ func install(options *RunOptions) (*manifestutil.Report, error) {
 	return report, nil
 }
 
-// upgrade upgrades content in targetDir with content in tempDir.
+// upgrade upgrades content in targetDir with content from tempDir.
 func upgrade(targetDir string, tempDir string, report *manifestutil.Report, mfest *manifest.Manifest) error {
 	logf("Upgrading content...")
 	paths := slices.Sorted(maps.Keys(report.Entries))
@@ -401,6 +401,11 @@ func upgrade(targetDir string, tempDir string, report *manifestutil.Report, mfes
 		srcPath := filepath.Clean(filepath.Join(tempDir, path))
 		dstPath := filepath.Clean(filepath.Join(targetDir, path))
 
+		// When extracting the content, a great care is taken to create parent
+		// directories respecting the tarball permissions. However the current
+		// approach may not record some of these parents in the report. Make sure
+		// to create consistent directories in the targetDir to sustain the same
+		// guarantees as a normal cut.
 		if err := upgradeParentDirs(tempDir, targetDir, path); err != nil {
 			return fmt.Errorf("cannot create parent directory for %q: %s", path, err)
 		}
