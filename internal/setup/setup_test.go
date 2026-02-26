@@ -3621,6 +3621,17 @@ var setupTests = []setupTest{{
 	},
 	relerror: `package "mypkg" repeats mypkg_myslice2 in essential fields`,
 }, {
+	summary: "Essential must be list or map",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			essential: not-a-list-or-map
+			slices:
+				myslice:
+		`,
+	},
+	relerror: `essential field must be a list or a map`,
+}, {
 	summary: "Cycles are detected with 'v3-essential'",
 	input: map[string]string{
 		"slices/mydir/mypkg1.yaml": `
