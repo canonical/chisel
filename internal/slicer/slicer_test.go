@@ -2269,7 +2269,7 @@ var slicerRecutTests = []slicerRecutTest{{
 		"/dir/other-file": "file 0644 63d5dd49 {test-package_slice2}",
 	},
 }, {
-	summary:     "Upgrade restores modified content and mode",
+	summary:     "Upgrade overrides modified content and mode",
 	cutSlices:   []setup.SliceKey{{"test-package", "slice1"}},
 	recutSlices: []setup.SliceKey{{"test-package", "slice1"}},
 	release: map[string]string{
@@ -2339,7 +2339,7 @@ var slicerRecutTests = []slicerRecutTest{{
 		`,
 	},
 	alterFilesystem: func(c *C, targetDir string) {
-		err := os.MkdirAll(filepath.Join(targetDir, "other-dir"), 0o775)
+		err := os.Mkdir(filepath.Join(targetDir, "other-dir"), 0o775)
 		c.Assert(err, IsNil)
 		err = os.WriteFile(filepath.Join(targetDir, "dir", "file"), []byte("data"), 0o644)
 		c.Assert(err, IsNil)
@@ -2387,7 +2387,7 @@ var slicerRecutTests = []slicerRecutTest{{
 		"/foo":  "symlink baz {test-package_slice2}",
 	},
 }, {
-	summary:     "Upgrade removes and change mode of content to create parent dirs",
+	summary:     "Upgrade removes and changes mode of content to create parent dirs",
 	cutSlices:   []setup.SliceKey{{"test-package", "slice1"}},
 	recutSlices: []setup.SliceKey{{"test-package", "slice1"}, {"test-package", "slice2"}},
 	release: map[string]string{
@@ -2671,7 +2671,7 @@ var selectValidManifestTests = []selectValidManifestTest{{
 		manifestPathA := manifestPathForDir("/chisel-a/**")
 		manifestPathB := manifestPathForDir("/chisel-b/**")
 		slice := release.Packages["test-package"].Slices["manifest"]
-		writeManifest(c, targetDir, manifestPathA, slice, "hash1")
+		writeSampleManifest(c, targetDir, manifestPathA, slice, "hash1")
 		writeInvalidSchemaManifest(c, targetDir, manifestPathB)
 	},
 }, {
@@ -2692,7 +2692,7 @@ var selectValidManifestTests = []selectValidManifestTest{{
 	setup: func(c *C, targetDir string, release *setup.Release) {
 		manifestPath := manifestPathForDir("/chisel/**")
 		slice := release.Packages["test-package"].Slices["manifest"]
-		writeManifest(c, targetDir, manifestPath, slice, "hash1")
+		writeSampleManifest(c, targetDir, manifestPath, slice, "hash1")
 	},
 }, {
 	summary: "Two consistent manifests are accepted",
@@ -2703,8 +2703,8 @@ var selectValidManifestTests = []selectValidManifestTest{{
 		manifestPathA := manifestPathForDir("/chisel-a/**")
 		manifestPathB := manifestPathForDir("/chisel-b/**")
 		slice := release.Packages["test-package"].Slices["manifest"]
-		writeManifest(c, targetDir, manifestPathA, slice, "hash1")
-		writeManifest(c, targetDir, manifestPathB, slice, "hash1")
+		writeSampleManifest(c, targetDir, manifestPathA, slice, "hash1")
+		writeSampleManifest(c, targetDir, manifestPathB, slice, "hash1")
 	},
 }, {
 	summary: "Inconsistent manifests with same schema are rejected",
@@ -2715,8 +2715,8 @@ var selectValidManifestTests = []selectValidManifestTest{{
 		manifestPathA := manifestPathForDir("/chisel-a/**")
 		manifestPathB := manifestPathForDir("/chisel-b/**")
 		slice := release.Packages["test-package"].Slices["manifest"]
-		writeManifest(c, targetDir, manifestPathA, slice, "hash1")
-		writeManifest(c, targetDir, manifestPathB, slice, "hash2")
+		writeSampleManifest(c, targetDir, manifestPathA, slice, "hash1")
+		writeSampleManifest(c, targetDir, manifestPathB, slice, "hash2")
 	},
 	error: `cannot select a manifest: "/chisel-a/manifest.wall" and "/chisel-b/manifest.wall" are inconsistent`,
 }, {
@@ -2869,7 +2869,7 @@ func readManifest(c *C, targetDir, manifestPath string) *manifest.Manifest {
 	return mfest
 }
 
-func writeManifest(c *C, targetDir, manifestPath string, slice *setup.Slice, hash string) {
+func writeSampleManifest(c *C, targetDir, manifestPath string, slice *setup.Slice, hash string) {
 	mfestPath := filepath.Join(targetDir, manifestPath)
 	err := os.MkdirAll(filepath.Dir(mfestPath), 0o755)
 	c.Assert(err, IsNil)
@@ -2927,7 +2927,7 @@ func writeInvalidSchemaManifest(c *C, targetDir, manifestPath string) {
 	c.Assert(err, IsNil)
 	zw, err := zstd.NewWriter(f)
 	c.Assert(err, IsNil)
-	dbw := jsonwall.NewDBWriter(&jsonwall.DBWriterOptions{Schema: "9.9"})
+	dbw := jsonwall.NewDBWriter(&jsonwall.DBWriterOptions{Schema: "invalid"})
 	_, err = dbw.WriteTo(zw)
 	c.Assert(err, IsNil)
 	c.Assert(zw.Close(), IsNil)
