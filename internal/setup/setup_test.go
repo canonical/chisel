@@ -3621,8 +3621,9 @@ var setupTests = []setupTest{{
 	},
 	relerror: `package "mypkg" repeats mypkg_myslice2 in essential fields`,
 }, {
-	summary: "Essential must be list or map",
+	summary: "Essential must be list or map v3",
 	input: map[string]string{
+		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYaml, "format: v1", "format: v3"),
 		"slices/mydir/mypkg.yaml": `
 			package: mypkg
 			essential: not-a-list-or-map
@@ -3630,7 +3631,7 @@ var setupTests = []setupTest{{
 				myslice:
 		`,
 	},
-	relerror: `essential field must be a list or a map`,
+	relerror: `cannot parse package \"mypkg\" slice definitions: essential field must be a list or a map`,
 }, {
 	summary: "Cycles are detected with 'v3-essential'",
 	input: map[string]string{
