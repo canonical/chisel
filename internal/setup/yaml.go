@@ -95,6 +95,8 @@ func (es *yamlEssentialListMap) UnmarshalYAML(value *yaml.Node) error {
 		if err != nil {
 			return err
 		}
+	default:
+		return fmt.Errorf("essential field must be a list or a map")
 	}
 	es.Values = m
 	return nil
