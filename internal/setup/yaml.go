@@ -95,6 +95,8 @@ func (es *yamlEssentialListMap) UnmarshalYAML(value *yaml.Node) error {
 		if err != nil {
 			return err
 		}
+	default:
+		return fmt.Errorf("cannot decode essential field")
 	}
 	es.Values = m
 	return nil

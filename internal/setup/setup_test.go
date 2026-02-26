@@ -3729,6 +3729,18 @@ var setupTests = []setupTest{{
 	},
 	relerror: `cannot parse package "mypkg": essential expects a list`,
 }, {
+	summary: "Essential must be list or map",
+	input: map[string]string{
+		"chisel.yaml": testutil.DefaultChiselYaml,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			essential: not-a-list-or-map
+			slices:
+				myslice:
+		`,
+	},
+	relerror: `cannot parse package "mypkg" slice definitions: cannot decode essential field`,
+}, {
 	summary: "Format v1/v2 expect a list in 'essential' (slice)",
 	input: map[string]string{
 		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYaml, "format: v1", "format: v2"),
@@ -4203,7 +4215,9 @@ func oldEssentialToV3(c *C, input []byte) (out string, skip bool) {
 		for _, rawSlice := range slices {
 			if slice, ok := rawSlice.(map[string]any); ok {
 				newEssential := make(map[string]any)
+				sliceEssentialProcessed := false
 				if oldEssential, ok := slice["essential"].([]any); ok {
+					sliceEssentialProcessed = true
 					for _, value := range oldEssential {
 						s := value.(string)
 						if _, ok := newEssential[s]; ok {
@@ -4214,6 +4228,7 @@ func oldEssentialToV3(c *C, input []byte) (out string, skip bool) {
 					}
 				}
 				if oldEssential, ok := slice["v3-essential"].(map[string]any); ok {
+					sliceEssentialProcessed = true
 					for key, value := range oldEssential {
 						if _, ok := newEssential[key]; ok {
 							return "", true
@@ -4222,13 +4237,17 @@ func oldEssentialToV3(c *C, input []byte) (out string, skip bool) {
 					}
 					delete(slice, "v3-essential")
 				}
-				slice["essential"] = newEssential
+				if sliceEssentialProcessed {
+					slice["essential"] = newEssential
+				}
 			}
 		}
 	}
 
 	newEssential := make(map[string]any)
+	essentialProcessed := false
 	if oldEssential, ok := raw["essential"].([]any); ok {
+		essentialProcessed = true
 		for _, item := range oldEssential {
 			s := item.(string)
 			if _, ok := newEssential[s]; ok {
@@ -4239,6 +4258,7 @@ func oldEssentialToV3(c *C, input []byte) (out string, skip bool) {
 		}
 	}
 	if oldEssential, ok := raw["v3-essential"].(map[string]any); ok {
+		essentialProcessed = true
 		for key, value := range oldEssential {
 			if _, ok := newEssential[key]; ok {
 				// Duplicated entries are impossible in v3.
@@ -4248,7 +4268,9 @@ func oldEssentialToV3(c *C, input []byte) (out string, skip bool) {
 		}
 		delete(raw, "v3-essential")
 	}
-	raw["essential"] = newEssential
+	if essentialProcessed {
+		raw["essential"] = newEssential
+	}
 
 	bs, err := yaml.Marshal(raw)
 	c.Assert(err, IsNil)
