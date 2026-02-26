@@ -3739,7 +3739,7 @@ var setupTests = []setupTest{{
 				myslice:
 		`,
 	},
-	relerror: `cannot parse package "mypkg" slice definitions: essential field must be a list or a map`,
+	relerror: `cannot parse package "mypkg" slice definitions: cannot decode essential field`,
 }, {
 	summary: "Essential must be list or map (v3)",
 	input: map[string]string{
@@ -3751,7 +3751,7 @@ var setupTests = []setupTest{{
 				myslice:
 		`,
 	},
-	relerror: `cannot parse package "mypkg" slice definitions: essential field must be a list or a map`,
+	relerror: `cannot parse package "mypkg" slice definitions: cannot decode essential field`,
 }, {
 	summary: "Format v1/v2 expect a list in 'essential' (slice)",
 	input: map[string]string{
