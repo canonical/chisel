@@ -3729,21 +3729,9 @@ var setupTests = []setupTest{{
 	},
 	relerror: `cannot parse package "mypkg": essential expects a list`,
 }, {
-	summary: "Essential must be list or map (v1/v2)",
+	summary: "Essential must be list or map",
 	input: map[string]string{
 		"chisel.yaml": testutil.DefaultChiselYaml,
-		"slices/mydir/mypkg.yaml": `
-			package: mypkg
-			essential: not-a-list-or-map
-			slices:
-				myslice:
-		`,
-	},
-	relerror: `cannot parse package "mypkg" slice definitions: cannot decode essential field`,
-}, {
-	summary: "Essential must be list or map (v3)",
-	input: map[string]string{
-		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYaml, "format: v1", "format: v3"),
 		"slices/mydir/mypkg.yaml": `
 			package: mypkg
 			essential: not-a-list-or-map
