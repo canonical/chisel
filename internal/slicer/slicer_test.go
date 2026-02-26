@@ -2307,7 +2307,7 @@ var slicerRecutTests = []slicerRecutTest{{
 		`,
 	},
 	alterFilesystem: func(c *C, targetDir string) {
-		err := os.MkdirAll(filepath.Join(targetDir, "extra"), 0o755)
+		err := os.Mkdir(filepath.Join(targetDir, "extra"), 0o755)
 		c.Assert(err, IsNil)
 		err = os.WriteFile(filepath.Join(targetDir, "extra", "untracked"), []byte("data"), 0o644)
 		c.Assert(err, IsNil)
