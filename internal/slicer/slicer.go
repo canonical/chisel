@@ -718,8 +718,18 @@ func selectPkgArchives(archives map[string]archive.Archive, selection *setup.Sel
 	return pkgArchive, nil
 }
 
-// SelectValidManifest returns, if found, a valid manifest. Consistency with
-// other manifests is verified so the selection is deterministic.
+// SelectValidManifest returns, if found, a valid manifest.
+//
+// Not finding any manifest (valid or not) means the targetDir cannot be
+// considered as previously produced by Chisel for the given release.
+//
+// Finding only manifests with unknown schema version means the targetDir may
+// have been produced by Chisel, but possibly by a future/incompatible one.
+// Chisel cannot safely proceed and so errors out.
+//
+// Finding multiple manifests, with at least one valid means Chisel can proceeds,
+// ignoring unknown ones. Consistency between valid manifests is verified,
+// ensuring a deterministic selection.
 func SelectValidManifest(targetDir string, release *setup.Release) (*manifest.Manifest, error) {
 	targetDir = filepath.Clean(targetDir)
 	if !filepath.IsAbs(targetDir) {
