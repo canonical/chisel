@@ -1,0 +1,13 @@
+package: hello
+
+essential:
+  - hello_copyright
+
+slices:
+  bins:
+    contents:
+      /usr/bin/hello:
+
+  copyright:
+    contents:
+      /usr/share/doc/hello/copyright:

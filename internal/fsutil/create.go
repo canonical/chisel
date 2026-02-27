@@ -168,6 +168,10 @@ func createDir(o *CreateOptions) error {
 	}
 	err = os.Mkdir(path, o.Mode)
 	if os.IsExist(err) {
+		// TODO: Detect if existing content is a file. ErrExist is also returned
+		// if a file exists at this path, so returning nil here creates an
+		// inconsistency between our view of the content and the real content on
+		// disk which is a bug that must be fixed.
 		return nil
 	}
 	return err
@@ -179,6 +183,9 @@ func createFile(o *CreateOptions) error {
 	if err != nil {
 		return err
 	}
+	// TODO: Detect if existing content is a symlink and remove it if so. The
+	// current implementation resolves the symlink and will override the target
+	// and not the symlink itself which is a bug.
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, o.Mode)
 	if err != nil {
 		return err

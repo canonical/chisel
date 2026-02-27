@@ -3,10 +3,15 @@ package slicer
 import (
 	"archive/tar"
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
+	"maps"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -21,6 +26,7 @@ import (
 	"github.com/canonical/chisel/internal/manifestutil"
 	"github.com/canonical/chisel/internal/scripts"
 	"github.com/canonical/chisel/internal/setup"
+	"github.com/canonical/chisel/public/manifest"
 )
 
 const manifestMode fs.FileMode = 0644
@@ -29,6 +35,7 @@ type RunOptions struct {
 	Selection *setup.Selection
 	Archives  map[string]archive.Archive
 	TargetDir string
+	Manifest  *manifest.Manifest
 }
 
 type pathData struct {
@@ -90,14 +97,44 @@ func Run(options *RunOptions) error {
 		targetDir = filepath.Join(dir, targetDir)
 	}
 
-	pkgArchive, err := selectPkgArchives(options.Archives, options.Selection)
+	optsCopy := *options
+	installOpts := &optsCopy
+	installOpts.TargetDir = targetDir
+	if options.Manifest != nil {
+		tmpWorkDir, err := os.MkdirTemp(targetDir, "chisel-workdir-*")
+		if err != nil {
+			return fmt.Errorf("cannot create temporary working directory: %w", err)
+		}
+		installOpts.TargetDir = tmpWorkDir
+		defer func() {
+			os.RemoveAll(tmpWorkDir)
+		}()
+	}
+
+	report, err := install(installOpts)
 	if err != nil {
 		return err
 	}
 
+	if options.Manifest != nil {
+		err = upgrade(targetDir, installOpts.TargetDir, report, options.Manifest)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func install(options *RunOptions) (*manifestutil.Report, error) {
+	pkgArchive, err := selectPkgArchives(options.Archives, options.Selection)
+	if err != nil {
+		return nil, err
+	}
+
 	prefers, err := options.Selection.Prefers()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Build information to process the selection.
@@ -154,7 +191,7 @@ func Run(options *RunOptions) error {
 		}
 		reader, info, err := pkgArchive[slice.Package].Fetch(slice.Package)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		defer reader.Close()
 		packages[slice.Package] = reader
@@ -165,9 +202,9 @@ func Run(options *RunOptions) error {
 	// listed as until: mutate in all the slices that reference them.
 	knownPaths := map[string]pathData{}
 	addKnownPath(knownPaths, "/", pathData{})
-	report, err := manifestutil.NewReport(targetDir)
+	report, err := manifestutil.NewReport(options.TargetDir)
 	if err != nil {
-		return fmt.Errorf("internal error: cannot create report: %w", err)
+		return nil, fmt.Errorf("internal error: cannot create report: %w", err)
 	}
 
 	// Record directories which are created but where not listed in the slice
@@ -183,7 +220,7 @@ func Run(options *RunOptions) error {
 			return err
 		}
 
-		relPath := filepath.Clean("/" + strings.TrimPrefix(o.Path, targetDir))
+		relPath := filepath.Clean("/" + strings.TrimPrefix(o.Path, options.TargetDir))
 		if o.Mode.IsDir() {
 			relPath = relPath + "/"
 		}
@@ -241,13 +278,13 @@ func Run(options *RunOptions) error {
 		err := deb.Extract(reader, &deb.ExtractOptions{
 			Package:   slice.Package,
 			Extract:   extract[slice.Package],
-			TargetDir: targetDir,
+			TargetDir: options.TargetDir,
 			Create:    create,
 		})
 		reader.Close()
 		packages[slice.Package] = nil
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -303,9 +340,9 @@ func Run(options *RunOptions) error {
 			mutable: pathInfo.Mutable,
 		}
 		addKnownPath(knownPaths, relPath, data)
-		entry, err := createFile(targetDir, relPath, pathInfo)
+		entry, err := createFile(options.TargetDir, relPath, pathInfo)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		// Do not add paths with "until: mutate".
@@ -313,7 +350,7 @@ func Run(options *RunOptions) error {
 			for _, slice := range slices {
 				err = report.Add(slice, entry)
 				if err != nil {
-					return err
+					return nil, err
 				}
 			}
 		}
@@ -323,7 +360,7 @@ func Run(options *RunOptions) error {
 	// dependencies must run before dependents.
 	checker := contentChecker{knownPaths}
 	content := &scripts.ContentValue{
-		RootDir:    targetDir,
+		RootDir:    options.TargetDir,
 		CheckWrite: checker.checkMutable,
 		CheckRead:  checker.checkKnown,
 		OnWrite:    report.Mutate,
@@ -338,16 +375,159 @@ func Run(options *RunOptions) error {
 		}
 		err := scripts.Run(&opts)
 		if err != nil {
-			return fmt.Errorf("slice %s: %w", slice, err)
+			return nil, fmt.Errorf("slice %s: %w", slice, err)
 		}
 	}
 
-	err = removeAfterMutate(targetDir, knownPaths)
+	err = removeAfterMutate(options.TargetDir, knownPaths)
+	if err != nil {
+		return nil, err
+	}
+
+	err = generateManifests(options.TargetDir, options.Selection, report, pkgInfos)
+	if err != nil {
+		return nil, err
+	}
+
+	return report, nil
+}
+
+// upgrade upgrades content in targetDir with content from tempDir.
+func upgrade(targetDir string, tempDir string, report *manifestutil.Report, mfest *manifest.Manifest) error {
+	logf("Upgrading content...")
+	paths := slices.Sorted(maps.Keys(report.Entries))
+	for _, path := range paths {
+		entry := report.Entries[path]
+		srcPath := filepath.Clean(filepath.Join(tempDir, path))
+		dstPath := filepath.Clean(filepath.Join(targetDir, path))
+
+		// When extracting the content, a great care is taken to create parent
+		// directories respecting the tarball permissions. However the current
+		// approach may not record some of these parents in the report. Make sure
+		// to create consistent directories in the targetDir to sustain the same
+		// guarantees as a normal cut.
+		if err := upgradeParentDirs(tempDir, targetDir, path); err != nil {
+			return fmt.Errorf("cannot create parent directory for %q: %s", path, err)
+		}
+
+		var err error
+		switch entry.Mode & fs.ModeType {
+		case 0, fs.ModeSymlink:
+			err = upgradeFile(srcPath, dstPath)
+			if err != nil {
+				err = fmt.Errorf("cannot upgrade file at %q: %s", path, err)
+			}
+		case fs.ModeDir:
+			err = upgradeDir(dstPath, entry.Mode)
+			if err != nil {
+				err = fmt.Errorf("cannot upgrade directory at %q: %s", path, err)
+			}
+		default:
+			err = fmt.Errorf("unsupported file type: %s", path)
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+	// Remove missing paths.
+	missingPaths := make([]string, 0)
+	err := mfest.IteratePaths("", func(path *manifest.Path) error {
+		_, ok := report.Entries[path.Path]
+		if !ok {
+			missingPaths = append(missingPaths, path.Path)
+		}
+		return nil
+	})
 	if err != nil {
 		return err
 	}
+	sort.Sort(sort.Reverse(sort.StringSlice(missingPaths)))
+	// Go through the list in reverse order to empty directories before removing
+	// them. Any ENOTEMPTY error encountered means user content is in the directory
+	// and Chisel does not manage it anymore.
+	for _, relPath := range missingPaths {
+		path := filepath.Clean(filepath.Join(targetDir, relPath))
+		err = os.Remove(path)
+		if err != nil && !os.IsNotExist(err) && !errors.Is(err, syscall.ENOTEMPTY) {
+			return err
+		}
+	}
+	return nil
+}
 
-	return generateManifests(targetDir, options.Selection, report, pkgInfos)
+// upgradeParentDirs replicates the parent directories of targetPath in dstRoot,
+// removing any non-directory on the way.
+func upgradeParentDirs(srcRoot string, dstRoot string, targetPath string) error {
+	parents := parentDirs(targetPath)
+	for _, path := range parents {
+		if path == "/" {
+			continue
+		}
+		srcPath := filepath.Clean(filepath.Join(srcRoot, path))
+		srcInfo, err := os.Stat(srcPath)
+		if err != nil {
+			return err
+		}
+		dstPath := filepath.Clean(filepath.Join(dstRoot, path))
+		err = upgradeDir(dstPath, srcInfo.Mode())
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func parentDirs(path string) []string {
+	path = filepath.Clean(path)
+	parents := make([]string, strings.Count(path, "/"))
+	count := 0
+	for i, c := range path {
+		if c == '/' {
+			parents[count] = path[:i+1]
+			count++
+		}
+	}
+	return parents
+}
+
+func upgradeDir(path string, mode fs.FileMode) error {
+	err := os.Mkdir(path, mode)
+	if err != nil {
+		if !os.IsExist(err) {
+			return err
+		}
+		fileinfo, err := os.Lstat(path)
+		if err != nil {
+			return err
+		}
+		if fileinfo.IsDir() {
+			return os.Chmod(path, mode)
+		}
+		// Path is a regular file or symlink, remove it.
+		err = os.Remove(path)
+		if err != nil {
+			return err
+		}
+
+		return os.Mkdir(path, mode)
+	}
+	return nil
+}
+
+func upgradeFile(srcPath string, dstPath string) error {
+	err := os.Rename(srcPath, dstPath)
+	if err != nil {
+		if !os.IsExist(err) {
+			return err
+		}
+		err = os.RemoveAll(dstPath)
+		if err != nil {
+			return err
+		}
+		return os.Rename(srcPath, dstPath)
+	}
+	return nil
 }
 
 func generateManifests(targetDir string, selection *setup.Selection,
@@ -536,4 +716,95 @@ func selectPkgArchives(archives map[string]archive.Archive, selection *setup.Sel
 		pkgArchive[pkg.Name] = chosen
 	}
 	return pkgArchive, nil
+}
+
+// SelectValidManifest returns, if found, a valid manifest.
+//
+// Not finding any manifest (valid or not) means the targetDir cannot be
+// considered as previously produced by Chisel for the given release.
+//
+// Finding only manifests with unknown schema version means the targetDir may
+// have been produced by Chisel, but possibly by a future/incompatible one.
+// Chisel cannot safely proceed and so errors out.
+//
+// Finding multiple manifests, with at least one valid means Chisel can proceeds,
+// ignoring unknown ones. Consistency between valid manifests is verified,
+// ensuring a deterministic selection.
+func SelectValidManifest(targetDir string, release *setup.Release) (*manifest.Manifest, error) {
+	targetDir = filepath.Clean(targetDir)
+	if !filepath.IsAbs(targetDir) {
+		dir, err := os.Getwd()
+		if err != nil {
+			return nil, fmt.Errorf("cannot obtain current directory: %w", err)
+		}
+		targetDir = filepath.Join(dir, targetDir)
+	}
+	manifestPaths := manifestutil.FindPathsInRelease(release)
+	if len(manifestPaths) == 0 {
+		return nil, nil
+	}
+
+	var selected *manifest.Manifest
+	var selectedHash string
+	var selectedPath string
+	foundUnknownSchema := false
+	for _, mfestPath := range manifestPaths {
+		mfestFullPath := path.Join(targetDir, mfestPath)
+		f, err := os.Open(mfestFullPath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return nil, err
+		}
+		defer f.Close()
+		r, err := zstd.NewReader(f)
+		if err != nil {
+			return nil, err
+		}
+		defer r.Close()
+		mfest, err := manifest.Read(r)
+		if err != nil {
+			if errors.Is(err, manifest.ErrUnknownSchema) {
+				foundUnknownSchema = true
+				// Ignore manifests with unknown (potentially future) schema versions.
+				continue
+			}
+			return nil, err
+		}
+		err = manifestutil.Validate(mfest)
+		if err != nil {
+			return nil, err
+		}
+		h, err := contentHash(mfestFullPath)
+		if err != nil {
+			return nil, fmt.Errorf("cannot compute hash for %q: %s", mfestFullPath, err)
+		}
+		mfestHash := hex.EncodeToString(h)
+		if selected == nil {
+			selected = mfest
+			selectedHash = mfestHash
+			selectedPath = mfestPath
+		} else if selectedHash != mfestHash {
+			return nil, fmt.Errorf("cannot select a manifest: %q and %q are inconsistent", selectedPath, mfestPath)
+		}
+	}
+	if foundUnknownSchema && selected == nil {
+		return nil, fmt.Errorf("cannot select a manifest: all manifests found use unknown schema")
+	}
+	return selected, nil
+}
+
+func contentHash(path string) ([]byte, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return nil, err
+	}
+	return h.Sum(nil), nil
 }
