@@ -2229,8 +2229,8 @@ var slicerRecutTests = []slicerRecutTest{{
 		"/file":                    "file 0644 fc02ca0e",
 		"/other-dir/":              "dir 0755",
 		"/other-dir/file":          "symlink ../dir/file",
-		"/parent/":                 "dir 01777",
-		"/parent/permissions/":     "dir 0764",
+		"/parent/":                 "dir 01777", // Permissions from the tarball preserved.
+		"/parent/permissions/":     "dir 0764",  // Permissions from the tarball preserved.
 		"/parent/permissions/file": "file 0755 722c14b3",
 	},
 	manifestPaths: map[string]string{
