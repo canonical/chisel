@@ -2643,30 +2643,23 @@ func (s *S) TestRunRecut(c *C) {
 }
 
 type selectValidManifestTest struct {
-	summary string
-	build   func() *setup.Release
-	setup   func(c *C, targetDir string, release *setup.Release)
-	noMatch bool
-	error   string
+	summary      string
+	setup        func(c *C, targetDir string, release *setup.Release)
+	manifestDirs []string
+	noMatch      bool
+	error        string
 }
 
 var selectValidManifestTests = []selectValidManifestTest{{
 	summary: "No manifest paths in release",
-	build: func() *setup.Release {
-		return &setup.Release{Packages: map[string]*setup.Package{}}
-	},
 	noMatch: true,
 }, {
-	summary: "Manifest path missing in target",
-	build: func() *setup.Release {
-		return buildReleaseWithManifestDirs("/chisel/**")
-	},
-	noMatch: true,
+	summary:      "Manifest path missing in target",
+	manifestDirs: []string{"/chisel/**"},
+	noMatch:      true,
 }, {
-	summary: "Unknown schema error ignored when other valid found",
-	build: func() *setup.Release {
-		return buildReleaseWithManifestDirs("/chisel-a/**", "/chisel-b/**")
-	},
+	summary:      "Unknown schema error ignored when other valid found",
+	manifestDirs: []string{"/chisel-a/**", "/chisel-b/**"},
 	setup: func(c *C, targetDir string, release *setup.Release) {
 		manifestPathA := manifestPathForDir("/chisel-a/**")
 		manifestPathB := manifestPathForDir("/chisel-b/**")
@@ -2675,30 +2668,24 @@ var selectValidManifestTests = []selectValidManifestTest{{
 		writeInvalidSchemaManifest(c, targetDir, manifestPathB)
 	},
 }, {
-	summary: "Unknown schema error raised when no other valid found",
-	build: func() *setup.Release {
-		return buildReleaseWithManifestDirs("/chisel/**")
-	},
+	summary:      "Unknown schema error raised when no other valid found",
+	manifestDirs: []string{"/chisel/**"},
 	setup: func(c *C, targetDir string, release *setup.Release) {
 		manifestPath := manifestPathForDir("/chisel/**")
 		writeInvalidSchemaManifest(c, targetDir, manifestPath)
 	},
 	error: `cannot select a manifest: all manifests found use unknown schema`,
 }, {
-	summary: "Valid manifest selected",
-	build: func() *setup.Release {
-		return buildReleaseWithManifestDirs("/chisel/**")
-	},
+	summary:      "Valid manifest selected",
+	manifestDirs: []string{"/chisel/**"},
 	setup: func(c *C, targetDir string, release *setup.Release) {
 		manifestPath := manifestPathForDir("/chisel/**")
 		slice := release.Packages["test-package"].Slices["manifest"]
 		writeSampleManifest(c, targetDir, manifestPath, slice, "hash1")
 	},
 }, {
-	summary: "Two consistent manifests are accepted",
-	build: func() *setup.Release {
-		return buildReleaseWithManifestDirs("/chisel-a/**", "/chisel-b/**")
-	},
+	summary:      "Two consistent manifests are accepted",
+	manifestDirs: []string{"/chisel-a/**", "/chisel-b/**"},
 	setup: func(c *C, targetDir string, release *setup.Release) {
 		manifestPathA := manifestPathForDir("/chisel-a/**")
 		manifestPathB := manifestPathForDir("/chisel-b/**")
@@ -2707,10 +2694,8 @@ var selectValidManifestTests = []selectValidManifestTest{{
 		writeSampleManifest(c, targetDir, manifestPathB, slice, "hash1")
 	},
 }, {
-	summary: "Inconsistent manifests with same schema are rejected",
-	build: func() *setup.Release {
-		return buildReleaseWithManifestDirs("/chisel-a/**", "/chisel-b/**")
-	},
+	summary:      "Inconsistent manifests with same schema are rejected",
+	manifestDirs: []string{"/chisel-a/**", "/chisel-b/**"},
 	setup: func(c *C, targetDir string, release *setup.Release) {
 		manifestPathA := manifestPathForDir("/chisel-a/**")
 		manifestPathB := manifestPathForDir("/chisel-b/**")
@@ -2720,10 +2705,8 @@ var selectValidManifestTests = []selectValidManifestTest{{
 	},
 	error: `cannot select a manifest: "/chisel-a/manifest.wall" and "/chisel-b/manifest.wall" are inconsistent`,
 }, {
-	summary: "Invalid manifest data returns error",
-	build: func() *setup.Release {
-		return buildReleaseWithManifestDirs("/chisel/**")
-	},
+	summary:      "Invalid manifest data returns error",
+	manifestDirs: []string{"/chisel/**"},
 	setup: func(c *C, targetDir string, release *setup.Release) {
 		manifestPath := filepath.Join(targetDir, manifestPathForDir("/chisel/**"))
 		err := os.MkdirAll(filepath.Dir(manifestPath), 0o755)
@@ -2733,10 +2716,8 @@ var selectValidManifestTests = []selectValidManifestTest{{
 	},
 	error: "cannot read manifest: invalid input: .*",
 }, {
-	summary: "Manifest validation error is returned",
-	build: func() *setup.Release {
-		return buildReleaseWithManifestDirs("/chisel/**")
-	},
+	summary:      "Manifest validation error is returned",
+	manifestDirs: []string{"/chisel/**"},
 	setup: func(c *C, targetDir string, release *setup.Release) {
 		manifestPath := manifestPathForDir("/chisel/**")
 		writeInvalidManifest(c, targetDir, manifestPath)
@@ -2747,7 +2728,28 @@ var selectValidManifestTests = []selectValidManifestTest{{
 func (s *S) TestSelectValidManifest(c *C) {
 	for _, test := range selectValidManifestTests {
 		c.Logf("Summary: %s", test.summary)
-		release := test.build()
+		packages := map[string]*setup.Package{}
+		if len(test.manifestDirs) > 0 {
+			contents := map[string]setup.PathInfo{}
+			for _, dir := range test.manifestDirs {
+				contents[dir] = setup.PathInfo{Kind: "generate", Generate: "manifest"}
+			}
+			packages = map[string]*setup.Package{
+				"test-package": {
+					Name: "test-package",
+					Slices: map[string]*setup.Slice{
+						"manifest": {
+							Package:  "test-package",
+							Name:     "manifest",
+							Contents: contents,
+						},
+					},
+				},
+			}
+		}
+		release := &setup.Release{
+			Packages: packages,
+		}
 		targetDir := c.MkDir()
 		if test.setup != nil {
 			test.setup(c, targetDir, release)
@@ -2763,27 +2765,6 @@ func (s *S) TestSelectValidManifest(c *C) {
 			continue
 		}
 		c.Assert(mfest, NotNil)
-	}
-}
-
-func buildReleaseWithManifestDirs(dirs ...string) *setup.Release {
-	contents := map[string]setup.PathInfo{}
-	for _, dir := range dirs {
-		contents[dir] = setup.PathInfo{Kind: "generate", Generate: "manifest"}
-	}
-	return &setup.Release{
-		Packages: map[string]*setup.Package{
-			"test-package": {
-				Name: "test-package",
-				Slices: map[string]*setup.Slice{
-					"manifest": {
-						Package:  "test-package",
-						Name:     "manifest",
-						Contents: contents,
-					},
-				},
-			},
-		},
 	}
 }
 
