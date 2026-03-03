@@ -3742,6 +3742,40 @@ var setupTests = []setupTest{{
 		`,
 	},
 	relerror: `cannot parse slice mypkg_myslice1: essential expects a list`,
+}, {
+	summary: "Chisel.yaml style test with invalid pro and default priority normalization",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v1
+			archives:
+				ubuntu:
+					version: 20.04
+					suites: [focal]
+					components: [main]
+					public-keys: [test-key]
+					default: true
+			v2-archives:
+				ubuntu-esm-apps:
+					pro: esm-apps
+					version: 20.04
+					components: [main]
+					suites: [focal-apps-security]
+					public-keys: [test-key]
+				ubuntu-invalid:
+					pro: invalid-pro
+					version: 20.04
+					components: [main]
+					suites: [focal]
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
 }}
 
 func (s *S) TestParseRelease(c *C) {
