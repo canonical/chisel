@@ -359,7 +359,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		// negative priorities to all but the default one, which means all
 		// others will be ignored unless pinned.
 		var archiveNames []string
-		for archiveName := range yamlArchives {
+		for archiveName := range release.Archives {
 			archiveNames = append(archiveNames, archiveName)
 		}
 		// Make it deterministic.
