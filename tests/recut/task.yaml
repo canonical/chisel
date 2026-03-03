@@ -1,0 +1,48 @@
+summary: Recut relies on manifest to upgrade existing content
+
+variants:
+  - noble
+
+environment:
+  ROOTFS: rootfs
+
+execute: |
+  # Install yq.
+  wget -q https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq &&\
+    chmod +x /usr/bin/yq
+
+  mkdir -p ${ROOTFS}
+
+  # TODO: remove this env var when final upgrade strategy is in place.
+  export CHISEL_RECUT_EXPERIMENTAL=1
+  # First cut generates manifest and installs slice-a.
+  chisel cut --release ./chisel-releases/ \
+    --root ${ROOTFS} \
+    base-files_slice-a hello_bins base-files_manifest
+
+  test -s ${ROOTFS}/etc/debian_version
+  test -s ${ROOTFS}/etc/foo
+  test -s ${ROOTFS}/usr/bin/hello
+  cat ${ROOTFS}/etc/foo | grep "bar"
+  test -f ${ROOTFS}/chisel/manifest.wall
+
+  # Update slice-a definition.
+  yq -i '.slices.slice-a.contents./etc/foo.text = "qux"' ./chisel-releases/slices/base-files.yaml
+
+  # Second cut, only requesting slice-b.
+  chisel cut --release ./chisel-releases/ \
+    --root ${ROOTFS} \
+    base-files_slice-b
+
+  test -s ${ROOTFS}/etc/debian_version
+  test -s ${ROOTFS}/etc/issue
+  cat ${ROOTFS}/etc/foo | grep "qux"
+  test -f ${ROOTFS}/chisel/manifest.wall
+  zstd -d ${ROOTFS}/chisel/manifest.wall -o ${ROOTFS}/chisel/manifest.jsonwall
+  packages=$(jq -r 'select(.kind == "package") | .name' ${ROOTFS}/chisel/manifest.jsonwall)
+  expected=$(cat <<EOF
+  base-files
+  hello
+  EOF
+  )
+  diff <(echo $expected) <(echo $packages)
