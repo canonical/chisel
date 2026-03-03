@@ -3729,6 +3729,19 @@ var setupTests = []setupTest{{
 	},
 	relerror: `cannot parse package "mypkg": essential expects a list`,
 }, {
+	// NOTE: we only test this for v3. See discussion in https://github.com/canonical/chisel/pull/267
+	summary: "Essential must be list or map",
+	input: map[string]string{
+		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYaml, "format: v1", "format: v3"),
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			essential: not-a-list-or-map
+			slices:
+				myslice:
+		`,
+	},
+	relerror: `cannot parse package "mypkg" slice definitions: essential field must be a list or a map`,
+}, {
 	summary: "Format v1/v2 expect a list in 'essential' (slice)",
 	input: map[string]string{
 		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYaml, "format: v1", "format: v2"),
