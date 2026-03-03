@@ -3742,6 +3742,21 @@ var setupTests = []setupTest{{
 		`,
 	},
 	relerror: `cannot parse slice mypkg_myslice1: essential expects a list`,
+}, {
+	summary: "Package slices defined more than once",
+	input: map[string]string{
+		"slices/dir1/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+		`,
+		"slices/dir2/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice2:
+		`,
+	},
+	relerror: `package "mypkg" slices defined more than once: slices/dir1/mypkg.yaml and slices/dir2/mypkg.yaml`,
 }}
 
 func (s *S) TestParseRelease(c *C) {
