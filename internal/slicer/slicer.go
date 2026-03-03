@@ -402,8 +402,8 @@ func upgrade(targetDir string, tempDir string, report *manifestutil.Report, mfes
 		dstPath := filepath.Clean(filepath.Join(targetDir, path))
 
 		// When extracting the content, a great care is taken to create parent
-		// directories respecting the tarball permissions. However the current
-		// approach may not record some of these parents in the report. Make sure
+		// directories respecting the tarball permissions. However this approach
+		// can create implicit parents, not recorded in the report. Make sure
 		// to create consistent directories in the targetDir to sustain the same
 		// guarantees as a normal cut.
 		if err := upgradeParentDirs(tempDir, targetDir, path); err != nil {
@@ -724,10 +724,10 @@ func selectPkgArchives(archives map[string]archive.Archive, selection *setup.Sel
 // considered as previously produced by Chisel for the given release.
 //
 // Finding only manifests with unknown schema version means the targetDir may
-// have been produced by Chisel, but possibly by a future/incompatible one.
+// have been produced by Chisel, but possibly by a future/incompatible version.
 // Chisel cannot safely proceed and so errors out.
 //
-// Finding multiple manifests, with at least one valid means Chisel can proceeds,
+// Finding multiple manifests, with at least one valid means Chisel can proceed,
 // ignoring unknown ones. Consistency between valid manifests is verified,
 // ensuring a deterministic selection.
 func SelectValidManifest(targetDir string, release *setup.Release) (*manifest.Manifest, error) {
