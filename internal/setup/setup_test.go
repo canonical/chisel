@@ -3755,12 +3755,6 @@ var setupTests = []setupTest{{
 					public-keys: [test-key]
 					default: true
 			v2-archives:
-				ubuntu-esm-apps:
-					pro: esm-apps
-					version: 20.04
-					components: [main]
-					suites: [focal-apps-security]
-					public-keys: [test-key]
 				ubuntu-invalid:
 					pro: invalid-pro
 					version: 20.04
