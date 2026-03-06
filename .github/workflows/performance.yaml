@@ -1,7 +1,7 @@
 name: Performance
 
 on:
-  pull_request_target:
+  pull_request:
     branches: [main]
 
 jobs:
@@ -37,8 +37,6 @@ jobs:
     runs-on: ubuntu-22.04
     needs: build
     name: Benchmark chisel info (chisel-releases 24.04)
-    permissions:
-      pull-requests: write
     steps:
       - name: Download base
         uses: actions/download-artifact@v4
@@ -68,7 +66,8 @@ jobs:
           chmod +x base head
           hyperfine --export-markdown "$msg_file" "./base info --release ./chisel-releases 'python3.12_core'" -n "BASE" "./head info --release ./chisel-releases 'python3.12_core'" -n "HEAD"
 
-      - name: Post message to PR
-        uses: mshick/add-pr-comment@v2
+      - name: Upload result
+        uses: actions/upload-artifact@v4
         with:
-          message-path: ${{ steps.benchmark.outputs.msg_file }}
+          name: perf-report
+          path: ${{ steps.benchmark.outputs.msg_file }}
