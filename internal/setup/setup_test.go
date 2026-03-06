@@ -2736,6 +2736,120 @@ var setupTests = []setupTest{{
 	},
 	relerror: `chisel.yaml: v2-archives is obsolete since format v2`,
 }, {
+	summary: "Invalid pro in archives ignored",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v3
+			maintenance:
+				standard: 2001-02-03
+				end-of-life: 2010-11-12
+			archives:
+				ubuntu:
+					version: 20.04
+					suites: [focal]
+					components: [main]
+					public-keys: [test-key]
+					priority: 10
+				ubuntu-invalid:
+					pro: invalid-pro  # <- invalid pro should be ignored, not cause an error 
+					version: 20.04
+					components: [main]
+					suites: [focal]
+					public-keys: [test-key]
+					priority: 20
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	release: &setup.Release{
+		Format: "v3",
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "20.04",
+				Suites:     []string{"focal"},
+				Components: []string{"main"},
+				Priority:   10,
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: false,
+				OldRelease: true,
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Name:   "mypkg",
+				Path:   "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{},
+			},
+		},
+		Maintenance: &setup.Maintenance{
+			Standard:  time.Date(2001, time.February, 3, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2010, time.November, 12, 0, 0, 0, 0, time.UTC),
+		},
+	},
+}, {
+	summary: "Invalid pro in archives ignored in v2-archives",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v1
+			maintenance:
+				standard: 2001-02-03
+				end-of-life: 2010-11-12
+			archives:
+				ubuntu:
+					version: 20.04
+					suites: [focal]
+					components: [main]
+					public-keys: [test-key]
+					default: true
+			v2-archives:
+				ubuntu-invalid:
+					pro: invalid-pro  # <- invalid pro should be ignored, not cause an error 
+					version: 20.04
+					components: [main]
+					suites: [focal]
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+		`,
+	},
+	release: &setup.Release{
+		Format: "v1",
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "20.04",
+				Suites:     []string{"focal"},
+				Components: []string{"main"},
+				Priority:   1,
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: false,
+				OldRelease: true,
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Name:   "mypkg",
+				Path:   "slices/mydir/mypkg.yaml",
+				Slices: map[string]*setup.Slice{},
+			},
+		},
+		Maintenance: &setup.Maintenance{
+			Standard:  time.Date(2001, time.February, 3, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2010, time.November, 12, 0, 0, 0, 0, time.UTC),
+		},
+	},
+}, {
 	summary: "Maintenance all dates",
 	input: map[string]string{
 		"chisel.yaml": `
