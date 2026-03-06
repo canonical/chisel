@@ -2751,7 +2751,7 @@ var setupTests = []setupTest{{
 					public-keys: [test-key]
 					priority: 10
 				ubuntu-invalid:
-					pro: invalid-pro
+					pro: invalid-pro  # <- invalid pro should be ignored, not cause an error 
 					version: 20.04
 					components: [main]
 					suites: [focal]
@@ -2809,7 +2809,7 @@ var setupTests = []setupTest{{
 					default: true
 			v2-archives:
 				ubuntu-invalid:
-					pro: invalid-pro
+					pro: invalid-pro  # <- invalid pro should be ignored, not cause an error 
 					version: 20.04
 					components: [main]
 					suites: [focal]
