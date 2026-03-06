@@ -71,3 +71,4 @@ jobs:
         with:
           name: perf-report
           path: ${{ steps.benchmark.outputs.msg_file }}
+          retention-days: 1
