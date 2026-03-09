@@ -1575,11 +1575,12 @@ var slicerTests = []slicerTest{{
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Dir(0755, "./"),
-			testutil.Reg(0644, "./file1", "text for file1"),
-			testutil.Reg(0644, "./file2", "text for file2"),
-			testutil.Hrd(0644, "./hardlink1", "./file1"),
-			testutil.Hrd(0644, "./hardlink2", "./file2"),
+			testutil.Dir(0o755, "./"),
+			testutil.Dir(0o755, "./dir/"),
+			testutil.Reg(0o644, "./dir/file1", "text for file1"),
+			testutil.Reg(0o644, "./dir/file2", "text for file2"),
+			testutil.Hrd(0o644, "./dir/hardlink1", "./dir/file1"),
+			testutil.Hrd(0o644, "./dir/hardlink2", "./dir/file2"),
 		}),
 	}},
 	release: map[string]string{
@@ -1588,20 +1589,22 @@ var slicerTests = []slicerTest{{
 			slices:
 				myslice:
 					contents:
-						/**:
+						/dir/**:
 		`,
 	},
 	filesystem: map[string]string{
-		"/file1":     "file 0644 df82bbbd <1>",
-		"/file2":     "file 0644 dcddda2e <2>",
-		"/hardlink1": "file 0644 df82bbbd <1>",
-		"/hardlink2": "file 0644 dcddda2e <2>",
+		"/dir/":          "dir 0755",
+		"/dir/file1":     "file 0644 df82bbbd <1>",
+		"/dir/file2":     "file 0644 dcddda2e <2>",
+		"/dir/hardlink1": "file 0644 df82bbbd <1>",
+		"/dir/hardlink2": "file 0644 dcddda2e <2>",
 	},
 	manifestPaths: map[string]string{
-		"/file1":     "file 0644 df82bbbd <1> {test-package_myslice}",
-		"/file2":     "file 0644 dcddda2e <2> {test-package_myslice}",
-		"/hardlink1": "file 0644 df82bbbd <1> {test-package_myslice}",
-		"/hardlink2": "file 0644 dcddda2e <2> {test-package_myslice}",
+		"/dir/":          "dir 0755 {test-package_myslice}",
+		"/dir/file1":     "file 0644 df82bbbd <1> {test-package_myslice}",
+		"/dir/file2":     "file 0644 dcddda2e <2> {test-package_myslice}",
+		"/dir/hardlink1": "file 0644 df82bbbd <1> {test-package_myslice}",
+		"/dir/hardlink2": "file 0644 dcddda2e <2> {test-package_myslice}",
 	},
 }, {
 	summary: "Single hard link entry can be extracted without regular file and no hard links are created",
@@ -1794,8 +1797,9 @@ var slicerTests = []slicerTest{{
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Dir(0755, "./"),
-			testutil.Reg(0644, "./../file", "hijacking system file"),
+			testutil.Dir(0o755, "./"),
+			testutil.Dir(0o755, "./dir/"),
+			testutil.Reg(0o644, "./dir/../../file", "hijacking system file"),
 		}),
 	}},
 	release: map[string]string{
