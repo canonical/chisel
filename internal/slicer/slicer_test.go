@@ -2293,6 +2293,35 @@ var slicerRecutTests = []slicerRecutTest{{
 	manifestPaths: map[string]string{
 		"/dir/file": "file 0644 cc55e2ec {test-package_slice1}",
 	},
+},{
+	summary:     "Upgrade removes and recreates existing working directory",
+	cutSlices:   []setup.SliceKey{{"test-package", "slice1"}},
+	recutSlices: []setup.SliceKey{{"test-package", "slice1"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				slice1:
+					contents:
+						/dir/file:
+		`,
+	},
+	alterFilesystem: func(c *C, targetDir string) {
+		workDirPath := filepath.Join(targetDir, ".chisel-workdir")
+		err := os.Mkdir(workDirPath, 0o755)
+		c.Assert(err, IsNil)
+		// Also create a file to make sure a non-empty existing dir is also removed.
+		filePath := filepath.Join(workDirPath, "file")
+		err = os.WriteFile(filePath, []byte("data"), 0o700)
+		c.Assert(err, IsNil)
+	},
+	filesystem: map[string]string{
+		"/dir/":     "dir 0755",
+		"/dir/file": "file 0644 cc55e2ec",
+	},
+	manifestPaths: map[string]string{
+		"/dir/file": "file 0644 cc55e2ec {test-package_slice1}",
+	},
 }, {
 	summary:     "Upgrade keeps untracked files",
 	cutSlices:   []setup.SliceKey{{"test-package", "slice1"}},

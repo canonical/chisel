@@ -29,7 +29,10 @@ import (
 	"github.com/canonical/chisel/public/manifest"
 )
 
-const manifestMode fs.FileMode = 0644
+const (
+	manifestMode fs.FileMode = 0644
+	workDir                  = ".chisel-workdir"
+)
 
 type RunOptions struct {
 	Selection *setup.Selection
@@ -101,13 +104,22 @@ func Run(options *RunOptions) error {
 	installOpts := &optsCopy
 	installOpts.TargetDir = targetDir
 	if options.Manifest != nil {
-		tmpWorkDir, err := os.MkdirTemp(targetDir, "chisel-workdir-*")
+		workDirPath := filepath.Join(targetDir, workDir)
+		// An existing working directory means something unexpected happened, likely
+		// during its defered removall. Content from a working directory left behind
+		// by a previous execution cannot be used reliably, so remove and recreate
+		// the working directory.
+		err := os.RemoveAll(workDirPath)
 		if err != nil {
-			return fmt.Errorf("cannot create temporary working directory: %w", err)
+			return fmt.Errorf("cannot remove previous working directory: %s", err)
 		}
-		installOpts.TargetDir = tmpWorkDir
+		err = os.Mkdir(workDirPath, 0o755)
+		if err != nil {
+			return fmt.Errorf("cannot create working directory: %s", err)
+		}
+		installOpts.TargetDir = workDirPath
 		defer func() {
-			os.RemoveAll(tmpWorkDir)
+			os.RemoveAll(workDirPath)
 		}()
 	}
 
