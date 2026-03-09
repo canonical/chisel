@@ -18,7 +18,7 @@ jobs:
         with:
           name: perf-report
           path: perf-report.txt
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.ROCKSBOT_CHISEL_PR_COMMENTER }}
           run-id: ${{ github.event.workflow_run.id }}
 
       - name: Post message to PR
@@ -26,3 +26,4 @@ jobs:
         with:
           message-path: perf-report.txt
           issue: ${{ github.event.workflow_run.pull_requests[0].number }}
+          repo-token: ${{ secrets.ROCKSBOT_CHISEL_PR_COMMENTER }}
