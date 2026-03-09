@@ -181,6 +181,8 @@ func (s *Selection) Prefers() (map[string]*Package, error) {
 	return pathPreferredPkg, nil
 }
 
+const WorkDir = ".chisel-workdir"
+
 func ReadRelease(dir string) (*Release, error) {
 	logDir := dir
 	if strings.Contains(dir, "/.cache/") {
@@ -243,10 +245,13 @@ func (r *Release) validate() error {
 							return fmt.Errorf("slices %s and %s conflict on %s", old, new, newPath)
 						}
 					}
-					paths[newPath] = append(paths[newPath], new)
-				} else {
-					paths[newPath] = append(paths[newPath], new)
 				}
+				// Detect conflicts with reserved paths.
+				relWorkDir := filepath.Clean("/" + WorkDir)
+				if filepath.Clean(strings.TrimSuffix(newPath, "/")) == relWorkDir || strdist.GlobPath(newPath, relWorkDir) {
+					return fmt.Errorf("slice %s path %s conflicts with the reserved path %s", new, newPath, WorkDir)
+				}
+				paths[newPath] = append(paths[newPath], new)
 			}
 		}
 	}

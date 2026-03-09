@@ -29,10 +29,7 @@ import (
 	"github.com/canonical/chisel/public/manifest"
 )
 
-const (
-	manifestMode fs.FileMode = 0644
-	workDir                  = ".chisel-workdir"
-)
+const manifestMode fs.FileMode = 0644
 
 type RunOptions struct {
 	Selection *setup.Selection
@@ -104,7 +101,7 @@ func Run(options *RunOptions) error {
 	installOpts := &optsCopy
 	installOpts.TargetDir = targetDir
 	if options.Manifest != nil {
-		workDirPath := filepath.Join(targetDir, workDir)
+		workDirPath := filepath.Join(targetDir, setup.WorkDir)
 		// An existing working directory means something unexpected happened, likely
 		// during its defered removall. Content from a working directory left behind
 		// by a previous execution cannot be used reliably, so remove and recreate

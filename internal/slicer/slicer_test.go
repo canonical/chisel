@@ -1804,7 +1804,7 @@ var slicerTests = []slicerTest{{
 			slices:
 				myslice:
 					contents:
-						/**:
+						/dir/**:
 		`,
 	},
 	error: `cannot extract from package "test-package": cannot create path /[a-z0-9\-\/]*/file outside of root /[a-z0-9\-\/]*`,
