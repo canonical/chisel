@@ -2293,7 +2293,7 @@ var slicerRecutTests = []slicerRecutTest{{
 	manifestPaths: map[string]string{
 		"/dir/file": "file 0644 cc55e2ec {test-package_slice1}",
 	},
-},{
+}, {
 	summary:     "Upgrade removes and recreates existing working directory",
 	cutSlices:   []setup.SliceKey{{"test-package", "slice1"}},
 	recutSlices: []setup.SliceKey{{"test-package", "slice1"}},
