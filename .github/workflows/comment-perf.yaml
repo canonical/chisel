@@ -1,4 +1,4 @@
-name: Post performance result on pull request
+name: Post benchmark result on pull request
 
 on:
   workflow_run:
@@ -14,14 +14,14 @@ jobs:
       - name: Download comment
         uses: actions/download-artifact@v4
         with:
-          name: perf-report
-          path: perf-report.txt
+          name: benchmark-report
+          path: benchmark-report.txt
           github-token: ${{ secrets.ROCKSBOT_CHISEL_PR_COMMENTER }}
           run-id: ${{ github.event.workflow_run.id }}
 
       - name: Post message to PR
         uses: mshick/add-pr-comment@dd126dd8c253650d181ad9538d8b4fa218fc31e8
         with:
-          message-path: perf-report.txt
+          message-path: benchmark-report.txt
           issue: ${{ github.event.workflow_run.pull_requests[0].number }}
           repo-token: ${{ secrets.ROCKSBOT_CHISEL_PR_COMMENTER }}
