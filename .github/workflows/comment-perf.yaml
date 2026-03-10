@@ -1,4 +1,4 @@
-name: Comment on pull request
+name: Post performance result on pull request
 
 on:
   workflow_run:
