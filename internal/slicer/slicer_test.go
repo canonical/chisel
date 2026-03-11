@@ -1575,12 +1575,11 @@ var slicerTests = []slicerTest{{
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Dir(0o755, "./"),
-			testutil.Dir(0o755, "./dir/"),
-			testutil.Reg(0o644, "./dir/file1", "text for file1"),
-			testutil.Reg(0o644, "./dir/file2", "text for file2"),
-			testutil.Hrd(0o644, "./dir/hardlink1", "./dir/file1"),
-			testutil.Hrd(0o644, "./dir/hardlink2", "./dir/file2"),
+			testutil.Dir(0755, "./"),
+			testutil.Reg(0644, "./file1", "text for file1"),
+			testutil.Reg(0644, "./file2", "text for file2"),
+			testutil.Hrd(0644, "./hardlink1", "./file1"),
+			testutil.Hrd(0644, "./hardlink2", "./file2"),
 		}),
 	}},
 	release: map[string]string{
@@ -1589,22 +1588,20 @@ var slicerTests = []slicerTest{{
 			slices:
 				myslice:
 					contents:
-						/dir/**:
+						/**:
 		`,
 	},
 	filesystem: map[string]string{
-		"/dir/":          "dir 0755",
-		"/dir/file1":     "file 0644 df82bbbd <1>",
-		"/dir/file2":     "file 0644 dcddda2e <2>",
-		"/dir/hardlink1": "file 0644 df82bbbd <1>",
-		"/dir/hardlink2": "file 0644 dcddda2e <2>",
+		"/file1":     "file 0644 df82bbbd <1>",
+		"/file2":     "file 0644 dcddda2e <2>",
+		"/hardlink1": "file 0644 df82bbbd <1>",
+		"/hardlink2": "file 0644 dcddda2e <2>",
 	},
 	manifestPaths: map[string]string{
-		"/dir/":          "dir 0755 {test-package_myslice}",
-		"/dir/file1":     "file 0644 df82bbbd <1> {test-package_myslice}",
-		"/dir/file2":     "file 0644 dcddda2e <2> {test-package_myslice}",
-		"/dir/hardlink1": "file 0644 df82bbbd <1> {test-package_myslice}",
-		"/dir/hardlink2": "file 0644 dcddda2e <2> {test-package_myslice}",
+		"/file1":     "file 0644 df82bbbd <1> {test-package_myslice}",
+		"/file2":     "file 0644 dcddda2e <2> {test-package_myslice}",
+		"/hardlink1": "file 0644 df82bbbd <1> {test-package_myslice}",
+		"/hardlink2": "file 0644 dcddda2e <2> {test-package_myslice}",
 	},
 }, {
 	summary: "Single hard link entry can be extracted without regular file and no hard links are created",
@@ -1797,9 +1794,8 @@ var slicerTests = []slicerTest{{
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Dir(0o755, "./"),
-			testutil.Dir(0o755, "./dir/"),
-			testutil.Reg(0o644, "./dir/../../file", "hijacking system file"),
+			testutil.Dir(0755, "./"),
+			testutil.Reg(0644, "./../file", "hijacking system file"),
 		}),
 	}},
 	release: map[string]string{
@@ -1808,7 +1804,7 @@ var slicerTests = []slicerTest{{
 			slices:
 				myslice:
 					contents:
-						/dir/**:
+						/**:
 		`,
 	},
 	error: `cannot extract from package "test-package": cannot create path /[a-z0-9\-\/]*/file outside of root /[a-z0-9\-\/]*`,
@@ -2288,35 +2284,6 @@ var slicerRecutTests = []slicerRecutTest{{
 	alterFilesystem: func(c *C, targetDir string) {
 		modifiedPath := filepath.Join(targetDir, "dir/file")
 		err := os.WriteFile(modifiedPath, []byte("data2"), 0o700)
-		c.Assert(err, IsNil)
-	},
-	filesystem: map[string]string{
-		"/dir/":     "dir 0755",
-		"/dir/file": "file 0644 cc55e2ec",
-	},
-	manifestPaths: map[string]string{
-		"/dir/file": "file 0644 cc55e2ec {test-package_slice1}",
-	},
-}, {
-	summary:     "Upgrade removes and recreates existing working directory",
-	cutSlices:   []setup.SliceKey{{"test-package", "slice1"}},
-	recutSlices: []setup.SliceKey{{"test-package", "slice1"}},
-	release: map[string]string{
-		"slices/mydir/test-package.yaml": `
-			package: test-package
-			slices:
-				slice1:
-					contents:
-						/dir/file:
-		`,
-	},
-	alterFilesystem: func(c *C, targetDir string) {
-		workDirPath := filepath.Join(targetDir, ".chisel-workdir")
-		err := os.Mkdir(workDirPath, 0o755)
-		c.Assert(err, IsNil)
-		// Also create a file to make sure a non-empty existing dir is also removed.
-		filePath := filepath.Join(workDirPath, "file")
-		err = os.WriteFile(filePath, []byte("data"), 0o700)
 		c.Assert(err, IsNil)
 	},
 	filesystem: map[string]string{

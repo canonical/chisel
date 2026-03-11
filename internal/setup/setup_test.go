@@ -368,54 +368,6 @@ var setupTests = []setupTest{{
 	},
 	selslices: []setup.SliceKey{{"mypkg1", "myslice1"}, {"mypkg1", "myslice2"}, {"mypkg2", "myslice1"}},
 }, {
-	summary: "Conflict with reserved path - dir",
-	input: map[string]string{
-		"slices/mydir/mypkg1.yaml": `
-			package: mypkg1
-			slices:
-				myslice1:
-					contents:
-						/.chisel-workdir/:
-		`,
-	},
-	relerror: "slice mypkg1_myslice1 path /.chisel-workdir/ conflicts with the reserved path .chisel-workdir",
-}, {
-	summary: "Conflict with reserved path - file",
-	input: map[string]string{
-		"slices/mydir/mypkg1.yaml": `
-			package: mypkg1
-			slices:
-				myslice1:
-					contents:
-						/.chisel-workdir:
-		`,
-	},
-	relerror: "slice mypkg1_myslice1 path /.chisel-workdir conflicts with the reserved path .chisel-workdir",
-}, {
-	summary: "Conflict with reserved path - glob",
-	input: map[string]string{
-		"slices/mydir/mypkg1.yaml": `
-			package: mypkg1
-			slices:
-				myslice1:
-					contents:
-						/**:
-		`,
-	},
-	relerror: `slice mypkg1_myslice1 path /\*\* conflicts with the reserved path .chisel-workdir`,
-}, {
-	summary: "Conflict with reserved path - glob with partial name",
-	input: map[string]string{
-		"slices/mydir/mypkg1.yaml": `
-			package: mypkg1
-			slices:
-				myslice1:
-					contents:
-						/.chisel-**:
-		`,
-	},
-	relerror: `slice mypkg1_myslice1 path /.chisel-\*\* conflicts with the reserved path .chisel-workdir`,
-}, {
 	summary: "Conflicting paths across slices",
 	input: map[string]string{
 		"slices/mydir/mypkg1.yaml": `
@@ -2647,22 +2599,22 @@ var setupTests = []setupTest{{
 			slices:
 				myslice1:
 					contents:
-						/dir/**:
+						/**:
 				myslice2:
 					contents:
-						/dir/path: {prefer: mypkg2}
+						/path: {prefer: mypkg2}
 		`,
 		"slices/mydir/mypkg2.yaml": `
 			package: mypkg2
 			slices:
 				myslice:
 					contents:
-						/dir/path:
+						/path:
 		`,
 	},
 	// This test and the following one together ensure that both mypkg2_myslice
 	// and mypkg1_myslice2 are checked against the glob.
-	relerror: `slices mypkg1_myslice1 and mypkg2_myslice conflict on /dir/\*\* and /dir/path`,
+	relerror: `slices mypkg1_myslice1 and mypkg2_myslice conflict on /\*\* and /path`,
 }, {
 	summary: "Glob paths can conflict with 'prefer' chain (reverse dependency)",
 	input: map[string]string{
@@ -2671,22 +2623,22 @@ var setupTests = []setupTest{{
 			slices:
 				myslice1:
 					contents:
-						/dir/**:
+						/**:
 				myslice2:
 					contents:
-						/dir/path:
+						/path:
 		`,
 		"slices/mydir/mypkg2.yaml": `
 			package: mypkg2
 			slices:
 				myslice:
 					contents:
-						/dir/path: {prefer: mypkg1}
+						/path: {prefer: mypkg1}
 		`,
 	},
 	// This test and the previous one together ensure that both mypkg2_myslice
 	// and mypkg1_myslice2 are checked against the glob.
-	relerror: `slices mypkg1_myslice1 and mypkg2_myslice conflict on /dir/\*\* and /dir/path`,
+	relerror: `slices mypkg1_myslice1 and mypkg2_myslice conflict on /\*\* and /path`,
 }, {
 	summary: "Slices of same package cannot have different 'prefer'",
 	input: map[string]string{

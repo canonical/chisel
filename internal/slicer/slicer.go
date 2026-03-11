@@ -101,22 +101,13 @@ func Run(options *RunOptions) error {
 	installOpts := &optsCopy
 	installOpts.TargetDir = targetDir
 	if options.Manifest != nil {
-		workDirPath := filepath.Join(targetDir, setup.WorkDir)
-		// An existing working directory means something unexpected happened, likely
-		// during its defered removall. Content from a working directory left behind
-		// by a previous execution cannot be used reliably, so remove and recreate
-		// the working directory.
-		err := os.RemoveAll(workDirPath)
+		tmpWorkDir, err := os.MkdirTemp(targetDir, "chisel-workdir-*")
 		if err != nil {
-			return fmt.Errorf("cannot remove previous working directory: %s", err)
+			return fmt.Errorf("cannot create temporary working directory: %w", err)
 		}
-		err = os.Mkdir(workDirPath, 0o755)
-		if err != nil {
-			return fmt.Errorf("cannot create working directory: %s", err)
-		}
-		installOpts.TargetDir = workDirPath
+		installOpts.TargetDir = tmpWorkDir
 		defer func() {
-			os.RemoveAll(workDirPath)
+			os.RemoveAll(tmpWorkDir)
 		}()
 	}
 
