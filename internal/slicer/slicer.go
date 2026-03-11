@@ -101,6 +101,12 @@ func Run(options *RunOptions) error {
 	installOpts := &optsCopy
 	installOpts.TargetDir = targetDir
 	if options.Manifest != nil {
+		// The workdir name is partially random to reduce risk of collisions with
+		// package content. These collisions are still possible but very unlikely.
+		// Collisions with existing user content is already handled by MkdirTemp by
+		// generating another name.
+		// TODO: Use a predetermined name and reserve it so it cannot be used in
+		// chisel-releases.
 		tmpWorkDir, err := os.MkdirTemp(targetDir, "chisel-workdir-*")
 		if err != nil {
 			return fmt.Errorf("cannot create temporary working directory: %w", err)
