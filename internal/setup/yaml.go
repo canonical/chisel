@@ -448,7 +448,7 @@ func parsePackage(format, pkgName, pkgPath string, data []byte) (*Package, error
 			return nil, fmt.Errorf("cannot parse package %q: essential expects a list", pkgName)
 		}
 		for sliceName, yamlSlice := range yamlPkg.Slices {
-			if len(yamlSlice.Essential.Values) > 0 && !yamlSlice.Essential.isList && !yamlPkg.Essential.isMap {
+			if yamlSlice.Essential.Values != nil && !yamlSlice.Essential.isList {
 				return nil, fmt.Errorf("cannot parse slice %s: essential expects a list", SliceKey{pkgName, sliceName})
 			}
 		}
