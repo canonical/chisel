@@ -3659,7 +3659,7 @@ var setupTests = []setupTest{{
 	},
 	relerror: "essential loop detected: mypkg1_myslice, mypkg2_myslice",
 }, {
-	summary: "Format v3 expects a map in 'essential' (pkg)",
+	summary: "Format v3 expects a map in 'essential' (pkg), received a list",
 	input: map[string]string{
 		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYaml, "format: v1", "format: v3"),
 		"slices/mydir/mypkg.yaml": `
@@ -3673,7 +3673,20 @@ var setupTests = []setupTest{{
 	},
 	relerror: `cannot parse package "mypkg": essential expects a map`,
 }, {
-	summary: "Format v3 expects a map in 'essential' (slice)",
+	summary: "Format v3 expects a map in 'essential' (pkg), received a string",
+	input: map[string]string{
+		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYaml, "format: v1", "format: v3"),
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			essential: not-a-list-or-map
+			slices:
+				myslice1:
+				myslice2:
+		`,
+	},
+	relerror: `cannot parse package "mypkg": essential expects a map`,
+}, {
+	summary: "Format v3 expects a map in 'essential' (slice), received a list",
 	input: map[string]string{
 		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYaml, "format: v1", "format: v3"),
 		"slices/mydir/mypkg.yaml": `
@@ -3686,6 +3699,18 @@ var setupTests = []setupTest{{
 		`,
 	},
 	relerror: `cannot parse slice mypkg_myslice1: essential expects a map`,
+}, {
+	summary: "Format v3 expects a map in 'essential' (slice), received a string",
+	input: map[string]string{
+		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYaml, "format: v1", "format: v3"),
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+					essential: not-a-list-or-map
+		`,
+	},
+	relerror: `cannot parse slice mypkg_myslice: essential expects a map`,
 }, {
 	summary: "In format v3 'v3-essential' is not supported (pkg)",
 	input: map[string]string{
@@ -3728,18 +3753,6 @@ var setupTests = []setupTest{{
 		`,
 	},
 	relerror: `cannot parse package "mypkg": essential expects a list`,
-}, {
-	summary: "Essential must be list or map",
-	input: map[string]string{
-		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYaml, "format: v1", "format: v3"),
-		"slices/mydir/mypkg.yaml": `
-			package: mypkg
-			essential: not-a-list-or-map
-			slices:
-				myslice:
-		`,
-	},
-	relerror: `cannot parse package "mypkg" slice definitions: essential field must be a list or a map`,
 }, {
 	summary: "Format v1/v2 expect a list in 'essential' (slice)",
 	input: map[string]string{

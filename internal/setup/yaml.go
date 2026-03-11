@@ -67,10 +67,13 @@ type yamlPackage struct {
 
 type yamlEssentialListMap struct {
 	Values map[string]*yamlEssential
-	// isList is set to true when the marshaler found a list and false if it
-	// found a map. The former is only valid in format "v1" and "v2" while the
-	// latter is valid from "v3" onwards.
+	// isList is set to true when the marshaler found a list and false otherwise.
+	// The former is only valid in format "v1" and "v2" while the latter is valid
+	// from "v3" onwards.
 	isList bool
+	// isMap is set to true when the marshaler found a map and false otherwise.
+	// The former is only valid in format "v3" onwards.
+	isMap bool
 }
 
 func (es *yamlEssentialListMap) UnmarshalYAML(value *yaml.Node) error {
@@ -90,13 +93,11 @@ func (es *yamlEssentialListMap) UnmarshalYAML(value *yaml.Node) error {
 			m[sliceName] = &yamlEssential{}
 		}
 	case yaml.MappingNode:
-		es.isList = false
+		es.isMap = true
 		err := value.Decode(&m)
 		if err != nil {
 			return err
 		}
-	default:
-		return fmt.Errorf("essential field must be a list or a map")
 	}
 	es.Values = m
 	return nil
@@ -443,11 +444,11 @@ func parsePackage(format, pkgName, pkgPath string, data []byte) (*Package, error
 	}
 
 	if format == "v1" || format == "v2" {
-		if len(yamlPkg.Essential.Values) > 0 && !yamlPkg.Essential.isList {
+		if yamlPkg.Essential.Values != nil && !yamlPkg.Essential.isList {
 			return nil, fmt.Errorf("cannot parse package %q: essential expects a list", pkgName)
 		}
 		for sliceName, yamlSlice := range yamlPkg.Slices {
-			if len(yamlSlice.Essential.Values) > 0 && !yamlSlice.Essential.isList {
+			if len(yamlSlice.Essential.Values) > 0 && !yamlSlice.Essential.isList && !yamlPkg.Essential.isMap {
 				return nil, fmt.Errorf("cannot parse slice %s: essential expects a list", SliceKey{pkgName, sliceName})
 			}
 		}
@@ -455,14 +456,14 @@ func parsePackage(format, pkgName, pkgPath string, data []byte) (*Package, error
 		if yamlPkg.V3Essential != nil {
 			return nil, fmt.Errorf("cannot parse package %q: v3-essential is obsolete since format v3", pkgName)
 		}
-		if len(yamlPkg.Essential.Values) > 0 && yamlPkg.Essential.isList {
+		if yamlPkg.Essential.Values != nil && !yamlPkg.Essential.isMap {
 			return nil, fmt.Errorf("cannot parse package %q: essential expects a map", pkgName)
 		}
 		for sliceName, yamlSlice := range yamlPkg.Slices {
 			if yamlSlice.V3Essential != nil {
 				return nil, fmt.Errorf("cannot parse slice %s: v3-essential is obsolete since format v3", SliceKey{pkgName, sliceName})
 			}
-			if len(yamlSlice.Essential.Values) > 0 && yamlSlice.Essential.isList {
+			if yamlSlice.Essential.Values != nil && !yamlSlice.Essential.isMap {
 				return nil, fmt.Errorf("cannot parse slice %s: essential expects a map", SliceKey{pkgName, sliceName})
 			}
 		}
