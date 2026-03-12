@@ -1,59 +1,75 @@
+version: "2"
 linters:
-  # Disable all linters.
-  # Default: false
-  disable-all: true
-  # Enable specific linter
-  # https://golangci-lint.run/usage/linters/#enabled-by-default
+  default: none
   enable:
     - errcheck
     - staticcheck
     - unused
-
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - std-error-handling
+    rules:
+      - linters:
+          - errcheck
+        path: ^.*/log.go$
+        text: globalLogger.Output.*not checked
+      - linters:
+          - errcheck
+        path: ^.*_test.go$
+        text: release.Render.*not checked
+      - linters:
+          - errcheck
+        path: ^.*_test.go$
+        text: release.Walk.*not checked
+      - linters:
+          - errcheck
+        path: internal/setup/fetch.go
+        text: lockFile.Unlock.*not checked
+      - linters:
+          - unused
+        path: cmd/chisel/main.go
+        text: addDebugCommand.*unused
+      - linters:
+          - unused
+        path: ^.*/log.go$
+        text: logf.*unused
+      - linters:
+          - unused
+        path: ^.*/log.go$
+        text: debugf.*unused
+      - linters:
+          - unused
+        path: ^.*/log.go$
+        text: globalDebug.*unused
+      - linters:
+          - unused
+        path: ^.*/log.go$
+        text: globalLogger.*unused
+      - linters:
+          - staticcheck
+        path: ^.*.go$
+        text: '"golang.org/x/crypto/openpgp/\w+" is deprecated'
+  settings:
+    staticcheck:
+      checks:
+        - all
+        # Checks now detecting new issues after migrating to golangci-lint v2.
+        # TODO: Remove these and solve raised issues.
+        - -QF1008
+        - -ST1005
+        - -ST1012
+        - -QF1004
+        - -ST1011
+        - -ST1005
+        - -ST1003
+        - -QF1009
+        - -QF1011
+        - -S1011
+        - -S1005
+        - -QF1001
+        - -QF1012
 issues:
-  exclude-rules:
-    # exclusions for errcheck
-    - path: "^.*/log.go$"
-      text: "globalLogger.Output.*not checked"
-      linters:
-        - errcheck
-    - path: "^.*_test.go$"
-      text: "release.Render.*not checked"
-      linters:
-        - errcheck
-    - path: "^.*_test.go$"
-      text: "release.Walk.*not checked"
-      linters:
-        - errcheck
-    - path: "internal/setup/fetch.go"
-      text: "lockFile.Unlock.*not checked"
-      linters:
-        - errcheck
-    # exclusions for unused
-    # addDebugCommand is an useful function that may be used later
-    - path: "cmd/chisel/main.go"
-      text: "addDebugCommand.*unused"
-      linters:
-        - unused
-    # exclude common (unused) issues from log.go files
-    - path: "^.*/log.go$"
-      text: "logf.*unused"
-      linters:
-        - unused
-    - path: "^.*/log.go$"
-      text: "debugf.*unused"
-      linters:
-        - unused
-    - path: "^.*/log.go$"
-      text: "globalDebug.*unused"
-      linters:
-        - unused
-    - path: "^.*/log.go$"
-      text: "globalLogger.*unused"
-      linters:
-        - unused
-    - path: "^.*.go$"
-      text: "\"golang.org/x/crypto/openpgp/\\w+\" is deprecated"
-      linters:
-        - staticcheck
   max-issues-per-linter: 0
   max-same-issues: 0
