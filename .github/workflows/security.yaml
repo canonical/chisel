@@ -28,7 +28,7 @@ jobs:
           curl -sSL "${{ steps.release.outputs.url }}" | tar -xz -C release-scan
 
       - name: Run Trivy vulnerability scanner in on release
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
         with:
           scan-type: 'rootfs'
           scan-ref: './release-scan/chisel'
@@ -48,7 +48,7 @@ jobs:
           path: ${{ env.TRIVY_RESULTS }}
 
       - name: Raise error on HIGH,CRITICAL vulnerabilities
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
         with:
           scan-type: 'rootfs'
           scan-ref: './release-scan/chisel'
