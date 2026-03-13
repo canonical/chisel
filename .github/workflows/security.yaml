@@ -20,7 +20,7 @@ jobs:
           echo "url=$url" >> "$GITHUB_OUTPUT"
         env:
           # TODO: replace with fine grained token once created.
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download and extract latest release
         run: |
