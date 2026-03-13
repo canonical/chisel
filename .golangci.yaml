@@ -6,7 +6,6 @@ linters:
     - staticcheck
     - unused
   exclusions:
-    generated: lax
     presets:
       - comments
       - std-error-handling
