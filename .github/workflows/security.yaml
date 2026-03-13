@@ -11,15 +11,31 @@ jobs:
     env:
       TRIVY_RESULTS: 'trivy-results.sarif'
     steps:
-      - uses: actions/checkout@v3
+      - name: Get latest release download URL
+        id: release
+        run: |
+          url=$(gh release view --json assets --jq \
+            '.assets[] | select(.name | test("linux_amd64.tar.gz$")) | .url' \
+            --repo ${{ github.repository }})
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+        env:
+          # TODO: replace with fine grained token once created.
+          GH_TOKEN: ${{ github.token }}
 
-      - name: Run Trivy vulnerability scanner in fs mode
-        uses: aquasecurity/trivy-action@master
+      - name: Download and extract latest release
+        run: |
+          mkdir release-scan
+          curl -sSL "${{ steps.release.outputs.url }}" | tar -xz -C release-scan
+
+      - name: Run Trivy vulnerability scanner in on release
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
         with:
-          scan-type: 'fs'
-          scan-ref: '.'
+          scan-type: 'rootfs'
+          scan-ref: './release-scan/chisel'
           format: 'sarif'
           output: ${{ env.TRIVY_RESULTS }}
+          # TODO: Replace with the fine grained token once created.
+          github-pat: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
@@ -32,9 +48,11 @@ jobs:
           path: ${{ env.TRIVY_RESULTS }}
 
       - name: Raise error on HIGH,CRITICAL vulnerabilities
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
         with:
-          scan-type: 'fs'
-          scan-ref: '.'
+          scan-type: 'rootfs'
+          scan-ref: './release-scan/chisel'
           severity: 'CRITICAL,HIGH'
           exit-code: '1'
+          # TODO: Replace with the fine grained token once created.
+          github-pat: ${{ secrets.GITHUB_TOKEN }}
