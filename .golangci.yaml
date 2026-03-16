@@ -66,13 +66,10 @@ linters:
           - staticcheck
         path: internal/setup/setup.go
         text: "ST1012: error var preferNone"
-  settings:
-    staticcheck:
-      checks:
-        - all
-        # Checks now detecting new issues after migrating to golangci-lint v2.
-        # TODO: Remove these and solve raised issues.
-        - -QF1011
+      - linters:
+          - staticcheck
+        path: internal/testutil/containschecker.go
+        text: "QF1011"
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
