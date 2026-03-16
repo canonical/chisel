@@ -345,7 +345,7 @@ func run() error {
 				sug := "chisel help"
 				if len(xtra) > 0 {
 					sub = xtra[0]
-					if x := parser.Command.Active; x != nil && x.Name != "help" {
+					if x := parser.Active; x != nil && x.Name != "help" {
 						sug = "chisel help " + x.Name
 					}
 				}

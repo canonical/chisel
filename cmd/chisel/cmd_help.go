@@ -26,7 +26,7 @@ func addHelp(parser *flags.Parser) error {
 		// case, parser.Command.Active should be the command
 		// on which help is being requested (like "chisel foo
 		// --help", active is foo), or nil in the toplevel.
-		if parser.Command.Active == nil {
+		if parser.Active == nil {
 			// this means *either* a bare 'chisel --help',
 			// *or* 'chisel --help command'
 			//
@@ -101,7 +101,7 @@ func (w *manfixer) Write(buf []byte) (int, error) {
 var tpRegexp = regexp.MustCompile(`(?m)(?:^\.TP\n)+`)
 
 func (w *manfixer) flush() error {
-	str := tpRegexp.ReplaceAllLiteralString(w.Buffer.String(), ".TP\n")
+	str := tpRegexp.ReplaceAllLiteralString(w.String(), ".TP\n")
 	_, err := io.Copy(Stdout, strings.NewReader(str))
 	return err
 }
@@ -131,12 +131,12 @@ func (cmd cmdHelp) Execute(args []string) error {
 	// the subcommand is set below. The Active command at this point is `chisel
 	// help`, in the loop below we change it to be `chisel os.Args[1]
 	// os.Args[2] ...`.
-	cmd.parser.Command.Active = nil
+	cmd.parser.Active = nil
 	for _, subname := range cmd.Positional.Subs {
 		subcmd = subcmd.Find(subname)
 		if subcmd == nil {
 			sug := "chisel help"
-			if x := cmd.parser.Command.Active; x != nil && x.Name != "help" {
+			if x := cmd.parser.Active; x != nil && x.Name != "help" {
 				sug = "chisel help " + x.Name
 			}
 			return fmt.Errorf("unknown command %q, see '%s'.", subname, sug)
