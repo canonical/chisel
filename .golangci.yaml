@@ -58,13 +58,20 @@ linters:
           - staticcheck
         path: ^.*/log.go$
         text: "ST1003:"
+      - linters:
+          - staticcheck
+        path: internal/cache/cache.go
+        text: "ST1012: error var MissErr"
+      - linters:
+          - staticcheck
+        path: internal/setup/setup.go
+        text: "ST1012: error var preferNone"
   settings:
     staticcheck:
       checks:
         - all
         # Checks now detecting new issues after migrating to golangci-lint v2.
         # TODO: Remove these and solve raised issues.
-        - -ST1012
         - -QF1011
 issues:
   max-issues-per-linter: 0
