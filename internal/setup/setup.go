@@ -442,7 +442,7 @@ func readSlices(release *Release, baseDir, dirName string) error {
 		pkgName := match[1]
 		pkgPath := filepath.Join(dirName, entry.Name())
 		if pkg, ok := release.Packages[pkgName]; ok {
-			return fmt.Errorf("package %q slices defined more than once: %s and %s\")", pkgName, pkg.Path, pkgPath)
+			return fmt.Errorf("package %q slices defined more than once: %s and %s", pkgName, pkg.Path, stripBase(baseDir, pkgPath))
 		}
 		data, err := os.ReadFile(pkgPath)
 		if err != nil {
