@@ -1,5 +1,9 @@
 name: Performance
 
+# This workflow is decoupled from comment-perf.yaml to protect secrets.
+# The benchmark test executes the chisel binary, so the PR author could execute
+# arbitrary code in the runner. Hence, secrets MUST NOT be available to this
+# workflow.
 on:
   pull_request:
     branches: [main]

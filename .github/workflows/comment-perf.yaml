@@ -1,5 +1,11 @@
 name: Post benchmark result on pull request
 
+# This workflow can write to the PR. It must never execute PR author arbitrary
+# code to prevent from leaking secrets.
+# The pull_request_target trigger MUST NOT be used as it bypasses the
+# requirement of maintainer approval of a PR from an outside contributor and
+# it is executed in the context of the target repository, giving access to
+# secrets.
 on:
   workflow_run:
     workflows: ["Performance"]
