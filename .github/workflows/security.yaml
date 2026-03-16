@@ -8,21 +8,27 @@ jobs:
   scan:
     name: Scan for known vulnerabilities
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Scan binaries for all released architectures. Ensures catching
+        # architecture-specific vulnerabilities.
+        arch: [amd64, arm, arm64, ppc64le, s390x, riscv64]
     env:
       TRIVY_RESULTS: 'trivy-results.sarif'
-      RELEASE_SCAN: 'release-scan'
+      SCAN_DIR: 'release-scan'
     steps:
-      - name: Download and extract latest release
+      - name: Download and extract latest release (${{ matrix.arch }})
         run: |
-          gh release download --repo ${{ github.repository }} --pattern '*linux_amd64.tar.gz'
-          mkdir ${RELEASE_SCAN}
-          tar xvf chisel*amd64.tar.gz -C ${RELEASE_SCAN}
+          gh release download --repo ${{ github.repository }} --pattern '*linux_${{ matrix.arch }}.tar.gz'
+          mkdir ${SCAN_DIR}
+          tar xvf chisel*.tar.gz -C ${SCAN_DIR}
 
-      - name: Run Trivy vulnerability scanner on release
+      - name: Run Trivy vulnerability scanner on release (${{ matrix.arch }})
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
         with:
           scan-type: 'rootfs'
-          scan-ref: "./${{ env.RELEASE_SCAN }}/chisel"
+          scan-ref: "./${{ env.SCAN_DIR }}/chisel"
           format: 'sarif'
           output: ${{ env.TRIVY_RESULTS }}
           # TODO: Replace with the fine grained token once created.
@@ -42,6 +48,6 @@ jobs:
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
         with:
           scan-type: 'rootfs'
-          scan-ref: "./${{ env.RELEASE_SCAN }}/chisel"
+          scan-ref: "./${{ env.SCAN_DIR }}/chisel"
           severity: 'CRITICAL,HIGH'
           exit-code: '1'
