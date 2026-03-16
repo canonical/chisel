@@ -50,6 +50,10 @@ linters:
           - staticcheck
         path: ^.*.go$
         text: '"golang.org/x/crypto/openpgp/\w+" is deprecated'
+      - linters:
+          - staticcheck
+        path: cmd/chisel/.*.go
+        text: "ST1005:"
   settings:
     staticcheck:
       checks:
@@ -57,8 +61,6 @@ linters:
         # Checks now detecting new issues after migrating to golangci-lint v2.
         # TODO: Remove these and solve raised issues.
         - -ST1012
-        - -ST1011
-        - -ST1005
         - -ST1003
         - -QF1009
         - -QF1011
