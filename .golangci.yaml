@@ -65,7 +65,6 @@ linters:
         # Checks now detecting new issues after migrating to golangci-lint v2.
         # TODO: Remove these and solve raised issues.
         - -ST1012
-        - -QF1009
         - -QF1011
         - -QF1012
 issues:
