@@ -28,10 +28,6 @@ linters:
         text: lockFile.Unlock.*not checked
       - linters:
           - unused
-        path: cmd/chisel/main.go
-        text: addDebugCommand.*unused
-      - linters:
-          - unused
         path: ^.*/log.go$
         text: logf.*unused
       - linters:
