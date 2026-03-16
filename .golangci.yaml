@@ -63,7 +63,6 @@ linters:
         - -QF1009
         - -QF1011
         - -S1011
-        - -S1005
         - -QF1012
 issues:
   max-issues-per-linter: 0
