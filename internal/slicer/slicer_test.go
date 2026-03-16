@@ -2190,10 +2190,7 @@ func treeDumpManifestPaths(mfest *manifest.Manifest) (map[string]string, error) 
 		}
 
 		// append {slice1, ..., sliceN} to the end of the path dump.
-		slicesStr := make([]string, 0, len(path.Slices))
-		for _, slice := range path.Slices {
-			slicesStr = append(slicesStr, slice)
-		}
+		slicesStr := slices.Clone(path.Slices)
 		sort.Strings(slicesStr)
 		result[path.Path] = fmt.Sprintf("%s {%s}", fsDump, strings.Join(slicesStr, ","))
 		return nil
