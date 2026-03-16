@@ -66,7 +66,6 @@ linters:
         # TODO: Remove these and solve raised issues.
         - -ST1012
         - -QF1011
-        - -QF1012
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
