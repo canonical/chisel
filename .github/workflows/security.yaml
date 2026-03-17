@@ -8,8 +8,6 @@ jobs:
   scan:
     name: Scan for known vulnerabilities
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -26,6 +24,7 @@ jobs:
           mkdir ${SCAN_DIR}
           tar xvf chisel*.tar.gz -C ${SCAN_DIR}
         env:
+          # TODO: Replace with the fine grained token once created.
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run Trivy vulnerability scanner on release (${{ matrix.arch }})
