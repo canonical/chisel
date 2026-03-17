@@ -8,6 +8,8 @@ jobs:
   scan:
     name: Scan for known vulnerabilities
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -24,7 +26,7 @@ jobs:
           mkdir ${SCAN_DIR}
           tar xvf chisel*.tar.gz -C ${SCAN_DIR}
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run Trivy vulnerability scanner on release (${{ matrix.arch }})
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
