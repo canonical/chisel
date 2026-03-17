@@ -1,6 +1,6 @@
 module github.com/canonical/chisel
 
-go 1.24.6
+go 1.25.8
 
 require (
 	github.com/blakesmith/ar v0.0.0-20190502131153-809d4375e1fb
