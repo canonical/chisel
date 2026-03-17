@@ -18,7 +18,7 @@ jobs:
       TRIVY_RESULTS: 'trivy-results.sarif'
       SCAN_DIR: 'release-scan'
     steps:
-      - name: Download and extract latest release (${{ matrix.arch }})
+      - name: Download and extract latest release
         run: |
           gh release download --repo ${{ github.repository }} --pattern '*linux_${{ matrix.arch }}.tar.gz'
           mkdir ${SCAN_DIR}
@@ -27,7 +27,7 @@ jobs:
           # TODO: Replace with the fine grained token once created.
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run Trivy vulnerability scanner on release (${{ matrix.arch }})
+      - name: Run Trivy vulnerability scanner on release
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
         with:
           scan-type: 'rootfs'
