@@ -24,8 +24,7 @@ jobs:
           mkdir ${SCAN_DIR}
           tar xvf chisel*.tar.gz -C ${SCAN_DIR}
         env:
-          # TODO: Replace with the fine grained token once created.
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.ROCKSBOT_CHISEL_SECURITY_EVENTS }}
 
       - name: Run Trivy vulnerability scanner on release
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
@@ -34,23 +33,21 @@ jobs:
           scan-ref: "./${{ env.SCAN_DIR }}/chisel"
           format: 'sarif'
           output: ${{ env.TRIVY_RESULTS }}
-          # TODO: Replace with the fine grained token once created.
-          github-pat: ${{ secrets.GITHUB_TOKEN }}
+          github-pat: ${{ secrets.ROCKSBOT_CHISEL_SECURITY_EVENTS }}
+          # The severity is ignored when generating the SARIF report. It is only
+          # used as a condition to return the specified exit code, and so to fail
+          # in our case.
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
 
       - name: Upload Trivy scan results to GitHub Security tab
+        if: ${{ !cancelled() }}
         uses: github/codeql-action/upload-sarif@0d579ffd059c29b07949a3cce3983f0780820c98 # v4.32.6
         with:
           sarif_file: ${{ env.TRIVY_RESULTS }}
 
       - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        if: ${{ !cancelled() }}
         with:
           name: ${{ env.TRIVY_RESULTS }}
           path: ${{ env.TRIVY_RESULTS }}
-
-      - name: Raise error on HIGH,CRITICAL vulnerabilities
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
-        with:
-          scan-type: 'rootfs'
-          scan-ref: "./${{ env.SCAN_DIR }}/chisel"
-          severity: 'CRITICAL,HIGH'
-          exit-code: '1'
