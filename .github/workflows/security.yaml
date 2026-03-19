@@ -8,33 +8,46 @@ jobs:
   scan:
     name: Scan for known vulnerabilities
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Scan binaries for all released architectures. Ensures catching
+        # architecture-specific vulnerabilities.
+        arch: [amd64, arm, arm64, ppc64le, s390x, riscv64]
     env:
       TRIVY_RESULTS: 'trivy-results.sarif'
+      SCAN_DIR: 'release-scan'
     steps:
-      - uses: actions/checkout@v3
+      - name: Download and extract latest release
+        run: |
+          gh release download --repo ${{ github.repository }} --pattern '*linux_${{ matrix.arch }}.tar.gz'
+          mkdir ${SCAN_DIR}
+          tar xvf chisel*.tar.gz -C ${SCAN_DIR}
+        env:
+          GH_TOKEN: ${{ secrets.ROCKSBOT_CHISEL_SECURITY_EVENTS }}
 
-      - name: Run Trivy vulnerability scanner in fs mode
-        uses: aquasecurity/trivy-action@master
+      - name: Run Trivy vulnerability scanner on release
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
         with:
-          scan-type: 'fs'
-          scan-ref: '.'
+          scan-type: 'rootfs'
+          scan-ref: "./${{ env.SCAN_DIR }}/chisel"
           format: 'sarif'
           output: ${{ env.TRIVY_RESULTS }}
+          github-pat: ${{ secrets.ROCKSBOT_CHISEL_SECURITY_EVENTS }}
+          # The severity is ignored when generating the SARIF report. It is only
+          # used as a condition to return the specified exit code, and so to fail
+          # in our case.
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
 
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
+        if: ${{ !cancelled() }}
+        uses: github/codeql-action/upload-sarif@0d579ffd059c29b07949a3cce3983f0780820c98 # v4.32.6
         with:
           sarif_file: ${{ env.TRIVY_RESULTS }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        if: ${{ !cancelled() }}
         with:
           name: ${{ env.TRIVY_RESULTS }}
           path: ${{ env.TRIVY_RESULTS }}
-
-      - name: Raise error on HIGH,CRITICAL vulnerabilities
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          severity: 'CRITICAL,HIGH'
-          exit-code: '1'
