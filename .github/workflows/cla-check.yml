@@ -9,4 +9,4 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Check if Canonical's Contributor License Agreement has been signed
-        uses: canonical/has-signed-canonical-cla@v2
+        uses: canonical/has-signed-canonical-cla@1c20438ad54b4d37105e777000545881d2293ba4 #v2.2.0
