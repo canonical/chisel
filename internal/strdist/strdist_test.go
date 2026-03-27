@@ -92,3 +92,33 @@ func BenchmarkDistanceCut(b *testing.B) {
 		strdist.Distance(one, two, strdist.StandardCost, 1)
 	}
 }
+
+func (s *S) TestGlobPathWithSpecial(c *C) {
+	// Test special glob matching
+	specialA := map[rune]string{
+		'🎄': "[^o]",
+	}
+
+	// Should match: 🎄 matches any character except 'o'
+	c.Assert(strdist.GlobPathWithSpecial("/file/f🎄obar", "/file/faobar", specialA, nil), Equals, true)
+	c.Assert(strdist.GlobPathWithSpecial("/file/f🎄obar", "/file/fbobar", specialA, nil), Equals, true)
+	c.Assert(strdist.GlobPathWithSpecial("/file/f🎄obar", "/file/fxobar", specialA, nil), Equals, true)
+
+	// Should not match: 🎄 doesn't match 'o'
+	c.Assert(strdist.GlobPathWithSpecial("/file/f🎄obar", "/file/foobar", specialA, nil), Equals, false)
+
+	// Should not match standard glob pattern /file/foob*r with special glob /file/f🎄obar
+	// because 'f🎄obar' would need 🎄 to match 'oob', but it only matches single char
+	c.Assert(strdist.GlobPathWithSpecial("/file/foob*r", "/file/f🎄obar", nil, specialA), Equals, false)
+
+	// Test that special globs don't match /
+	specialSlash := map[rune]string{
+		'X': "[^/]",
+	}
+	c.Assert(strdist.GlobPathWithSpecial("/fileXbar", "/file/bar", specialSlash, nil), Equals, false)
+	c.Assert(strdist.GlobPathWithSpecial("/fileXbar", "/filexbar", specialSlash, nil), Equals, true)
+
+	// Test nil special globs (should work like normal GlobPath)
+	c.Assert(strdist.GlobPathWithSpecial("/file/*", "/file/test", nil, nil), Equals, true)
+	c.Assert(strdist.GlobPathWithSpecial("/file/?", "/file/a", nil, nil), Equals, true)
+}
