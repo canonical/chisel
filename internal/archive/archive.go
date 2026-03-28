@@ -454,11 +454,7 @@ func sectionPackageInfo(section control.Section) *PackageInfo {
 // The Source field may include a version in parentheses: "glibc (2.41-12)".
 // Returns empty string when Source is not set (binary name equals source name).
 func sourcePackageName(section control.Section) string {
-	src := section.Get("Source")
-	if src == "" {
-		return ""
-	}
-	name, _, _ := strings.Cut(src, " ")
+	name, _, _ := strings.Cut(section.Get("Source"), " ")
 	return name
 }
 
