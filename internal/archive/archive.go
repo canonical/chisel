@@ -30,6 +30,7 @@ type PackageInfo struct {
 	Version string
 	Arch    string
 	SHA256  string
+	Source  string
 }
 
 type Options struct {
@@ -445,7 +446,20 @@ func sectionPackageInfo(section control.Section) *PackageInfo {
 		Version: section.Get("Version"),
 		Arch:    section.Get("Architecture"),
 		SHA256:  section.Get("SHA256"),
+		Source:  sourcePackageName(section),
 	}
+}
+
+// sourcePackageName extracts the source package name from a control section.
+// The Source field may include a version in parentheses: "glibc (2.41-12)".
+// Returns empty string when Source is not set (binary name equals source name).
+func sourcePackageName(section control.Section) string {
+	src := section.Get("Source")
+	if src == "" {
+		return ""
+	}
+	name, _, _ := strings.Cut(src, " ")
+	return name
 }
 
 func (index *ubuntuIndex) displayName() string {
