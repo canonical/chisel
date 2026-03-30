@@ -1,0 +1,33 @@
+name: Post benchmark result on pull request
+
+# This workflow can write to the PR. It must never execute PR author arbitrary
+# code to prevent from leaking secrets.
+# The pull_request_target trigger MUST NOT be used as it bypasses the
+# requirement of maintainer approval of a PR from an outside contributor and
+# it is executed in the context of the target repository, giving access to
+# secrets.
+on:
+  workflow_run:
+    workflows: ["Performance"]
+    types: [completed]
+
+jobs:
+  post-comment:
+    name: Post PR comment
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'}}
+    steps:
+      - name: Download comment
+        uses: actions/download-artifact@v4
+        with:
+          name: benchmark-report
+          path: benchmark-report.txt
+          github-token: ${{ secrets.ROCKSBOT_CHISEL_PR_COMMENTER }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Post message to PR
+        uses: mshick/add-pr-comment@dd126dd8c253650d181ad9538d8b4fa218fc31e8
+        with:
+          message-path: benchmark-report.txt
+          issue: ${{ github.event.workflow_run.pull_requests[0].number }}
+          repo-token: ${{ secrets.ROCKSBOT_CHISEL_PR_COMMENTER }}
