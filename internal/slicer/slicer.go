@@ -770,8 +770,9 @@ func SelectValidManifest(targetDir string, release *setup.Release) (*manifest.Ma
 		}
 		defer r.Close()
 		mfest, err := manifest.Read(r)
+		var unknownSchemaError *manifest.UnknownSchemaError
 		if err != nil {
-			if errors.Is(err, manifest.ErrUnknownSchema) {
+			if errors.As(err, &unknownSchemaError) {
 				foundUnknownSchema = true
 				// Ignore manifests with unknown (potentially future) schema versions.
 				continue

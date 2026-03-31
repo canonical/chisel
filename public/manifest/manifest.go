@@ -46,7 +46,13 @@ type Manifest struct {
 	db *jsonwall.DB
 }
 
-var ErrUnknownSchema = fmt.Errorf("unknown schema version")
+type UnknownSchemaError struct {
+	Version string
+}
+
+func (e *UnknownSchemaError) Error() string {
+	return fmt.Sprintf("unknown manifest schema version %q", e.Version)
+}
 
 // Read loads a Manifest without performing any validation. The data is assumed
 // to be both valid jsonwall and a valid Manifest (see Validate).
@@ -63,7 +69,7 @@ func Read(reader io.Reader) (manifest *Manifest, err error) {
 	}
 	mfestSchema := db.Schema()
 	if mfestSchema != Schema {
-		return nil, fmt.Errorf("%w %q", ErrUnknownSchema, mfestSchema)
+		return nil, &UnknownSchemaError{Version: mfestSchema}
 	}
 
 	manifest = &Manifest{db: db}
