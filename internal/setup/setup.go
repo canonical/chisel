@@ -19,6 +19,7 @@ import (
 // Release is a collection of package slices targeting a particular
 // distribution version.
 type Release struct {
+	Format      string
 	Path        string
 	Packages    map[string]*Package
 	Archives    map[string]*Archive
@@ -441,7 +442,7 @@ func readSlices(release *Release, baseDir, dirName string) error {
 		pkgName := match[1]
 		pkgPath := filepath.Join(dirName, entry.Name())
 		if pkg, ok := release.Packages[pkgName]; ok {
-			return fmt.Errorf("package %q slices defined more than once: %s and %s\")", pkgName, pkg.Path, pkgPath)
+			return fmt.Errorf("package %q slices defined more than once: %s and %s", pkgName, pkg.Path, stripBase(baseDir, pkgPath))
 		}
 		data, err := os.ReadFile(pkgPath)
 		if err != nil {
@@ -449,7 +450,7 @@ func readSlices(release *Release, baseDir, dirName string) error {
 			return fmt.Errorf("cannot read slice definition file: %v", err)
 		}
 
-		pkg, err := parsePackage(baseDir, pkgName, stripBase(baseDir, pkgPath), data)
+		pkg, err := parsePackage(release.Format, pkgName, stripBase(baseDir, pkgPath), data)
 		if err != nil {
 			return err
 		}
