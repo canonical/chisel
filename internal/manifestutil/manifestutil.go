@@ -38,14 +38,14 @@ func FindPaths(slices []*setup.Slice) map[string][]*setup.Slice {
 // FindPathsInRelease finds all the paths marked with "generate:manifest"
 // for the given release.
 func FindPathsInRelease(r *setup.Release) []string {
-	manifestPaths := make(map[string]struct{})
+	manifestPaths := make(map[string]bool)
 	for _, pkg := range r.Packages {
 		for _, slice := range pkg.Slices {
 			for path, info := range slice.Contents {
 				if info.Generate == setup.GenerateManifest {
 					dir := strings.TrimSuffix(path, "**")
 					path = filepath.Join(dir, DefaultFilename)
-					manifestPaths[path] = struct{}{}
+					manifestPaths[path] = true
 				}
 			}
 		}
