@@ -782,17 +782,16 @@ func SelectValidManifest(targetDir string, release *setup.Release) (*manifest.Ma
 		if err != nil {
 			return nil, err
 		}
-		h, err := contentHash(mfestFullPath)
+		mfestHash, err := contentHash(mfestFullPath)
 		if err != nil {
 			return nil, fmt.Errorf("cannot compute hash for %q: %s", mfestFullPath, err)
 		}
-		mfestHash := hex.EncodeToString(h)
 		if selected == nil {
 			selected = mfest
 			selectedHash = mfestHash
 			selectedPath = mfestPath
 		} else if selectedHash != mfestHash {
-			return nil, fmt.Errorf("cannot select a manifest: %q and %q are inconsistent", selectedPath, mfestPath)
+			return nil, fmt.Errorf("cannot select between conflicting manifests: %q != %q", selectedPath, mfestPath)
 		}
 	}
 	if foundUnknownSchema && selected == nil {
@@ -801,16 +800,16 @@ func SelectValidManifest(targetDir string, release *setup.Release) (*manifest.Ma
 	return selected, nil
 }
 
-func contentHash(path string) ([]byte, error) {
+func contentHash(path string) (string, error) {
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	defer f.Close()
 
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {
-		return nil, err
+		return "", err
 	}
-	return h.Sum(nil), nil
+	return hex.EncodeToString(h.Sum(nil)), nil
 }

@@ -2596,10 +2596,10 @@ func (s *S) TestRunRecut(c *C) {
 		c.Assert(err, IsNil)
 
 		options = slicer.RunOptions{
-			Selection: selection,
-			Archives:  archives,
-			TargetDir: targetDir,
-			Manifest:  mfest,
+			Selection:        selection,
+			Archives:         archives,
+			TargetDir:        targetDir,
+			PreviousManifest: mfest,
 		}
 		// Second run.
 		err = slicer.Run(&options)
@@ -2703,7 +2703,7 @@ var selectValidManifestTests = []selectValidManifestTest{{
 		writeSampleManifest(c, targetDir, manifestPathA, slice, "hash1")
 		writeSampleManifest(c, targetDir, manifestPathB, slice, "hash2")
 	},
-	error: `cannot select a manifest: "/chisel-a/manifest.wall" and "/chisel-b/manifest.wall" are inconsistent`,
+	error: `cannot select between conflicting manifests: "/chisel-a/manifest.wall" != "/chisel-b/manifest.wall"`,
 }, {
 	summary:          "Invalid manifest data returns error",
 	releaseManifests: []string{"/chisel/**"},
