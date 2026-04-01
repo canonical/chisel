@@ -729,8 +729,8 @@ func selectPkgArchives(archives map[string]archive.Archive, selection *setup.Sel
 }
 
 var (
-	ErrNoReleaseManifest    = fmt.Errorf("no manifest generated for the release")
-	ErrNoValidManifest = fmt.Errorf("no valid manifest found in directory")
+	ErrNoReleaseManifest = fmt.Errorf("no manifest generated for the release")
+	ErrNoValidManifest   = fmt.Errorf("no valid manifest found in directory")
 )
 
 // SelectValidManifest returns, if found, a valid manifest.
