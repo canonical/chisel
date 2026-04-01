@@ -2851,10 +2851,10 @@ func readManifest(c *C, targetDir, manifestPath string) *manifest.Manifest {
 }
 
 func writeSampleManifest(c *C, targetDir, manifestPath string, slice *setup.Slice, hash string) {
-	mfestPath := filepath.Join(targetDir, manifestPath)
-	err := os.MkdirAll(filepath.Dir(mfestPath), 0o755)
+	manifestFullPath := filepath.Join(targetDir, manifestPath)
+	err := os.MkdirAll(filepath.Dir(manifestFullPath), 0o755)
 	c.Assert(err, IsNil)
-	f, err := os.Create(mfestPath)
+	f, err := os.Create(manifestFullPath)
 	c.Assert(err, IsNil)
 	zw, err := zstd.NewWriter(f)
 	c.Assert(err, IsNil)
@@ -2880,14 +2880,14 @@ func writeSampleManifest(c *C, targetDir, manifestPath string, slice *setup.Slic
 	c.Assert(err, IsNil)
 	c.Assert(zw.Close(), IsNil)
 	c.Assert(f.Close(), IsNil)
-	c.Assert(os.Chmod(mfestPath, 0o644), IsNil)
+	c.Assert(os.Chmod(manifestFullPath, 0o644), IsNil)
 }
 
 func writeInvalidManifest(c *C, targetDir, manifestPath string) {
-	mfestPath := filepath.Join(targetDir, manifestPath)
-	err := os.MkdirAll(filepath.Dir(mfestPath), 0o755)
+	manifestFullPath := filepath.Join(targetDir, manifestPath)
+	err := os.MkdirAll(filepath.Dir(manifestFullPath), 0o755)
 	c.Assert(err, IsNil)
-	f, err := os.Create(mfestPath)
+	f, err := os.Create(manifestFullPath)
 	c.Assert(err, IsNil)
 	zw, err := zstd.NewWriter(f)
 	c.Assert(err, IsNil)
@@ -2901,10 +2901,10 @@ func writeInvalidManifest(c *C, targetDir, manifestPath string) {
 }
 
 func writeInvalidSchemaManifest(c *C, targetDir, manifestPath string) {
-	mfestPath := filepath.Join(targetDir, manifestPath)
-	err := os.MkdirAll(filepath.Dir(mfestPath), 0o755)
+	manifestFullPath := filepath.Join(targetDir, manifestPath)
+	err := os.MkdirAll(filepath.Dir(manifestFullPath), 0o755)
 	c.Assert(err, IsNil)
-	f, err := os.Create(mfestPath)
+	f, err := os.Create(manifestFullPath)
 	c.Assert(err, IsNil)
 	zw, err := zstd.NewWriter(f)
 	c.Assert(err, IsNil)

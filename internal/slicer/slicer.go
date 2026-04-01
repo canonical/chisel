@@ -754,9 +754,9 @@ func SelectValidManifest(targetDir string, release *setup.Release) (*manifest.Ma
 	var selectedHash string
 	var selectedPath string
 	foundUnknownSchema := false
-	for _, mfestPath := range manifestPaths {
-		mfestFullPath := path.Join(targetDir, mfestPath)
-		f, err := os.Open(mfestFullPath)
+	for _, manifestPath := range manifestPaths {
+		manifestFullPath := path.Join(targetDir, manifestPath)
+		f, err := os.Open(manifestFullPath)
 		if err != nil {
 			if os.IsNotExist(err) {
 				continue
@@ -783,16 +783,16 @@ func SelectValidManifest(targetDir string, release *setup.Release) (*manifest.Ma
 		if err != nil {
 			return nil, err
 		}
-		mfestHash, err := contentHash(mfestFullPath)
+		manifestHash, err := contentHash(manifestFullPath)
 		if err != nil {
-			return nil, fmt.Errorf("cannot compute hash for %q: %s", mfestFullPath, err)
+			return nil, fmt.Errorf("cannot compute hash for %q: %s", manifestFullPath, err)
 		}
 		if selected == nil {
 			selected = mfest
-			selectedHash = mfestHash
-			selectedPath = mfestPath
-		} else if selectedHash != mfestHash {
-			return nil, fmt.Errorf("cannot select between conflicting manifests: %q != %q", selectedPath, mfestPath)
+			selectedHash = manifestHash
+			selectedPath = manifestPath
+		} else if selectedHash != manifestHash {
+			return nil, fmt.Errorf("cannot select between conflicting manifests: %q != %q", selectedPath, manifestPath)
 		}
 	}
 	if foundUnknownSchema && selected == nil {
