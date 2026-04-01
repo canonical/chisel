@@ -437,7 +437,7 @@ func upgrade(targetDir string, tempDir string, report *manifestutil.Report, prev
 	}
 
 	// Remove missing paths.
-	missingPaths := make([]string, 0)
+	missingPaths := make([]string, 0, len(report.Entries))
 	err := prevManifest.IteratePaths("", func(path *manifest.Path) error {
 		_, ok := report.Entries[path.Path]
 		if !ok {
