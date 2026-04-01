@@ -297,6 +297,9 @@ func (r *Release) validate() error {
 			}
 
 			prefixLen := strings.IndexAny(oldPath, "*?")
+			if prefixLen == -1 {
+				return fmt.Errorf("internal error: invalid path: generate or glob path does not contain ' ?' or '*': %q", oldPath)
+			}
 			searchKey := oldPath[:prefixLen]
 			// startIndex is the position of the prefix or the position where
 			// the prefix would have been found.
