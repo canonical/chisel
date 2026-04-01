@@ -736,7 +736,13 @@ func (e *NoManifestError) Error() string {
 	return e.message
 }
 
-// SelectValidManifest returns, if found, a valid manifest.
+// SelectValidManifest looks in the targetDir for manifests declared in the
+// release, reads and validates those found. The selection ensures that all
+// valid manifests found are identical, so only one is kept and returned.
+//
+// A file matching a manifest path declared in the release is considered valid
+// if it is a zstd file, readable by manifest.Read (with a known schema
+// version) and successfully validated by manifestutil.Validate.
 //
 // Not finding any manifest (valid or not) means the targetDir cannot be
 // considered as previously produced by Chisel for the given release.
@@ -746,8 +752,7 @@ func (e *NoManifestError) Error() string {
 // Chisel cannot safely proceed and so errors out.
 //
 // Finding multiple manifests, with at least one valid means Chisel can proceed,
-// ignoring unknown ones. Consistency between valid manifests is verified,
-// ensuring a deterministic selection.
+// ignoring unknown ones.
 func SelectValidManifest(targetDir string, release *setup.Release) (*manifest.Manifest, error) {
 	targetDir = filepath.Clean(targetDir)
 	if !filepath.IsAbs(targetDir) {
