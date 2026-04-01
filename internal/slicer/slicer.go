@@ -728,10 +728,13 @@ func selectPkgArchives(archives map[string]archive.Archive, selection *setup.Sel
 	return pkgArchive, nil
 }
 
-var (
-	ErrNoReleaseManifest = fmt.Errorf("no manifest generated for the release")
-	ErrNoValidManifest   = fmt.Errorf("no valid manifest found in directory")
-)
+type NoManifestError struct {
+	message string
+}
+
+func (e *NoManifestError) Error() string {
+	return e.message
+}
 
 // SelectValidManifest returns, if found, a valid manifest.
 //
@@ -756,7 +759,7 @@ func SelectValidManifest(targetDir string, release *setup.Release) (*manifest.Ma
 	}
 	manifestPaths := manifestutil.FindPathsInRelease(release)
 	if len(manifestPaths) == 0 {
-		return nil, ErrNoReleaseManifest
+		return nil, &NoManifestError{message: "no manifest generated for the release"}
 	}
 
 	var selected *manifest.Manifest
@@ -808,7 +811,7 @@ func SelectValidManifest(targetDir string, release *setup.Release) (*manifest.Ma
 		if foundUnknownSchema {
 			return nil, fmt.Errorf("cannot select a manifest: all manifests found use unknown schema")
 		} else {
-			return nil, ErrNoValidManifest
+			return nil, &NoManifestError{message: "no valid manifest found in directory"}
 		}
 	}
 	return selected, nil
