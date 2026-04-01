@@ -2653,10 +2653,12 @@ type selectValidManifestTest struct {
 var selectValidManifestTests = []selectValidManifestTest{{
 	summary: "No manifest paths in release",
 	noMatch: true,
+	error:   "no manifest generated for the release",
 }, {
 	summary:          "Manifest path missing in target",
 	releaseManifests: []string{"/chisel/**"},
 	noMatch:          true,
+	error:            "no valid manifest found in directory",
 }, {
 	summary:          "Unknown schema error ignored when other valid found",
 	releaseManifests: []string{"/chisel-a/**", "/chisel-b/**"},

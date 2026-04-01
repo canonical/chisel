@@ -728,6 +728,11 @@ func selectPkgArchives(archives map[string]archive.Archive, selection *setup.Sel
 	return pkgArchive, nil
 }
 
+var (
+	ErrNoReleaseManifest    = fmt.Errorf("no manifest generated for the release")
+	ErrNoValidManifest = fmt.Errorf("no valid manifest found in directory")
+)
+
 // SelectValidManifest returns, if found, a valid manifest.
 //
 // Not finding any manifest (valid or not) means the targetDir cannot be
@@ -751,7 +756,7 @@ func SelectValidManifest(targetDir string, release *setup.Release) (*manifest.Ma
 	}
 	manifestPaths := manifestutil.FindPathsInRelease(release)
 	if len(manifestPaths) == 0 {
-		return nil, nil
+		return nil, ErrNoReleaseManifest
 	}
 
 	var selected *manifest.Manifest
@@ -799,8 +804,12 @@ func SelectValidManifest(targetDir string, release *setup.Release) (*manifest.Ma
 			return nil, fmt.Errorf("cannot select between conflicting manifests: %q != %q", selectedPath, manifestPath)
 		}
 	}
-	if foundUnknownSchema && selected == nil {
-		return nil, fmt.Errorf("cannot select a manifest: all manifests found use unknown schema")
+	if selected == nil {
+		if foundUnknownSchema {
+			return nil, fmt.Errorf("cannot select a manifest: all manifests found use unknown schema")
+		} else {
+			return nil, ErrNoValidManifest
+		}
 	}
 	return selected, nil
 }

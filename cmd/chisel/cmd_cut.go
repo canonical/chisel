@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"slices"
@@ -79,10 +80,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 	// TODO: Remove this gating once the final upgrading strategy is in place.
 	if os.Getenv("CHISEL_RECUT_EXPERIMENTAL") != "" {
 		mfest, err = slicer.SelectValidManifest(cmd.RootDir, release)
-		if err != nil {
-			return err
-		}
-		if mfest != nil {
+		if err == nil {
 			err = mfest.IterateSlices("", func(slice *manifest.Slice) error {
 				sk, err := setup.ParseSliceKey(slice.Name)
 				if err != nil {
@@ -94,6 +92,8 @@ func (cmd *cmdCut) Execute(args []string) error {
 			if err != nil {
 				return err
 			}
+		} else if !errors.Is(err, slicer.ErrNoReleaseManifest) && !errors.Is(err, slicer.ErrNoValidManifest) {
+			return err
 		}
 	}
 	selection, err := setup.Select(release, sliceKeys, cmd.Arch)
