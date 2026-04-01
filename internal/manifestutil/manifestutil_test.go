@@ -152,6 +152,48 @@ var findPathsInReleaseTests = []struct {
 	},
 	expected: nil,
 }, {
+	summary: "Slice with invalid generate property",
+	release: &setup.Release{
+		Packages: map[string]*setup.Package{
+			"package1": {
+				Name: "package1",
+				Slices: map[string]*setup.Slice{
+					"slice1": {
+						Name: "slice1",
+						Contents: map[string]setup.PathInfo{
+							"/folder/**": {
+								Kind:     "generate",
+								Generate: "invalid",
+							},
+						},
+					},
+				},
+			},
+		},
+	},
+	expected: nil,
+}, {
+	summary: "Slice with invalid path",
+	release: &setup.Release{
+		Packages: map[string]*setup.Package{
+			"package1": {
+				Name: "package1",
+				Slices: map[string]*setup.Slice{
+					"slice1": {
+						Name: "slice1",
+						Contents: map[string]setup.PathInfo{
+							"/folder/foo*/**": {
+								Kind:     "generate",
+								Generate: "manifest",
+							},
+						},
+					},
+				},
+			},
+		},
+	},
+	expected: nil,
+}, {
 	summary: "Multiple packages with multiple slices",
 	release: &setup.Release{
 		Packages: map[string]*setup.Package{

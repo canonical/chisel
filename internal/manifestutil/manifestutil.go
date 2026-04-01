@@ -19,34 +19,54 @@ import (
 
 const DefaultFilename = "manifest.wall"
 
+// validateManifestPath validates that the path follows the following format:
+//   - /slashed/path/to/dir/**: {generate: manifest}
+//
+// Wildcard characters can only appear at the end as **, and the path before
+// those wildcards must be a directory.
+func validateManifestPath(path string, info setup.PathInfo) (string, error) {
+	if info.Generate != setup.GenerateManifest {
+		return "", fmt.Errorf("%s generate property not set to 'manifest'", path)
+	}
+	if !strings.HasSuffix(path, "/**") {
+		return "", fmt.Errorf("%s does not end with /**", path)
+	}
+	dirPath := strings.TrimSuffix(path, "**")
+	if strings.ContainsAny(dirPath, "*?") {
+		return "", fmt.Errorf("%s contains wildcard characters in addition to trailing **", path)
+	}
+	return dirPath, nil
+}
+
 // FindPaths finds the paths marked with "generate:manifest" and
 // returns a map from the manifest path to all the slices that declare it.
 func FindPaths(slices []*setup.Slice) map[string][]*setup.Slice {
 	manifestSlices := make(map[string][]*setup.Slice)
 	for _, slice := range slices {
 		for path, info := range slice.Contents {
-			if info.Generate == setup.GenerateManifest {
-				dir := strings.TrimSuffix(path, "**")
-				path = filepath.Join(dir, DefaultFilename)
-				manifestSlices[path] = append(manifestSlices[path], slice)
+			dir, err := validateManifestPath(path, info)
+			if err != nil {
+				continue
 			}
+			path = filepath.Join(dir, DefaultFilename)
+			manifestSlices[path] = append(manifestSlices[path], slice)
 		}
 	}
 	return manifestSlices
 }
 
-// FindPathsInRelease finds all the paths marked with "generate:manifest"
-// for the given release.
+// FindPathsInRelease finds all the valid manifest paths for the given release.
 func FindPathsInRelease(r *setup.Release) []string {
 	manifestPaths := make(map[string]bool)
 	for _, pkg := range r.Packages {
 		for _, slice := range pkg.Slices {
 			for path, info := range slice.Contents {
-				if info.Generate == setup.GenerateManifest {
-					dir := strings.TrimSuffix(path, "**")
-					path = filepath.Join(dir, DefaultFilename)
-					manifestPaths[path] = true
+				dir, err := validateManifestPath(path, info)
+				if err != nil {
+					continue
 				}
+				path = filepath.Join(dir, DefaultFilename)
+				manifestPaths[path] = true
 			}
 		}
 	}
