@@ -455,7 +455,11 @@ func upgrade(targetDir string, tempDir string, report *manifestutil.Report, prev
 	for _, relPath := range missingPaths {
 		path := filepath.Clean(filepath.Join(targetDir, relPath))
 		err = os.Remove(path)
-		if err != nil && !os.IsNotExist(err) && !errors.Is(err, syscall.ENOTEMPTY) {
+		if err != nil && !os.IsNotExist(err) {
+			if errors.Is(err, syscall.ENOTEMPTY) {
+				logf("Keep %s as not empty after package content removal", relPath)
+				continue
+			}
 			return err
 		}
 	}
