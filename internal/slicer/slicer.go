@@ -400,7 +400,7 @@ func cut(options *RunOptions) (*manifestutil.Report, error) {
 
 // applyRecut applies the content from the tempDir to the targetDir.
 func applyRecut(targetDir string, tempDir string, report *manifestutil.Report, prevManifest *manifest.Manifest) error {
-	logf("Recutting into %s...", targetDir)
+	logf("Applying cut on %s...", targetDir)
 	paths := slices.Sorted(maps.Keys(report.Entries))
 	for _, path := range paths {
 		entry := report.Entries[path]
