@@ -58,10 +58,12 @@ var distanceTests = []distanceTest{
 	{f: strdist.GlobCost, r: 1, a: "a**f/hij", b: "abc/def/hik"},
 	{f: strdist.GlobCost, r: 2, a: "a**fg", b: "abc/def/hik"},
 	{f: strdist.GlobCost, r: 0, a: "a**f/hij/klm", b: "abc/d**m"},
+	{f: strdist.GlobCost, r: 1, a: "**a", b: ""},
 }
 
 func (s *S) TestDistance(c *C) {
 	for _, test := range distanceTests {
+		// TODO: test both permutations, at the moment the function is not symmetrical.
 		c.Logf("Test: %v", test)
 		if strings.Contains(test.a, "*") || strings.Contains(test.b, "*") {
 			c.Assert(strdist.GlobPath(test.a, test.b), Equals, test.r == 0)
