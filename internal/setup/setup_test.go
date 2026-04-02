@@ -539,6 +539,66 @@ var setupTests = []setupTest{{
 	},
 	relerror: "slices mypkg1_myslice1 and mypkg2_myslice1 conflict on /path/\\*/foo and /path/bar/f\\*",
 }, {
+	summary: "Later matching paths are tested after several non-matches",
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice1:
+					contents:
+						/path/*/foo:
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+			slices:
+				myslice1:
+					contents:
+						/path/bar/f:
+						/path/bar/fa:
+						/path/bar/fb:
+						/path/bar/f*:
+		`,
+	},
+	relerror: "slices mypkg1_myslice1 and mypkg2_myslice1 conflict on /path/\\*/foo and /path/bar/f\\*",
+}, {
+	summary: "Conflicting globs with wildcard in the middle of the segment",
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice:
+					contents:
+						/path/ab*cd/file:
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+			slices:
+				myslice:
+					contents:
+						/path/ab12cd/file:
+		`,
+	},
+	relerror: `slices mypkg1_myslice and mypkg2_myslice conflict on /path/ab\*cd/file and /path/ab12cd/file`,
+}, {
+	summary: "Conflicting globs when one side uses double-star",
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice:
+					contents:
+						/path/**/file:
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+			slices:
+				myslice:
+					contents:
+						/path/*/file:
+		`,
+	},
+	relerror: `slices mypkg1_myslice and mypkg2_myslice conflict on /path/\*\*/file and /path/\*/file`,
+}, {
 	summary: "Directories must be suffixed with /",
 	input: map[string]string{
 		"slices/mydir/mypkg.yaml": `
@@ -1963,6 +2023,25 @@ var setupTests = []setupTest{{
 		`,
 	},
 	relerror: `slices mypkg_myslice1 and mypkg_myslice2 conflict on /path/subdir/\*\* and /path/\*\*`,
+}, {
+	summary: "Generate paths conflict with glob paths sharing the prefix",
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice:
+					contents:
+						/path/subdir/**: {generate: manifest}
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+			slices:
+				myslice:
+					contents:
+						/path/subdir/f*:
+		`,
+	},
+	relerror: `slices mypkg1_myslice and mypkg2_myslice conflict on /path/subdir/\*\* and /path/subdir/f\*`,
 }, {
 	summary: `No other options in "generate" paths`,
 	input: map[string]string{
