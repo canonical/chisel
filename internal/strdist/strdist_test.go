@@ -63,7 +63,6 @@ var distanceTests = []distanceTest{
 
 func (s *S) TestDistance(c *C) {
 	for _, test := range distanceTests {
-		// TODO: test both permutations, at the moment the function is not symmetrical.
 		c.Logf("Test: %v", test)
 		if strings.Contains(test.a, "*") || strings.Contains(test.b, "*") {
 			c.Assert(strdist.GlobPath(test.a, test.b), Equals, test.r == 0)
