@@ -398,45 +398,20 @@ func cut(options *RunOptions) (*manifestutil.Report, error) {
 	return report, nil
 }
 
-// applyRecut applies the content from the tempDir to the targetDir.
+// applyRecut applies the content from the tempDir to the targetDir. This
+// process assumes the targetDir was verified with prevManifest, and so
+// prevManifest is an accurate representation of files and directories
+// previously installed by Chisel in the targetDir.
 func applyRecut(targetDir string, tempDir string, report *manifestutil.Report, prevManifest *manifest.Manifest) error {
 	logf("Applying cut on %s...", targetDir)
-	paths := slices.Sorted(maps.Keys(report.Entries))
-	for _, path := range paths {
-		entry := report.Entries[path]
-		srcPath := filepath.Clean(filepath.Join(tempDir, path))
-		dstPath := filepath.Clean(filepath.Join(targetDir, path))
 
-		// When extracting the content, a great care is taken to create parent
-		// directories respecting the tarball permissions. However this approach
-		// can create implicit parents, not recorded in the report. Make sure
-		// to create consistent directories in the targetDir to sustain the same
-		// guarantees as a normal cut.
-		if err := upgradeParentDirs(tempDir, targetDir, path); err != nil {
-			return fmt.Errorf("cannot create parent directory for %q: %s", path, err)
-		}
-
-		var err error
-		switch entry.Mode & fs.ModeType {
-		case 0, fs.ModeSymlink:
-			err = upgradeFile(srcPath, dstPath)
-			if err != nil {
-				err = fmt.Errorf("cannot upgrade file at %q: %s", path, err)
-			}
-		case fs.ModeDir:
-			err = upgradeDir(dstPath, entry.Mode)
-			if err != nil {
-				err = fmt.Errorf("cannot upgrade directory at %q: %s", path, err)
-			}
-		default:
-			err = fmt.Errorf("unsupported file type: %s", path)
-		}
-		if err != nil {
-			return err
-		}
-	}
-
-	// Remove missing paths.
+	// Step 1: Clean
+	// An entry listed in the previous manifest but missing from the new report
+	// means it is not part of the package/slice anymore, so remove it.
+	// Doing the removing as a first step prevents from collisions in the next
+	// step if a path changed type in the package (ex. a dir became a file).
+	// This works because we can differentiate files and directories in
+	// the manifest due to the trailing slash on directories.
 	missingPaths := make([]string, 0, len(report.Entries))
 	err := prevManifest.IteratePaths("", func(path *manifest.Path) error {
 		_, ok := report.Entries[path.Path]
@@ -452,6 +427,9 @@ func applyRecut(targetDir string, tempDir string, report *manifestutil.Report, p
 	// Go through the list in reverse order to empty directories before removing
 	// them. Any ENOTEMPTY error encountered means user content is in the directory
 	// and Chisel does not manage it anymore.
+	// It is assumed that the content of targetDir was checked against the manifest,
+	// so this operation will only remove content extracted by Chisel and unmodified
+	// since.
 	for _, relPath := range missingPaths {
 		path := filepath.Clean(filepath.Join(targetDir, relPath))
 		err = os.Remove(path)
@@ -463,12 +441,103 @@ func applyRecut(targetDir string, tempDir string, report *manifestutil.Report, p
 			return err
 		}
 	}
+
+	// Step 2: Apply new content to targetDir
+	paths := slices.Sorted(maps.Keys(report.Entries))
+	for _, path := range paths {
+		var prevEntry *manifest.Path
+		err := prevManifest.IteratePaths(path, func(prevPath *manifest.Path) error {
+			if path == prevPath.Path {
+				prevEntry = prevPath
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+		entry := report.Entries[path]
+		if prevEntry != nil {
+			entryMode := fmt.Sprintf("0%o", unixPerm(entry.Mode))
+			// Skip the entry if both previous and new one are identical, except for
+			// manifests. No Size/SHA256/FinalSH2A56 are recorded for manifests, so make
+			// sure they are NOT skipped.
+			if prevEntry.Mode == entryMode &&
+				int(prevEntry.Size) == entry.Size &&
+				prevEntry.Link == entry.Link &&
+				prevEntry.SHA256 == entry.SHA256 &&
+				prevEntry.FinalSHA256 == entry.FinalSHA256 &&
+				(prevEntry.Inode != 0) == (entry.Inode != 0) &&
+				// Do not skip manifests.
+				(filepath.Base(prevEntry.Path) != manifestutil.DefaultFilename &&
+					prevEntry.Size == 0 &&
+					prevEntry.SHA256 == "") {
+				// The entry did not change, nothing to do.
+				continue
+			}
+		}
+		// When extracting the content, a great care is taken to create parent
+		// directories respecting the tarball permissions. However this approach
+		// can create implicit parents, not recorded in the report. Make sure
+		// to replicate these directories in the targetDir to sustain the same
+		// guarantees as a normal cut.
+		if err := replicateParentDirs(tempDir, targetDir, path); err != nil {
+			return fmt.Errorf("cannot create parent directory for %q: %s", path, err)
+		}
+
+		// The removal done above ensures that if the destination path still exists,
+		// it is of the same type (dir or file/symlink) as the source. So any error
+		// here is considered a failure because it can only mean one of these things:
+		// - An OS error happened, we cannot do anything about it;
+		// - There is a collision with user content. This content must not be
+		// overridden;
+		// - Content was modified in the rootfs between its verification and this
+		//   step. This process does not try to solve this case, to fail.
+		srcPath := filepath.Clean(filepath.Join(tempDir, path))
+		dstPath := filepath.Clean(filepath.Join(targetDir, path))
+		switch entry.Mode & fs.ModeType {
+		case 0, fs.ModeSymlink:
+			if prevEntry == nil {
+				// Make sure no user content is present at the destination to avoid
+				// overriding it.
+				_, err := os.Lstat(dstPath)
+				if !errors.Is(err, os.ErrNotExist) {
+					return fmt.Errorf("cannot override user content: %s exists", path)
+				}
+			}
+			err = os.Rename(srcPath, dstPath)
+			if err != nil {
+				err = fmt.Errorf("cannot move file at %q: %s", path, err)
+			}
+		case fs.ModeDir:
+			mkdirErr := os.Mkdir(path, entry.Mode)
+			if mkdirErr != nil {
+				if os.IsExist(mkdirErr) {
+					err = os.Chmod(dstPath, entry.Mode)
+				} else {
+					err = mkdirErr
+				}
+			}
+		default:
+			err = fmt.Errorf("unsupported file type: %s", path)
+		}
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
-// upgradeParentDirs replicates the parent directories of targetPath in dstRoot,
-// removing any non-directory on the way.
-func upgradeParentDirs(srcRoot string, dstRoot string, targetPath string) error {
+func unixPerm(mode fs.FileMode) (perm uint32) {
+	perm = uint32(mode.Perm())
+	if mode&fs.ModeSticky != 0 {
+		perm |= 0o1000
+	}
+	return perm
+}
+
+// replicateParentDirs replicates the parent directories of targetPath in dstRoot.
+// Fails if any non-directory is on the way.
+func replicateParentDirs(srcRoot string, dstRoot string, targetPath string) error {
 	parents := parentDirs(targetPath)
 	for _, path := range parents {
 		if path == "/" {
@@ -480,9 +549,19 @@ func upgradeParentDirs(srcRoot string, dstRoot string, targetPath string) error 
 			return err
 		}
 		dstPath := filepath.Clean(filepath.Join(dstRoot, path))
-		err = upgradeDir(dstPath, srcInfo.Mode())
+		err = os.Mkdir(dstPath, srcInfo.Mode())
 		if err != nil {
-			return err
+			if !os.IsExist(err) {
+				return err
+			}
+			fileinfo, err := os.Lstat(dstPath)
+			if err != nil {
+				return err
+			}
+			if !fileinfo.IsDir() {
+				return fmt.Errorf("cannot create directory, found a non-directory at %s", dstPath)
+			}
+			return os.Chmod(dstPath, srcInfo.Mode())
 		}
 	}
 	return nil
@@ -499,45 +578,6 @@ func parentDirs(path string) []string {
 		}
 	}
 	return parents
-}
-
-func upgradeDir(path string, mode fs.FileMode) error {
-	err := os.Mkdir(path, mode)
-	if err != nil {
-		if !os.IsExist(err) {
-			return err
-		}
-		fileinfo, err := os.Lstat(path)
-		if err != nil {
-			return err
-		}
-		if fileinfo.IsDir() {
-			return os.Chmod(path, mode)
-		}
-		// Path is a regular file or symlink, remove it.
-		err = os.Remove(path)
-		if err != nil {
-			return err
-		}
-
-		return os.Mkdir(path, mode)
-	}
-	return nil
-}
-
-func upgradeFile(srcPath string, dstPath string) error {
-	err := os.Rename(srcPath, dstPath)
-	if err != nil {
-		if !os.IsExist(err) {
-			return err
-		}
-		err = os.RemoveAll(dstPath)
-		if err != nil {
-			return err
-		}
-		return os.Rename(srcPath, dstPath)
-	}
-	return nil
 }
 
 func generateManifests(targetDir string, selection *setup.Selection,
