@@ -2322,7 +2322,7 @@ var slicerRecutTests = []slicerRecutTest{{
 		"/dir/file": "file 0644 cc55e2ec {test-package_slice1}",
 	},
 }, {
-	summary:     "Upgrade overrides existing mode",
+	summary:     "Upgrade overrides existing mode on directories",
 	cutSlices:   []setup.SliceKey{{"test-package", "slice1"}},
 	recutSlices: []setup.SliceKey{{"test-package", "slice1"}, {"test-package", "slice2"}},
 	release: map[string]string{
@@ -2339,9 +2339,7 @@ var slicerRecutTests = []slicerRecutTest{{
 		`,
 	},
 	alterFilesystem: func(c *C, targetDir string) {
-		err := os.Mkdir(filepath.Join(targetDir, "other-dir"), 0o775)
-		c.Assert(err, IsNil)
-		err = os.WriteFile(filepath.Join(targetDir, "dir", "file"), []byte("data"), 0o644)
+		err := os.Mkdir(filepath.Join(targetDir, "other-dir"), 0o777)
 		c.Assert(err, IsNil)
 	},
 	filesystem: map[string]string{
@@ -2354,8 +2352,8 @@ var slicerRecutTests = []slicerRecutTest{{
 		"/other-dir/": "dir 0755 {test-package_slice2}",
 		"/dir/file":   "file 0644 cc55e2ec {test-package_slice2}",
 	},
-}, {
-	summary:     "Upgrade overwrites existing symlink",
+},{
+	summary:     "Upgrade fails to override existing file",
 	cutSlices:   []setup.SliceKey{{"test-package", "slice1"}},
 	recutSlices: []setup.SliceKey{{"test-package", "slice1"}, {"test-package", "slice2"}},
 	release: map[string]string{
@@ -2364,30 +2362,19 @@ var slicerRecutTests = []slicerRecutTest{{
 			slices:
 				slice1:
 					contents:
-					  /dir/:
+						/dir/:
 				slice2:
 					contents:
-						/baz: {text: data}
-						/foo: {symlink: baz}
+						/dir/file:
 		`,
 	},
 	alterFilesystem: func(c *C, targetDir string) {
-		linkPath := filepath.Join(targetDir, "foo")
-		err := os.Symlink("bar", linkPath)
+		err := os.WriteFile(filepath.Join(targetDir, "dir", "file"), []byte("data"), 0o644)
 		c.Assert(err, IsNil)
 	},
-	filesystem: map[string]string{
-		"/dir/": "dir 0755",
-		"/baz":  "file 0644 3a6eb079",
-		"/foo":  "symlink baz",
-	},
-	manifestPaths: map[string]string{
-		"/dir/": "dir 0755 {test-package_slice1}",
-		"/baz":  "file 0644 3a6eb079 {test-package_slice2}",
-		"/foo":  "symlink baz {test-package_slice2}",
-	},
+	error: "cannot override user content: /dir/file exists",
 }, {
-	summary:     "Upgrade removes and changes mode of content to create parent dirs",
+	summary:     "Upgrade relicate implicit parent dirs",
 	cutSlices:   []setup.SliceKey{{"test-package", "slice1"}},
 	recutSlices: []setup.SliceKey{{"test-package", "slice1"}, {"test-package", "slice2"}},
 	release: map[string]string{
@@ -2402,16 +2389,6 @@ var slicerRecutTests = []slicerRecutTest{{
 						/parent/permissions/file:
 		`,
 	},
-	alterFilesystem: func(c *C, targetDir string) {
-		path := filepath.Join(targetDir, "dir")
-		err := os.RemoveAll(path)
-		c.Assert(err, IsNil)
-		err = os.WriteFile(path, []byte("data"), 0o644)
-		c.Assert(err, IsNil)
-		newDirPath := filepath.Join(targetDir, "parent/permissions/")
-		err = os.MkdirAll(newDirPath, 0o755)
-		c.Assert(err, IsNil)
-	},
 	filesystem: map[string]string{
 		"/dir/":                    "dir 0755",
 		"/dir/file":                "file 0644 3a6eb079",
@@ -2422,40 +2399,6 @@ var slicerRecutTests = []slicerRecutTest{{
 	manifestPaths: map[string]string{
 		"/dir/file":                "file 0644 3a6eb079 {test-package_slice1}",
 		"/parent/permissions/file": "file 0755 722c14b3 {test-package_slice2}",
-	},
-}, {
-	summary:     "Upgrade removes content whith unmatching type",
-	cutSlices:   []setup.SliceKey{{"test-package", "slice1"}},
-	recutSlices: []setup.SliceKey{{"test-package", "slice1"}},
-	release: map[string]string{
-		"slices/mydir/test-package.yaml": `
-			package: test-package
-			slices:
-				slice1:
-					contents:
-						/file: {text: data}
-						/a-dir/: {make: true}
-		`,
-	},
-	alterFilesystem: func(c *C, targetDir string) {
-		filePath := filepath.Join(targetDir, "file")
-		err := os.Remove(filePath)
-		c.Assert(err, IsNil)
-		err = os.Mkdir(filePath, 0o755)
-		c.Assert(err, IsNil)
-		dirPath := filepath.Join(targetDir, "a-dir")
-		err = os.Remove(dirPath)
-		c.Assert(err, IsNil)
-		err = os.WriteFile(dirPath, []byte("data"), 0o644)
-		c.Assert(err, IsNil)
-	},
-	filesystem: map[string]string{
-		"/file":   "file 0644 3a6eb079",
-		"/a-dir/": "dir 0755",
-	},
-	manifestPaths: map[string]string{
-		"/file":   "file 0644 3a6eb079 {test-package_slice1}",
-		"/a-dir/": "dir 0755 {test-package_slice1}",
 	},
 }, {
 	summary:     "Upgrade removes obsolete content but keeps non-empty directories",

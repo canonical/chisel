@@ -404,18 +404,13 @@ func cut(options *RunOptions) (*manifestutil.Report, error) {
 // previously installed by Chisel in the targetDir.
 func applyRecut(targetDir string, tempDir string, report *manifestutil.Report, prevManifest *manifest.Manifest) error {
 	logf("Applying cut on %s...", targetDir)
-
-	// Step 1: Clean
-	// An entry listed in the previous manifest but missing from the new report
-	// means it is not part of the package/slice anymore, so remove it.
-	// Doing the removing as a first step prevents from collisions in the next
-	// step if a path changed type in the package (ex. a dir became a file).
-	// This works because we can differentiate files and directories in
-	// the manifest due to the trailing slash on directories.
 	missingPaths := make([]string, 0, len(report.Entries))
+	newEntries := maps.Clone(report.Entries)
 	err := prevManifest.IteratePaths("", func(path *manifest.Path) error {
 		_, ok := report.Entries[path.Path]
-		if !ok {
+		if ok {
+			delete(newEntries, path.Path)
+		} else {
 			missingPaths = append(missingPaths, path.Path)
 		}
 		return nil
@@ -423,13 +418,36 @@ func applyRecut(targetDir string, tempDir string, report *manifestutil.Report, p
 	if err != nil {
 		return err
 	}
+
+	// Step 1: Verify no new path will collide with user content.
+	newPaths := slices.Sorted(maps.Keys(newEntries))
+	for _, path := range newPaths {
+		dstPath := filepath.Clean(filepath.Join(targetDir, path))
+		fileInfo, err := os.Lstat(dstPath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return err
+		}
+		if !fileInfo.IsDir() {
+			return fmt.Errorf("cannot override user content: %s exists", path)
+		}
+	}
+
+	// Step 2: Remove content removed from packages/slices.
+	// An entry listed in the previous manifest but missing from the new report
+	// means it is not part of the package/slice anymore, so remove it.
+	// Doing the removing before updating content prevents from collisions in the
+	// next step if a path changed type in the package (ex. a dir became a file).
+	// This works because we can differentiate files and directories in
+	// the manifest due to the trailing slash on directories.
+	// These files/directories are safe to remove because the targetDir
+	// verification ensured they were unmodified.
 	sort.Sort(sort.Reverse(sort.StringSlice(missingPaths)))
 	// Go through the list in reverse order to empty directories before removing
 	// them. Any ENOTEMPTY error encountered means user content is in the directory
 	// and Chisel does not manage it anymore.
-	// It is assumed that the content of targetDir was checked against the manifest,
-	// so this operation will only remove content extracted by Chisel and unmodified
-	// since.
 	for _, relPath := range missingPaths {
 		path := filepath.Clean(filepath.Join(targetDir, relPath))
 		err = os.Remove(path)
@@ -442,7 +460,7 @@ func applyRecut(targetDir string, tempDir string, report *manifestutil.Report, p
 		}
 	}
 
-	// Step 2: Apply new content to targetDir
+	// Step 3: Apply tmpDir content to targetDir.
 	paths := slices.Sorted(maps.Keys(report.Entries))
 	for _, path := range paths {
 		var prevEntry *manifest.Path
@@ -480,36 +498,29 @@ func applyRecut(targetDir string, tempDir string, report *manifestutil.Report, p
 		// can create implicit parents, not recorded in the report. Make sure
 		// to replicate these directories in the targetDir to sustain the same
 		// guarantees as a normal cut.
+		// Even if unlikely, this can operation can fail if a user file has the
+		// same path as one of the implicit parent directory replicated here.
 		if err := replicateParentDirs(tempDir, targetDir, path); err != nil {
 			return fmt.Errorf("cannot create parent directory for %q: %s", path, err)
 		}
-
-		// The removal done above ensures that if the destination path still exists,
+		// The removal done at step 2 ensures that if the destination path exists
 		// it is of the same type (dir or file/symlink) as the source. So any error
 		// here is considered a failure because it can only mean one of these things:
 		// - An OS error happened, we cannot do anything about it;
-		// - There is a collision with user content. This content must not be
-		// overridden;
+		// - There is a collision with a directory containing user content and not
+		// removed at step 1. This content must not be deleted;
 		// - Content was modified in the rootfs between its verification and this
-		//   step. This process does not try to solve this case, to fail.
+		//   step. This process does not try to solve this case.
 		srcPath := filepath.Clean(filepath.Join(tempDir, path))
 		dstPath := filepath.Clean(filepath.Join(targetDir, path))
 		switch entry.Mode & fs.ModeType {
 		case 0, fs.ModeSymlink:
-			if prevEntry == nil {
-				// Make sure no user content is present at the destination to avoid
-				// overriding it.
-				_, err := os.Lstat(dstPath)
-				if !errors.Is(err, os.ErrNotExist) {
-					return fmt.Errorf("cannot override user content: %s exists", path)
-				}
-			}
 			err = os.Rename(srcPath, dstPath)
 			if err != nil {
 				err = fmt.Errorf("cannot move file at %q: %s", path, err)
 			}
 		case fs.ModeDir:
-			mkdirErr := os.Mkdir(path, entry.Mode)
+			mkdirErr := os.Mkdir(dstPath, entry.Mode)
 			if mkdirErr != nil {
 				if os.IsExist(mkdirErr) {
 					err = os.Chmod(dstPath, entry.Mode)
