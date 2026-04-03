@@ -2352,7 +2352,7 @@ var slicerRecutTests = []slicerRecutTest{{
 		"/other-dir/": "dir 0755 {test-package_slice2}",
 		"/dir/file":   "file 0644 cc55e2ec {test-package_slice2}",
 	},
-},{
+}, {
 	summary:     "Upgrade fails to override existing file",
 	cutSlices:   []setup.SliceKey{{"test-package", "slice1"}},
 	recutSlices: []setup.SliceKey{{"test-package", "slice1"}, {"test-package", "slice2"}},
