@@ -114,7 +114,8 @@ jobs:
           CHISEL_VERSION: ${{ steps.build.outputs.CHISEL_VERSION }}
           ARCHIVE_FILE: ${{ steps.archive.outputs.ARCHIVE_FILE }}
           ARCHIVE_FILE_SHA384: ${{ steps.archive.outputs.ARCHIVE_FILE_SHA384 }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # The following token needs "contents: write" permission to upload assets to release
+          GITHUB_TOKEN: ${{ secrets.ROCKSBOT_CHISEL_CONTENTS }}
         if: ${{ github.event_name == 'release' }}
         run: |
           echo "Uploading $ARCHIVE_FILE to release $CHISEL_VERSION"
