@@ -21,7 +21,7 @@ jobs:
     steps:
       - name: Download and extract latest release
         run: |
-          gh release download --repo ${{ github.repository }} --pattern '*linux_${{ matrix.arch }}.tar.gz'
+          gh release download --repo canonical/chisel --pattern '*linux_${{ matrix.arch }}.tar.gz'
           mkdir ${SCAN_DIR}
           tar xvf chisel*.tar.gz -C ${SCAN_DIR}
         env:
