@@ -3,6 +3,7 @@ name: Security
 on:
   schedule:
     - cron: "0 1 * * *"
+  workflow_dispatch:
 
 jobs:
   scan:
@@ -15,7 +16,7 @@ jobs:
         # architecture-specific vulnerabilities.
         arch: [amd64, arm, arm64, ppc64le, s390x, riscv64]
     env:
-      TRIVY_RESULTS: 'trivy-results.sarif'
+      TRIVY_RESULTS: 'trivy-results.${{ matrix.arch }}.sarif'
       SCAN_DIR: 'release-scan'
     steps:
       - name: Download and extract latest release
@@ -45,6 +46,7 @@ jobs:
         uses: github/codeql-action/upload-sarif@0d579ffd059c29b07949a3cce3983f0780820c98 # v4.32.6
         with:
           sarif_file: ${{ env.TRIVY_RESULTS }}
+          token: ${{ secrets.ROCKSBOT_CHISEL_SECURITY_EVENTS }}
 
       - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         if: ${{ !cancelled() }}
