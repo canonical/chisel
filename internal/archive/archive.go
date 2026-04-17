@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"slices"
 	"strings"
 	"time"
@@ -201,13 +202,20 @@ func archiveURL(pro, arch string, oldRelease bool) (string, *credentials, error)
 	}
 
 	if oldRelease {
-		return ubuntuOldReleasesURL, nil, nil
+		return envOrDefault("CHISEL_UBUNTU_REPO_OLD_RELEASES_URL", ubuntuOldReleasesURL), nil, nil
 	}
 
 	if arch == "amd64" || arch == "i386" {
-		return ubuntuURL, nil, nil
+		return envOrDefault("CHISEL_UBUNTU_REPO_ARCHIVE_URL", ubuntuURL), nil, nil
 	}
-	return ubuntuPortsURL, nil, nil
+	return envOrDefault("CHISEL_UBUNTU_REPO_PORTS_URL", ubuntuPortsURL), nil, nil
+}
+
+func envOrDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
 }
 
 func openUbuntu(options *Options) (Archive, error) {
