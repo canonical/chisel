@@ -20,18 +20,22 @@ jobs:
       - name: Download comment
         uses: actions/download-artifact@v4
         with:
-          name: benchmark-result
-          path: benchmark-result
+          name: benchmark-report
+          path: report.md
           github-token: ${{ secrets.ROCKSBOT_CHISEL_PR_COMMENTER }}
           run-id: ${{ github.event.workflow_run.id }}
 
-      - name: Read PR number
-        id: read-pr-number
-        run: echo "number=$(cat benchmark-result/pr_number)" >> $GITHUB_OUTPUT
+      - name: Get PR number
+        id: get-pr-number
+        run: |
+          PR_NUMBER=$(gh api "repos/${{ github.repository }}/pulls?head=${{ github.event.workflow_run.head_repository.owner.login }}:${{ github.event.workflow_run.head_branch }}&state=open" --jq '.[0].number')
+          echo "number=$PR_NUMBER" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.ROCKSBOT_CHISEL_PR_COMMENTER }}
 
       - name: Post message to PR
         uses: mshick/add-pr-comment@dd126dd8c253650d181ad9538d8b4fa218fc31e8 # v2
         with:
-          message-path: benchmark-result/report.md
-          issue: ${{ steps.read-pr-number.outputs.number }}
+          message-path: report.md
+          issue: ${{ steps.get-pr-number.outputs.number }}
           repo-token: ${{ secrets.ROCKSBOT_CHISEL_PR_COMMENTER }}
