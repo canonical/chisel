@@ -3,6 +3,9 @@ package slicer
 import (
 	"archive/tar"
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -21,6 +24,7 @@ import (
 	"github.com/canonical/chisel/internal/manifestutil"
 	"github.com/canonical/chisel/internal/scripts"
 	"github.com/canonical/chisel/internal/setup"
+	"github.com/canonical/chisel/public/manifest"
 )
 
 const manifestMode fs.FileMode = 0644
@@ -536,4 +540,112 @@ func selectPkgArchives(archives map[string]archive.Archive, selection *setup.Sel
 		pkgArchive[pkg.Name] = chosen
 	}
 	return pkgArchive, nil
+}
+
+type NoManifestError struct {
+	message string
+}
+
+func (e *NoManifestError) Error() string {
+	return e.message
+}
+
+// SelectValidManifest looks in the targetDir for manifests declared in the
+// release, reads and validates those found. The selection ensures that all
+// valid manifests found are identical, so only one is kept and returned.
+//
+// A file matching a manifest path declared in the release is considered valid
+// if it is a zstd file, readable by manifest.Read (with a known schema
+// version) and successfully validated by manifestutil.Validate.
+//
+// Not finding any manifest (valid or not) means the targetDir cannot be
+// considered as previously produced by Chisel for the given release.
+//
+// Finding only manifests with unknown schema version means the targetDir may
+// have been produced by Chisel, but possibly by a future/incompatible version.
+// Chisel cannot safely proceed and so errors out.
+//
+// Finding multiple manifests, with at least one valid means Chisel can proceed,
+// ignoring unknown ones.
+func SelectValidManifest(targetDir string, release *setup.Release) (*manifest.Manifest, error) {
+	targetDir = filepath.Clean(targetDir)
+	if !filepath.IsAbs(targetDir) {
+		dir, err := os.Getwd()
+		if err != nil {
+			return nil, fmt.Errorf("cannot obtain current directory: %w", err)
+		}
+		targetDir = filepath.Join(dir, targetDir)
+	}
+	manifestPaths := manifestutil.FindPathsInRelease(release)
+	if len(manifestPaths) == 0 {
+		return nil, &NoManifestError{message: "no manifest generated for the release"}
+	}
+
+	var selected *manifest.Manifest
+	var selectedHash string
+	var selectedPath string
+	foundUnknownSchema := false
+	for _, manifestPath := range manifestPaths {
+		manifestFullPath := filepath.Join(targetDir, manifestPath)
+		f, err := os.Open(manifestFullPath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return nil, err
+		}
+		defer f.Close()
+		r, err := zstd.NewReader(f)
+		if err != nil {
+			return nil, err
+		}
+		defer r.Close()
+		mfest, err := manifest.Read(r)
+		var unknownSchemaError *manifest.UnknownSchemaError
+		if err != nil {
+			if errors.As(err, &unknownSchemaError) {
+				foundUnknownSchema = true
+				// Ignore manifests with unknown (potentially future) schema versions.
+				continue
+			}
+			return nil, err
+		}
+		err = manifestutil.Validate(mfest)
+		if err != nil {
+			return nil, err
+		}
+		manifestHash, err := contentHash(manifestFullPath)
+		if err != nil {
+			return nil, fmt.Errorf("cannot compute hash for %q: %s", manifestFullPath, err)
+		}
+		if selected == nil {
+			selected = mfest
+			selectedHash = manifestHash
+			selectedPath = manifestPath
+		} else if selectedHash != manifestHash {
+			return nil, fmt.Errorf("cannot select between conflicting manifests: %q != %q", selectedPath, manifestPath)
+		}
+	}
+	if selected == nil {
+		if foundUnknownSchema {
+			return nil, fmt.Errorf("cannot select a manifest: all manifests found use unknown schema")
+		} else {
+			return nil, &NoManifestError{message: "no valid manifest found in directory"}
+		}
+	}
+	return selected, nil
+}
+
+func contentHash(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
