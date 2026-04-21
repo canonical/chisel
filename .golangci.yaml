@@ -28,10 +28,6 @@ linters:
         text: lockFile.Unlock.*not checked
       - linters:
           - unused
-        path: cmd/chisel/main.go
-        text: addDebugCommand.*unused
-      - linters:
-          - unused
         path: ^.*/log.go$
         text: logf.*unused
       - linters:
@@ -50,25 +46,26 @@ linters:
           - staticcheck
         path: ^.*.go$
         text: '"golang.org/x/crypto/openpgp/\w+" is deprecated'
-  settings:
-    staticcheck:
-      checks:
-        - all
-        # Checks now detecting new issues after migrating to golangci-lint v2.
-        # TODO: Remove these and solve raised issues.
-        - -QF1008
-        - -ST1005
-        - -ST1012
-        - -QF1004
-        - -ST1011
-        - -ST1005
-        - -ST1003
-        - -QF1009
-        - -QF1011
-        - -S1011
-        - -S1005
-        - -QF1001
-        - -QF1012
+      - linters:
+          - staticcheck
+        path: cmd/chisel/.*.go
+        text: "ST1005:"
+      - linters:
+          - staticcheck
+        path: ^.*/log.go$
+        text: "ST1003:"
+      - linters:
+          - staticcheck
+        path: internal/cache/cache.go
+        text: "ST1012: error var MissErr"
+      - linters:
+          - staticcheck
+        path: internal/setup/setup.go
+        text: "ST1012: error var preferNone"
+      - linters:
+          - staticcheck
+        path: internal/testutil/containschecker.go
+        text: "QF1011"
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0

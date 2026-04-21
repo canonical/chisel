@@ -368,7 +368,7 @@ func extractHardLinks(pkgReader io.ReadSeeker, opts *extractHardLinkOptions) err
 	// this package.
 	if len(opts.pendingLinks) > 0 {
 		var targets []string
-		for target, _ := range opts.pendingLinks {
+		for target := range opts.pendingLinks {
 			targets = append(targets, target)
 		}
 		sort.Strings(targets)

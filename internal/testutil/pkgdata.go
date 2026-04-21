@@ -82,7 +82,7 @@ func fixupTarEntry(entry *TarEntry) {
 	if hdr.Gid == 0 && hdr.Gname == "" {
 		hdr.Gname = "root"
 	}
-	if hdr.ModTime == zeroTime {
+	if hdr.ModTime.Equal(zeroTime) {
 		hdr.ModTime = epochStartTime
 	}
 	if hdr.Format == 0 {
