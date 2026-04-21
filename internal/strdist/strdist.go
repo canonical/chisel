@@ -34,14 +34,14 @@ func Distance(a, b string, f CostFunc, cut int64) int64 {
 	}
 	lst := make([]CostInt, len(b)+1)
 	bl := 0
-	for bi, br := range b {
-		bl++
+	for _, br := range b {
 		cost := f(-1, br)
-		if cost.InsertB == Inhibit || lst[bi] == Inhibit {
-			lst[bi+1] = Inhibit
+		if cost.InsertB == Inhibit || lst[bl] == Inhibit {
+			lst[bl+1] = Inhibit
 		} else {
-			lst[bi+1] = lst[bi] + cost.InsertB
+			lst[bl+1] = lst[bl] + cost.InsertB
 		}
+		bl++
 	}
 	lst = lst[:bl+1]
 	// Not required, but caching means preventing the fast path
@@ -87,8 +87,7 @@ func Distance(a, b string, f CostFunc, cut int64) int64 {
 		if debug {
 			debugf("... %v", lst)
 		}
-		_ = stop
-		if cut != 0 && stop {
+		if cut != 0 && len(b) > 0 && stop {
 			break
 		}
 	}
