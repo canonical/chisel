@@ -3,6 +3,7 @@ package setup
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -273,14 +274,46 @@ func (r *Release) validate() error {
 	}
 
 	// Check for glob and generate conflicts.
+	//
+	// This is the most time-consuming part of every command because checking
+	// each pair of paths uses an n^2 algorithm; specifically due to glob
+	// handling. We can speed up the process by exploiting the fact that
+	// conflicts are not allowed which means that in valid releases globs will
+	// appear at only the specific parts of the paths. There will always be a
+	// non-trivial prefix of the path that doesn't contain globs.
+	//
+	// We will speed up the search by only looking for conflicts in paths that
+	// share this same prefix. By collecting all paths and doing binary search
+	// we can find the start of the prefix. This is much simpler than other
+	// data structures like tries or radix trees which have similar algorithmic
+	// complexities.
+	allPaths := slices.Collect(maps.Keys(paths))
+	slices.Sort(allPaths)
 	for oldPath, oldSlices := range paths {
 		for _, old := range oldSlices {
 			oldInfo := old.Contents[oldPath]
 			if oldInfo.Kind != GeneratePath && oldInfo.Kind != GlobPath {
 				break
 			}
-			for newPath, newSlices := range paths {
-				if oldPath == newPath {
+
+			prefixLen := strings.IndexAny(oldPath, "*?")
+			if prefixLen == -1 {
+				return fmt.Errorf("internal error: invalid path: generate or glob path does not contain ' ?' or '*': %q", oldPath)
+			}
+			searchKey := oldPath[:prefixLen]
+			// startIndex is the position of the prefix or the position where
+			// the prefix would have been found.
+			startIndex, _ := slices.BinarySearch(allPaths, searchKey)
+			for i := startIndex; i < len(allPaths); i++ {
+				newPath := allPaths[i]
+				if !strings.HasPrefix(newPath, searchKey) {
+					// Iterate until the prefix no longer matches, which means
+					// all other paths will fail the comparison below.
+					break
+				}
+				newSlices := paths[newPath]
+				// We know prefixes match, we can skip that part of the string.
+				if oldPath[len(searchKey)-1:] == newPath[len(searchKey)-1:] {
 					// Identical paths have been filtered earlier.
 					continue
 				}
@@ -291,13 +324,16 @@ func (r *Release) validate() error {
 							continue
 						}
 					}
-					if strdist.GlobPath(newPath, oldPath) {
+					// We know prefixes match, we can skip that part of the string.
+					if strdist.GlobPath(newPath[len(searchKey)-1:], oldPath[len(searchKey)-1:]) {
 						if (old.Package > new.Package) || (old.Package == new.Package && old.Name > new.Name) ||
 							(old.Package == new.Package && old.Name == new.Name && oldPath > newPath) {
 							old, new = new, old
 							oldPath, newPath = newPath, oldPath
 						}
 						return fmt.Errorf("slices %s and %s conflict on %s and %s", old, new, oldPath, newPath)
+					} else {
+						break
 					}
 				}
 			}
