@@ -68,14 +68,9 @@ jobs:
           chmod +x base head
           hyperfine --export-markdown report.md "./base info --release ./chisel-releases 'python3.12_core'" -n "BASE" "./head info --release ./chisel-releases 'python3.12_core'" -n "HEAD"
 
-      - name: Save PR number
-        run: echo "${{ github.event.pull_request.number }}" > pr_number
-
       - name: Upload result
         uses: actions/upload-artifact@v4
         with:
-          name: benchmark-result
-          path: |
-            report.md
-            pr_number
+          name: benchmark-report
+          path: report.md
           retention-days: 1
