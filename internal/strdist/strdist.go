@@ -123,12 +123,12 @@ func globCost(ar, br rune) Cost {
 	if ar == '⁑' || br == '⁑' {
 		return Cost{SwapAB: 0, DeleteA: 0, InsertB: 0}
 	}
+	if ar == '*' && br == '/' {
+		return Cost{SwapAB: Inhibit, DeleteA: 0, InsertB: Inhibit}
+	} else if ar == '/' && br == '*' {
+		return Cost{SwapAB: Inhibit, DeleteA: Inhibit, InsertB: 0}
+	}
 	if ar == '*' || br == '*' {
-		if ar == '*' && br == '/' {
-			return Cost{SwapAB: Inhibit, DeleteA: 0, InsertB: Inhibit}
-		} else if ar == '/' && br == '*' {
-			return Cost{SwapAB: Inhibit, DeleteA: Inhibit, InsertB: 0}
-		}
 		return Cost{SwapAB: 0, DeleteA: 0, InsertB: 0}
 	}
 	if ar == '/' || br == '/' {
