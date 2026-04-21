@@ -277,16 +277,17 @@ func (r *Release) validate() error {
 	//
 	// This is the most time-consuming part of every command because checking
 	// each pair of paths uses an n^2 algorithm; specifically due to glob
-	// handling. We can speed up the process by exploiting the fact that
-	// conflicts are not allowed which means that in valid releases globs will
-	// appear at only the specific parts of the paths. There will always be a
-	// non-trivial prefix of the path that doesn't contain globs.
+	// handling.
 	//
-	// We will speed up the search by only looking for conflicts in paths that
-	// share this same prefix. By collecting all paths and doing binary search
-	// we can find the start of the prefix. This is much simpler than other
-	// data structures like tries or radix trees which have similar algorithmic
-	// complexities.
+	// We can speed up the search by looking at the prefixes of each path that
+	// don't contain globs. Specifically two paths a and b conflict if and only
+	// if they both start with the prefix of a or with the prefix of b. We can
+	// discard directly all other parts that do not share either of the
+	// prefixes. This can be done efficiently with a radix tree or a trie or a
+	// simple list of sorted paths and using binary search (see below).
+	//
+	// Note: to check both prefixes we have to check `(a,b)` and `(b,a)` as the
+	// code below is not symmetric.
 	allPaths := slices.Collect(maps.Keys(paths))
 	slices.Sort(allPaths)
 	for oldPath, oldSlices := range paths {
