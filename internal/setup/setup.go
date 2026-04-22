@@ -288,8 +288,7 @@ func (r *Release) validate() error {
 	//
 	// Note: to check both prefixes we have to check `(a,b)` and `(b,a)` as the
 	// code below is not symmetric.
-	allPaths := slices.Collect(maps.Keys(paths))
-	slices.Sort(allPaths)
+	allPaths := slices.Sorted(maps.Keys(paths))
 	for oldPath, oldSlices := range paths {
 		for _, old := range oldSlices {
 			oldInfo := old.Contents[oldPath]
