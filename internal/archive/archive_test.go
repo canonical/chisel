@@ -294,6 +294,67 @@ func (s *httpSuite) TestFetchPortsPackage(c *C) {
 	c.Assert(read(pkg), Equals, "mypkg4 1.4 data")
 }
 
+func (s *httpSuite) TestArchiveURLFromEnv(c *C) {
+	restoreArchive := fakeEnv("CHISEL_UBUNTU_REPO_ARCHIVE_URL", "")
+	defer restoreArchive()
+	restoreOldReleases := fakeEnv("CHISEL_UBUNTU_REPO_OLD_RELEASES_URL", "")
+	defer restoreOldReleases()
+	restorePorts := fakeEnv("CHISEL_UBUNTU_REPO_PORTS_URL", "")
+	defer restorePorts()
+
+	tests := []struct {
+		summary    string
+		envName    string
+		base       string
+		arch       string
+		oldRelease bool
+	}{{
+		summary: "Ubuntu archive URL override",
+		envName: "CHISEL_UBUNTU_REPO_ARCHIVE_URL",
+		base:    "http://mirror.example/ubuntu/",
+		arch:    "amd64",
+	}, {
+		summary: "Ubuntu ports URL override",
+		envName: "CHISEL_UBUNTU_REPO_PORTS_URL",
+		base:    "http://mirror.example/ubuntu-ports/",
+		arch:    "arm64",
+	}, {
+		summary:    "Ubuntu old releases URL override",
+		envName:    "CHISEL_UBUNTU_REPO_OLD_RELEASES_URL",
+		base:       "http://mirror.example/ubuntu-old/",
+		arch:       "amd64",
+		oldRelease: true,
+	}}
+
+	for _, test := range tests {
+		c.Logf("Summary: %s", test.summary)
+
+		err := os.Setenv(test.envName, test.base)
+		c.Assert(err, IsNil)
+
+		s.base = test.base
+		s.responses = make(map[string][]byte)
+		s.prepareArchive("jammy", "22.04", test.arch, []string{"main"})
+
+		options := archive.Options{
+			Label:      "ubuntu",
+			Version:    "22.04",
+			Arch:       test.arch,
+			Suites:     []string{"jammy"},
+			Components: []string{"main"},
+			CacheDir:   c.MkDir(),
+			PubKeys:    []*packet.PublicKey{s.pubKey},
+			OldRelease: test.oldRelease,
+		}
+
+		_, err = archive.Open(&options)
+		c.Assert(err, IsNil)
+
+		err = os.Setenv(test.envName, "")
+		c.Assert(err, IsNil)
+	}
+}
+
 func (s *httpSuite) TestFetchSecurityPackage(c *C) {
 
 	for i, suite := range []string{"jammy", "jammy-updates", "jammy-security"} {
