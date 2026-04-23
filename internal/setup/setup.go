@@ -275,16 +275,16 @@ func (r *Release) validate() error {
 
 	// Check for glob and generate conflicts.
 	//
-	// This is the most time-consuming part of every command because checking
-	// each pair of paths uses an n^2 algorithm; specifically due to glob
-	// handling.
+	// A naive approach would be to check each pair of paths. That would result
+	// in an a n^2 algorithm, specifically due to glob handling; leading this
+	// to be the most time-consuming operation of almost every command.
 	//
 	// We can speed up the search by looking at the prefixes of each path that
 	// don't contain globs. Specifically two paths a and b conflict if and only
 	// if they both start with the prefix of a or with the prefix of b. We can
 	// discard directly all other parts that do not share either of the
-	// prefixes. This can be done efficiently with a radix tree or a trie or a
-	// simple list of sorted paths and using binary search (see below).
+	// prefixes. This can be done efficiently with a simple list of sorted
+	// paths and using binary search (see below).
 	//
 	// Note: to check both prefixes we have to check `(a,b)` and `(b,a)` as the
 	// code below is not symmetric.
@@ -333,6 +333,11 @@ func (r *Release) validate() error {
 						}
 						return fmt.Errorf("slices %s and %s conflict on %s and %s", old, new, oldPath, newPath)
 					} else {
+						// Once GlobPath succeeds there cannot be a conflict
+						// between oldPath and newPath, we can break here.
+						// TODO: This could actually be optimized further by
+						// reordering the loops so that once GlobPath succeeds
+						// we skip all other checks for this pair of paths.
 						break
 					}
 				}
