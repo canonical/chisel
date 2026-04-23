@@ -3993,6 +3993,70 @@ var setupTests = []setupTest{{
 	},
 	selslices: []setup.SliceKey{{"mypkg", "_priv"}},
 	selerror:  `cannot select private slice mypkg__priv`,
+}, {
+	summary: "Chained private slices: pub -> _priv1 -> _priv2",
+	input: map[string]string{
+		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYaml, "format: v1", "format: v3"),
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				pub:
+					essential:
+						mypkg__priv1: {}
+				_priv1:
+					essential:
+						mypkg__priv2: {}
+					contents:
+						/usr/bin/one:
+				_priv2:
+					contents:
+						/usr/bin/two:
+		`,
+	},
+	selslices: []setup.SliceKey{{"mypkg", "pub"}},
+	selection: &setup.Selection{
+		Slices: []*setup.Slice{{
+			Package: "mypkg",
+			Name:    "_priv2",
+			Contents: map[string]setup.PathInfo{
+				"/usr/bin/two": {Kind: setup.CopyPath},
+			},
+		}, {
+			Package: "mypkg",
+			Name:    "_priv1",
+			Essential: map[setup.SliceKey]setup.EssentialInfo{
+				{"mypkg", "_priv2"}: {},
+			},
+			Contents: map[string]setup.PathInfo{
+				"/usr/bin/one": {Kind: setup.CopyPath},
+			},
+		}, {
+			Package: "mypkg",
+			Name:    "pub",
+			Essential: map[setup.SliceKey]setup.EssentialInfo{
+				{"mypkg", "_priv1"}: {},
+			},
+		}},
+	},
+}, {
+	summary: "Chained private slice with cycle detected",
+	input: map[string]string{
+		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYaml, "format: v1", "format: v3"),
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				pub:
+					essential:
+						mypkg__priv1: {}
+				_priv1:
+					essential:
+						mypkg__priv2: {}
+				_priv2:
+					essential:
+						mypkg__priv1: {}
+		`,
+	},
+	relerror: `essential loop detected: mypkg__priv1, mypkg__priv2`,
 }}
 
 func (s *S) TestParseRelease(c *C) {
