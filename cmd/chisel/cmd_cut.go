@@ -55,6 +55,9 @@ func (cmd *cmdCut) Execute(args []string) error {
 		if err != nil {
 			return err
 		}
+		if sliceKey.IsPrivate() {
+			return fmt.Errorf("cannot cut private slice %s", sliceRef)
+		}
 		sliceKeys[i] = sliceKey
 	}
 

@@ -485,7 +485,10 @@ func parsePackage(format, pkgName, pkgPath string, data []byte) (*Package, error
 	for sliceName, yamlSlice := range yamlPkg.Slices {
 		match := apacheutil.SnameExp.FindStringSubmatch(sliceName)
 		if match == nil {
-			return nil, fmt.Errorf("invalid slice name %q in %s (must start with a-z, len >= 3, only a-z / 0-9 / -)", sliceName, pkgPath)
+			return nil, fmt.Errorf("invalid slice name %q in %s (must start with a-z or _, len >= 3 after the optional _, only a-z / 0-9 / -)", sliceName, pkgPath)
+		}
+		if strings.HasPrefix(sliceName, "_") && format != "v3" {
+			return nil, fmt.Errorf("private slice %s requires format v3", SliceKey{pkgName, sliceName})
 		}
 		hintNotPrintable := strings.ContainsFunc(yamlSlice.Hint, func(r rune) bool {
 			return !unicode.IsPrint(r)

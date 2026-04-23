@@ -43,7 +43,7 @@ var sampleRelease = &setup.Release{
 	},
 	Packages: map[string]*setup.Package{
 		"openjdk-8-jdk": makeSamplePackage("openjdk-8-jdk", []string{"bins", "config", "core", "libs", "utils"}),
-		"python3.10":    makeSamplePackage("python3.10", []string{"bins", "config", "core", "libs", "utils"}),
+		"python3.10":    makeSamplePackage("python3.10", []string{"bins", "config", "core", "libs", "utils", "_priv"}),
 	},
 }
 
@@ -122,6 +122,27 @@ var findTests = []findTest{{
 	summary: "Several terms, one does not match",
 	release: sampleRelease,
 	query:   []string{"python", "slice"},
+	result:  []*setup.Slice{},
+}, {
+	summary: "Private slices are hidden when matching by package",
+	release: sampleRelease,
+	query:   []string{"python3.10"},
+	result: []*setup.Slice{
+		sampleRelease.Packages["python3.10"].Slices["bins"],
+		sampleRelease.Packages["python3.10"].Slices["config"],
+		sampleRelease.Packages["python3.10"].Slices["core"],
+		sampleRelease.Packages["python3.10"].Slices["libs"],
+		sampleRelease.Packages["python3.10"].Slices["utils"],
+	},
+}, {
+	summary: "Private slices are hidden when matching by full slice name",
+	release: sampleRelease,
+	query:   []string{"python3.10__priv"},
+	result:  []*setup.Slice{},
+}, {
+	summary: "Private slices are hidden when matching by slice-only query",
+	release: sampleRelease,
+	query:   []string{"__priv"},
 	result:  []*setup.Slice{},
 }}
 
