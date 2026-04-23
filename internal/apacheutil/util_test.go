@@ -43,6 +43,18 @@ var sliceKeyTests = []struct {
 	input:    "a._bar",
 	expected: apacheutil.SliceKey{Package: "a.", Slice: "bar"},
 }, {
+	input:    "foo__bar",
+	expected: apacheutil.SliceKey{Package: "foo", Slice: "_bar"},
+}, {
+	input:    "foo__abc",
+	expected: apacheutil.SliceKey{Package: "foo", Slice: "_abc"},
+}, {
+	input: "foo___bar",
+	err:   `invalid slice reference: "foo___bar"`,
+}, {
+	input: "foo__ab",
+	err:   `invalid slice reference: "foo__ab"`,
+}, {
 	input: "foo_ba",
 	err:   `invalid slice reference: "foo_ba"`,
 }, {
@@ -93,4 +105,10 @@ func (s *S) TestParseSliceKey(c *C) {
 		c.Assert(err, IsNil)
 		c.Assert(key, DeepEquals, test.expected)
 	}
+}
+
+func (s *S) TestIsPrivate(c *C) {
+	c.Assert(apacheutil.SliceKey{Package: "foo", Slice: "_bar"}.IsPrivate(), Equals, true)
+	c.Assert(apacheutil.SliceKey{Package: "foo", Slice: "bar"}.IsPrivate(), Equals, false)
+	c.Assert(apacheutil.SliceKey{Package: "foo", Slice: ""}.IsPrivate(), Equals, false)
 }

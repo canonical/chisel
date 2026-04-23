@@ -5,6 +5,7 @@ package apacheutil
 import (
 	"fmt"
 	"regexp"
+	"strings"
 )
 
 type SliceKey struct {
@@ -14,14 +15,20 @@ type SliceKey struct {
 
 func (s SliceKey) String() string { return s.Package + "_" + s.Slice }
 
+// IsPrivate reports whether the slice name marks the slice as private.
+// Private slices begin with a single underscore and may only be used as
+// essentials of other slices; they cannot be selected directly.
+func (s SliceKey) IsPrivate() bool { return strings.HasPrefix(s.Slice, "_") }
+
 // FnameExp matches the slice definition file basename.
 var FnameExp = regexp.MustCompile(`^([a-z0-9](?:-?[.a-z0-9+]){1,})\.yaml$`)
 
 // SnameExp matches only the slice name, without the leading package name.
-var SnameExp = regexp.MustCompile(`^([a-z](?:-?[a-z0-9]){2,})$`)
+// An optional single leading underscore marks the slice as private.
+var SnameExp = regexp.MustCompile(`^(_?[a-z](?:-?[a-z0-9]){2,})$`)
 
 // knameExp matches the slice full name in pkg_slice format.
-var knameExp = regexp.MustCompile(`^([a-z0-9](?:-?[.a-z0-9+]){1,})_([a-z](?:-?[a-z0-9]){2,})$`)
+var knameExp = regexp.MustCompile(`^([a-z0-9](?:-?[.a-z0-9+]){1,})_(_?[a-z](?:-?[a-z0-9]){2,})$`)
 
 func ParseSliceKey(sliceKey string) (SliceKey, error) {
 	match := knameExp.FindStringSubmatch(sliceKey)
