@@ -32,7 +32,9 @@ jobs:
           # The branch name is considered an untrusted input value (under the
           # contributor's control), so store it in a variable to avoid shell
           # injection.
-          QUERY_PR: "head:${{ github.event.workflow_run.head_branch }} ${{ github.event.workflow_run.head_sha }}"
+          # In the unlikely case where multiple PRs, on the same branch, from the
+          # same author exists, the most recent one is selected.
+          QUERY_PR: "head:${{ github.event.workflow_run.head_branch }} sort:updated-desc author:${{ github.event.workflow_run.head_repository.owner.login }} ${{ github.event.workflow_run.head_sha }}"
           # Filters and formats the JSON into a `key=value` string with basic error handling.
           JQ_FILTER: >-
             .[0]
