@@ -59,7 +59,7 @@ func run() error {
 	}
 
 	// Check the internal dependencies of the external packages.
-	output, err := exec.Command("sh", "-c", "go list -deps -test ./public/*").Output()
+	output, err := exec.Command("sh", "-c", "go list -deps -test ./public/...").Output()
 	if err != nil {
 		return err
 	}
