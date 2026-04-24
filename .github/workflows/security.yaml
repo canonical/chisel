@@ -8,8 +8,9 @@ jobs:
   scan:
     name: Scan for known vulnerabilities
     runs-on: ubuntu-latest
-    # The codeql-action/upload-sarif action can only use the built-in GH token.
-    # So use it and expand its permissions instead od using a fine-grained token.
+    # The codeql-action/upload-sarif action can only use the built-in GitHub
+    # token. So use it and expand its permissions instead of using a fine-grained
+    # token.
     # See https://github.com/github/codeql-action/blob/main/upload-sarif/action.yml#L23
     permissions:
       security-events: write
