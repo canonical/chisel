@@ -519,6 +519,26 @@ var setupTests = []setupTest{{
 	},
 	relerror: "slices mypkg1_myslice1 and mypkg2_myslice1 conflict on /path1",
 }, {
+	summary: "When multiple prefixes match all are tested",
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice1:
+					contents:
+						/path/*/foo:
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+			slices:
+				myslice1:
+					contents:
+						/path/bar/foo1:
+						/path/bar/f*:
+		`,
+	},
+	relerror: "slices mypkg1_myslice1 and mypkg2_myslice1 conflict on /path/\\*/foo and /path/bar/f\\*",
+}, {
 	summary: "Directories must be suffixed with /",
 	input: map[string]string{
 		"slices/mydir/mypkg.yaml": `
