@@ -276,7 +276,7 @@ func (r *Release) validate() error {
 	// Check for glob and generate conflicts.
 	//
 	// A naive approach would be to check each pair of paths. That would result
-	// in an a n^2 algorithm, specifically due to glob handling; leading this
+	// in a n^2 algorithm, specifically due to glob handling; leading this
 	// to be the most time-consuming operation of almost every command.
 	//
 	// We can speed up the search by looking at the prefixes of each path that
