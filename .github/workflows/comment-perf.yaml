@@ -21,13 +21,32 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: benchmark-report
-          path: benchmark-report.txt
+          path: report.md
           github-token: ${{ secrets.ROCKSBOT_CHISEL_PR_COMMENTER }}
           run-id: ${{ github.event.workflow_run.id }}
 
+      - name: Get PR number
+        id: get-pr-number
+        env:
+          GH_TOKEN: ${{ secrets.ROCKSBOT_CHISEL_PR_COMMENTER }}
+          # The branch name is considered an untrusted input value (under the
+          # contributor's control), so store it in a variable to avoid shell
+          # injection.
+          # In the unlikely case where multiple PRs, on the same branch, from the
+          # same author exists, the most recent one is selected.
+          QUERY_PR: "head:${{ github.event.workflow_run.head_branch }} sort:updated-desc author:${{ github.event.workflow_run.head_repository.owner.login }} ${{ github.event.workflow_run.head_sha }}"
+          # Filters and formats the JSON into a `key=value` string with basic error handling.
+          JQ_FILTER: >-
+            .[0]
+            | if (.number == null) then error("Could not find PR number") end
+            | "number=\(.number)"
+        run: |
+          gh pr list --repo "${{ github.repository }}" --state all --search "${QUERY_PR}" \
+          --json number --jq "${JQ_FILTER}" >> "${GITHUB_OUTPUT}"
+
       - name: Post message to PR
-        uses: mshick/add-pr-comment@dd126dd8c253650d181ad9538d8b4fa218fc31e8
+        uses: mshick/add-pr-comment@dd126dd8c253650d181ad9538d8b4fa218fc31e8 # v2
         with:
-          message-path: benchmark-report.txt
-          issue: ${{ github.event.workflow_run.pull_requests[0].number }}
+          message-path: report.md
+          issue: ${{ steps.get-pr-number.outputs.number }}
           repo-token: ${{ secrets.ROCKSBOT_CHISEL_PR_COMMENTER }}

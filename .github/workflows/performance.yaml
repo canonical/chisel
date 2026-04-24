@@ -65,14 +65,12 @@ jobs:
       - name: Run benchmark
         id: benchmark
         run: |
-          msg_file="$(mktemp)"
-          echo "msg_file=$msg_file" >> $GITHUB_OUTPUT
           chmod +x base head
-          hyperfine --export-markdown "$msg_file" "./base info --release ./chisel-releases 'python3.12_core'" -n "BASE" "./head info --release ./chisel-releases 'python3.12_core'" -n "HEAD"
+          hyperfine --export-markdown report.md "./base info --release ./chisel-releases 'python3.12_core'" -n "BASE" "./head info --release ./chisel-releases 'python3.12_core'" -n "HEAD"
 
       - name: Upload result
         uses: actions/upload-artifact@v4
         with:
           name: benchmark-report
-          path: ${{ steps.benchmark.outputs.msg_file }}
+          path: report.md
           retention-days: 1
