@@ -59,6 +59,9 @@ func Distance(a, b string, f CostFunc, cut int64) int64 {
 			lst[0] = last + cost.DeleteA
 		}
 		stop := true
+		if lst[0] < CostInt(cut) {
+			stop = false
+		}
 		i := 0
 		for _, br := range b {
 			i++
@@ -87,7 +90,7 @@ func Distance(a, b string, f CostFunc, cut int64) int64 {
 		if debug {
 			debugf("... %v", lst)
 		}
-		if cut != 0 && len(b) > 0 && stop {
+		if cut != 0 && stop {
 			break
 		}
 	}
