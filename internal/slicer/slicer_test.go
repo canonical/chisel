@@ -1990,7 +1990,7 @@ func (s *S) TestRun(c *C) {
 		m := make(map[string]string)
 		for k, v := range t.release {
 			if !strings.Contains(v, "v2-archives:") {
-				v = strings.Replace(v, "archives:", "v2-archives:", -1)
+				v = strings.ReplaceAll(v, "archives:", "v2-archives:")
 			}
 			m[k] = v
 		}
@@ -2007,7 +2007,7 @@ func (s *S) TestRun(c *C) {
 			if strings.Contains(v, "format: v1") &&
 				!strings.Contains(v, "v2-archives:") &&
 				!strings.Contains(v, "default: true") {
-				v = strings.Replace(v, "format: v1", "format: v2", -1)
+				v = strings.ReplaceAll(v, "format: v1", "format: v2")
 			}
 			m[k] = v
 		}
@@ -2190,10 +2190,7 @@ func treeDumpManifestPaths(mfest *manifest.Manifest) (map[string]string, error) 
 		}
 
 		// append {slice1, ..., sliceN} to the end of the path dump.
-		slicesStr := make([]string, 0, len(path.Slices))
-		for _, slice := range path.Slices {
-			slicesStr = append(slicesStr, slice)
-		}
+		slicesStr := slices.Clone(path.Slices)
 		sort.Strings(slicesStr)
 		result[path.Path] = fmt.Sprintf("%s {%s}", fsDump, strings.Join(slicesStr, ","))
 		return nil
