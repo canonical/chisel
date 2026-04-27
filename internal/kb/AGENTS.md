@@ -9,10 +9,10 @@ The `internal/` directory houses the core business logic, components, and utilit
 # Directory
 
 - `slicer/` - Main orchestrator for a Chisel run. Receives a slice selection, drives all other internal packages (setup, archive, cache, deb, fsutil, scripts, manifestutil) to completion, and writes the final filesystem and manifest.
-- `setup/` - Parses chisel-releases YAML slice definitions, builds the `Release` data model (packages, slices, dependencies), and performs dependency resolution using Tarjan's topological sort algorithm. Also handles fetching package index metadata from remote archives.
+- `setup/` - Fetches and parses chisel-releases YAML slice definitions, building the `Release` data model (packages, slices, archives). Performs slice dependency resolution, uses Tarjan's topological sort to detect cycles, validates path conflicts across slices, and resolves same-path contention between packages using `prefer` relationships.
 - `deb/` - Extracts files from `.deb` archives (AR format with tar/gzip/xz/zstd inner layers). Handles multiple compression formats and preserves file permissions and ordering.
 - `archive/` - Manages remote Ubuntu package archive sources over HTTP/HTTPS. Handles PGP signature verification of package indices, credential management for authenticated repositories (e.g. Ubuntu Pro), and HTTP-level caching.
-- `cache/` - Content-addressable on-disk cache keyed by SHA256 digest. Stores extracted files and uses hardlinks to the target filesystem to avoid redundant copies. Respects `XDG_CACHE_HOME`.
+- `cache/` - Content-addressable on-disk store keyed by SHA256 digest, with time-based eviction. Resolves the cache directory from `XDG_CACHE_HOME`.
 - `fsutil/` - Core filesystem operations for writing files, directories, and symlinks into the target root filesystem, with correct ownership, permissions, and SHA256 generation during writes.
 - `manifestutil/` - Generates the Chisel manifest: a ZSTD-compressed file in jsonwall format recording every installed package, slice, and file. The default filename is `manifest.wall`.
 - `scripts/` - Executes Starlark mutation scripts defined in slice definitions. Scripts run after extraction and can transform or clean up files within the target filesystem.
@@ -27,12 +27,33 @@ The `internal/` directory houses the core business logic, components, and utilit
 
 Chisel's internal packages form a directed dependency chain driven by `slicer/`:
 
-```
-slicer/ → setup/ (resolve slice deps) → archive/ (fetch package indices)
-        → cache/ + deb/ (extract .deb to cache by SHA256)
-        → fsutil/ (hardlink/copy from cache to target rootfs)
-        → scripts/ (apply Starlark mutations)
-        → manifestutil/ (write manifest.wall)
-```
+```mermaid
+flowchart LR
+    slicer["slicer<br/>Orchestrator"]
 
-`control/` is used by `deb/` and `archive/` for parsing Debian metadata. `pgputil/` is used by `archive/` for signature verification. `strdist/` is used at the CLI layer and in `setup/` for error reporting. `testutil/` is test-only and has no production dependents.
+    subgraph logic["Core Logic"]
+        setup["setup<br/>Release parsing, dep resolution,<br/>conflict detection"]
+        archive["archive<br/>Ubuntu archive HTTP client"]
+        manifestutil["manifestutil<br/>Manifest writer"]
+        scripts["scripts<br/>Starlark mutations"]
+    end
+
+    subgraph base["Extraction & Storage"]
+        deb["deb<br/>.deb file extractor"]
+        fsutil["fsutil<br/>Filesystem writer"]
+        cache["cache<br/>Content-addressable store"]
+    end
+
+    subgraph util["Utilities"]
+        control["control<br/>Debian control parser"]
+        pgputil["pgputil<br/>PGP verification"]
+        strdist["strdist<br/>Glob & distance matching"]
+    end
+
+    slicer --> setup & archive & deb & fsutil & scripts & manifestutil
+    setup --> archive & deb & cache & strdist
+    manifestutil --> archive & setup
+    archive --> cache & control & pgputil & deb
+    deb --> fsutil & strdist
+    scripts --> fsutil
+```
