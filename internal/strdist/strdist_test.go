@@ -36,6 +36,7 @@ var distanceTests = []distanceTest{
 	{f: uniqueCost, r: 6, a: "abc", b: "b"},
 	{f: uniqueCost, r: 6, a: "abc", b: "c"},
 	{f: uniqueCost, r: 9, a: "abc", b: ""},
+	{f: uniqueCost, r: 6, cut: 6, a: "abc", b: ""},
 	{f: uniqueCost, r: 5, a: "abc", b: "abcd"},
 	{f: uniqueCost, r: 5, a: "abc", b: "dabc"},
 	{f: uniqueCost, r: 10, a: "abc", b: "adbdc"},
