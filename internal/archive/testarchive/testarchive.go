@@ -125,7 +125,7 @@ func (r *Release) Content() []byte {
 	digests := bytes.Buffer{}
 	for _, item := range r.Items {
 		content := item.Content()
-		digests.WriteString(fmt.Sprintf(" %s  %d  %s\n", makeSha256(content), len(content), item.Path()))
+		fmt.Fprintf(&digests, " %s  %d  %s\n", makeSha256(content), len(content), item.Path())
 	}
 	content := fmt.Sprintf(string(testutil.Reindent(`
 		Origin: Ubuntu

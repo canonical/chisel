@@ -8,6 +8,13 @@ jobs:
   scan:
     name: Scan for known vulnerabilities
     runs-on: ubuntu-latest
+    # The codeql-action/upload-sarif action can only use the built-in GitHub
+    # token. So use it and expand its permissions instead of using a fine-grained
+    # token.
+    # See https://github.com/github/codeql-action/blob/main/upload-sarif/action.yml#L23
+    permissions:
+      security-events: write
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -15,7 +22,7 @@ jobs:
         # architecture-specific vulnerabilities.
         arch: [amd64, arm, arm64, ppc64le, s390x, riscv64]
     env:
-      TRIVY_RESULTS: 'trivy-results.sarif'
+      TRIVY_RESULTS: 'trivy-results.${{ matrix.arch }}.sarif'
       SCAN_DIR: 'release-scan'
     steps:
       - name: Download and extract latest release
