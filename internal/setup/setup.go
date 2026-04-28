@@ -290,68 +290,73 @@ func (r *Release) validate() error {
 	// complexities.
 	allPaths := slices.Collect(maps.Keys(paths))
 	slices.Sort(allPaths)
-	var wg sync.WaitGroup
+	sem := make(chan struct{}, 4)
 	var mu sync.Mutex
 	err = nil
 	for oldPath, oldSlices := range paths {
-		wg.Go(
-			func() {
-				for _, old := range oldSlices {
-					oldInfo := old.Contents[oldPath]
-					if oldInfo.Kind != GeneratePath && oldInfo.Kind != GlobPath {
+		sem <- struct{}{}
+		go func() {
+			defer func() {
+				<-sem
+			}()
+			for _, old := range oldSlices {
+				oldInfo := old.Contents[oldPath]
+				if oldInfo.Kind != GeneratePath && oldInfo.Kind != GlobPath {
+					break
+				}
+
+				prefixLen := strings.IndexAny(oldPath, "*?")
+				if prefixLen == -1 {
+					// return fmt.Errorf("internal error: invalid path: generate or glob path does not contain ' ?' or '*': %q", oldPath)
+				}
+				searchKey := oldPath[:prefixLen]
+				// startIndex is the position of the prefix or the position where
+				// the prefix would have been found.
+				startIndex, _ := slices.BinarySearch(allPaths, searchKey)
+				for i := startIndex; i < len(allPaths); i++ {
+					newPath := allPaths[i]
+					if !strings.HasPrefix(newPath, searchKey) {
+						// Iterate until the prefix no longer matches, which means
+						// all other paths will fail the comparison below.
 						break
 					}
-
-					prefixLen := strings.IndexAny(oldPath, "*?")
-					if prefixLen == -1 {
-						// return fmt.Errorf("internal error: invalid path: generate or glob path does not contain ' ?' or '*': %q", oldPath)
+					newSlices := paths[newPath]
+					// We know prefixes match, we can skip that part of the string.
+					if oldPath[len(searchKey)-1:] == newPath[len(searchKey)-1:] {
+						// Identical paths have been filtered earlier.
+						continue
 					}
-					searchKey := oldPath[:prefixLen]
-					// startIndex is the position of the prefix or the position where
-					// the prefix would have been found.
-					startIndex, _ := slices.BinarySearch(allPaths, searchKey)
-					for i := startIndex; i < len(allPaths); i++ {
-						newPath := allPaths[i]
-						if !strings.HasPrefix(newPath, searchKey) {
-							// Iterate until the prefix no longer matches, which means
-							// all other paths will fail the comparison below.
-							break
+					for _, new := range newSlices {
+						newInfo := new.Contents[newPath]
+						if oldInfo.Kind == GlobPath && (newInfo.Kind == GlobPath || newInfo.Kind == CopyPath) {
+							if new.Package == old.Package {
+								continue
+							}
 						}
-						newSlices := paths[newPath]
 						// We know prefixes match, we can skip that part of the string.
-						if oldPath[len(searchKey)-1:] == newPath[len(searchKey)-1:] {
-							// Identical paths have been filtered earlier.
-							continue
-						}
-						for _, new := range newSlices {
-							newInfo := new.Contents[newPath]
-							if oldInfo.Kind == GlobPath && (newInfo.Kind == GlobPath || newInfo.Kind == CopyPath) {
-								if new.Package == old.Package {
-									continue
-								}
+						if strdist.GlobPath(newPath[len(searchKey)-1:], oldPath[len(searchKey)-1:]) {
+							if (old.Package > new.Package) || (old.Package == new.Package && old.Name > new.Name) ||
+								(old.Package == new.Package && old.Name == new.Name && oldPath > newPath) {
+								old, new = new, old
+								oldPath, newPath = newPath, oldPath
 							}
-							// We know prefixes match, we can skip that part of the string.
-							if strdist.GlobPath(newPath[len(searchKey)-1:], oldPath[len(searchKey)-1:]) {
-								if (old.Package > new.Package) || (old.Package == new.Package && old.Name > new.Name) ||
-									(old.Package == new.Package && old.Name == new.Name && oldPath > newPath) {
-									old, new = new, old
-									oldPath, newPath = newPath, oldPath
-								}
-								mu.Lock()
-								if err == nil {
-									err = fmt.Errorf("slices %s and %s conflict on %s and %s", old, new, oldPath, newPath)
-								}
-								mu.Unlock()
-								return
-							} else {
-								break
+							mu.Lock()
+							if err == nil {
+								err = fmt.Errorf("slices %s and %s conflict on %s and %s", old, new, oldPath, newPath)
 							}
+							mu.Unlock()
+							return
+						} else {
+							break
 						}
 					}
 				}
-			})
+			}
+		}()
 	}
-	wg.Wait()
+	for range 4 {
+		sem <- struct{}{}
+	}
 	if err != nil {
 		return err
 	}
