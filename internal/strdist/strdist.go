@@ -28,6 +28,14 @@ func StandardCost(ar, br rune) Cost {
 	return Cost{SwapAB: 1, DeleteA: 1, InsertB: 1}
 }
 
+// Distance returns the edit distance between two strings. The cost per edit is
+// given by the costFunc argument.
+//
+// There is an optional cut argument that when set will finish the computation
+// as early as possible once the final cost is certain to be >= cut. There is
+// no guarantee about the exact cost returned when this is the case other than
+// being >= cut. In particular, when cut is used, the function is not symmetric
+// on a and b.
 func Distance(a, b string, f CostFunc, cut int64) int64 {
 	if a == b {
 		return 0

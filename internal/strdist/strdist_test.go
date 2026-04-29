@@ -63,7 +63,9 @@ var distanceTests = []distanceTest{
 	{f: strdist.GlobCost, r: 0, a: "/*a/", b: "/a/"},
 	{f: strdist.GlobCost, r: 3, a: "abc", b: ""},
 	{f: strdist.GlobCost, r: 1, cut: 1, a: "abc", b: ""},
+	// Not symmetric.
 	{f: strdist.GlobCost, r: 2, cut: 3, a: "ab", b: ""},
+	{f: strdist.GlobCost, r: 2, cut: 1, a: "", b: "ab"},
 }
 
 func (s *S) TestDistance(c *C) {
