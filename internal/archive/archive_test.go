@@ -4,6 +4,8 @@ import (
 	"golang.org/x/crypto/openpgp/packet"
 	. "gopkg.in/check.v1"
 
+	"bytes"
+	"compress/gzip"
 	"debug/elf"
 	"errors"
 	"flag"
@@ -83,14 +85,18 @@ func (s *httpSuite) Do(req *http.Request) (*http.Response, error) {
 	s.request = req
 	s.requests = append(s.requests, req)
 	body := s.response
+	status := s.status
 	s.logf("Request: %s", req.URL.String())
 	if response, ok := s.responses[path.Clean(req.URL.Path)]; ok {
 		body = string(response)
+	} else if len(s.responses) > 0 && s.status == 200 {
+		// Unknown path with responses populated: behave like a real archive.
+		status = 404
 	}
 	rsp := &http.Response{
 		Body:       io.NopCloser(strings.NewReader(body)),
 		Header:     s.header,
-		StatusCode: s.status,
+		StatusCode: status,
 	}
 	return rsp, s.err
 }
@@ -623,6 +629,97 @@ func read(r io.Reader) string {
 		panic(err)
 	}
 	return string(data)
+}
+
+func gzipBytes(s string) []byte {
+	var buf bytes.Buffer
+	w := gzip.NewWriter(&buf)
+	if _, err := w.Write([]byte(s)); err != nil {
+		panic(err)
+	}
+	if err := w.Close(); err != nil {
+		panic(err)
+	}
+	return buf.Bytes()
+}
+
+func (s *httpSuite) sawByHashRequest() bool {
+	for _, req := range s.requests {
+		if strings.Contains(req.URL.Path, "/by-hash/SHA256/") {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *httpSuite) TestFetchByHashSucceedsWhenNamedPathIsStale(c *C) {
+	s.prepareArchiveAdjustRelease("jammy", "22.04", "amd64", []string{"main"}, func(r *testarchive.Release) {
+		r.AcquireByHash = true
+		r.NamedPathContent = map[string][]byte{
+			"main/binary-amd64/Packages.gz": gzipBytes("stale Packages from previous publication"),
+		}
+	})
+
+	options := archive.Options{
+		Label:      "ubuntu",
+		Version:    "22.04",
+		Arch:       "amd64",
+		Suites:     []string{"jammy"},
+		Components: []string{"main"},
+		CacheDir:   c.MkDir(),
+		PubKeys:    []*packet.PublicKey{s.pubKey},
+	}
+
+	testArchive, err := archive.Open(&options)
+	c.Assert(err, IsNil)
+
+	pkg, _, err := testArchive.Fetch("mypkg1")
+	c.Assert(err, IsNil)
+	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
+	c.Assert(s.sawByHashRequest(), Equals, true)
+}
+
+func (s *httpSuite) TestFetchByHashFallsBackOnNotFound(c *C) {
+	s.prepareArchiveAdjustRelease("jammy", "22.04", "amd64", []string{"main"}, func(r *testarchive.Release) {
+		r.AcquireByHash = true
+		r.ByHashSkip = []string{"main/binary-amd64/Packages.gz"}
+	})
+
+	options := archive.Options{
+		Label:      "ubuntu",
+		Version:    "22.04",
+		Arch:       "amd64",
+		Suites:     []string{"jammy"},
+		Components: []string{"main"},
+		CacheDir:   c.MkDir(),
+		PubKeys:    []*packet.PublicKey{s.pubKey},
+	}
+
+	testArchive, err := archive.Open(&options)
+	c.Assert(err, IsNil)
+
+	pkg, _, err := testArchive.Fetch("mypkg1")
+	c.Assert(err, IsNil)
+	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
+	c.Assert(s.sawByHashRequest(), Equals, true)
+}
+
+func (s *httpSuite) TestFetchSkipsByHashWhenNotAdvertised(c *C) {
+	s.prepareArchive("jammy", "22.04", "amd64", []string{"main"})
+
+	options := archive.Options{
+		Label:      "ubuntu",
+		Version:    "22.04",
+		Arch:       "amd64",
+		Suites:     []string{"jammy"},
+		Components: []string{"main"},
+		CacheDir:   c.MkDir(),
+		PubKeys:    []*packet.PublicKey{s.pubKey},
+	}
+
+	_, err := archive.Open(&options)
+	c.Assert(err, IsNil)
+	c.Assert(s.sawByHashRequest(), Equals, false)
 }
 
 // ----------------------------------------------------------------------------------------
