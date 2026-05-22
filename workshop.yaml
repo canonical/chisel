@@ -2,5 +2,8 @@ name: dev
 base: ubuntu@24.04
 sdks:
   - name: vscode-remote
+  - name: opencode
+  - name: codex
+  - name: copilot
   - name: go
     channel: 1.25
