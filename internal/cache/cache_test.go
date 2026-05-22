@@ -45,11 +45,11 @@ func (s *S) TestDefaultDir(c *C) {
 func (s *S) TestCacheEmpty(c *C) {
 	cc := cache.Cache{c.MkDir()}
 
-	_, err := cc.Open(data1Digest)
+	_, err := cc.Open(cache.SHA256, data1Digest)
 	c.Assert(err, Equals, cache.MissErr)
-	_, err = cc.Read(data1Digest)
+	_, err = cc.Read(cache.SHA256, data1Digest)
 	c.Assert(err, Equals, cache.MissErr)
-	_, err = cc.Read("")
+	_, err = cc.Read(cache.SHA256, "")
 	c.Assert(err, Equals, cache.MissErr)
 }
 
@@ -60,21 +60,21 @@ func (s *S) TestCacheReadWrite(c *C) {
 	data2Path := filepath.Join(cc.Dir, "sha256", data2Digest)
 	data3Path := filepath.Join(cc.Dir, "sha256", data3Digest)
 
-	err := cc.Write(data1Digest, []byte("data1"))
+	err := cc.Write(cache.SHA256, data1Digest, []byte("data1"))
 	c.Assert(err, IsNil)
-	data1, err := cc.Read(data1Digest)
+	data1, err := cc.Read(cache.SHA256, data1Digest)
 	c.Assert(err, IsNil)
 	c.Assert(string(data1), Equals, "data1")
 
-	err = cc.Write("", []byte("data2"))
+	err = cc.Write(cache.SHA256, "", []byte("data2"))
 	c.Assert(err, IsNil)
-	data2, err := cc.Read(data2Digest)
+	data2, err := cc.Read(cache.SHA256, data2Digest)
 	c.Assert(err, IsNil)
 	c.Assert(string(data2), Equals, "data2")
 
-	_, err = cc.Read(data3Digest)
+	_, err = cc.Read(cache.SHA256, data3Digest)
 	c.Assert(err, Equals, cache.MissErr)
-	_, err = cc.Read("")
+	_, err = cc.Read(cache.SHA256, "")
 	c.Assert(err, Equals, cache.MissErr)
 
 	_, err = os.Stat(data1Path)
@@ -98,7 +98,7 @@ func (s *S) TestCacheReadWrite(c *C) {
 func (s *S) TestCacheCreate(c *C) {
 	cc := cache.Cache{Dir: c.MkDir()}
 
-	w := cc.Create("")
+	w := cc.Create(cache.SHA256, "")
 
 	c.Assert(w.Digest(), Equals, "")
 
@@ -113,7 +113,7 @@ func (s *S) TestCacheCreate(c *C) {
 
 	c.Assert(w.Digest(), Equals, data1Digest)
 
-	data1, err := cc.Read(data1Digest)
+	data1, err := cc.Read(cache.SHA256, data1Digest)
 	c.Assert(err, IsNil)
 	c.Assert(string(data1), Equals, "data1")
 }
@@ -121,7 +121,7 @@ func (s *S) TestCacheCreate(c *C) {
 func (s *S) TestCacheWrongDigest(c *C) {
 	cc := cache.Cache{Dir: c.MkDir()}
 
-	w := cc.Create(data1Digest)
+	w := cc.Create(cache.SHA256, data1Digest)
 
 	c.Assert(w.Digest(), Equals, data1Digest)
 
@@ -130,19 +130,19 @@ func (s *S) TestCacheWrongDigest(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(errClose, ErrorMatches, "expected digest "+data1Digest+", got "+data2Digest)
 
-	_, err = cc.Read(data1Digest)
+	_, err = cc.Read(cache.SHA256, data1Digest)
 	c.Assert(err, Equals, cache.MissErr)
-	_, err = cc.Read(data2Digest)
+	_, err = cc.Read(cache.SHA256, data2Digest)
 	c.Assert(err, Equals, cache.MissErr)
 }
 
 func (s *S) TestCacheOpen(c *C) {
 	cc := cache.Cache{Dir: c.MkDir()}
 
-	err := cc.Write(data1Digest, []byte("data1"))
+	err := cc.Write(cache.SHA256, data1Digest, []byte("data1"))
 	c.Assert(err, IsNil)
 
-	f, err := cc.Open(data1Digest)
+	f, err := cc.Open(cache.SHA256, data1Digest)
 	c.Assert(err, IsNil)
 	data1, err := io.ReadAll(f)
 	closeErr := f.Close()
@@ -150,4 +150,31 @@ func (s *S) TestCacheOpen(c *C) {
 	c.Assert(closeErr, IsNil)
 
 	c.Assert(string(data1), Equals, "data1")
+}
+
+func (s *S) TestCacheSHA3384(c *C) {
+	cc := cache.Cache{Dir: c.MkDir()}
+
+	w := cc.Create(cache.SHA3384, "")
+	_, err := w.Write([]byte("data1"))
+	c.Assert(err, IsNil)
+	err = w.Close()
+	c.Assert(err, IsNil)
+	sha3Digest := w.Digest()
+
+	c.Assert(sha3Digest, Not(Equals), data1Digest)
+
+	data, err := cc.Read(cache.SHA3384, sha3Digest)
+	c.Assert(err, IsNil)
+	c.Assert(string(data), Equals, "data1")
+
+	// SHA3-384 entry must not be visible under SHA-256.
+	_, err = cc.Open(cache.SHA256, sha3Digest)
+	c.Assert(err, Equals, cache.MissErr)
+
+	// SHA-256 entry must not be visible under SHA3-384.
+	err = cc.Write(cache.SHA256, data1Digest, []byte("data1"))
+	c.Assert(err, IsNil)
+	_, err = cc.Open(cache.SHA3384, data1Digest)
+	c.Assert(err, Equals, cache.MissErr)
 }
