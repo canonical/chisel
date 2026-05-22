@@ -45,6 +45,11 @@ var distanceTests = []distanceTest{
 	{f: strdist.StandardCost, r: 3, a: "abcdefg", b: "axcdfgh"},
 	{f: strdist.StandardCost, r: 2, cut: 2, a: "abcdef", b: "abc"},
 	{f: strdist.StandardCost, r: 2, cut: 3, a: "abcdef", b: "abcd"},
+	{f: strdist.StandardCost, r: 3, a: "abc", b: ""},
+	{f: strdist.StandardCost, r: 1, cut: 1, a: "abc", b: ""},
+	// Not symmetric.
+	{f: strdist.StandardCost, r: 2, cut: 3, a: "ab", b: ""},
+	{f: strdist.StandardCost, r: 2, cut: 1, a: "", b: "ab"},
 	{f: strdist.GlobCost, r: 0, a: "abc*", b: "abcdef"},
 	{f: strdist.GlobCost, r: 0, a: "ab*ef", b: "abcdef"},
 	{f: strdist.GlobCost, r: 0, a: "*def", b: "abcdef"},
@@ -61,11 +66,13 @@ var distanceTests = []distanceTest{
 	{f: strdist.GlobCost, r: 0, a: "a**f/hij/klm", b: "abc/d**m"},
 	{f: strdist.GlobCost, r: 1, a: "**a", b: ""},
 	{f: strdist.GlobCost, r: 0, a: "/*a/", b: "/a/"},
-	{f: strdist.GlobCost, r: 3, a: "abc", b: ""},
-	{f: strdist.GlobCost, r: 1, cut: 1, a: "abc", b: ""},
-	// Not symmetric.
-	{f: strdist.GlobCost, r: 2, cut: 3, a: "ab", b: ""},
-	{f: strdist.GlobCost, r: 2, cut: 1, a: "", b: "ab"},
+	// Edge cases with empty strings.
+	{f: strdist.GlobCost, r: strdist.Inhibit, cut: 1, a: "/", b: ""},
+	{f: strdist.GlobCost, r: strdist.Inhibit, cut: 1, a: "", b: "/"},
+	{f: strdist.GlobCost, r: 0, cut: 1, a: "*", b: ""},
+	{f: strdist.GlobCost, r: 0, cut: 1, a: "", b: "*"},
+	{f: strdist.GlobCost, r: 0, cut: 1, a: "**", b: ""},
+	{f: strdist.GlobCost, r: 0, cut: 1, a: "", b: "**"},
 }
 
 func (s *S) TestDistance(c *C) {
