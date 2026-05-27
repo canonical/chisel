@@ -101,7 +101,7 @@ func Run(options *RunOptions) error {
 		pkgArch[pkg] = a.Options().Arch
 	}
 	// TODO Handle packages coming from a store as well when we support them.
-	
+
 	prefers, err := options.Selection.Prefers()
 	if err != nil {
 		return err
