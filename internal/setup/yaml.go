@@ -35,6 +35,7 @@ type yamlRelease struct {
 	// fields that break said compatibility (e.g. "pro" archives) and merged
 	// together with "archives".
 	V2Archives map[string]yamlArchive `yaml:"v2-archives"`
+	Stores     map[string]yamlStore   `yaml:"stores"`
 }
 
 const (
@@ -52,9 +53,17 @@ type yamlArchive struct {
 	PubKeys    []string `yaml:"public-keys"`
 }
 
+type yamlStore struct {
+	Kind          string `yaml:"kind"`
+	Version       string `yaml:"version"`
+	DefaultPrefix string `yaml:"default-prefix"`
+}
+
 type yamlPackage struct {
-	Name    string `yaml:"package"`
-	Archive string `yaml:"archive,omitempty"`
+	Name         string `yaml:"package"`
+	Archive      string `yaml:"archive,omitempty"`
+	Store        string `yaml:"store,omitempty"`
+	DefaultTrack string `yaml:"default-track,omitempty"`
 	// For backwards-compatibility reasons with v1 and v2, essential needs
 	// custom logic to be parsed. See [yamlEssentialListMap].
 	Essential yamlEssentialListMap `yaml:"essential,omitempty"`
@@ -433,6 +442,33 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 		release.Archives[archiveName] = details
 	}
 
+	// Parse stores.
+	if len(yamlVar.Stores) > 0 && (release.Format == "v1" || release.Format == "v2") {
+		return nil, fmt.Errorf("%s: stores is not supported in format %q", fileName, release.Format)
+	}
+	if len(yamlVar.Stores) > 0 {
+		release.Stores = make(map[string]*Store, len(yamlVar.Stores))
+	}
+	for storeName, details := range yamlVar.Stores {
+		switch StoreKind(details.Kind) {
+		case StoreBin:
+		default:
+			return nil, fmt.Errorf("%s: store %q has invalid kind %q", fileName, storeName, details.Kind)
+		}
+		if details.Version == "" {
+			return nil, fmt.Errorf("%s: store %q missing version field", fileName, storeName)
+		}
+		if details.DefaultPrefix == "" {
+			return nil, fmt.Errorf("%s: store %q missing default-prefix field", fileName, storeName)
+		}
+		release.Stores[storeName] = &Store{
+			Name:          storeName,
+			Kind:          StoreKind(details.Kind),
+			Version:       details.Version,
+			DefaultPrefix: details.DefaultPrefix,
+		}
+	}
+
 	return release, err
 }
 
@@ -480,6 +516,23 @@ func parsePackage(format, pkgName, pkgPath string, data []byte) (*Package, error
 		}
 	}
 
+	if yamlPkg.Store != "" && yamlPkg.Archive != "" {
+		return nil, fmt.Errorf("cannot parse package %q: both 'store' and 'archive' fields are set", pkgName)
+	}
+	if yamlPkg.Store != "" {
+		if yamlPkg.DefaultTrack == "" {
+			return nil, fmt.Errorf("cannot parse package %q: 'default-track' is required when 'store' is set", pkgName)
+		}
+		if strings.Contains(yamlPkg.DefaultTrack, "/") {
+			return nil, fmt.Errorf("cannot parse package %q: 'default-track' must be a track name without /", pkgName)
+		}
+		pkg.Store = yamlPkg.Store
+		pkg.DefaultTrack = yamlPkg.DefaultTrack
+	} else {
+		if yamlPkg.DefaultTrack != "" {
+			return nil, fmt.Errorf("cannot parse package %q: 'store' is required when 'default-track' is set", pkgName)
+		}
+	}
 	pkg.Archive = yamlPkg.Archive
 	zeroPath := yamlPath{}
 	for sliceName, yamlSlice := range yamlPkg.Slices {
@@ -690,9 +743,11 @@ func sliceToYAML(s *Slice) (*yamlSlice, error) {
 // packageToYAML converts a Package object to a yamlPackage object.
 func packageToYAML(p *Package) (*yamlPackage, error) {
 	pkg := &yamlPackage{
-		Name:    p.Name,
-		Archive: p.Archive,
-		Slices:  make(map[string]yamlSlice, len(p.Slices)),
+		Name:         p.Name,
+		Archive:      p.Archive,
+		Store:        p.Store,
+		DefaultTrack: p.DefaultTrack,
+		Slices:       make(map[string]yamlSlice, len(p.Slices)),
 	}
 	for name, slice := range p.Slices {
 		yamlSlice, err := sliceToYAML(slice)

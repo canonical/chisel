@@ -16,6 +16,19 @@ import (
 	"github.com/canonical/chisel/internal/strdist"
 )
 
+// StoreKind identifies the backend type of a store.
+type StoreKind string
+
+const StoreBin StoreKind = "bin"
+
+// Store is the location from which binary packages are obtained via a store API.
+type Store struct {
+	Name          string
+	Kind          StoreKind
+	Version       string
+	DefaultPrefix string
+}
+
 // Release is a collection of package slices targeting a particular
 // distribution version.
 type Release struct {
@@ -23,6 +36,7 @@ type Release struct {
 	Path        string
 	Packages    map[string]*Package
 	Archives    map[string]*Archive
+	Stores      map[string]*Store
 	Maintenance *Maintenance
 }
 
@@ -51,10 +65,12 @@ type Archive struct {
 
 // Package holds a collection of slices that represent parts of themselves.
 type Package struct {
-	Name    string
-	Path    string
-	Archive string
-	Slices  map[string]*Slice
+	Name         string
+	Path         string
+	Archive      string
+	Store        string
+	DefaultTrack string
+	Slices       map[string]*Slice
 }
 
 // Slice holds the details about a package slice.
@@ -334,6 +350,16 @@ func (r *Release) validate() error {
 		}
 		if _, ok := r.Archives[pkg.Archive]; !ok {
 			return fmt.Errorf("%s: package refers to undefined archive %q", pkg.Path, pkg.Archive)
+		}
+	}
+
+	// Check that stores referenced in packages are defined.
+	for _, pkg := range r.Packages {
+		if pkg.Store == "" {
+			continue
+		}
+		if _, ok := r.Stores[pkg.Store]; !ok {
+			return fmt.Errorf("%s: package refers to undefined store %q", pkg.Path, pkg.Store)
 		}
 	}
 

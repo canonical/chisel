@@ -95,6 +95,13 @@ func Run(options *RunOptions) error {
 		return err
 	}
 
+	// Build a map from package name to architecture.
+	pkgArch := make(map[string]string)
+	for pkg, a := range pkgArchive {
+		pkgArch[pkg] = a.Options().Arch
+	}
+	// TODO Handle packages coming from a store as well when we support them.
+	
 	prefers, err := options.Selection.Prefers()
 	if err != nil {
 		return err
@@ -108,7 +115,7 @@ func Run(options *RunOptions) error {
 			extractPackage = make(map[string][]deb.ExtractInfo)
 			extract[slice.Package] = extractPackage
 		}
-		arch := pkgArchive[slice.Package].Options().Arch
+		arch := pkgArch[slice.Package]
 		for targetPath, pathInfo := range slice.Contents {
 			if targetPath == "" {
 				continue
@@ -269,7 +276,7 @@ func Run(options *RunOptions) error {
 	// them to the appropriate slices.
 	relPaths := map[string][]*setup.Slice{}
 	for _, slice := range options.Selection.Slices {
-		arch := pkgArchive[slice.Package].Options().Arch
+		arch := pkgArch[slice.Package]
 		for relPath, pathInfo := range slice.Contents {
 			if len(pathInfo.Arch) > 0 && !slices.Contains(pathInfo.Arch, arch) {
 				continue
@@ -512,6 +519,11 @@ func selectPkgArchives(archives map[string]archive.Archive, selection *setup.Sel
 			continue
 		}
 		pkg := selection.Release.Packages[s.Package]
+		if pkg.Store != "" {
+			// Packages coming from a store are not fetched from an archive,
+			// so we skip them here.
+			continue
+		}
 
 		var candidates []*setup.Archive
 		if pkg.Archive == "" {

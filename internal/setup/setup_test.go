@@ -3896,6 +3896,195 @@ var setupTests = []setupTest{{
 		`,
 	},
 	relerror: `package "mypkg" slices defined more than once: slices/dir1/mypkg.yaml and slices/dir2/mypkg.yaml`,
+}, {
+	summary: "Store package is parsed correctly",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v3
+			maintenance:
+				standard: 2025-01-01
+				end-of-life: 2100-01-01
+			archives:
+				ubuntu:
+					version: 26.10
+					components: [main, universe]
+					suites: [stonking]
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+			stores:
+				bin:
+					kind: bin
+					version: 26.10
+					default-prefix: "bin-"
+		`,
+		"slices/bin/mypkg.yaml": `
+			package: mypkg
+			store: bin
+			default-track: "3.0"
+		`,
+	},
+	release: &setup.Release{
+		Format: "v3",
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "26.10",
+				Suites:     []string{"stonking"},
+				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
+			},
+		},
+		Stores: map[string]*setup.Store{
+			"bin": {
+				Name:          "bin",
+				Kind:          setup.StoreBin,
+				Version:       "26.10",
+				DefaultPrefix: "bin-",
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"mypkg": {
+				Name:         "mypkg",
+				Path:         "slices/bin/mypkg.yaml",
+				Store:        "bin",
+				DefaultTrack: "3.0",
+				Slices:       map[string]*setup.Slice{},
+			},
+		},
+		Maintenance: &setup.Maintenance{
+			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
+		},
+	},
+}, {
+	summary: "Store and archive are mutually exclusive",
+	input: map[string]string{
+		"slices/bin/mypkg.yaml": `
+			package: mypkg
+			archive: ubuntu
+			store: bin
+			default-track: "3.0"
+		`,
+	},
+	relerror: `cannot parse package "mypkg": both 'store' and 'archive' fields are set`,
+}, {
+	summary: "Store package missing default-track",
+	input: map[string]string{
+		"slices/bin/mypkg.yaml": `
+			package: mypkg
+			store: bin
+		`,
+	},
+	relerror: `cannot parse package "mypkg": 'default-track' is required when 'store' is set`,
+}, {
+	summary: "default-track without store",
+	input: map[string]string{
+		"slices/bin/mypkg.yaml": `
+			package: mypkg
+			default-track: "3.0"
+		`,
+	},
+	relerror: `cannot parse package "mypkg": 'store' is required when 'default-track' is set`,
+}, {
+	summary: "default-track must not contain /",
+	input: map[string]string{
+		"slices/bin/mypkg.yaml": `
+			package: mypkg
+			store: bin
+			default-track: "3.0/stable"
+		`,
+	},
+	relerror: `cannot parse package "mypkg": 'default-track' must be a track name without /`,
+}, {
+	summary: "Package store references undefined store",
+	input: map[string]string{
+		"slices/bin/mypkg.yaml": `
+			package: mypkg
+			store: no-such-store
+			default-track: "3.0"
+		`,
+	},
+	relerror: `slices/bin/mypkg.yaml: package refers to undefined store "no-such-store"`,
+}, {
+	summary: "Store with invalid kind",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v3
+			maintenance:
+				standard: 2025-01-01
+				end-of-life: 2100-01-01
+			archives:
+				ubuntu:
+					version: 26.10
+					components: [main, universe]
+					suites: [stonking]
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+			stores:
+				mystore:
+					kind: unknown-kind
+					version: 26.10
+					default-prefix: "pfx-"
+		`,
+	},
+	relerror: `chisel.yaml: store "mystore" has invalid kind "unknown-kind"`,
+}, {
+	summary: "Store missing version",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v3
+			maintenance:
+				standard: 2025-01-01
+				end-of-life: 2100-01-01
+			archives:
+				ubuntu:
+					version: 26.10
+					components: [main, universe]
+					suites: [stonking]
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+			stores:
+				bin:
+					kind: bin
+					default-prefix: "bin-"
+		`,
+	},
+	relerror: `chisel.yaml: store "bin" missing version field`,
+}, {
+	summary: "Store missing default-prefix",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v3
+			maintenance:
+				standard: 2025-01-01
+				end-of-life: 2100-01-01
+			archives:
+				ubuntu:
+					version: 26.10
+					components: [main, universe]
+					suites: [stonking]
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+			stores:
+				bin:
+					kind: bin
+					version: 26.10
+		`,
+	},
+	relerror: `chisel.yaml: store "bin" missing default-prefix field`,
 }}
 
 func (s *S) TestParseRelease(c *C) {
@@ -3998,9 +4187,9 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 		dir := c.MkDir()
 		for path, data := range test.input {
 			fpath := filepath.Join(dir, path)
-			err := os.MkdirAll(filepath.Dir(fpath), 0755)
+			err := os.MkdirAll(filepath.Dir(fpath), 0o755)
 			c.Assert(err, IsNil)
-			err = os.WriteFile(fpath, testutil.Reindent(data), 0644)
+			err = os.WriteFile(fpath, testutil.Reindent(data), 0o644)
 			c.Assert(err, IsNil)
 		}
 
@@ -4042,6 +4231,40 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 				c.Assert(selection, DeepEquals, test.selection)
 			}
 		}
+	}
+}
+
+func (s *S) TestStoresNotSupportedInOldFormats(c *C) {
+	for _, format := range []string{"v1", "v2"} {
+		c.Logf("Format: %s", format)
+		chiselYaml := `
+			format: ` + format + `
+			maintenance:
+				standard: 2025-01-01
+				end-of-life: 2100-01-01
+			archives:
+				ubuntu:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+			stores:
+				bin:
+					kind: bin
+					version: 22.04
+					default-prefix: "bin-"
+		`
+		dir := c.MkDir()
+		err := os.WriteFile(filepath.Join(dir, "chisel.yaml"), testutil.Reindent(chiselYaml), 0o644)
+		c.Assert(err, IsNil)
+		err = os.MkdirAll(filepath.Join(dir, "slices"), 0o755)
+		c.Assert(err, IsNil)
+		_, err = setup.ReadRelease(dir)
+		c.Assert(err, ErrorMatches, `chisel.yaml: stores is not supported in format "`+format+`"`)
 	}
 }
 
@@ -4230,6 +4453,40 @@ func (s *S) TestPackageYAMLFormat(c *C) {
 					two:
 						essential:
 							mypkg_three: {arch: i386}
+			`,
+		},
+	}, {
+		summary: "Store package fields",
+		input: map[string]string{
+			"chisel.yaml": `
+				format: v3
+				maintenance:
+					standard: 2025-01-01
+					end-of-life: 2100-01-01
+				archives:
+					ubuntu:
+						version: 26.10
+						components: [main, universe]
+						suites: [stonking]
+						public-keys: [test-key]
+				stores:
+					bin:
+						kind: bin
+						version: 26.10
+						default-prefix: "bin-"
+				public-keys:
+					test-key:
+						id: ` + testKey.ID + `
+						armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t\t") + `
+			`,
+			"slices/bin/mypkg.yaml": `
+				package: mypkg
+				store: bin
+				default-track: "3.0"
+				slices:
+					myslice:
+						contents:
+							/usr/bin/mypkg: {}
 			`,
 		},
 	}}
