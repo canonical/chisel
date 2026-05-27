@@ -4187,9 +4187,9 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 		dir := c.MkDir()
 		for path, data := range test.input {
 			fpath := filepath.Join(dir, path)
-			err := os.MkdirAll(filepath.Dir(fpath), 0o755)
+			err := os.MkdirAll(filepath.Dir(fpath), 0755)
 			c.Assert(err, IsNil)
-			err = os.WriteFile(fpath, testutil.Reindent(data), 0o644)
+			err = os.WriteFile(fpath, testutil.Reindent(data), 0644)
 			c.Assert(err, IsNil)
 		}
 
