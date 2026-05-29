@@ -102,11 +102,12 @@ func (p *Package) Content() []byte {
 }
 
 type Release struct {
-	Suite   string
-	Version string
-	Label   string
-	Items   []Item
-	PrivKey *packet.PrivateKey
+	Suite         string
+	Version       string
+	Label         string
+	Items         []Item
+	PrivKey       *packet.PrivateKey
+	AcquireByHash bool
 }
 
 func (r *Release) Walk(f func(Item) error) error {
@@ -127,6 +128,10 @@ func (r *Release) Content() []byte {
 		content := item.Content()
 		fmt.Fprintf(&digests, " %s  %d  %s\n", makeSha256(content), len(content), item.Path())
 	}
+	acquireByHash := ""
+	if r.AcquireByHash {
+		acquireByHash = "Acquire-By-Hash: yes\n"
+	}
 	content := fmt.Sprintf(string(testutil.Reindent(`
 		Origin: Ubuntu
 		Label: %s
@@ -137,9 +142,9 @@ func (r *Release) Content() []byte {
 		Architectures: amd64 arm64 armhf i386 ppc64el riscv64 s390x
 		Components: main restricted universe multiverse
 		Description: Ubuntu %s
-		SHA256:
+		%sSHA256:
 		%s
-	`)), r.Label, r.Suite, r.Version, r.Version, digests.String())
+	`)), r.Label, r.Suite, r.Version, r.Version, acquireByHash, digests.String())
 
 	var buf bytes.Buffer
 	writer, err := clearsign.Encode(&buf, r.PrivKey, nil)
@@ -166,6 +171,13 @@ func (r *Release) Render(prefix string, content map[string][]byte) error {
 			itemPath = path.Join(prefix, "dists", r.Suite, itemPath)
 		}
 		content[itemPath] = item.Content()
+		// When Acquire-By-Hash is enabled, also render the by-hash URL
+		// for index files (those under dists/).
+		if r.AcquireByHash && !strings.HasPrefix(item.Path(), "pool/") {
+			dir, _ := path.Split(itemPath)
+			hashPath := dir + "by-hash/SHA256/" + makeSha256(item.Content())
+			content[hashPath] = item.Content()
+		}
 		return nil
 	})
 }

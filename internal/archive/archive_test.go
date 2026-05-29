@@ -617,6 +617,112 @@ func (s *httpSuite) TestPackageInfo(c *C) {
 	}
 }
 
+func (s *httpSuite) TestAcquireByHash(c *C) {
+	// When Acquire-By-Hash is enabled, the by-hash URL should be used
+	// for fetching index files.
+	s.prepareArchiveAdjustRelease("jammy", "22.04", "amd64", []string{"main"}, func(r *testarchive.Release) {
+		r.AcquireByHash = true
+	})
+
+	options := archive.Options{
+		Label:      "ubuntu",
+		Version:    "22.04",
+		Arch:       "amd64",
+		Suites:     []string{"jammy"},
+		Components: []string{"main"},
+		CacheDir:   c.MkDir(),
+		PubKeys:    []*packet.PublicKey{s.pubKey},
+	}
+
+	_, err := archive.Open(&options)
+	c.Assert(err, IsNil)
+
+	// Verify that a by-hash URL was requested.
+	foundByHash := false
+	for _, req := range s.requests {
+		if strings.Contains(req.URL.Path, "by-hash/SHA256/") {
+			foundByHash = true
+			break
+		}
+	}
+	c.Assert(foundByHash, Equals, true)
+}
+
+func (s *httpSuite) TestAcquireByHashFallback(c *C) {
+	// When Acquire-By-Hash is enabled but the by-hash URL returns 404,
+	// Chisel should fall back to the canonical path.
+	s.prepareArchiveAdjustRelease("jammy", "22.04", "amd64", []string{"main"}, func(r *testarchive.Release) {
+		r.AcquireByHash = true
+	})
+
+	// Override Do to return 404 for by-hash URLs, normal responses otherwise.
+	var allRequests []*http.Request
+	restoreDo := archive.FakeDo(func(req *http.Request) (*http.Response, error) {
+		allRequests = append(allRequests, req)
+		c.Logf("Request: %s", req.URL.String())
+		if strings.Contains(req.URL.Path, "by-hash/") {
+			return &http.Response{
+				Body:       io.NopCloser(strings.NewReader("")),
+				StatusCode: 404,
+			}, nil
+		}
+		return s.Do(req)
+	})
+	defer restoreDo()
+
+	options := archive.Options{
+		Label:      "ubuntu",
+		Version:    "22.04",
+		Arch:       "amd64",
+		Suites:     []string{"jammy"},
+		Components: []string{"main"},
+		CacheDir:   c.MkDir(),
+		PubKeys:    []*packet.PublicKey{s.pubKey},
+	}
+
+	_, err := archive.Open(&options)
+	c.Assert(err, IsNil)
+
+	// Verify that both by-hash and canonical URLs were requested.
+	foundByHash := false
+	foundCanonical := false
+	for _, req := range allRequests {
+		if strings.Contains(req.URL.Path, "by-hash/SHA256/") {
+			foundByHash = true
+		}
+		if strings.Contains(req.URL.Path, "binary-amd64/Packages.gz") &&
+			!strings.Contains(req.URL.Path, "by-hash/") {
+			foundCanonical = true
+		}
+	}
+	c.Assert(foundByHash, Equals, true)
+	c.Assert(foundCanonical, Equals, true)
+}
+
+func (s *httpSuite) TestNoAcquireByHash(c *C) {
+	// When Acquire-By-Hash is not enabled, the canonical path should
+	// be used directly (no by-hash URLs).
+	s.prepareArchive("jammy", "22.04", "amd64", []string{"main"})
+
+	options := archive.Options{
+		Label:      "ubuntu",
+		Version:    "22.04",
+		Arch:       "amd64",
+		Suites:     []string{"jammy"},
+		Components: []string{"main"},
+		CacheDir:   c.MkDir(),
+		PubKeys:    []*packet.PublicKey{s.pubKey},
+	}
+
+	_, err := archive.Open(&options)
+	c.Assert(err, IsNil)
+
+	// Verify that no by-hash URL was requested.
+	for _, req := range s.requests {
+		c.Assert(strings.Contains(req.URL.Path, "by-hash/"), Equals, false)
+	}
+}
+
 func read(r io.Reader) string {
 	data, err := io.ReadAll(r)
 	if err != nil {
