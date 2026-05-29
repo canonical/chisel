@@ -79,6 +79,15 @@ var sliceKeyTests = []struct {
 	input: "..._bar",
 	err:   `invalid slice reference: "\.\.\._bar"`,
 }, {
+	input:    "bin/curl_bins",
+	expected: apacheutil.SliceKey{Package: "curl", Kind: "bin", Slice: "bins"},
+}, {
+	input:    "bin/g++_bins",
+	expected: apacheutil.SliceKey{Package: "g++", Kind: "bin", Slice: "bins"},
+}, {
+	input:    "b/curl_bins",
+	expected: apacheutil.SliceKey{Package: "curl", Kind: "b", Slice: "bins"},
+}, {
 	input: "white space_no-whitespace",
 	err:   `invalid slice reference: "white space_no-whitespace"`,
 }}
@@ -92,5 +101,48 @@ func (s *S) TestParseSliceKey(c *C) {
 		}
 		c.Assert(err, IsNil)
 		c.Assert(key, DeepEquals, test.expected)
+	}
+}
+
+var sliceKeyStringTests = []struct {
+	key      apacheutil.SliceKey
+	expected string
+}{{
+	key:      apacheutil.SliceKey{Package: "curl", Slice: "bins"},
+	expected: "curl_bins",
+}, {
+	key:      apacheutil.SliceKey{Package: "curl", Kind: "bin", Slice: "bins"},
+	expected: "bin/curl_bins",
+}, {
+	key:      apacheutil.SliceKey{Package: "g++", Kind: "bin", Slice: "bins"},
+	expected: "bin/g++_bins",
+}}
+
+func (s *S) TestSliceKeyString(c *C) {
+	for _, test := range sliceKeyStringTests {
+		c.Assert(test.key.String(), Equals, test.expected)
+	}
+}
+
+var sliceKeyMapKeyTests = []struct {
+	key      apacheutil.SliceKey
+	expected string
+}{{
+	key:      apacheutil.SliceKey{Package: "curl", Slice: "bins"},
+	expected: "curl",
+}, {
+	key:      apacheutil.SliceKey{Package: "curl", Kind: "bin", Slice: "bins"},
+	expected: "bin/curl",
+}, {
+	key:      apacheutil.SliceKey{Package: "curl", Kind: "bin"},
+	expected: "bin/curl",
+}, {
+	key:      apacheutil.SliceKey{Package: "curl"},
+	expected: "curl",
+}}
+
+func (s *S) TestSliceKeyMapKey(c *C) {
+	for _, test := range sliceKeyMapKeyTests {
+		c.Assert(test.key.MapKey(), Equals, test.expected)
 	}
 }
