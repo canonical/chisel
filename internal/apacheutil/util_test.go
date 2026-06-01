@@ -124,7 +124,7 @@ func (s *S) TestSliceKeyString(c *C) {
 	}
 }
 
-var sliceKeyMapKeyTests = []struct {
+var sliceKeyPkgKeyTests = []struct {
 	key      apacheutil.SliceKey
 	expected string
 }{{
@@ -141,8 +141,8 @@ var sliceKeyMapKeyTests = []struct {
 	expected: "curl",
 }}
 
-func (s *S) TestSliceKeyMapKey(c *C) {
-	for _, test := range sliceKeyMapKeyTests {
-		c.Assert(test.key.MapKey(), Equals, test.expected)
+func (s *S) TestSliceKeyPkgKey(c *C) {
+	for _, test := range sliceKeyPkgKeyTests {
+		c.Assert(test.key.PkgKey(), Equals, test.expected)
 	}
 }

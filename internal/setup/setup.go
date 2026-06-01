@@ -162,9 +162,9 @@ func pkgKind(release *Release, pkg *Package) string {
 	return string(store.Kind)
 }
 
-// pkgMapKey returns the qualified key for a package used as the
+// pkgKey returns the qualified key for a package used as the
 // Release.Packages map key.
-func pkgMapKey(name, kind string) string {
+func pkgKey(name, kind string) string {
 	if kind != "" {
 		return kind + "/" + name
 	}
@@ -175,8 +175,8 @@ func (s *Slice) String() string {
 	return SliceKey{Package: s.Package, Kind: s.Kind, Slice: s.Name}.String()
 }
 
-func (s *Slice) MapKey() string {
-	return SliceKey{Package: s.Package, Kind: s.Kind}.MapKey()
+func (s *Slice) PkgKey() string {
+	return SliceKey{Package: s.Package, Kind: s.Kind}.PkgKey()
 }
 
 // Selection holds the required configuration to create a Build for a selection
@@ -204,18 +204,18 @@ func (s *Selection) Prefers() (map[string]*Package, error) {
 			if !hasPrefers {
 				continue
 			}
-			sliceKey := pkgMapKey(slice.Package, slice.Kind)
+			sPkgKey := pkgKey(slice.Package, slice.Kind)
 			old, ok := pathPreferredPkg[path]
 			if !ok {
-				pathPreferredPkg[path] = s.Release.Packages[sliceKey]
+				pathPreferredPkg[path] = s.Release.Packages[sPkgKey]
 				continue
 			}
-			oldKey := pkgMapKey(old.Name, pkgKind(s.Release, old))
-			if oldKey == sliceKey {
+			oldKey := pkgKey(old.Name, pkgKind(s.Release, old))
+			if oldKey == sPkgKey {
 				// Skip if the package was already recorded.
 				continue
 			}
-			preferred, err := preferredPathPackage(path, oldKey, sliceKey, prefers)
+			preferred, err := preferredPathPackage(path, oldKey, sPkgKey, prefers)
 			if err != nil {
 				// Note: we have checked above that the path has prefers and
 				// they are different packages so the error cannot be
@@ -271,11 +271,11 @@ func (r *Release) validate() error {
 		kind := pkgKind(r, pkg)
 		for _, new := range pkg.Slices {
 			keys = append(keys, SliceKey{Package: pkg.Name, Kind: kind, Slice: new.Name})
-			newKey := pkgMapKey(new.Package, new.Kind)
+			newKey := pkgKey(new.Package, new.Kind)
 			for newPath, newInfo := range new.Contents {
 				if oldSlices, ok := paths[newPath]; ok {
 					for _, old := range oldSlices {
-						oldKey := pkgMapKey(old.Package, old.Kind)
+						oldKey := pkgKey(old.Package, old.Kind)
 						if newKey != oldKey {
 							_, err := preferredPathPackage(newPath, newKey, oldKey, prefers)
 							if err == nil {
@@ -310,7 +310,7 @@ func (r *Release) validate() error {
 
 			found := false
 			for _, slice := range paths[skey.path] {
-				if pkgMapKey(slice.Package, slice.Kind) == skey.pkg {
+				if pkgKey(slice.Package, slice.Kind) == skey.pkg {
 					found = true
 					break
 				}
@@ -335,8 +335,8 @@ func (r *Release) validate() error {
 				}
 				for _, new := range newSlices {
 					newInfo := new.Contents[newPath]
-					newKey := pkgMapKey(new.Package, new.Kind)
-					oldKey := pkgMapKey(old.Package, old.Kind)
+					newKey := pkgKey(new.Package, new.Kind)
+					oldKey := pkgKey(old.Package, old.Kind)
 					if oldInfo.Kind == GlobPath && (newInfo.Kind == GlobPath || newInfo.Kind == CopyPath) {
 						if newKey == oldKey {
 							continue
@@ -409,7 +409,7 @@ func (r *Release) validate() error {
 func order(pkgs map[string]*Package, keys []SliceKey, arch string) ([]SliceKey, error) {
 	// Preprocess the list to improve error messages.
 	for _, key := range keys {
-		if pkg, ok := pkgs[key.MapKey()]; !ok {
+		if pkg, ok := pkgs[key.PkgKey()]; !ok {
 			return nil, fmt.Errorf("slices of package %q not found", key.Package)
 		} else if _, ok := pkg.Slices[key.Slice]; !ok {
 			return nil, fmt.Errorf("slice %s not found", key)
@@ -427,7 +427,7 @@ func order(pkgs map[string]*Package, keys []SliceKey, arch string) ([]SliceKey, 
 			continue
 		}
 		seen[key] = true
-		pkg := pkgs[key.MapKey()]
+		pkg := pkgs[key.PkgKey()]
 		slice := pkg.Slices[key.Slice]
 		fqslice := slice.String()
 		predecessors := successors[fqslice]
@@ -436,7 +436,7 @@ func order(pkgs map[string]*Package, keys []SliceKey, arch string) ([]SliceKey, 
 				continue
 			}
 			fqreq := req.String()
-			if reqpkg, ok := pkgs[req.MapKey()]; !ok || reqpkg.Slices[req.Slice] == nil {
+			if reqpkg, ok := pkgs[req.PkgKey()]; !ok || reqpkg.Slices[req.Slice] == nil {
 				return nil, fmt.Errorf("%s requires %s, but slice is missing", fqslice, fqreq)
 			}
 			predecessors = append(predecessors, fqreq)
@@ -523,11 +523,11 @@ func readSlices(release *Release, baseDir, dirName string) error {
 		}
 
 		// Use the qualified key for the Packages map.
-		mapKey := pkgMapKey(pkg.Name, kind)
-		if existing, ok := release.Packages[mapKey]; ok {
+		pkgMapKey := pkgKey(pkg.Name, kind)
+		if existing, ok := release.Packages[pkgMapKey]; ok {
 			return fmt.Errorf("package %q slices defined more than once: %s and %s", pkgName, existing.Path, stripBase(baseDir, pkgPath))
 		}
-		release.Packages[mapKey] = pkg
+		release.Packages[pkgMapKey] = pkg
 	}
 	return nil
 }
@@ -560,7 +560,7 @@ func Select(release *Release, slices []SliceKey, arch string) (*Selection, error
 	}
 	selection.Slices = make([]*Slice, len(sorted))
 	for i, key := range sorted {
-		selection.Slices[i] = release.Packages[key.MapKey()].Slices[key.Slice]
+		selection.Slices[i] = release.Packages[key.PkgKey()].Slices[key.Slice]
 	}
 
 	for _, new := range selection.Slices {

@@ -83,7 +83,7 @@ func selectPackageSlices(release *setup.Release, queries []string) (packages []*
 	allPkgSlices := make(map[string]bool)
 
 	sliceExists := func(key setup.SliceKey) bool {
-		pkg, ok := release.Packages[key.MapKey()]
+		pkg, ok := release.Packages[key.PkgKey()]
 		if !ok {
 			return false
 		}

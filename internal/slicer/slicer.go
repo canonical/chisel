@@ -110,13 +110,13 @@ func Run(options *RunOptions) error {
 	// Build information to process the selection.
 	extract := make(map[string]map[string][]deb.ExtractInfo)
 	for _, slice := range options.Selection.Slices {
-		sliceKey := slice.MapKey()
-		extractPackage := extract[sliceKey]
+		pkgKey := slice.PkgKey()
+		extractPackage := extract[pkgKey]
 		if extractPackage == nil {
 			extractPackage = make(map[string][]deb.ExtractInfo)
-			extract[sliceKey] = extractPackage
+			extract[pkgKey] = extractPackage
 		}
-		arch := pkgArch[sliceKey]
+		arch := pkgArch[pkgKey]
 		for targetPath, pathInfo := range slice.Contents {
 			if targetPath == "" {
 				continue
@@ -157,16 +157,16 @@ func Run(options *RunOptions) error {
 	packages := make(map[string]io.ReadSeekCloser)
 	var pkgInfos []*archive.PackageInfo
 	for _, slice := range options.Selection.Slices {
-		sliceKey := slice.MapKey()
-		if packages[sliceKey] != nil {
+		pkgKey := slice.PkgKey()
+		if packages[pkgKey] != nil {
 			continue
 		}
-		reader, info, err := pkgArchive[sliceKey].Fetch(slice.Package)
+		reader, info, err := pkgArchive[pkgKey].Fetch(slice.Package)
 		if err != nil {
 			return err
 		}
 		defer reader.Close()
-		packages[sliceKey] = reader
+		packages[pkgKey] = reader
 		pkgInfos = append(pkgInfos, info)
 	}
 
@@ -243,19 +243,19 @@ func Run(options *RunOptions) error {
 
 	// Extract all packages, also using the selection order.
 	for _, slice := range options.Selection.Slices {
-		sliceKey := slice.MapKey()
-		reader := packages[sliceKey]
+		pkgKey := slice.PkgKey()
+		reader := packages[pkgKey]
 		if reader == nil {
 			continue
 		}
 		err := deb.Extract(reader, &deb.ExtractOptions{
 			Package:   slice.Package,
-			Extract:   extract[sliceKey],
+			Extract:   extract[pkgKey],
 			TargetDir: targetDir,
 			Create:    create,
 		})
 		reader.Close()
-		packages[sliceKey] = nil
+		packages[pkgKey] = nil
 		if err != nil {
 			return err
 		}
@@ -279,7 +279,7 @@ func Run(options *RunOptions) error {
 	// them to the appropriate slices.
 	relPaths := map[string][]*setup.Slice{}
 	for _, slice := range options.Selection.Slices {
-		arch := pkgArch[slice.MapKey()]
+		arch := pkgArch[slice.PkgKey()]
 		for relPath, pathInfo := range slice.Contents {
 			if len(pathInfo.Arch) > 0 && !slices.Contains(pathInfo.Arch, arch) {
 				continue
@@ -518,11 +518,11 @@ func selectPkgArchives(archives map[string]archive.Archive, selection *setup.Sel
 
 	pkgArchive := make(map[string]archive.Archive)
 	for _, s := range selection.Slices {
-		sliceKey := s.MapKey()
-		if _, ok := pkgArchive[sliceKey]; ok {
+		pkgKey := s.PkgKey()
+		if _, ok := pkgArchive[pkgKey]; ok {
 			continue
 		}
-		pkg := selection.Release.Packages[sliceKey]
+		pkg := selection.Release.Packages[pkgKey]
 		if pkg.Store != "" {
 			// Packages coming from a store are not fetched from an archive,
 			// so we skip them here.
@@ -549,7 +549,7 @@ func selectPkgArchives(archives map[string]archive.Archive, selection *setup.Sel
 		if chosen == nil {
 			return nil, fmt.Errorf("cannot find package %q in archive(s)", pkg.Name)
 		}
-		pkgArchive[sliceKey] = chosen
+		pkgArchive[pkgKey] = chosen
 	}
 	return pkgArchive, nil
 }

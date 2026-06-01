@@ -20,8 +20,8 @@ func (s SliceKey) String() string {
 	return s.Package + "_" + s.Slice
 }
 
-// MapKey returns the qualified package key used for Release.Packages lookups.
-func (s SliceKey) MapKey() string {
+// PkgKey returns the qualified package key used for Release.Packages lookups.
+func (s SliceKey) PkgKey() string {
 	if s.Kind != "" {
 		return s.Kind + "/" + s.Package
 	}
