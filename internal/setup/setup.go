@@ -231,7 +231,7 @@ func (r *Release) validate() error {
 							_, err := preferredPathPackage(newPath, new.Package, old.Package, prefers)
 							if err == nil {
 								continue
-							} else if err != preferNone {
+							} else if err != errPreferNone {
 								return err
 							}
 						}
@@ -585,10 +585,10 @@ func preferredPathPackage(path, pkg1, pkg2 string, prefers map[preferKey]string)
 		pkg1, pkg2 = sortPair(conflict, sample)
 		return "", fmt.Errorf("package %q and %q conflict on %s without prefer relationship", pkg1, pkg2, path)
 	}
-	return "", preferNone
+	return "", errPreferNone
 }
 
-var preferNone = errors.New("no prefer relationship")
+var errPreferNone = errors.New("no prefer relationship")
 
 func findPrefer(path, pkg, prefer string, prefers map[preferKey]string) (found bool, err error) {
 	if len(prefers) == 0 {

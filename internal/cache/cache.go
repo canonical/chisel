@@ -91,7 +91,7 @@ func (cw *Writer) Digest() string {
 
 const digestKind = "sha256"
 
-var MissErr = fmt.Errorf("not cached")
+var ErrMiss = fmt.Errorf("not cached")
 
 func (c *Cache) filePath(digest string) string {
 	return filepath.Join(c.Dir, digestKind, digest)
@@ -134,12 +134,12 @@ func (c *Cache) Write(digest string, data []byte) error {
 
 func (c *Cache) Open(digest string) (io.ReadSeekCloser, error) {
 	if c.Dir == "" || digest == "" {
-		return nil, MissErr
+		return nil, ErrMiss
 	}
 	filePath := c.filePath(digest)
 	file, err := os.Open(filePath)
 	if os.IsNotExist(err) {
-		return nil, MissErr
+		return nil, ErrMiss
 	} else if err != nil {
 		return nil, fmt.Errorf("cannot open cache file: %v", err)
 	}

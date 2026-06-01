@@ -377,7 +377,7 @@ func (index *ubuntuIndex) fetch(path, digest string, flags fetchFlags) (io.ReadS
 	reader, err := index.archive.cache.Open(digest)
 	if err == nil {
 		return reader, nil
-	} else if err != cache.MissErr {
+	} else if err != cache.ErrMiss {
 		return nil, err
 	}
 
