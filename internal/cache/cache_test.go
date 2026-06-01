@@ -1,13 +1,13 @@
 package cache_test
 
 import (
-	. "gopkg.in/check.v1"
-
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	. "gopkg.in/check.v1"
 
 	"github.com/canonical/chisel/internal/cache"
 )
@@ -155,7 +155,7 @@ func (s *S) TestCacheOpen(c *C) {
 func (s *S) TestCacheSHA3384(c *C) {
 	cc := cache.Cache{Dir: c.MkDir()}
 
-	w := cc.Create(cache.SHA3384, "")
+	w := cc.Create(cache.SHA3_384, "")
 	_, err := w.Write([]byte("data1"))
 	c.Assert(err, IsNil)
 	err = w.Close()
@@ -164,7 +164,7 @@ func (s *S) TestCacheSHA3384(c *C) {
 
 	c.Assert(sha3Digest, Not(Equals), data1Digest)
 
-	data, err := cc.Read(cache.SHA3384, sha3Digest)
+	data, err := cc.Read(cache.SHA3_384, sha3Digest)
 	c.Assert(err, IsNil)
 	c.Assert(string(data), Equals, "data1")
 
@@ -175,6 +175,82 @@ func (s *S) TestCacheSHA3384(c *C) {
 	// SHA-256 entry must not be visible under SHA3-384.
 	err = cc.Write(cache.SHA256, data1Digest, []byte("data1"))
 	c.Assert(err, IsNil)
-	_, err = cc.Open(cache.SHA3384, data1Digest)
+	_, err = cc.Open(cache.SHA3_384, data1Digest)
 	c.Assert(err, Equals, cache.MissErr)
+}
+
+func (s *S) TestCacheExpireBothAlgorithms(c *C) {
+	cc := cache.Cache{Dir: c.MkDir()}
+
+	// Write entries under both algorithms.
+	err := cc.Write(cache.SHA256, data1Digest, []byte("data1"))
+	c.Assert(err, IsNil)
+	err = cc.Write(cache.SHA256, data2Digest, []byte("data2"))
+	c.Assert(err, IsNil)
+
+	w := cc.Create(cache.SHA3_384, "")
+	_, err = w.Write([]byte("sha3data1"))
+	c.Assert(err, IsNil)
+	err = w.Close()
+	c.Assert(err, IsNil)
+	sha3Digest1 := w.Digest()
+
+	w = cc.Create(cache.SHA3_384, "")
+	_, err = w.Write([]byte("sha3data2"))
+	c.Assert(err, IsNil)
+	err = w.Close()
+	c.Assert(err, IsNil)
+	sha3Digest2 := w.Digest()
+
+	sha256Expired := filepath.Join(cc.Dir, "sha256", data1Digest)
+	sha256Fresh := filepath.Join(cc.Dir, "sha256", data2Digest)
+	sha3Expired := filepath.Join(cc.Dir, "sha3-384", sha3Digest1)
+	sha3Fresh := filepath.Join(cc.Dir, "sha3-384", sha3Digest2)
+
+	// Mark one entry per algorithm as expired.
+	now := time.Now()
+	expiredTime := now.Add(-2 * time.Hour)
+	err = os.Chtimes(sha256Expired, now, expiredTime)
+	c.Assert(err, IsNil)
+	err = os.Chtimes(sha3Expired, now, expiredTime)
+	c.Assert(err, IsNil)
+
+	err = cc.Expire(time.Hour)
+	c.Assert(err, IsNil)
+
+	// Expired entries must be removed from both algorithm directories.
+	_, err = os.Stat(sha256Expired)
+	c.Assert(os.IsNotExist(err), Equals, true)
+	_, err = os.Stat(sha3Expired)
+	c.Assert(os.IsNotExist(err), Equals, true)
+
+	// Fresh entries must remain in both algorithm directories.
+	_, err = os.Stat(sha256Fresh)
+	c.Assert(err, IsNil)
+	_, err = os.Stat(sha3Fresh)
+	c.Assert(err, IsNil)
+}
+
+func (s *S) TestCacheExpireMissingAlgoDir(c *C) {
+	cc := cache.Cache{Dir: c.MkDir()}
+
+	// Only write under SHA-256; the sha3-384 directory won't exist.
+	err := cc.Write(cache.SHA256, data1Digest, []byte("data1"))
+	c.Assert(err, IsNil)
+
+	// Expire should succeed despite the missing sha3-384 directory.
+	err = cc.Expire(time.Hour)
+	c.Assert(err, IsNil)
+
+	// The fresh SHA-256 entry must still be present.
+	_, err = os.Stat(filepath.Join(cc.Dir, "sha256", data1Digest))
+	c.Assert(err, IsNil)
+}
+
+func (s *S) TestCacheExpireNoAlgoDirs(c *C) {
+	cc := cache.Cache{Dir: c.MkDir()}
+
+	// No algorithm directories exist at all.
+	err := cc.Expire(time.Hour)
+	c.Assert(err, IsNil)
 }
