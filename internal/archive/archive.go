@@ -2,10 +2,12 @@ package archive
 
 import (
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"path"
 	"slices"
 	"strings"
 	"time"
@@ -90,14 +92,15 @@ type ubuntuArchive struct {
 }
 
 type ubuntuIndex struct {
-	label     string
-	version   string
-	arch      string
-	suite     string
-	component string
-	release   control.Section
-	packages  control.File
-	archive   *ubuntuArchive
+	label         string
+	version       string
+	arch          string
+	suite         string
+	component     string
+	release       control.Section
+	packages      control.File
+	archive       *ubuntuArchive
+	acquireByHash bool
 }
 
 func (a *ubuntuArchive) Options() *Options {
@@ -322,6 +325,7 @@ func (index *ubuntuIndex) fetchRelease() error {
 	logf("Release date: %s", section.Get("Date"))
 
 	index.release = section
+	index.acquireByHash = section.Get("Acquire-By-Hash") == "yes"
 	return nil
 }
 
@@ -333,8 +337,14 @@ func (index *ubuntuIndex) fetchIndex() error {
 		return fmt.Errorf("%s is missing from %s %s component digests", packagesPath, index.suite, index.component)
 	}
 
+	// Look up the digest for the .gz file to use in by-hash URL construction.
+	// The by-hash URL must reference the file as it exists on the server
+	// (gzipped), not the decompressed content.
+	gzPackagesPath := packagesPath + ".gz"
+	byHashDigest, _, _ := control.ParsePathInfo(digests, gzPackagesPath)
+
 	logf("Fetching index for %s %s %s %s component...", index.displayName(), index.version, index.suite, index.component)
-	reader, err := index.fetch(index.distPath(packagesPath+".gz"), digest, fetchBulk)
+	reader, err := index.fetch(index.distPath(gzPackagesPath), digest, fetchBulk, byHashDigest)
 	if err != nil {
 		return err
 	}
@@ -373,7 +383,15 @@ func (index *ubuntuIndex) distPath(suffix string) string {
 	return "dists/" + index.suite + "/" + suffix
 }
 
-func (index *ubuntuIndex) fetch(path, digest string, flags fetchFlags) (io.ReadSeekCloser, error) {
+// byHashPath transforms a dists/ path into its by-hash equivalent.
+// For example: dists/jammy/main/binary-amd64/Packages.gz
+// becomes:     dists/jammy/main/binary-amd64/by-hash/SHA256/<digest>
+func (index *ubuntuIndex) byHashPath(p, digest string) string {
+	dir, _ := path.Split(p)
+	return dir + "by-hash/SHA256/" + digest
+}
+
+func (index *ubuntuIndex) fetch(path, digest string, flags fetchFlags, byHashDigest ...string) (io.ReadSeekCloser, error) {
 	reader, err := index.archive.cache.Open(digest)
 	if err == nil {
 		return reader, nil
@@ -381,11 +399,52 @@ func (index *ubuntuIndex) fetch(path, digest string, flags fetchFlags) (io.ReadS
 		return nil, err
 	}
 
+	// Build the list of candidate URLs to try. When Acquire-By-Hash is
+	// supported and the path is an index file (under dists/ with a known
+	// by-hash digest), try the by-hash URL first. This avoids digest
+	// mismatches during archive publication. Fall back to the canonical
+	// path if the by-hash URL returns 404.
+	var hashDigest string
+	if len(byHashDigest) > 0 {
+		hashDigest = byHashDigest[0]
+	}
+	var candidates []string
+	if index.acquireByHash && hashDigest != "" && strings.HasPrefix(path, "dists/") {
+		hashPath := index.byHashPath(path, hashDigest)
+		cleanURL, err := url.JoinPath(index.archive.baseURL, hashPath)
+		if err != nil {
+			return nil, fmt.Errorf("internal error: cannot construct by-hash URL: %v", err)
+		}
+		logf("Fetching by-hash: %s", hashPath)
+		candidates = append(candidates, cleanURL)
+	}
 	cleanURL, err := url.JoinPath(index.archive.baseURL, path)
 	if err != nil {
 		return nil, fmt.Errorf("internal error: cannot construct URL: %v", err)
 	}
-	req, err := http.NewRequest("GET", cleanURL, nil)
+	candidates = append(candidates, cleanURL)
+
+	var lastErr error
+	for _, candidateURL := range candidates {
+		reader, lastErr = index.fetchURL(candidateURL, path, digest, flags)
+		if lastErr == nil {
+			return reader, nil
+		}
+		if !errors.Is(lastErr, errArchiveNotFound) {
+			return nil, lastErr
+		}
+		// 404 for this candidate; try the next one.
+		if len(candidates) > 1 {
+			logf("By-hash URL not found, falling back to canonical path for %s", path)
+		}
+	}
+	return nil, lastErr
+}
+
+var errArchiveNotFound = errors.New("cannot find archive data")
+
+func (index *ubuntuIndex) fetchURL(rawURL, path, digest string, flags fetchFlags) (io.ReadSeekCloser, error) {
+	req, err := http.NewRequest("GET", rawURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create HTTP request: %v", err)
 	}
@@ -410,7 +469,7 @@ func (index *ubuntuIndex) fetch(path, digest string, flags fetchFlags) (io.ReadS
 	case 401:
 		return nil, fmt.Errorf("cannot fetch from %q: unauthorized", index.label)
 	case 404:
-		return nil, fmt.Errorf("cannot find archive data")
+		return nil, errArchiveNotFound
 	default:
 		return nil, fmt.Errorf("error from archive: %v", resp.Status)
 	}
