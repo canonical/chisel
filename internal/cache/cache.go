@@ -124,7 +124,7 @@ func (c *Cache) Create(algo hashAlgo, digest string) *Writer {
 	}
 	h, err := newHash(algo)
 	if err != nil {
-		return &Writer{err: fmt.Errorf("cannot create cache entry: %v", err)}
+		return &Writer{err: fmt.Errorf("internal error: %v", err)}
 	}
 	err = os.MkdirAll(filepath.Join(c.Dir, string(algo)), 0755)
 	if err != nil {
