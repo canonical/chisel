@@ -3999,6 +3999,27 @@ var setupTests = []setupTest{{
 }, {
 	summary: "Store and archive are mutually exclusive",
 	input: map[string]string{
+		"chisel.yaml": `
+			format: v3
+			maintenance:
+				standard: 2025-01-01
+				end-of-life: 2100-01-01
+			archives:
+				ubuntu:
+					version: 26.10
+					components: [main, universe]
+					suites: [stonking]
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+			stores:
+				bin:
+					kind: bin
+					version: 26.10
+					default-prefix: "bin-"
+		`,
 		"slices/bin/mypkg.yaml": `
 			package: mypkg
 			archive: ubuntu
@@ -4008,8 +4029,29 @@ var setupTests = []setupTest{{
 	},
 	relerror: `cannot parse package "mypkg": both 'store' and 'archive' fields are set`,
 }, {
-	summary: "Store package missing default-track",
+	summary: "Store package missing default-track (v3)",
 	input: map[string]string{
+		"chisel.yaml": `
+			format: v3
+			maintenance:
+				standard: 2025-01-01
+				end-of-life: 2100-01-01
+			archives:
+				ubuntu:
+					version: 26.10
+					components: [main, universe]
+					suites: [stonking]
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+			stores:
+				bin:
+					kind: bin
+					version: 26.10
+					default-prefix: "bin-"
+		`,
 		"slices/bin/mypkg.yaml": `
 			package: mypkg
 			store: bin
@@ -4017,8 +4059,29 @@ var setupTests = []setupTest{{
 	},
 	relerror: `cannot parse package "mypkg": 'default-track' is required when 'store' is set`,
 }, {
-	summary: "default-track without store",
+	summary: "default-track without store (v3)",
 	input: map[string]string{
+		"chisel.yaml": `
+			format: v3
+			maintenance:
+				standard: 2025-01-01
+				end-of-life: 2100-01-01
+			archives:
+				ubuntu:
+					version: 26.10
+					components: [main, universe]
+					suites: [stonking]
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+			stores:
+				bin:
+					kind: bin
+					version: 26.10
+					default-prefix: "bin-"
+		`,
 		"slices/bin/mypkg.yaml": `
 			package: mypkg
 			default-track: "3.0"
@@ -4026,8 +4089,29 @@ var setupTests = []setupTest{{
 	},
 	relerror: `cannot parse package "mypkg": 'store' is required when 'default-track' is set`,
 }, {
-	summary: "default-track must not contain /",
+	summary: "default-track must not contain / (v3)",
 	input: map[string]string{
+		"chisel.yaml": `
+			format: v3
+			maintenance:
+				standard: 2025-01-01
+				end-of-life: 2100-01-01
+			archives:
+				ubuntu:
+					version: 26.10
+					components: [main, universe]
+					suites: [stonking]
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+			stores:
+				bin:
+					kind: bin
+					version: 26.10
+					default-prefix: "bin-"
+		`,
 		"slices/bin/mypkg.yaml": `
 			package: mypkg
 			store: bin
@@ -4036,8 +4120,29 @@ var setupTests = []setupTest{{
 	},
 	relerror: `cannot parse package "mypkg": 'default-track' must be a track name without /`,
 }, {
-	summary: "Package store references undefined store",
+	summary: "Package store references undefined store (v3)",
 	input: map[string]string{
+		"chisel.yaml": `
+			format: v3
+			maintenance:
+				standard: 2025-01-01
+				end-of-life: 2100-01-01
+			archives:
+				ubuntu:
+					version: 26.10
+					components: [main, universe]
+					suites: [stonking]
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+			stores:
+				bin:
+					kind: bin
+					version: 26.10
+					default-prefix: "bin-"
+		`,
 		"slices/bin/mypkg.yaml": `
 			package: mypkg
 			store: no-such-store

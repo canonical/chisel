@@ -146,18 +146,6 @@ func ParseSliceKey(sliceKey string) (SliceKey, error) {
 	return apacheutil.ParseSliceKey(sliceKey)
 }
 
-// pkgDefaultPrefix returns the DefaultPrefix for a package based on its store reference.
-func pkgDefaultPrefix(release *Release, pkg *Package) string {
-	if pkg.Store == "" {
-		return ""
-	}
-	store := release.Stores[pkg.Store]
-	if store == nil {
-		return ""
-	}
-	return store.DefaultPrefix
-}
-
 func (s *Slice) String() string {
 	return SliceKey{Package: s.RealPkgName(), Slice: s.Name}.String()
 }

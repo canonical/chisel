@@ -510,10 +510,14 @@ func parsePackage(release *Release, pkgName, pkgPath string, data []byte) (*Pack
 			return nil, fmt.Errorf("cannot parse package %q: 'store' is required when 'default-track' is set", pkgName)
 		}
 	}
-	pkg.Archive = yamlPkg.Archive
 
 	// Derive the package DefaultPrefix from its store reference.
-	prefix := pkgDefaultPrefix(release, &pkg)
+	var prefix string
+	if pkg.Store != "" {
+		if store := release.Stores[pkg.Store]; store != nil {
+			prefix = store.DefaultPrefix
+		}
+	}
 	pkg.RealName = prefix + pkgName
 
 	if release.Format == "v1" || release.Format == "v2" {
@@ -542,6 +546,7 @@ func parsePackage(release *Release, pkgName, pkgPath string, data []byte) (*Pack
 		}
 	}
 
+	pkg.Archive = yamlPkg.Archive
 	zeroPath := yamlPath{}
 	for sliceName, yamlSlice := range yamlPkg.Slices {
 		match := apacheutil.SnameExp.FindStringSubmatch(sliceName)
