@@ -134,7 +134,7 @@ func manifestAddReport(dbw *jsonwall.DBWriter, report *Report) error {
 func unixPerm(mode fs.FileMode) (perm uint32) {
 	perm = uint32(mode.Perm())
 	if mode&fs.ModeSticky != 0 {
-		perm |= 01000
+		perm |= 0o1000
 	}
 	return perm
 }
@@ -291,8 +291,8 @@ func Validate(mfest *manifest.Manifest) (err error) {
 		if err != nil {
 			return err
 		}
-		if !pkgExist[sk.Package] {
-			return fmt.Errorf("slice %s refers to missing package %q", slice.Name, sk.Package)
+		if !pkgExist[sk.RealName] {
+			return fmt.Errorf("slice %s refers to missing package %q", slice.Name, sk.RealName)
 		}
 		sliceExist[slice.Name] = true
 		return nil
