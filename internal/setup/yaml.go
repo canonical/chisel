@@ -472,7 +472,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 	return release, err
 }
 
-func parsePackage(format, pkgName, pkgPath string, data []byte) (*Package, error) {
+func parsePackage(release *Release, pkgName, pkgPath string, data []byte) (*Package, error) {
 	pkg := Package{
 		Name:   pkgName,
 		Path:   pkgPath,
@@ -488,32 +488,6 @@ func parsePackage(format, pkgName, pkgPath string, data []byte) (*Package, error
 	}
 	if yamlPkg.Name != pkg.Name {
 		return nil, fmt.Errorf("%s: filename and 'package' field (%q) disagree", pkgPath, yamlPkg.Name)
-	}
-
-	if format == "v1" || format == "v2" {
-		if yamlPkg.Essential.style != unsetEssential && yamlPkg.Essential.style != listEssential {
-			return nil, fmt.Errorf("cannot parse package %q: essential expects a list", pkgName)
-		}
-		for sliceName, yamlSlice := range yamlPkg.Slices {
-			if yamlSlice.Essential.style != unsetEssential && yamlSlice.Essential.style != listEssential {
-				return nil, fmt.Errorf("cannot parse slice %s: essential expects a list", SliceKey{Package: pkgName, Slice: sliceName})
-			}
-		}
-	} else {
-		if yamlPkg.V3Essential != nil {
-			return nil, fmt.Errorf("cannot parse package %q: v3-essential is obsolete since format v3", pkgName)
-		}
-		if yamlPkg.Essential.style != unsetEssential && yamlPkg.Essential.style != mapEssential {
-			return nil, fmt.Errorf("cannot parse package %q: essential expects a map", pkgName)
-		}
-		for sliceName, yamlSlice := range yamlPkg.Slices {
-			if yamlSlice.V3Essential != nil {
-				return nil, fmt.Errorf("cannot parse slice %s: v3-essential is obsolete since format v3", SliceKey{Package: pkgName, Slice: sliceName})
-			}
-			if yamlSlice.Essential.style != unsetEssential && yamlSlice.Essential.style != mapEssential {
-				return nil, fmt.Errorf("cannot parse slice %s: essential expects a map", SliceKey{Package: pkgName, Slice: sliceName})
-			}
-		}
 	}
 
 	if yamlPkg.Store != "" && yamlPkg.Archive != "" {
@@ -534,6 +508,37 @@ func parsePackage(format, pkgName, pkgPath string, data []byte) (*Package, error
 		}
 	}
 	pkg.Archive = yamlPkg.Archive
+
+	// Derive the package DefaultPrefix from its store reference.
+	prefix := pkgDefaultPrefix(release, &pkg)
+	pkgRealName := realName(pkgName, prefix)
+
+	if release.Format == "v1" || release.Format == "v2" {
+		if yamlPkg.Essential.style != unsetEssential && yamlPkg.Essential.style != listEssential {
+			return nil, fmt.Errorf("cannot parse package %q: essential expects a list", pkgName)
+		}
+		for sliceName, yamlSlice := range yamlPkg.Slices {
+			if yamlSlice.Essential.style != unsetEssential && yamlSlice.Essential.style != listEssential {
+				return nil, fmt.Errorf("cannot parse slice %s: essential expects a list", SliceKey{Package: pkgName, Slice: sliceName})
+			}
+		}
+	} else {
+		if yamlPkg.V3Essential != nil {
+			return nil, fmt.Errorf("cannot parse package %q: v3-essential is obsolete since format v3", pkgRealName)
+		}
+		if yamlPkg.Essential.style != unsetEssential && yamlPkg.Essential.style != mapEssential {
+			return nil, fmt.Errorf("cannot parse package %q: essential expects a map", pkgRealName)
+		}
+		for sliceName, yamlSlice := range yamlPkg.Slices {
+			if yamlSlice.V3Essential != nil {
+				return nil, fmt.Errorf("cannot parse slice %s: v3-essential is obsolete since format v3", SliceKey{Package: pkgRealName, Slice: sliceName})
+			}
+			if yamlSlice.Essential.style != unsetEssential && yamlSlice.Essential.style != mapEssential {
+				return nil, fmt.Errorf("cannot parse slice %s: essential expects a map", SliceKey{Package: pkgRealName, Slice: sliceName})
+			}
+		}
+	}
+
 	zeroPath := yamlPath{}
 	for sliceName, yamlSlice := range yamlPkg.Slices {
 		match := apacheutil.SnameExp.FindStringSubmatch(sliceName)
@@ -544,12 +549,13 @@ func parsePackage(format, pkgName, pkgPath string, data []byte) (*Package, error
 			return !unicode.IsPrint(r)
 		})
 		if len(yamlSlice.Hint) > 40 || hintNotPrintable {
-			return nil, fmt.Errorf("slice %s has invalid hint %q (must be len <= 40, only contain letters, numbers, symbols and \" \")", SliceKey{Package: pkgName, Slice: sliceName}, yamlSlice.Hint)
+			return nil, fmt.Errorf("slice %s has invalid hint %q (must be len <= 40, only contain letters, numbers, symbols and \" \")", SliceKey{Package: pkgRealName, Slice: sliceName}, yamlSlice.Hint)
 		}
 		slice := &Slice{
-			Package: pkgName,
-			Name:    sliceName,
-			Hint:    yamlSlice.Hint,
+			Package:       pkgName,
+			DefaultPrefix: prefix,
+			Name:          sliceName,
+			Hint:          yamlSlice.Hint,
 			Scripts: SliceScripts{
 				Mutate: yamlSlice.Mutate,
 			},

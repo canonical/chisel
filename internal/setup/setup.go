@@ -501,20 +501,13 @@ func readSlices(release *Release, baseDir, dirName string) error {
 			return fmt.Errorf("cannot read slice definition file: %v", err)
 		}
 
-		pkg, err := parsePackage(release.Format, pkgName, stripBase(baseDir, pkgPath), data)
+		pkg, err := parsePackage(release, pkgName, stripBase(baseDir, pkgPath), data)
 		if err != nil {
 			return err
 		}
 
-		// Derive the package DefaultPrefix from its store reference.
-		prefix := pkgDefaultPrefix(release, pkg)
-
-		// Set DefaultPrefix on all slices in the package.
-		for _, slice := range pkg.Slices {
-			slice.DefaultPrefix = prefix
-		}
-
 		// Use the real name for the Packages map.
+		prefix := pkgDefaultPrefix(release, pkg)
 		pkgRealName := realName(pkg.Name, prefix)
 		if existing, ok := release.Packages[pkgRealName]; ok {
 			return fmt.Errorf("package %q slices defined more than once: %s and %s", pkgName, existing.Path, stripBase(baseDir, pkgPath))
