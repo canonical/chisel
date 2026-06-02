@@ -243,19 +243,19 @@ func Run(options *RunOptions) error {
 
 	// Extract all packages, also using the selection order.
 	for _, slice := range options.Selection.Slices {
-		realName := slice.RealPkgName()
-		reader := packages[realName]
+		realPkgName := slice.RealPkgName()
+		reader := packages[realPkgName]
 		if reader == nil {
 			continue
 		}
 		err := deb.Extract(reader, &deb.ExtractOptions{
 			Package:   slice.Package,
-			Extract:   extract[realName],
+			Extract:   extract[realPkgName],
 			TargetDir: targetDir,
 			Create:    create,
 		})
 		reader.Close()
-		packages[realName] = nil
+		packages[realPkgName] = nil
 		if err != nil {
 			return err
 		}
@@ -519,11 +519,11 @@ func selectPkgArchives(archives map[string]archive.Archive, selection *setup.Sel
 
 	pkgArchive := make(map[string]archive.Archive)
 	for _, s := range selection.Slices {
-		realName := s.RealPkgName()
-		if _, ok := pkgArchive[realName]; ok {
+		realPkgName := s.RealPkgName()
+		if _, ok := pkgArchive[realPkgName]; ok {
 			continue
 		}
-		pkg := selection.Release.Packages[realName]
+		pkg := selection.Release.Packages[realPkgName]
 		if pkg.Store != "" {
 			// Packages coming from a store are not fetched from an archive,
 			// so we skip them here.
@@ -550,7 +550,7 @@ func selectPkgArchives(archives map[string]archive.Archive, selection *setup.Sel
 		if chosen == nil {
 			return nil, fmt.Errorf("cannot find package %q in archive(s)", pkg.Name)
 		}
-		pkgArchive[realName] = chosen
+		pkgArchive[realPkgName] = chosen
 	}
 	return pkgArchive, nil
 }
