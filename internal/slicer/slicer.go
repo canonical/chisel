@@ -110,7 +110,7 @@ func Run(options *RunOptions) error {
 	// Build information to process the selection.
 	extract := make(map[string]map[string][]deb.ExtractInfo)
 	for _, slice := range options.Selection.Slices {
-		realName := slice.RealName()
+		realName := slice.RealPkgName()
 		extractPackage := extract[realName]
 		if extractPackage == nil {
 			extractPackage = make(map[string][]deb.ExtractInfo)
@@ -157,7 +157,7 @@ func Run(options *RunOptions) error {
 	packages := make(map[string]io.ReadSeekCloser)
 	var pkgInfos []*archive.PackageInfo
 	for _, slice := range options.Selection.Slices {
-		realName := slice.RealName()
+		realName := slice.RealPkgName()
 		if packages[realName] != nil {
 			continue
 		}
@@ -243,7 +243,7 @@ func Run(options *RunOptions) error {
 
 	// Extract all packages, also using the selection order.
 	for _, slice := range options.Selection.Slices {
-		realName := slice.RealName()
+		realName := slice.RealPkgName()
 		reader := packages[realName]
 		if reader == nil {
 			continue
@@ -279,7 +279,7 @@ func Run(options *RunOptions) error {
 	// them to the appropriate slices.
 	relPaths := map[string][]*setup.Slice{}
 	for _, slice := range options.Selection.Slices {
-		arch := pkgArch[slice.RealName()]
+		arch := pkgArch[slice.RealPkgName()]
 		for relPath, pathInfo := range slice.Contents {
 			if len(pathInfo.Arch) > 0 && !slices.Contains(pathInfo.Arch, arch) {
 				continue
@@ -519,7 +519,7 @@ func selectPkgArchives(archives map[string]archive.Archive, selection *setup.Sel
 
 	pkgArchive := make(map[string]archive.Archive)
 	for _, s := range selection.Slices {
-		realName := s.RealName()
+		realName := s.RealPkgName()
 		if _, ok := pkgArchive[realName]; ok {
 			continue
 		}

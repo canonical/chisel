@@ -12,9 +12,7 @@ type SliceKey struct {
 	Slice   string
 }
 
-func (s SliceKey) String() string {
-	return s.Package + "_" + s.Slice
-}
+func (s SliceKey) String() string { return s.Package + "_" + s.Slice }
 
 // FnameExp matches the slice definition file basename.
 var FnameExp = regexp.MustCompile(`^([a-z0-9](?:-?[.a-z0-9+]){1,})\.yaml$`)
@@ -30,5 +28,5 @@ func ParseSliceKey(sliceKey string) (SliceKey, error) {
 	if match == nil {
 		return SliceKey{}, fmt.Errorf("invalid slice reference: %q", sliceKey)
 	}
-	return SliceKey{Package: match[1], Slice: match[2]}, nil
+	return SliceKey{match[1], match[2]}, nil
 }

@@ -92,9 +92,10 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
-				Slices: map[string]*setup.Slice{},
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
+				Slices:   map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -139,8 +140,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name: "mypkg",
-				Path: "slices/mydir/mypkg.yaml",
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice1": {
 						Package: "mypkg",
@@ -204,8 +206,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name: "mypkg",
-				Path: "slices/mydir/mypkg.yaml",
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice1": {
 						Package: "mypkg",
@@ -270,9 +273,10 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
-				Slices: map[string]*setup.Slice{},
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
+				Slices:   map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -327,9 +331,10 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
-				Slices: map[string]*setup.Slice{},
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
+				Slices:   map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -582,8 +587,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name: "mypkg",
-				Path: "slices/mydir/mypkg.yaml",
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice1": {
 						Package: "mypkg",
@@ -800,8 +806,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name: "mypkg",
-				Path: "slices/mydir/mypkg.yaml",
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg",
@@ -843,8 +850,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name: "mypkg",
-				Path: "slices/mydir/mypkg.yaml",
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg",
@@ -887,8 +895,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name: "mypkg",
-				Path: "slices/mydir/mypkg.yaml",
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg",
@@ -960,9 +969,10 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
-				Slices: map[string]*setup.Slice{},
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
+				Slices:   map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -1166,8 +1176,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name: "mypkg",
-				Path: "slices/mydir/mypkg.yaml",
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg",
@@ -1241,9 +1252,10 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
-				Slices: map[string]*setup.Slice{},
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
+				Slices:   map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -1354,8 +1366,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"jq": {
-				Name: "jq",
-				Path: "slices/mydir/jq.yaml",
+				RealName: "jq",
+				Name:     "jq",
+				Path:     "slices/mydir/jq.yaml",
 				Slices: map[string]*setup.Slice{
 					"bins": {
 						Package: "jq",
@@ -1465,8 +1478,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name: "mypkg",
-				Path: "slices/mydir/mypkg.yaml",
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"slice1": {
 						Package: "mypkg",
@@ -1538,8 +1552,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name: "mypkg",
-				Path: "slices/mydir/mypkg.yaml",
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"slice1": {
 						Package: "mypkg",
@@ -1560,8 +1575,9 @@ var setupTests = []setupTest{{
 				},
 			},
 			"myotherpkg": {
-				Name: "myotherpkg",
-				Path: "slices/mydir/myotherpkg.yaml",
+				RealName: "myotherpkg",
+				Name:     "myotherpkg",
+				Path:     "slices/mydir/myotherpkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"slice1": {
 						Package: "myotherpkg",
@@ -1721,8 +1737,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name: "mypkg",
-				Path: "slices/mydir/mypkg.yaml",
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg",
@@ -1774,8 +1791,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name: "mypkg",
-				Path: "slices/mydir/mypkg.yaml",
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg",
@@ -1869,8 +1887,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name: "mypkg",
-				Path: "slices/mydir/mypkg.yaml",
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg",
@@ -1882,8 +1901,9 @@ var setupTests = []setupTest{{
 				},
 			},
 			"mypkg2": {
-				Name: "mypkg2",
-				Path: "slices/mydir/mypkg2.yaml",
+				RealName: "mypkg2",
+				Name:     "mypkg2",
+				Path:     "slices/mydir/mypkg2.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg2",
@@ -2040,9 +2060,10 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
-				Slices: map[string]*setup.Slice{},
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
+				Slices:   map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -2166,9 +2187,10 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
-				Slices: map[string]*setup.Slice{},
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
+				Slices:   map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -2233,9 +2255,10 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
-				Slices: map[string]*setup.Slice{},
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
+				Slices:   map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -2328,9 +2351,10 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
-				Slices: map[string]*setup.Slice{},
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
+				Slices:   map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -2454,8 +2478,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg1": {
-				Name: "mypkg1",
-				Path: "slices/mydir/mypkg1.yaml",
+				RealName: "mypkg1",
+				Name:     "mypkg1",
+				Path:     "slices/mydir/mypkg1.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice1": {
 						Package: "mypkg1",
@@ -2475,8 +2500,9 @@ var setupTests = []setupTest{{
 				},
 			},
 			"mypkg2": {
-				Name: "mypkg2",
-				Path: "slices/mydir/mypkg2.yaml",
+				RealName: "mypkg2",
+				Name:     "mypkg2",
+				Path:     "slices/mydir/mypkg2.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice1": {
 						Package: "mypkg2",
@@ -2489,8 +2515,9 @@ var setupTests = []setupTest{{
 				},
 			},
 			"mypkg3": {
-				Name: "mypkg3",
-				Path: "slices/mydir/mypkg3.yaml",
+				RealName: "mypkg3",
+				Name:     "mypkg3",
+				Path:     "slices/mydir/mypkg3.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice1": {
 						Package: "mypkg3",
@@ -2889,9 +2916,10 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
-				Slices: map[string]*setup.Slice{},
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
+				Slices:   map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -2939,9 +2967,10 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
-				Slices: map[string]*setup.Slice{},
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
+				Slices:   map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -3128,9 +3157,10 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
-				Slices: map[string]*setup.Slice{},
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
+				Slices:   map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -3250,9 +3280,10 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
-				Slices: map[string]*setup.Slice{},
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
+				Slices:   map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -3372,9 +3403,10 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
-				Slices: map[string]*setup.Slice{},
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
+				Slices:   map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -3494,9 +3526,10 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
-				Slices: map[string]*setup.Slice{},
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
+				Slices:   map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -3614,9 +3647,10 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
-				Slices: map[string]*setup.Slice{},
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
+				Slices:   map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -3657,8 +3691,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name: "mypkg",
-				Path: "slices/mydir/mypkg.yaml",
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice1": {
 						Package: "mypkg",
@@ -3948,6 +3983,7 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"bin-mypkg": {
+				RealName:     "bin-mypkg",
 				Name:         "mypkg",
 				Path:         "slices/bin/mypkg.yaml",
 				Store:        "bin",
@@ -4125,8 +4161,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"curl": {
-				Name: "curl",
-				Path: "slices/curl.yaml",
+				RealName: "curl",
+				Name:     "curl",
+				Path:     "slices/curl.yaml",
 				Slices: map[string]*setup.Slice{
 					"libs": {
 						Package:       "curl",
@@ -4147,6 +4184,7 @@ var setupTests = []setupTest{{
 				},
 			},
 			"bin-curl": {
+				RealName:     "bin-curl",
 				Name:         "curl",
 				Path:         "slices/bin/curl.yaml",
 				Store:        "bin",
