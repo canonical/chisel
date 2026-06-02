@@ -584,32 +584,32 @@ type preferKey struct {
 
 func (r *Release) prefers() (map[preferKey]string, error) {
 	prefers := make(map[preferKey]string)
-	for mapKey, pkg := range r.Packages {
+	for realName, pkg := range r.Packages {
 		for _, slice := range pkg.Slices {
 			for path, info := range slice.Contents {
 				if info.Prefer != "" {
 					if _, ok := r.Packages[info.Prefer]; !ok {
 						return nil, fmt.Errorf("slice %s path %s 'prefer' refers to undefined package %q", slice, path, info.Prefer)
 					}
-					tkey := preferKey{preferTarget, path, mapKey}
+					tkey := preferKey{preferTarget, path, realName}
 					skey := preferKey{preferSource, path, info.Prefer}
 					if target, ok := prefers[tkey]; ok {
 						if target != info.Prefer {
 							pkg1, pkg2 := sortPair(target, info.Prefer)
 							return nil, fmt.Errorf("package %q has conflicting prefers for %s: %s != %s",
-								mapKey, path, pkg1, pkg2)
+								realName, path, pkg1, pkg2)
 						}
 					} else if source, ok := prefers[skey]; ok {
-						if source != mapKey {
-							pkg1, pkg2 := sortPair(source, mapKey)
+						if source != realName {
+							pkg1, pkg2 := sortPair(source, realName)
 							return nil, fmt.Errorf("packages %q and %q cannot both prefer %q for %s",
 								pkg1, pkg2, info.Prefer, path)
 						}
 					} else {
 						prefers[tkey] = info.Prefer
-						prefers[skey] = mapKey
+						prefers[skey] = realName
 						// Sample package that requires this path to be in a prefer relationship.
-						prefers[preferKey{preferSource, path, ""}] = mapKey
+						prefers[preferKey{preferSource, path, ""}] = realName
 					}
 				}
 			}
