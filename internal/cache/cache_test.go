@@ -46,11 +46,11 @@ func (s *S) TestCacheEmpty(c *C) {
 	cc := cache.Cache{c.MkDir()}
 
 	_, err := cc.Open(data1Digest)
-	c.Assert(err, Equals, cache.MissErr)
+	c.Assert(err, Equals, cache.ErrMiss)
 	_, err = cc.Read(data1Digest)
-	c.Assert(err, Equals, cache.MissErr)
+	c.Assert(err, Equals, cache.ErrMiss)
 	_, err = cc.Read("")
-	c.Assert(err, Equals, cache.MissErr)
+	c.Assert(err, Equals, cache.ErrMiss)
 }
 
 func (s *S) TestCacheReadWrite(c *C) {
@@ -73,9 +73,9 @@ func (s *S) TestCacheReadWrite(c *C) {
 	c.Assert(string(data2), Equals, "data2")
 
 	_, err = cc.Read(data3Digest)
-	c.Assert(err, Equals, cache.MissErr)
+	c.Assert(err, Equals, cache.ErrMiss)
 	_, err = cc.Read("")
-	c.Assert(err, Equals, cache.MissErr)
+	c.Assert(err, Equals, cache.ErrMiss)
 
 	_, err = os.Stat(data1Path)
 	c.Assert(err, IsNil)
@@ -131,9 +131,9 @@ func (s *S) TestCacheWrongDigest(c *C) {
 	c.Assert(errClose, ErrorMatches, "expected digest "+data1Digest+", got "+data2Digest)
 
 	_, err = cc.Read(data1Digest)
-	c.Assert(err, Equals, cache.MissErr)
+	c.Assert(err, Equals, cache.ErrMiss)
 	_, err = cc.Read(data2Digest)
-	c.Assert(err, Equals, cache.MissErr)
+	c.Assert(err, Equals, cache.ErrMiss)
 }
 
 func (s *S) TestCacheOpen(c *C) {

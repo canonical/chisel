@@ -56,14 +56,6 @@ linters:
         text: "ST1003:"
       - linters:
           - staticcheck
-        path: internal/cache/cache.go
-        text: "ST1012: error var MissErr"
-      - linters:
-          - staticcheck
-        path: internal/setup/setup.go
-        text: "ST1012: error var preferNone"
-      - linters:
-          - staticcheck
         path: internal/testutil/containschecker.go
         text: "QF1011"
 issues:
