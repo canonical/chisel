@@ -1,0 +1,21 @@
+name: chisel-dev
+base: ubuntu@24.04
+sdks:
+  - name: go # Necessary build and test toolchains.
+    channel: 1.25
+    # Publisher:  Dmitry Lyfar (dlyfar)
+    # https://github.com/canonical/go-sdk
+  - name: vscode-remote # Standard tool for agentic work.
+    # Publisher:  Dmitry Lyfar (dlyfar)
+    # https://github.com/canonical/vscode-remote-sdk
+
+  # Additional agents used as standardization is in progress.
+  - name: opencode
+    # Publisher:  Dmitry Lyfar (dlyfar)
+    # https://github.com/canonical/opencode-sdk
+  - name: codex
+    # Publisher:  Dmitry Lyfar (dlyfar)
+    # https://github.com/canonical/codex-sdk
+  - name: copilot
+    # Publisher:  Dmitry Lyfar (dlyfar)
+    # https://github.com/canonical/copilot-sdk
