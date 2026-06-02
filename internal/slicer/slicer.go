@@ -23,7 +23,7 @@ import (
 	"github.com/canonical/chisel/internal/setup"
 )
 
-const manifestMode fs.FileMode = 0644
+const manifestMode fs.FileMode = 0o644
 
 type RunOptions struct {
 	Selection *setup.Selection
@@ -95,6 +95,13 @@ func Run(options *RunOptions) error {
 		return err
 	}
 
+	// Build a map from package real name to architecture.
+	pkgArch := make(map[string]string)
+	for realName, a := range pkgArchive {
+		pkgArch[realName] = a.Options().Arch
+	}
+	// TODO Handle packages coming from a store as well when we support them.
+
 	prefers, err := options.Selection.Prefers()
 	if err != nil {
 		return err
@@ -103,12 +110,13 @@ func Run(options *RunOptions) error {
 	// Build information to process the selection.
 	extract := make(map[string]map[string][]deb.ExtractInfo)
 	for _, slice := range options.Selection.Slices {
-		extractPackage := extract[slice.Package]
+		realName := slice.RealPkgName()
+		extractPackage := extract[realName]
 		if extractPackage == nil {
 			extractPackage = make(map[string][]deb.ExtractInfo)
-			extract[slice.Package] = extractPackage
+			extract[realName] = extractPackage
 		}
-		arch := pkgArchive[slice.Package].Options().Arch
+		arch := pkgArch[realName]
 		for targetPath, pathInfo := range slice.Contents {
 			if targetPath == "" {
 				continue
@@ -149,15 +157,16 @@ func Run(options *RunOptions) error {
 	packages := make(map[string]io.ReadSeekCloser)
 	var pkgInfos []*archive.PackageInfo
 	for _, slice := range options.Selection.Slices {
-		if packages[slice.Package] != nil {
+		realName := slice.RealPkgName()
+		if packages[realName] != nil {
 			continue
 		}
-		reader, info, err := pkgArchive[slice.Package].Fetch(slice.Package)
+		reader, info, err := pkgArchive[realName].Fetch(slice.Package)
 		if err != nil {
 			return err
 		}
 		defer reader.Close()
-		packages[slice.Package] = reader
+		packages[realName] = reader
 		pkgInfos = append(pkgInfos, info)
 	}
 
@@ -234,18 +243,19 @@ func Run(options *RunOptions) error {
 
 	// Extract all packages, also using the selection order.
 	for _, slice := range options.Selection.Slices {
-		reader := packages[slice.Package]
+		realPkgName := slice.RealPkgName()
+		reader := packages[realPkgName]
 		if reader == nil {
 			continue
 		}
 		err := deb.Extract(reader, &deb.ExtractOptions{
 			Package:   slice.Package,
-			Extract:   extract[slice.Package],
+			Extract:   extract[realPkgName],
 			TargetDir: targetDir,
 			Create:    create,
 		})
 		reader.Close()
-		packages[slice.Package] = nil
+		packages[realPkgName] = nil
 		if err != nil {
 			return err
 		}
@@ -269,7 +279,7 @@ func Run(options *RunOptions) error {
 	// them to the appropriate slices.
 	relPaths := map[string][]*setup.Slice{}
 	for _, slice := range options.Selection.Slices {
-		arch := pkgArchive[slice.Package].Options().Arch
+		arch := pkgArch[slice.RealPkgName()]
 		for relPath, pathInfo := range slice.Contents {
 			if len(pathInfo.Arch) > 0 && !slices.Contains(pathInfo.Arch, arch) {
 				continue
@@ -351,7 +361,8 @@ func Run(options *RunOptions) error {
 }
 
 func generateManifests(targetDir string, selection *setup.Selection,
-	report *manifestutil.Report, pkgInfos []*archive.PackageInfo) error {
+	report *manifestutil.Report, pkgInfos []*archive.PackageInfo,
+) error {
 	manifestSlices := manifestutil.FindPaths(selection.Slices)
 	if len(manifestSlices) == 0 {
 		// Nothing to do.
@@ -456,9 +467,9 @@ func createFile(targetDir, relPath string, pathInfo setup.PathInfo) (*fsutil.Ent
 	targetMode := pathInfo.Mode
 	if targetMode == 0 {
 		if pathInfo.Kind == setup.DirPath {
-			targetMode = 0755
+			targetMode = 0o755
 		} else {
-			targetMode = 0644
+			targetMode = 0o644
 		}
 	}
 
@@ -508,10 +519,16 @@ func selectPkgArchives(archives map[string]archive.Archive, selection *setup.Sel
 
 	pkgArchive := make(map[string]archive.Archive)
 	for _, s := range selection.Slices {
-		if _, ok := pkgArchive[s.Package]; ok {
+		realPkgName := s.RealPkgName()
+		if _, ok := pkgArchive[realPkgName]; ok {
 			continue
 		}
-		pkg := selection.Release.Packages[s.Package]
+		pkg := selection.Release.Packages[realPkgName]
+		if pkg.Store != "" {
+			// Packages coming from a store are not fetched from an archive,
+			// so we skip them here.
+			continue
+		}
 
 		var candidates []*setup.Archive
 		if pkg.Archive == "" {
@@ -533,7 +550,7 @@ func selectPkgArchives(archives map[string]archive.Archive, selection *setup.Sel
 		if chosen == nil {
 			return nil, fmt.Errorf("cannot find package %q in archive(s)", pkg.Name)
 		}
-		pkgArchive[pkg.Name] = chosen
+		pkgArchive[realPkgName] = chosen
 	}
 	return pkgArchive, nil
 }
