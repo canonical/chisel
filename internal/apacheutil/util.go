@@ -8,12 +8,12 @@ import (
 )
 
 type SliceKey struct {
-	RealName string
-	Slice    string
+	Package string
+	Slice   string
 }
 
 func (s SliceKey) String() string {
-	return s.RealName + "_" + s.Slice
+	return s.Package + "_" + s.Slice
 }
 
 // FnameExp matches the slice definition file basename.
@@ -30,5 +30,5 @@ func ParseSliceKey(sliceKey string) (SliceKey, error) {
 	if match == nil {
 		return SliceKey{}, fmt.Errorf("invalid slice reference: %q", sliceKey)
 	}
-	return SliceKey{RealName: match[1], Slice: match[2]}, nil
+	return SliceKey{Package: match[1], Slice: match[2]}, nil
 }

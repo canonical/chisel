@@ -158,7 +158,7 @@ var setupTests = []setupTest{{
 						Package: "mypkg",
 						Name:    "myslice2",
 						Essential: map[setup.SliceKey]setup.EssentialInfo{
-							{RealName: "mypkg", Slice: "myslice1"}: {},
+							{Package: "mypkg", Slice: "myslice1"}: {},
 						},
 						Contents: map[string]setup.PathInfo{
 							"/another/path": {Kind: "copy"},
@@ -421,7 +421,7 @@ var setupTests = []setupTest{{
 				myslice2: {essential: [mypkg1_myslice1]}
 		`,
 	},
-	selslices: []setup.SliceKey{{RealName: "mypkg1", Slice: "myslice1"}},
+	selslices: []setup.SliceKey{{Package: "mypkg1", Slice: "myslice1"}},
 	selection: &setup.Selection{
 		Slices: []*setup.Slice{{
 			Package: "mypkg1",
@@ -444,7 +444,7 @@ var setupTests = []setupTest{{
 				myslice2: {essential: [mypkg1_myslice1]}
 		`,
 	},
-	selslices: []setup.SliceKey{{RealName: "mypkg2", Slice: "myslice2"}},
+	selslices: []setup.SliceKey{{Package: "mypkg2", Slice: "myslice2"}},
 	selection: &setup.Selection{
 		Slices: []*setup.Slice{{
 			Package: "mypkg1",
@@ -453,7 +453,7 @@ var setupTests = []setupTest{{
 			Package: "mypkg2",
 			Name:    "myslice2",
 			Essential: map[setup.SliceKey]setup.EssentialInfo{
-				{RealName: "mypkg1", Slice: "myslice1"}: {},
+				{Package: "mypkg1", Slice: "myslice1"}: {},
 			},
 		}},
 	},
@@ -483,7 +483,7 @@ var setupTests = []setupTest{{
 						/path3: {symlink: /link}
 		`,
 	},
-	selslices: []setup.SliceKey{{RealName: "mypkg1", Slice: "myslice1"}, {RealName: "mypkg1", Slice: "myslice2"}, {RealName: "mypkg2", Slice: "myslice1"}},
+	selslices: []setup.SliceKey{{Package: "mypkg1", Slice: "myslice1"}, {Package: "mypkg1", Slice: "myslice2"}, {Package: "mypkg2", Slice: "myslice1"}},
 }, {
 	summary: "Conflicting paths across slices",
 	input: map[string]string{
@@ -1472,7 +1472,7 @@ var setupTests = []setupTest{{
 						Package: "mypkg",
 						Name:    "slice1",
 						Essential: map[setup.SliceKey]setup.EssentialInfo{
-							{RealName: "mypkg", Slice: "slice2"}: {},
+							{Package: "mypkg", Slice: "slice2"}: {},
 						},
 					},
 					"slice2": {
@@ -1483,16 +1483,16 @@ var setupTests = []setupTest{{
 						Package: "mypkg",
 						Name:    "slice3",
 						Essential: map[setup.SliceKey]setup.EssentialInfo{
-							{RealName: "mypkg", Slice: "slice2"}: {},
-							{RealName: "mypkg", Slice: "slice1"}: {},
-							{RealName: "mypkg", Slice: "slice4"}: {},
+							{Package: "mypkg", Slice: "slice2"}: {},
+							{Package: "mypkg", Slice: "slice1"}: {},
+							{Package: "mypkg", Slice: "slice4"}: {},
 						},
 					},
 					"slice4": {
 						Package: "mypkg",
 						Name:    "slice4",
 						Essential: map[setup.SliceKey]setup.EssentialInfo{
-							{RealName: "mypkg", Slice: "slice2"}: {},
+							{Package: "mypkg", Slice: "slice2"}: {},
 						},
 					},
 				},
@@ -1545,16 +1545,16 @@ var setupTests = []setupTest{{
 						Package: "mypkg",
 						Name:    "slice1",
 						Essential: map[setup.SliceKey]setup.EssentialInfo{
-							{RealName: "myotherpkg", Slice: "slice2"}: {},
-							{RealName: "mypkg", Slice: "slice2"}:      {},
-							{RealName: "myotherpkg", Slice: "slice1"}: {},
+							{Package: "myotherpkg", Slice: "slice2"}: {},
+							{Package: "mypkg", Slice: "slice2"}:      {},
+							{Package: "myotherpkg", Slice: "slice1"}: {},
 						},
 					},
 					"slice2": {
 						Package: "mypkg",
 						Name:    "slice2",
 						Essential: map[setup.SliceKey]setup.EssentialInfo{
-							{RealName: "myotherpkg", Slice: "slice2"}: {},
+							{Package: "myotherpkg", Slice: "slice2"}: {},
 						},
 					},
 				},
@@ -1739,7 +1739,7 @@ var setupTests = []setupTest{{
 			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
 		},
 	},
-	selslices: []setup.SliceKey{{RealName: "mypkg", Slice: "myslice"}},
+	selslices: []setup.SliceKey{{Package: "mypkg", Slice: "myslice"}},
 	selection: &setup.Selection{
 		Slices: []*setup.Slice{{
 			Package: "mypkg",
@@ -1792,7 +1792,7 @@ var setupTests = []setupTest{{
 			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
 		},
 	},
-	selslices: []setup.SliceKey{{RealName: "mypkg", Slice: "myslice"}},
+	selslices: []setup.SliceKey{{Package: "mypkg", Slice: "myslice"}},
 	selerror:  `slice mypkg_myslice has invalid 'generate' for path /dir/\*\*: "foo"`,
 }, {
 	summary: "Paths with generate: manifest must have trailing /**",
@@ -2407,10 +2407,10 @@ var setupTests = []setupTest{{
 }, {
 	summary: "Path conflicts with 'prefer'",
 	selslices: []setup.SliceKey{
-		{RealName: "mypkg1", Slice: "myslice1"},
-		{RealName: "mypkg1", Slice: "myslice2"},
-		{RealName: "mypkg2", Slice: "myslice1"},
-		{RealName: "mypkg3", Slice: "myslice1"},
+		{Package: "mypkg1", Slice: "myslice1"},
+		{Package: "mypkg1", Slice: "myslice2"},
+		{Package: "mypkg2", Slice: "myslice1"},
+		{Package: "mypkg3", Slice: "myslice1"},
 	},
 	input: map[string]string{
 		"slices/mydir/mypkg1.yaml": `
@@ -2514,9 +2514,9 @@ var setupTests = []setupTest{{
 }, {
 	summary: "Path conflicts with 'prefer' depends on selection",
 	selslices: []setup.SliceKey{
-		{RealName: "mypkg1", Slice: "myslice1"},
-		{RealName: "mypkg1", Slice: "myslice2"},
-		{RealName: "mypkg2", Slice: "myslice1"},
+		{Package: "mypkg1", Slice: "myslice1"},
+		{Package: "mypkg1", Slice: "myslice2"},
+		{Package: "mypkg2", Slice: "myslice1"},
 	},
 	input: map[string]string{
 		"slices/mydir/mypkg1.yaml": `
@@ -3664,24 +3664,24 @@ var setupTests = []setupTest{{
 						Package: "mypkg",
 						Name:    "myslice1",
 						Essential: map[setup.SliceKey]setup.EssentialInfo{
-							{RealName: "mypkg", Slice: "myslice2"}: {Arch: []string{"amd64"}},
-							{RealName: "mypkg", Slice: "myslice3"}: {Arch: []string{"amd64", "arm64"}},
-							{RealName: "mypkg", Slice: "myslice4"}: {Arch: []string{"amd64", "i386"}},
-							{RealName: "mypkg", Slice: "myslice5"}: {Arch: nil},
+							{Package: "mypkg", Slice: "myslice2"}: {Arch: []string{"amd64"}},
+							{Package: "mypkg", Slice: "myslice3"}: {Arch: []string{"amd64", "arm64"}},
+							{Package: "mypkg", Slice: "myslice4"}: {Arch: []string{"amd64", "i386"}},
+							{Package: "mypkg", Slice: "myslice5"}: {Arch: nil},
 						},
 					},
 					"myslice2": {
 						Package: "mypkg",
 						Name:    "myslice2",
 						Essential: map[setup.SliceKey]setup.EssentialInfo{
-							{RealName: "mypkg", Slice: "myslice4"}: {Arch: []string{"amd64", "i386"}},
+							{Package: "mypkg", Slice: "myslice4"}: {Arch: []string{"amd64", "i386"}},
 						},
 					},
 					"myslice3": {
 						Package: "mypkg",
 						Name:    "myslice3",
 						Essential: map[setup.SliceKey]setup.EssentialInfo{
-							{RealName: "mypkg", Slice: "myslice4"}: {Arch: []string{"amd64", "i386"}},
+							{Package: "mypkg", Slice: "myslice4"}: {Arch: []string{"amd64", "i386"}},
 						},
 					},
 					"myslice4": {
@@ -3693,7 +3693,7 @@ var setupTests = []setupTest{{
 						Package: "mypkg",
 						Name:    "myslice5",
 						Essential: map[setup.SliceKey]setup.EssentialInfo{
-							{RealName: "mypkg", Slice: "myslice4"}: {Arch: []string{"amd64", "i386"}},
+							{Package: "mypkg", Slice: "myslice4"}: {Arch: []string{"amd64", "i386"}},
 						},
 					},
 				},
@@ -4672,7 +4672,7 @@ func (s *S) TestSelectEmptyArch(c *C) {
 	release, err := setup.ReadRelease(dir)
 	c.Assert(err, IsNil)
 
-	selslice := []setup.SliceKey{{RealName: "mypkg", Slice: "myslice"}}
+	selslice := []setup.SliceKey{{Package: "mypkg", Slice: "myslice"}}
 	selection, err := setup.Select(release, selslice, "")
 	c.Assert(err, IsNil)
 

@@ -98,7 +98,7 @@ const (
 	GeneratePath PathKind = "generate"
 
 	// TODO Maybe in the future, for binary support.
-	//Base64Path PathKind = "base64"
+	// Base64Path PathKind = "base64"
 )
 
 type PathUntil string
@@ -164,7 +164,7 @@ func realName(name, defaultPrefix string) string {
 }
 
 func (s *Slice) String() string {
-	return SliceKey{RealName: s.RealName(), Slice: s.Name}.String()
+	return SliceKey{Package: s.RealName(), Slice: s.Name}.String()
 }
 
 func (s *Slice) RealName() string {
@@ -262,7 +262,7 @@ func (r *Release) validate() error {
 	for _, pkg := range r.Packages {
 		prefix := pkgDefaultPrefix(r, pkg)
 		for _, new := range pkg.Slices {
-			keys = append(keys, SliceKey{RealName: realName(pkg.Name, prefix), Slice: new.Name})
+			keys = append(keys, SliceKey{Package: realName(pkg.Name, prefix), Slice: new.Name})
 			newRealName := new.RealName()
 			for newPath, newInfo := range new.Contents {
 				if oldSlices, ok := paths[newPath]; ok {
@@ -401,8 +401,8 @@ func (r *Release) validate() error {
 func order(pkgs map[string]*Package, keys []SliceKey, arch string) ([]SliceKey, error) {
 	// Preprocess the list to improve error messages.
 	for _, key := range keys {
-		if pkg, ok := pkgs[key.RealName]; !ok {
-			return nil, fmt.Errorf("slices of package %q not found", key.RealName)
+		if pkg, ok := pkgs[key.Package]; !ok {
+			return nil, fmt.Errorf("slices of package %q not found", key.Package)
 		} else if _, ok := pkg.Slices[key.Slice]; !ok {
 			return nil, fmt.Errorf("slice %s not found", key)
 		}
@@ -419,7 +419,7 @@ func order(pkgs map[string]*Package, keys []SliceKey, arch string) ([]SliceKey, 
 			continue
 		}
 		seen[key] = true
-		pkg := pkgs[key.RealName]
+		pkg := pkgs[key.Package]
 		slice := pkg.Slices[key.Slice]
 		fqslice := slice.String()
 		predecessors := successors[fqslice]
@@ -428,7 +428,7 @@ func order(pkgs map[string]*Package, keys []SliceKey, arch string) ([]SliceKey, 
 				continue
 			}
 			fqreq := req.String()
-			if reqpkg, ok := pkgs[req.RealName]; !ok || reqpkg.Slices[req.Slice] == nil {
+			if reqpkg, ok := pkgs[req.Package]; !ok || reqpkg.Slices[req.Slice] == nil {
 				return nil, fmt.Errorf("%s requires %s, but slice is missing", fqslice, fqreq)
 			}
 			predecessors = append(predecessors, fqreq)
@@ -552,7 +552,7 @@ func Select(release *Release, slices []SliceKey, arch string) (*Selection, error
 	}
 	selection.Slices = make([]*Slice, len(sorted))
 	for i, key := range sorted {
-		selection.Slices[i] = release.Packages[key.RealName].Slices[key.Slice]
+		selection.Slices[i] = release.Packages[key.Package].Slices[key.Slice]
 	}
 
 	for _, new := range selection.Slices {

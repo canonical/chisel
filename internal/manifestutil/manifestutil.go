@@ -291,8 +291,8 @@ func Validate(mfest *manifest.Manifest) (err error) {
 		if err != nil {
 			return err
 		}
-		if !pkgExist[sk.RealName] {
-			return fmt.Errorf("slice %s refers to missing package %q", slice.Name, sk.RealName)
+		if !pkgExist[sk.Package] {
+			return fmt.Errorf("slice %s refers to missing package %q", slice.Name, sk.Package)
 		}
 		sliceExist[slice.Name] = true
 		return nil

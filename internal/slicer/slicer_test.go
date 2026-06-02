@@ -76,7 +76,7 @@ var testPackageCopyrightEntries = []testutil.TarEntry{
 
 var slicerTests = []slicerTest{{
 	summary: "Basic slicing",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -109,7 +109,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Glob extraction",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -131,7 +131,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Create new file under extracted directory and preserve parent directory permissions",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -151,7 +151,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Create new nested file under extracted directory and preserve parent directory permissions",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -172,7 +172,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Create new directory under extracted directory and preserve parent directory permissions",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -192,7 +192,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Create new file using glob and preserve parent directory permissions",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -216,7 +216,7 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Conditional architecture",
 	arch:    "amd64",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -247,7 +247,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Copyright is not installed implicitly",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		// Add the copyright entries to the package.
@@ -272,8 +272,8 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Install two packages",
 	slices: []setup.SliceKey{
-		{RealName: "test-package", Slice: "myslice"},
-		{RealName: "other-package", Slice: "myslice"},
+		{Package: "test-package", Slice: "myslice"},
+		{Package: "other-package", Slice: "myslice"},
 	},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
@@ -316,9 +316,9 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Install two packages, explicit path has preference over implicit parent",
 	slices: []setup.SliceKey{
-		{RealName: "a-implicit-parent", Slice: "myslice"},
-		{RealName: "b-explicit-dir", Slice: "myslice"},
-		{RealName: "c-implicit-parent", Slice: "myslice"},
+		{Package: "a-implicit-parent", Slice: "myslice"},
+		{Package: "b-explicit-dir", Slice: "myslice"},
+		{Package: "c-implicit-parent", Slice: "myslice"},
 	},
 	pkgs: []*testutil.TestPackage{{
 		Name: "a-implicit-parent",
@@ -376,8 +376,8 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Valid same file in two slices in different packages",
 	slices: []setup.SliceKey{
-		{RealName: "test-package", Slice: "myslice"},
-		{RealName: "other-package", Slice: "myslice"},
+		{Package: "test-package", Slice: "myslice"},
+		{Package: "other-package", Slice: "myslice"},
 	},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
@@ -410,7 +410,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Script: write a file",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -431,7 +431,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Script: read a file",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -457,7 +457,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Script: use 'until' to remove file after mutate",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -481,7 +481,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Script: use 'until' to remove wildcard after mutate",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -499,7 +499,7 @@ var slicerTests = []slicerTest{{
 	manifestPaths: map[string]string{},
 }, {
 	summary: "Script: 'until' does not remove non-empty directories",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -520,7 +520,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Script: writing same contents to existing file does not set the final hash in report",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -541,7 +541,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Script: cannot write non-mutable files",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -556,7 +556,7 @@ var slicerTests = []slicerTest{{
 	error: `slice test-package_myslice: cannot write file which is not mutable: /dir/text-file`,
 }, {
 	summary: "Script: cannot write to unlisted file",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -570,7 +570,7 @@ var slicerTests = []slicerTest{{
 	error: `slice test-package_myslice: cannot write file which is not mutable: /dir/text-file`,
 }, {
 	summary: "Script: cannot write to directory",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -585,7 +585,7 @@ var slicerTests = []slicerTest{{
 	error: `slice test-package_myslice: cannot write file which is not mutable: /dir/`,
 }, {
 	summary: "Script: cannot read unlisted content",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice2"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice2"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -601,7 +601,7 @@ var slicerTests = []slicerTest{{
 	error: `slice test-package_myslice2: cannot read file which is not selected: /dir/text-file`,
 }, {
 	summary: "Script: can read globbed content",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice1"}, {RealName: "test-package", Slice: "myslice2"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice1"}, {Package: "test-package", Slice: "myslice2"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -616,7 +616,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Relative content root directory must not error",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -637,7 +637,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Can list parent directories of normal paths",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -656,7 +656,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Cannot list unselected directory",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -671,7 +671,7 @@ var slicerTests = []slicerTest{{
 	error: `slice test-package_myslice: cannot list directory which is not selected: /a/d/`,
 }, {
 	summary: "Cannot list file path as a directory",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -686,7 +686,7 @@ var slicerTests = []slicerTest{{
 	error: `slice test-package_myslice: content is not a directory: /a/b/c`,
 }, {
 	summary: "Can list parent directories of globs",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -700,7 +700,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Cannot list directories not matched by glob",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -715,7 +715,7 @@ var slicerTests = []slicerTest{{
 	error: `slice test-package_myslice: cannot list directory which is not selected: /other-dir/`,
 }, {
 	summary: "Duplicate copyright symlink is ignored",
-	slices:  []setup.SliceKey{{RealName: "copyright-symlink-openssl", Slice: "bins"}},
+	slices:  []setup.SliceKey{{Package: "copyright-symlink-openssl", Slice: "bins"}},
 	pkgs: []*testutil.TestPackage{{
 		Name: "copyright-symlink-openssl",
 		Data: testutil.MustMakeDeb(packageEntries["copyright-symlink-openssl"]),
@@ -747,7 +747,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Can list unclean directory paths",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -766,7 +766,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Cannot read directories",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -781,7 +781,7 @@ var slicerTests = []slicerTest{{
 	error: `slice test-package_myslice: content is not a file: /x/y`,
 }, {
 	summary: "Multiple archives with priority",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}, {RealName: "other-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}, {Package: "other-package", Slice: "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name:    "test-package",
 		Hash:    "h1",
@@ -865,7 +865,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Pinned archive bypasses higher priority",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name:    "test-package",
 		Hash:    "h1",
@@ -933,7 +933,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Pinned archive does not have the package",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
@@ -979,7 +979,7 @@ var slicerTests = []slicerTest{{
 	error: `cannot find package "test-package" in archive\(s\)`,
 }, {
 	summary: "No archives have the package",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	pkgs:    []*testutil.TestPackage{},
 	release: map[string]string{
 		"chisel.yaml": `
@@ -1016,7 +1016,7 @@ var slicerTests = []slicerTest{{
 	error: `cannot find package "test-package" in archive\(s\)`,
 }, {
 	summary: "Negative priority archives are ignored when not explicitly pinned in package",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
@@ -1053,7 +1053,7 @@ var slicerTests = []slicerTest{{
 	error: `cannot find package "test-package" in archive\(s\)`,
 }, {
 	summary: "Negative priority archive explicitly pinned in package",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name:    "test-package",
 		Hash:    "h1",
@@ -1103,8 +1103,8 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Multiple slices of same package",
 	slices: []setup.SliceKey{
-		{RealName: "test-package", Slice: "myslice1"},
-		{RealName: "test-package", Slice: "myslice2"},
+		{Package: "test-package", Slice: "myslice1"},
+		{Package: "test-package", Slice: "myslice2"},
 	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
@@ -1141,8 +1141,8 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Same glob in several entries with until:mutate and reading from script",
 	slices: []setup.SliceKey{
-		{RealName: "test-package", Slice: "myslice1"},
-		{RealName: "test-package", Slice: "myslice2"},
+		{Package: "test-package", Slice: "myslice1"},
+		{Package: "test-package", Slice: "myslice2"},
 	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
@@ -1187,8 +1187,8 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Overlapping globs, until:mutate and reading from script",
 	slices: []setup.SliceKey{
-		{RealName: "test-package", Slice: "myslice2"},
-		{RealName: "test-package", Slice: "myslice1"},
+		{Package: "test-package", Slice: "myslice2"},
+		{Package: "test-package", Slice: "myslice1"},
 	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
@@ -1233,8 +1233,8 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Overlapping glob and single entry, until:mutate on entry and reading from script",
 	slices: []setup.SliceKey{
-		{RealName: "test-package", Slice: "myslice1"},
-		{RealName: "test-package", Slice: "myslice2"},
+		{Package: "test-package", Slice: "myslice1"},
+		{Package: "test-package", Slice: "myslice2"},
 	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
@@ -1279,8 +1279,8 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Overlapping glob and single entry, until:mutate on glob and reading from script",
 	slices: []setup.SliceKey{
-		{RealName: "test-package", Slice: "myslice1"},
-		{RealName: "test-package", Slice: "myslice2"},
+		{Package: "test-package", Slice: "myslice1"},
+		{Package: "test-package", Slice: "myslice2"},
 	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
@@ -1308,8 +1308,8 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Overlapping glob and single entry, until:mutate on both and reading from script",
 	slices: []setup.SliceKey{
-		{RealName: "test-package", Slice: "myslice1"},
-		{RealName: "test-package", Slice: "myslice2"},
+		{Package: "test-package", Slice: "myslice1"},
+		{Package: "test-package", Slice: "myslice2"},
 	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
@@ -1332,8 +1332,8 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Content not created in packages with until:mutate on one and reading from script",
 	slices: []setup.SliceKey{
-		{RealName: "test-package", Slice: "myslice1"},
-		{RealName: "test-package", Slice: "myslice2"},
+		{Package: "test-package", Slice: "myslice1"},
+		{Package: "test-package", Slice: "myslice2"},
 	},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
@@ -1356,8 +1356,8 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Install two packages, both are recorded",
 	slices: []setup.SliceKey{
-		{RealName: "test-package", Slice: "myslice"},
-		{RealName: "other-package", Slice: "myslice"},
+		{Package: "test-package", Slice: "myslice"},
+		{Package: "other-package", Slice: "myslice"},
 	},
 	pkgs: []*testutil.TestPackage{{
 		Name:    "test-package",
@@ -1393,7 +1393,7 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Two packages, only one is selected and recorded",
 	slices: []setup.SliceKey{
-		{RealName: "test-package", Slice: "myslice"},
+		{Package: "test-package", Slice: "myslice"},
 	},
 	pkgs: []*testutil.TestPackage{{
 		Name:    "test-package",
@@ -1427,7 +1427,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Relative paths are properly trimmed during extraction",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
@@ -1458,7 +1458,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Producing a manifest is not mandatory",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	hackopt: func(c *C, opts *slicer.RunOptions) {
 		// Remove the manifest slice that the tests add automatically.
 		var index int
@@ -1480,7 +1480,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "No valid archives defined due to invalid pro value",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	release: map[string]string{
 		"chisel.yaml": `
 			format: v1
@@ -1507,8 +1507,8 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Valid hard link in two slices in the same package",
 	slices: []setup.SliceKey{
-		{RealName: "test-package", Slice: "slice1"},
-		{RealName: "test-package", Slice: "slice2"},
+		{Package: "test-package", Slice: "slice1"},
+		{Package: "test-package", Slice: "slice2"},
 	},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
@@ -1542,7 +1542,7 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Hard link entries can be extracted without extracting the regular file",
 	slices: []setup.SliceKey{
-		{RealName: "test-package", Slice: "myslice"},
+		{Package: "test-package", Slice: "myslice"},
 	},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
@@ -1573,7 +1573,7 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Hard link identifier for different groups",
 	slices: []setup.SliceKey{
-		{RealName: "test-package", Slice: "myslice"},
+		{Package: "test-package", Slice: "myslice"},
 	},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
@@ -1609,7 +1609,7 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Single hard link entry can be extracted without regular file and no hard links are created",
 	slices: []setup.SliceKey{
-		{RealName: "test-package", Slice: "myslice"},
+		{Package: "test-package", Slice: "myslice"},
 	},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
@@ -1637,7 +1637,7 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Hard link to symlink does not follow symlink",
 	slices: []setup.SliceKey{
-		{RealName: "test-package", Slice: "myslice"},
+		{Package: "test-package", Slice: "myslice"},
 	},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
@@ -1670,8 +1670,8 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Hard link identifiers are unique across packages",
 	slices: []setup.SliceKey{
-		{RealName: "test-package1", Slice: "myslice"},
-		{RealName: "test-package2", Slice: "myslice"},
+		{Package: "test-package1", Slice: "myslice"},
+		{Package: "test-package2", Slice: "myslice"},
 	},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package1",
@@ -1721,7 +1721,7 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Mutations for hard links are forbidden",
 	slices: []setup.SliceKey{
-		{RealName: "test-package", Slice: "myslice"},
+		{Package: "test-package", Slice: "myslice"},
 	},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
@@ -1747,7 +1747,7 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Hard links can be marked as mutable, but not mutated",
 	slices: []setup.SliceKey{
-		{RealName: "test-package", Slice: "myslice"},
+		{Package: "test-package", Slice: "myslice"},
 	},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
@@ -1777,7 +1777,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Hard links cannot escape the target directory",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
@@ -1797,7 +1797,7 @@ var slicerTests = []slicerTest{{
 	error: `cannot extract from package "test-package": invalid link target /etc/group`,
 }, {
 	summary: "Cannot extract outside of target directory",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
@@ -1818,8 +1818,8 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Extract conflicting paths with prefer from proper package",
 	slices: []setup.SliceKey{
-		{RealName: "test-package1", Slice: "myslice"},
-		{RealName: "test-package2", Slice: "myslice"},
+		{Package: "test-package1", Slice: "myslice"},
+		{Package: "test-package2", Slice: "myslice"},
 	},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package1",
@@ -1879,8 +1879,8 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Warning when implicit parent directories conflict",
 	slices: []setup.SliceKey{
-		{RealName: "test-package1", Slice: "myslice"},
-		{RealName: "test-package2", Slice: "myslice"},
+		{Package: "test-package1", Slice: "myslice"},
+		{Package: "test-package2", Slice: "myslice"},
 	},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package1",
@@ -1918,7 +1918,7 @@ var slicerTests = []slicerTest{{
 	logOutput: `(?s).*Warning: Path "/parent/" has diverging modes in different packages\. Please report\..*`,
 }, {
 	summary: "Arch specific slice is not installed when it does not match requested arch",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	arch:    "amd64",
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
@@ -1937,7 +1937,7 @@ var slicerTests = []slicerTest{{
 	manifestPaths: map[string]string{},
 }, {
 	summary: "Arch specific slice is installed when it matches requested arch",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "myslice"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "myslice"}},
 	arch:    "arm64",
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
@@ -1961,7 +1961,7 @@ var slicerTests = []slicerTest{{
 	},
 }, {
 	summary: "Transitive essential",
-	slices:  []setup.SliceKey{{RealName: "test-package", Slice: "first"}},
+	slices:  []setup.SliceKey{{Package: "test-package", Slice: "first"}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -2067,7 +2067,7 @@ func runSlicerTests(s *S, c *C, tests []slicerTest) {
 			c.Assert(err, IsNil)
 
 			// Create a manifest slice and add it to the selection.
-			manifestPackage := test.slices[0].RealName
+			manifestPackage := test.slices[0].Package
 			manifestPath := "/chisel-data/manifest.wall"
 			release.Packages[manifestPackage].Slices["manifest"] = &setup.Slice{
 				Package:   manifestPackage,
@@ -2082,8 +2082,8 @@ func runSlicerTests(s *S, c *C, tests []slicerTest) {
 				Scripts: setup.SliceScripts{},
 			}
 			testSlices = append(testSlices, setup.SliceKey{
-				RealName: manifestPackage,
-				Slice:    "manifest",
+				Package: manifestPackage,
+				Slice:   "manifest",
 			})
 
 			selection, err := setup.Select(release, testSlices, test.arch)

@@ -14,34 +14,34 @@ var sliceKeyTests = []struct {
 	err      string
 }{{
 	input:    "foo_bar",
-	expected: apacheutil.SliceKey{RealName: "foo", Slice: "bar"},
+	expected: apacheutil.SliceKey{Package: "foo", Slice: "bar"},
 }, {
 	input:    "fo_bar",
-	expected: apacheutil.SliceKey{RealName: "fo", Slice: "bar"},
+	expected: apacheutil.SliceKey{Package: "fo", Slice: "bar"},
 }, {
 	input:    "1234_bar",
-	expected: apacheutil.SliceKey{RealName: "1234", Slice: "bar"},
+	expected: apacheutil.SliceKey{Package: "1234", Slice: "bar"},
 }, {
 	input:    "foo1.1-2-3_bar",
-	expected: apacheutil.SliceKey{RealName: "foo1.1-2-3", Slice: "bar"},
+	expected: apacheutil.SliceKey{Package: "foo1.1-2-3", Slice: "bar"},
 }, {
 	input:    "foo-pkg_dashed-slice-name",
-	expected: apacheutil.SliceKey{RealName: "foo-pkg", Slice: "dashed-slice-name"},
+	expected: apacheutil.SliceKey{Package: "foo-pkg", Slice: "dashed-slice-name"},
 }, {
 	input:    "foo+_bar",
-	expected: apacheutil.SliceKey{RealName: "foo+", Slice: "bar"},
+	expected: apacheutil.SliceKey{Package: "foo+", Slice: "bar"},
 }, {
 	input:    "foo_slice123",
-	expected: apacheutil.SliceKey{RealName: "foo", Slice: "slice123"},
+	expected: apacheutil.SliceKey{Package: "foo", Slice: "slice123"},
 }, {
 	input:    "g++_bins",
-	expected: apacheutil.SliceKey{RealName: "g++", Slice: "bins"},
+	expected: apacheutil.SliceKey{Package: "g++", Slice: "bins"},
 }, {
 	input:    "a+_bar",
-	expected: apacheutil.SliceKey{RealName: "a+", Slice: "bar"},
+	expected: apacheutil.SliceKey{Package: "a+", Slice: "bar"},
 }, {
 	input:    "a._bar",
-	expected: apacheutil.SliceKey{RealName: "a.", Slice: "bar"},
+	expected: apacheutil.SliceKey{Package: "a.", Slice: "bar"},
 }, {
 	input: "foo_ba",
 	err:   `invalid slice reference: "foo_ba"`,
@@ -99,13 +99,13 @@ var sliceKeyStringTests = []struct {
 	key      apacheutil.SliceKey
 	expected string
 }{{
-	key:      apacheutil.SliceKey{RealName: "curl", Slice: "bins"},
+	key:      apacheutil.SliceKey{Package: "curl", Slice: "bins"},
 	expected: "curl_bins",
 }, {
-	key:      apacheutil.SliceKey{RealName: "bin-curl", Slice: "bins"},
+	key:      apacheutil.SliceKey{Package: "bin-curl", Slice: "bins"},
 	expected: "bin-curl_bins",
 }, {
-	key:      apacheutil.SliceKey{RealName: "bin-g++", Slice: "bins"},
+	key:      apacheutil.SliceKey{Package: "bin-g++", Slice: "bins"},
 	expected: "bin-g++_bins",
 }}
 
@@ -115,25 +115,25 @@ func (s *S) TestSliceKeyString(c *C) {
 	}
 }
 
-var sliceKeyRealNameTests = []struct {
+var sliceKeyPackageTests = []struct {
 	key      apacheutil.SliceKey
 	expected string
 }{{
-	key:      apacheutil.SliceKey{RealName: "curl", Slice: "bins"},
+	key:      apacheutil.SliceKey{Package: "curl", Slice: "bins"},
 	expected: "curl",
 }, {
-	key:      apacheutil.SliceKey{RealName: "bin-curl", Slice: "bins"},
+	key:      apacheutil.SliceKey{Package: "bin-curl", Slice: "bins"},
 	expected: "bin-curl",
 }, {
-	key:      apacheutil.SliceKey{RealName: "bin-curl"},
+	key:      apacheutil.SliceKey{Package: "bin-curl"},
 	expected: "bin-curl",
 }, {
-	key:      apacheutil.SliceKey{RealName: "curl"},
+	key:      apacheutil.SliceKey{Package: "curl"},
 	expected: "curl",
 }}
 
-func (s *S) TestSliceKeyRealName(c *C) {
-	for _, test := range sliceKeyRealNameTests {
-		c.Assert(test.key.RealName, Equals, test.expected)
+func (s *S) TestSliceKeyPackage(c *C) {
+	for _, test := range sliceKeyPackageTests {
+		c.Assert(test.key.Package, Equals, test.expected)
 	}
 }

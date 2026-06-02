@@ -11,8 +11,9 @@ import (
 	"github.com/canonical/chisel/internal/setup"
 )
 
-var shortInfoHelp = "Show information about package slices"
-var longInfoHelp = `
+var (
+	shortInfoHelp = "Show information about package slices"
+	longInfoHelp  = `
 The info command shows detailed information about package slices.
 
 It accepts a whitespace-separated list of strings. The list can be
@@ -23,6 +24,7 @@ the output is a list of YAML documents separated by a "---" line.
 Slice definitions are shown verbatim according to their definition in
 the selected release. For example, globs are not expanded.
 `
+)
 
 var infoDescs = map[string]string{
 	"release": "Chisel release name or directory (e.g. ubuntu-22.04)",
@@ -83,7 +85,7 @@ func selectPackageSlices(release *setup.Release, queries []string) (packages []*
 	allPkgSlices := make(map[string]bool)
 
 	sliceExists := func(key setup.SliceKey) bool {
-		pkg, ok := release.Packages[key.RealName]
+		pkg, ok := release.Packages[key.Package]
 		if !ok {
 			return false
 		}
@@ -98,7 +100,7 @@ func selectPackageSlices(release *setup.Release, queries []string) (packages []*
 				notFound = append(notFound, query)
 				continue
 			}
-			pkg, slice = key.RealName, key.Slice
+			pkg, slice = key.Package, key.Slice
 		} else {
 			if _, ok := release.Packages[query]; !ok {
 				notFound = append(notFound, query)
