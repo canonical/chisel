@@ -490,6 +490,9 @@ func parsePackage(release *Release, pkgName, pkgPath string, data []byte) (*Pack
 		return nil, fmt.Errorf("%s: filename and 'package' field (%q) disagree", pkgPath, yamlPkg.Name)
 	}
 
+	if (yamlPkg.Store != "" || yamlPkg.DefaultTrack != "") && (release.Format == "v1" || release.Format == "v2") {
+		return nil, fmt.Errorf("cannot parse package %q: 'store' and 'default-track' are not supported in format %q", pkgName, release.Format)
+	}
 	if yamlPkg.Store != "" && yamlPkg.Archive != "" {
 		return nil, fmt.Errorf("cannot parse package %q: both 'store' and 'archive' fields are set", pkgName)
 	}
