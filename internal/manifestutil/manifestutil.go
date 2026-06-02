@@ -134,7 +134,7 @@ func manifestAddReport(dbw *jsonwall.DBWriter, report *Report) error {
 func unixPerm(mode fs.FileMode) (perm uint32) {
 	perm = uint32(mode.Perm())
 	if mode&fs.ModeSticky != 0 {
-		perm |= 0o1000
+		perm |= 01000
 	}
 	return perm
 }

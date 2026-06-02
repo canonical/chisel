@@ -11,9 +11,8 @@ import (
 	"github.com/canonical/chisel/internal/setup"
 )
 
-var (
-	shortInfoHelp = "Show information about package slices"
-	longInfoHelp  = `
+var shortInfoHelp = "Show information about package slices"
+var longInfoHelp = `
 The info command shows detailed information about package slices.
 
 It accepts a whitespace-separated list of strings. The list can be
@@ -24,7 +23,6 @@ the output is a list of YAML documents separated by a "---" line.
 Slice definitions are shown verbatim according to their definition in
 the selected release. For example, globs are not expanded.
 `
-)
 
 var infoDescs = map[string]string{
 	"release": "Chisel release name or directory (e.g. ubuntu-22.04)",
