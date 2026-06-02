@@ -77,6 +77,7 @@ func manifestAddPackages(dbw *jsonwall.DBWriter, infos []*archive.PackageInfo) e
 			Version: info.Version,
 			Digest:  info.SHA256,
 			Arch:    info.Arch,
+			Source:  info.Source,
 		})
 		if err != nil {
 			return err
