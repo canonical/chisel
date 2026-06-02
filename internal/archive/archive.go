@@ -69,7 +69,7 @@ const (
 	fetchDefault fetchFlags = 0
 )
 
-var notFoundErr = fmt.Errorf("cannot find archive data")
+var errNotFound = fmt.Errorf("cannot find archive data")
 
 var httpClient = &http.Client{
 	Timeout: 30 * time.Second,
@@ -349,7 +349,7 @@ func (index *ubuntuIndex) fetchIndex() error {
 		if gzDigest != "" {
 			byHashPath := fmt.Sprintf("%s/binary-%s/by-hash/SHA256/%s", index.component, index.arch, gzDigest)
 			r, err := index.fetch(index.distPath(byHashPath), digest, fetchBulk|fetchGzip)
-			if err != nil && err != notFoundErr {
+			if err != nil && err != errNotFound {
 				return err
 			}
 			// On 404 fall through to the named-path fetch below: the hash
@@ -436,7 +436,7 @@ func (index *ubuntuIndex) fetch(path, digest string, flags fetchFlags) (io.ReadS
 	case 401:
 		return nil, fmt.Errorf("cannot fetch from %q: unauthorized", index.label)
 	case 404:
-		return nil, notFoundErr
+		return nil, errNotFound
 	default:
 		return nil, fmt.Errorf("error from archive: %v", resp.Status)
 	}
