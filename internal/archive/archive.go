@@ -64,9 +64,12 @@ func Open(options *Options) (Archive, error) {
 type fetchFlags uint
 
 const (
-	fetchBulk    fetchFlags = 1 << iota
+	fetchBulk fetchFlags = 1 << iota
+	fetchGzip
 	fetchDefault fetchFlags = 0
 )
+
+var errNotFound = fmt.Errorf("cannot find archive data")
 
 var httpClient = &http.Client{
 	Timeout: 30 * time.Second,
@@ -334,9 +337,32 @@ func (index *ubuntuIndex) fetchIndex() error {
 	}
 
 	logf("Fetching index for %s %s %s %s component...", index.displayName(), index.version, index.suite, index.component)
-	reader, err := index.fetch(index.distPath(packagesPath+".gz"), digest, fetchBulk)
-	if err != nil {
-		return err
+
+	// Prefer acquire-by-hash when the archive advertises it. By-hash URLs
+	// are content-addressed and so are immune to the inconsistent view of
+	// InRelease vs Packages.gz that mirrors and CDNs can serve while a
+	// publication is propagating. See https://wiki.ubuntu.com/AptByHash.
+	gzPath := packagesPath + ".gz"
+	var reader io.ReadSeekCloser
+	if index.release.Get("Acquire-By-Hash") == "yes" {
+		gzDigest, _, _ := control.ParsePathInfo(digests, gzPath)
+		if gzDigest != "" {
+			byHashPath := fmt.Sprintf("%s/binary-%s/by-hash/SHA256/%s", index.component, index.arch, gzDigest)
+			r, err := index.fetch(index.distPath(byHashPath), digest, fetchBulk|fetchGzip)
+			if err != nil && err != errNotFound {
+				return err
+			}
+			// On 404 fall through to the named-path fetch below: the hash
+			// may have been garbage-collected on the mirror.
+			reader = r
+		}
+	}
+	if reader == nil {
+		r, err := index.fetch(index.distPath(gzPath), digest, fetchBulk|fetchGzip)
+		if err != nil {
+			return err
+		}
+		reader = r
 	}
 	ctrl, err := control.ParseReader("Package", reader)
 	if err != nil {
@@ -410,13 +436,13 @@ func (index *ubuntuIndex) fetch(path, digest string, flags fetchFlags) (io.ReadS
 	case 401:
 		return nil, fmt.Errorf("cannot fetch from %q: unauthorized", index.label)
 	case 404:
-		return nil, fmt.Errorf("cannot find archive data")
+		return nil, errNotFound
 	default:
 		return nil, fmt.Errorf("error from archive: %v", resp.Status)
 	}
 
 	body := resp.Body
-	if strings.HasSuffix(path, ".gz") {
+	if flags&fetchGzip != 0 {
 		reader, err := gzip.NewReader(body)
 		if err != nil {
 			return nil, fmt.Errorf("cannot decompress data: %v", err)

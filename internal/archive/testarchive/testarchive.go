@@ -107,6 +107,10 @@ type Release struct {
 	Label   string
 	Items   []Item
 	PrivKey *packet.PrivateKey
+	// Fields below model acquire-by-hash and mirror inconsistencies for tests.
+	AcquireByHash    bool
+	ByHashSkip       []string
+	NamedPathContent map[string][]byte
 }
 
 func (r *Release) Walk(f func(Item) error) error {
@@ -127,6 +131,10 @@ func (r *Release) Content() []byte {
 		content := item.Content()
 		fmt.Fprintf(&digests, " %s  %d  %s\n", makeSha256(content), len(content), item.Path())
 	}
+	acquireByHash := ""
+	if r.AcquireByHash {
+		acquireByHash = "Acquire-By-Hash: yes\n"
+	}
 	content := fmt.Sprintf(string(testutil.Reindent(`
 		Origin: Ubuntu
 		Label: %s
@@ -137,9 +145,9 @@ func (r *Release) Content() []byte {
 		Architectures: amd64 arm64 armhf i386 ppc64el riscv64 s390x
 		Components: main restricted universe multiverse
 		Description: Ubuntu %s
-		SHA256:
+		%sSHA256:
 		%s
-	`)), r.Label, r.Suite, r.Version, r.Version, digests.String())
+	`)), r.Label, r.Suite, r.Version, r.Version, acquireByHash, digests.String())
 
 	var buf bytes.Buffer
 	writer, err := clearsign.Encode(&buf, r.PrivKey, nil)
@@ -158,14 +166,27 @@ func (r *Release) Content() []byte {
 }
 
 func (r *Release) Render(prefix string, content map[string][]byte) error {
+	skipByHash := make(map[string]bool, len(r.ByHashSkip))
+	for _, p := range r.ByHashSkip {
+		skipByHash[p] = true
+	}
 	return r.Walk(func(item Item) error {
 		itemPath := item.Path()
+		itemContent := item.Content()
 		if strings.HasPrefix(itemPath, "pool/") {
-			itemPath = path.Join(prefix, itemPath)
-		} else {
-			itemPath = path.Join(prefix, "dists", r.Suite, itemPath)
+			content[path.Join(prefix, itemPath)] = itemContent
+			return nil
 		}
-		content[itemPath] = item.Content()
+		distItemPath := path.Join(prefix, "dists", r.Suite, itemPath)
+		if override, ok := r.NamedPathContent[itemPath]; ok {
+			content[distItemPath] = override
+		} else {
+			content[distItemPath] = itemContent
+		}
+		if r.AcquireByHash && itemPath != r.Path() && !skipByHash[itemPath] {
+			byHashPath := path.Join(prefix, "dists", r.Suite, path.Dir(itemPath), "by-hash", "SHA256", makeSha256(itemContent))
+			content[byHashPath] = itemContent
+		}
 		return nil
 	})
 }
