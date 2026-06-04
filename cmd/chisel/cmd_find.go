@@ -87,12 +87,15 @@ func match(slice *setup.Slice, query string) bool {
 }
 
 // findSlices returns slices from the provided release that match all of the
-// query strings (AND).
+// query strings (AND). Private slices are never returned.
 func findSlices(release *setup.Release, query []string) (slices []*setup.Slice, err error) {
 	slices = []*setup.Slice{}
 	for _, pkg := range release.Packages {
 		for _, slice := range pkg.Slices {
 			if slice == nil {
+				continue
+			}
+			if (setup.SliceKey{Package: slice.Package, Slice: slice.Name}).IsPrivate() {
 				continue
 			}
 			allMatch := true

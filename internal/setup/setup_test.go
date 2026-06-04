@@ -1391,7 +1391,7 @@ var setupTests = []setupTest{{
 						/usr/bin/cc:
 		`,
 	},
-	relerror: `invalid slice name "cc" in slices/mydir/mypkg.yaml \(must start with a-z, len >= 3, only a-z / 0-9 / -\)`,
+	relerror: `invalid slice name "cc" in slices/mydir/mypkg.yaml \(must start with a-z or _, len >= 3 after the optional _, only a-z / 0-9 / -\)`,
 }, {
 	summary: "Invalid slice hint - too long",
 	input: map[string]string{
@@ -3896,6 +3896,167 @@ var setupTests = []setupTest{{
 		`,
 	},
 	relerror: `package "mypkg" slices defined more than once: slices/dir1/mypkg.yaml and slices/dir2/mypkg.yaml`,
+}, {
+	summary: "Private slice referenced as essential by a public slice (same package)",
+	input: map[string]string{
+		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYaml, "format: v1", "format: v3"),
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+					essential:
+						mypkg__priv: {}
+				_priv:
+					contents:
+						/usr/bin/cc:
+		`,
+	},
+	selslices: []setup.SliceKey{{"mypkg", "myslice"}},
+	selection: &setup.Selection{
+		Slices: []*setup.Slice{{
+			Package: "mypkg",
+			Name:    "_priv",
+			Contents: map[string]setup.PathInfo{
+				"/usr/bin/cc": {Kind: setup.CopyPath},
+			},
+		}, {
+			Package: "mypkg",
+			Name:    "myslice",
+			Essential: map[setup.SliceKey]setup.EssentialInfo{
+				{"mypkg", "_priv"}: {},
+			},
+		}},
+	},
+}, {
+	summary: "Private slice referenced as essential by a public slice (cross-package)",
+	input: map[string]string{
+		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYaml, "format: v1", "format: v3"),
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice:
+					essential:
+						mypkg2__priv: {}
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+			slices:
+				_priv:
+					contents:
+						/usr/bin/cc:
+		`,
+	},
+	selslices: []setup.SliceKey{{"mypkg1", "myslice"}},
+	selection: &setup.Selection{
+		Slices: []*setup.Slice{{
+			Package: "mypkg2",
+			Name:    "_priv",
+			Contents: map[string]setup.PathInfo{
+				"/usr/bin/cc": {Kind: setup.CopyPath},
+			},
+		}, {
+			Package: "mypkg1",
+			Name:    "myslice",
+			Essential: map[setup.SliceKey]setup.EssentialInfo{
+				{"mypkg2", "_priv"}: {},
+			},
+		}},
+	},
+}, {
+	summary: "Unreferenced private slice is rejected",
+	input: map[string]string{
+		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYaml, "format: v1", "format: v3"),
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+				_priv:
+					contents:
+						/usr/bin/cc:
+		`,
+	},
+	relerror: `private slice mypkg__priv is not referenced by any other slice`,
+}, {
+	summary: "Private slice cannot be selected directly",
+	input: map[string]string{
+		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYaml, "format: v1", "format: v3"),
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+					essential:
+						mypkg__priv: {}
+				_priv:
+					contents:
+						/usr/bin/cc:
+		`,
+	},
+	selslices: []setup.SliceKey{{"mypkg", "_priv"}},
+	selerror:  `cannot select private slice mypkg__priv`,
+}, {
+	summary: "Chained private slices: pub -> _priv1 -> _priv2",
+	input: map[string]string{
+		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYaml, "format: v1", "format: v3"),
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				pub:
+					essential:
+						mypkg__priv1: {}
+				_priv1:
+					essential:
+						mypkg__priv2: {}
+					contents:
+						/usr/bin/one:
+				_priv2:
+					contents:
+						/usr/bin/two:
+		`,
+	},
+	selslices: []setup.SliceKey{{"mypkg", "pub"}},
+	selection: &setup.Selection{
+		Slices: []*setup.Slice{{
+			Package: "mypkg",
+			Name:    "_priv2",
+			Contents: map[string]setup.PathInfo{
+				"/usr/bin/two": {Kind: setup.CopyPath},
+			},
+		}, {
+			Package: "mypkg",
+			Name:    "_priv1",
+			Essential: map[setup.SliceKey]setup.EssentialInfo{
+				{"mypkg", "_priv2"}: {},
+			},
+			Contents: map[string]setup.PathInfo{
+				"/usr/bin/one": {Kind: setup.CopyPath},
+			},
+		}, {
+			Package: "mypkg",
+			Name:    "pub",
+			Essential: map[setup.SliceKey]setup.EssentialInfo{
+				{"mypkg", "_priv1"}: {},
+			},
+		}},
+	},
+}, {
+	summary: "Chained private slice with cycle detected",
+	input: map[string]string{
+		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYaml, "format: v1", "format: v3"),
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				pub:
+					essential:
+						mypkg__priv1: {}
+				_priv1:
+					essential:
+						mypkg__priv2: {}
+				_priv2:
+					essential:
+						mypkg__priv1: {}
+		`,
+	},
+	relerror: `essential loop detected: mypkg__priv1, mypkg__priv2`,
 }}
 
 func (s *S) TestParseRelease(c *C) {
@@ -4342,6 +4503,50 @@ func (s *S) TestSelectEmptyArch(c *C) {
 	}
 	expected := []string{"myotherslice", "myslice"}
 	c.Assert(sliceNames, DeepEquals, expected)
+}
+
+var privateSliceFormatGatingTests = []struct {
+	summary string
+	format  string
+}{{
+	summary: "v1",
+	format:  "v1",
+}, {
+	summary: "v2",
+	format:  "v2",
+}}
+
+func (s *S) TestPrivateSliceFormatGating(c *C) {
+	mypkgYAML := `
+		package: mypkg
+		slices:
+			myslice:
+				essential:
+					- mypkg__priv
+			_priv:
+				contents:
+					/usr/bin/cc:
+	`
+	for _, test := range privateSliceFormatGatingTests {
+		c.Logf("Format: %s", test.summary)
+
+		input := map[string]string{
+			"chisel.yaml":             strings.ReplaceAll(string(testutil.DefaultChiselYaml), "format: v1", "format: "+test.format),
+			"slices/mydir/mypkg.yaml": mypkgYAML,
+		}
+
+		dir := c.MkDir()
+		for path, data := range input {
+			fpath := filepath.Join(dir, path)
+			err := os.MkdirAll(filepath.Dir(fpath), 0o755)
+			c.Assert(err, IsNil)
+			err = os.WriteFile(fpath, testutil.Reindent(data), 0o644)
+			c.Assert(err, IsNil)
+		}
+
+		_, err := setup.ReadRelease(dir)
+		c.Assert(err, ErrorMatches, `private slice mypkg__priv requires format v3`)
+	}
 }
 
 // oldEssentialToV3 converts the essentials in v1 and v2, both 'essential', and

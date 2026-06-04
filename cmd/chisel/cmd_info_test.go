@@ -217,3 +217,43 @@ func (s *ChiselSuite) TestInfoCommand(c *C) {
 		c.Assert(s.Stdout(), Equals, strings.TrimSpace(test.stdout)+"\n")
 	}
 }
+
+func (s *ChiselSuite) TestInfoPrivateSlice(c *C) {
+	s.ResetStdStreams()
+
+	input := map[string]string{
+		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYaml, "format: v1", "format: v3"),
+		"slices/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+					essential:
+						mypkg__priv: {}
+				_priv:
+					contents:
+						/usr/bin/cc:
+		`,
+	}
+
+	dir := c.MkDir()
+	for path, data := range input {
+		fpath := filepath.Join(dir, path)
+		err := os.MkdirAll(filepath.Dir(fpath), 0755)
+		c.Assert(err, IsNil)
+		err = os.WriteFile(fpath, testutil.Reindent(data), 0644)
+		c.Assert(err, IsNil)
+	}
+
+	_, err := chisel.Parser().ParseArgs([]string{"info", "--release", dir, "mypkg__priv"})
+	c.Assert(err, IsNil)
+
+	expected := `
+		package: mypkg
+		slices:
+			_priv:
+				contents:
+					/usr/bin/cc: {}
+	`
+	expected = string(testutil.Reindent(expected))
+	c.Assert(s.Stdout(), Equals, strings.TrimSpace(expected)+"\n")
+}

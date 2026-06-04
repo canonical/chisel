@@ -304,6 +304,26 @@ func (r *Release) validate() error {
 		}
 	}
 
+	// Check that every private slice is referenced as an essential by some
+	// other slice. Private slices cannot be selected directly, so an
+	// unreferenced one is dead code.
+	referenced := make(map[SliceKey]bool)
+	for _, pkg := range r.Packages {
+		for _, slice := range pkg.Slices {
+			for ref := range slice.Essential {
+				referenced[ref] = true
+			}
+		}
+	}
+	for _, pkg := range r.Packages {
+		for _, slice := range pkg.Slices {
+			key := SliceKey{Package: pkg.Name, Slice: slice.Name}
+			if key.IsPrivate() && !referenced[key] {
+				return fmt.Errorf("private slice %s is not referenced by any other slice", key)
+			}
+		}
+	}
+
 	// Check for cycles.
 	// Note: For release validation an essential with a specific arch is the
 	// same as an essential with all archs, i.e. Chisel does not use arch to
@@ -467,6 +487,12 @@ func stripBase(baseDir, path string) string {
 
 func Select(release *Release, slices []SliceKey, arch string) (*Selection, error) {
 	logf("Selecting slices...")
+
+	for _, key := range slices {
+		if key.IsPrivate() {
+			return nil, fmt.Errorf("cannot select private slice %s", key)
+		}
+	}
 
 	var err error
 	if arch == "" {
