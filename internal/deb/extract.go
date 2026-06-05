@@ -32,10 +32,11 @@ type ExtractOptions struct {
 }
 
 type ExtractInfo struct {
-	Path     string
-	Mode     uint
-	Optional bool
-	Context  any
+	Path         string
+	Mode         uint
+	Optional     bool
+	Context      any
+	SpecialGlobs map[rune]string
 }
 
 func getValidOptions(options *ExtractOptions) (*ExtractOptions, error) {
@@ -152,7 +153,12 @@ func extractData(pkgReader io.ReadSeeker, options *ExtractOptions) error {
 				continue
 			}
 			if strings.ContainsAny(extractPath, "*?") {
-				if strdist.GlobPath(extractPath, sourcePath) {
+				// Get special globs from the first extractInfo if available
+				var extractSpecial map[rune]string
+				if len(extractInfos) > 0 {
+					extractSpecial = extractInfos[0].SpecialGlobs
+				}
+				if strdist.GlobPathWithSpecial(extractPath, sourcePath, extractSpecial, nil) {
 					targetPaths[sourcePath] = append(targetPaths[sourcePath], extractInfos...)
 					delete(pendingPaths, extractPath)
 				}
