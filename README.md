@@ -2,6 +2,7 @@
 [![Snap](https://github.com/canonical/chisel/actions/workflows/snap.yml/badge.svg?event=release)](https://github.com/canonical/chisel/actions/workflows/snap.yml)
 [![Build](https://github.com/canonical/chisel/actions/workflows/build.yml/badge.svg)](https://github.com/canonical/chisel/actions/workflows/build.yml)
 [![Tests](https://github.com/canonical/chisel/actions/workflows/tests.yaml/badge.svg)](https://github.com/canonical/chisel/actions/workflows/tests.yaml)
+[![Documentation Status](https://readthedocs.com/projects/canonical-chisel/badge/?version=latest)](https://canonical-chisel.readthedocs-hosted.com/en/latest/?badge=latest)
 
 # Chisel
 
