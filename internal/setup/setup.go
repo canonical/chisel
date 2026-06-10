@@ -13,7 +13,6 @@ import (
 
 	"github.com/canonical/chisel/internal/apacheutil"
 	"github.com/canonical/chisel/internal/deb"
-	"github.com/canonical/chisel/internal/strdist"
 )
 
 // Release is a collection of package slices targeting a particular
@@ -272,36 +271,11 @@ func (r *Release) validate() error {
 		}
 	}
 
-	// Check for glob and generate conflicts.
-	for oldPath, oldSlices := range paths {
-		for _, old := range oldSlices {
-			oldInfo := old.Contents[oldPath]
-			if oldInfo.Kind != GeneratePath && oldInfo.Kind != GlobPath {
-				break
-			}
-			for newPath, newSlices := range paths {
-				if oldPath == newPath {
-					// Identical paths have been filtered earlier.
-					continue
-				}
-				for _, new := range newSlices {
-					newInfo := new.Contents[newPath]
-					if oldInfo.Kind == GlobPath && (newInfo.Kind == GlobPath || newInfo.Kind == CopyPath) {
-						if new.Package == old.Package {
-							continue
-						}
-					}
-					if strdist.GlobPath(newPath, oldPath) {
-						if (old.Package > new.Package) || (old.Package == new.Package && old.Name > new.Name) ||
-							(old.Package == new.Package && old.Name == new.Name && oldPath > newPath) {
-							old, new = new, old
-							oldPath, newPath = newPath, oldPath
-						}
-						return fmt.Errorf("slices %s and %s conflict on %s and %s", old, new, oldPath, newPath)
-					}
-				}
-			}
-		}
+	// Check for conflicts among different paths.
+	tree := newConflictTree(paths)
+	err = tree.HasConflict()
+	if err != nil {
+		return err
 	}
 
 	// Check for cycles.
@@ -556,7 +530,7 @@ func (r *Release) prefers() (map[preferKey]string, error) {
 
 // preferredPathPackage returns pkg1 if it can be reached from pkg2 following
 // prefer relationships, and conversely for pkg2. If none are reachable it
-// returns the preferNone error.
+// returns the errPreferNone error.
 //
 // If there is a cycle, an error is returned.
 func preferredPathPackage(path, pkg1, pkg2 string, prefers map[preferKey]string) (choice string, err error) {
