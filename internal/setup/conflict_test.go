@@ -111,26 +111,35 @@ func (s *S) TestPathToSegments(c *C) {
 }
 
 func (s *S) TestConflictTree(c *C) {
-	dirSlice := &setup.Slice{
+	slicePath := &setup.Slice{
 		Package: "pkg1",
-		Name:    "dir",
+		Name:    "path",
 		Contents: map[string]setup.PathInfo{
-			"/a/": {Kind: setup.CopyPath},
+			"/a/*/b": {Kind: setup.CopyPath},
 		},
 	}
-	globSlice := &setup.Slice{
+	sliceGlob := &setup.Slice{
 		Package: "pkg2",
 		Name:    "glob",
 		Contents: map[string]setup.PathInfo{
-			"/a/*": {Kind: setup.CopyPath},
+			"/a/*": {Kind: setup.GlobPath},
 		},
 	}
-	dirInfo := setup.PathSegmentSlice{Slice: dirSlice, WholePath: "/a/*/b"}
-	globInfo := setup.PathSegmentSlice{Slice: globSlice, PathInfo: setup.PathInfo{Kind: setup.CopyPath}, WholePath: "/a/*"}
+
+	pathInfo := setup.PathSegmentSlice{
+		Slice:     slicePath,
+		PathInfo:  setup.PathInfo{Kind: setup.CopyPath},
+		WholePath: "/a/*/b",
+	}
+	globInfo := setup.PathSegmentSlice{
+		Slice:     sliceGlob,
+		PathInfo:  setup.PathInfo{Kind: setup.GlobPath},
+		WholePath: "/a/*",
+	}
 
 	tree := setup.NewConflictTree(map[string][]*setup.Slice{
-		"/a/*/b": {dirSlice},
-		"/a/*":   {globSlice},
+		"/a/*/b": {slicePath},
+		"/a/*":   {sliceGlob},
 	})
 	err := tree.HasConflict()
 	c.Assert(err, IsNil)
@@ -140,7 +149,7 @@ func (s *S) TestConflictTree(c *C) {
 		Children: map[string]*setup.PathNode{
 			"a/": {
 				Segment: setup.PathSegment{Text: "a/"},
-				Slices:  []setup.PathSegmentSlice{dirInfo, globInfo},
+				Slices:  []setup.PathSegmentSlice{pathInfo, globInfo},
 				Children: map[string]*setup.PathNode{
 					"*": {
 						Segment: setup.PathSegment{Text: "*", HasGlob: true},
@@ -154,15 +163,15 @@ func (s *S) TestConflictTree(c *C) {
 					},
 					"*/": {
 						Segment: setup.PathSegment{Text: "*/", HasGlob: true},
-						Slices:  []setup.PathSegmentSlice{dirInfo},
+						Slices:  []setup.PathSegmentSlice{pathInfo},
 						Children: map[string]*setup.PathNode{
 							"b": {
 								Segment: setup.PathSegment{Text: "b"},
-								Slices:  []setup.PathSegmentSlice{dirInfo},
+								Slices:  []setup.PathSegmentSlice{pathInfo},
 								Children: map[string]*setup.PathNode{
 									"": {
 										Segment: setup.PathSegment{Text: ""},
-										Slices:  []setup.PathSegmentSlice{dirInfo},
+										Slices:  []setup.PathSegmentSlice{pathInfo},
 									},
 								},
 							},

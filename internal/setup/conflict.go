@@ -12,7 +12,7 @@ import (
 
 type segmentSlice struct {
 	Slice *Slice
-	// PathInfo is kept here as an optimzation to avoid lookups on
+	// PathInfo is kept here as an optimization to avoid lookups on
 	// Slice.Contents for every slice.
 	PathInfo PathInfo
 	// WholePath is used to simplify both error reporting and matching against
@@ -230,9 +230,8 @@ func pathToSegments(path string) ([]segment, error) {
 }
 
 // segmentEnd finds the end of a segment according to the following rules:
-//   - If s contains "**" then segment = s.
-//   - Else if the s contains "/" then segment will finish at the first "/"
-//     found.
+//   - If s contains "/" then segment will finish at the first "/" found unless
+//     there is a "**" before that, in that case segment = s.
 //   - Else segment = s.
 //
 // hasGlob is set to true if "*", "?" or "**" is found in the segment.
