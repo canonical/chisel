@@ -30,7 +30,7 @@ type segment struct {
 
 type node struct {
 	Segment  segment
-	Slices   []segmentSlice
+	Slices   []*segmentSlice
 	Children map[string]*node
 }
 
@@ -44,7 +44,7 @@ type node struct {
 // very restrictive (only "*", "?" and "**") meaning that unless "**" is used,
 // any symbol can only match until a "/" is found.
 //
-// Because of the above, this algorithms splits paths into segments that are
+// Because of the above, this algorithm splits paths into segments that are
 // delimited by "/". When inserting a path, each segment is compared at most
 // once with the path independently of how many paths there are in the release.
 // Lastly, when looking for conflicts, if the segments do not contain "**" then
@@ -69,27 +69,27 @@ func (g *pathConflictTree) HasConflict() error {
 
 	for _, path := range paths {
 		slices := g.PathToSlices[path]
-		var oldInfos []segmentSlice
+		var oldSlices []*segmentSlice
 		for _, oldSlice := range slices {
-			oldInfos = append(oldInfos, segmentSlice{oldSlice, oldSlice.Contents[path], path})
+			oldSlices = append(oldSlices, &segmentSlice{oldSlice, oldSlice.Contents[path], path})
 		}
 		segments, err := pathToSegments(path)
 		if err != nil {
 			return err
 		}
-		err = g.pathHasConflict(path, segments, oldInfos)
+		err = g.pathHasConflict(segments, oldSlices)
 		if err != nil {
 			return err
 		}
-		g.insertSegments(segments, oldInfos)
+		g.insertSegments(segments, oldSlices)
 	}
 	return nil
 }
 
-func (g *pathConflictTree) pathHasConflict(oldPath string, oldSegments []segment, oldInfos []segmentSlice) error {
-	conflictErrMsg := func(oldInfo, newInfo *segmentSlice) error {
-		oldSlice, oldPath := oldInfo.Slice, oldInfo.WholePath
-		newSlice, newPath := newInfo.Slice, newInfo.WholePath
+func (g *pathConflictTree) pathHasConflict(oldSegments []segment, oldSlices []*segmentSlice) error {
+	conflictErrMsg := func(oldSegmentSlice, newSegmentSlice *segmentSlice) error {
+		oldSlice, oldPath := oldSegmentSlice.Slice, oldSegmentSlice.WholePath
+		newSlice, newPath := newSegmentSlice.Slice, newSegmentSlice.WholePath
 		if (oldSlice.Package > newSlice.Package) || (oldSlice.Package == newSlice.Package && oldSlice.Name > newSlice.Name) ||
 			(oldSlice.Package == newSlice.Package && oldSlice.Name == newSlice.Name && oldPath > newPath) {
 			oldSlice, newSlice = newSlice, oldSlice
@@ -109,12 +109,12 @@ func (g *pathConflictTree) pathHasConflict(oldPath string, oldSegments []segment
 		oldSegment := oldSegments[0]
 		for _, newNode := range currentQueue {
 		newNodeLoop:
-			for _, oldSegmentInfo := range oldInfos {
-				oldSlice := oldSegmentInfo.Slice
-				oldPathInfo := oldSegmentInfo.PathInfo
-				for _, newSegmentInfo := range newNode.Slices {
-					newSlice := newSegmentInfo.Slice
-					newPathInfo := newSegmentInfo.PathInfo
+			for _, oldSegmentSlice := range oldSlices {
+				oldSlice := oldSegmentSlice.Slice
+				oldPathInfo := oldSegmentSlice.PathInfo
+				for _, newSegmentSlice := range newNode.Slices {
+					newSlice := newSegmentSlice.Slice
+					newPathInfo := newSegmentSlice.PathInfo
 					newSegment := newNode.Segment
 
 					// If slices cannot conflict then skip the more expensive
@@ -131,8 +131,8 @@ func (g *pathConflictTree) pathHasConflict(oldPath string, oldSegments []segment
 						// Case 1: One of the strings has a double glob, we
 						// need to check the whole remaining path against
 						// each other.
-						if strdist.GlobPath(oldSegmentInfo.WholePath, newSegmentInfo.WholePath) {
-							return conflictErrMsg(&oldSegmentInfo, &newSegmentInfo)
+						if strdist.GlobPath(oldSegmentSlice.WholePath, newSegmentSlice.WholePath) {
+							return conflictErrMsg(oldSegmentSlice, newSegmentSlice)
 						}
 					} else if newSegment.HasGlob || oldSegment.HasGlob {
 						// Case 2: Either segment has a single glob (* or ?).
@@ -143,11 +143,11 @@ func (g *pathConflictTree) pathHasConflict(oldPath string, oldSegments []segment
 							if len(newNode.Children) == 0 {
 								if len(oldSegments) == 1 {
 									// If we are at the terminal node of both paths we found a conflict.
-									return conflictErrMsg(&oldSegmentInfo, &newSegmentInfo)
+									return conflictErrMsg(oldSegmentSlice, newSegmentSlice)
 								} else {
-									// If oldPath is not yet finished we will keep comparing it against
-									// this segment. Example: ["/", "a/", "*", ""] and ["/", "a/", ""];
-									// the segments ["*", ""] match [""].
+									// If oldSegments is not yet finished we will keep comparing
+									// it against this segment. Example: ["/", "a/", "*", ""]
+									// and ["/", "a/", ""]; the segments ["*", ""] match [""].
 									nextQueue = append(nextQueue, newNode)
 								}
 							}
@@ -157,7 +157,7 @@ func (g *pathConflictTree) pathHasConflict(oldPath string, oldSegments []segment
 							break newNodeLoop
 						} else {
 							// Once GlobPath returns false there cannot be a
-							// conflict  between oldPath and newPath, we can
+							// conflict between both paths, we can
 							// break here.
 							break newNodeLoop
 						}
@@ -166,7 +166,7 @@ func (g *pathConflictTree) pathHasConflict(oldPath string, oldSegments []segment
 						if oldSegment.Text == newSegment.Text {
 							if len(newNode.Children) == 0 && len(oldSegments) == 1 {
 								// If these are both terminal nodes, conflict found.
-								return conflictErrMsg(&oldSegmentInfo, &newSegmentInfo)
+								return conflictErrMsg(oldSegmentSlice, newSegmentSlice)
 							}
 							for _, child := range newNode.Children {
 								nextQueue = append(nextQueue, child)
@@ -191,7 +191,7 @@ func (g *pathConflictTree) pathHasConflict(oldPath string, oldSegments []segment
 
 // insertSegments inserts the path's segments blindly in the graph without
 // looking at conflicts.
-func (g *pathConflictTree) insertSegments(segments []segment, infos []segmentSlice) {
+func (g *pathConflictTree) insertSegments(segments []segment, slices []*segmentSlice) {
 	parent := g.Root
 	// Skip "/".
 	segments = segments[1:]
@@ -204,7 +204,7 @@ func (g *pathConflictTree) insertSegments(segments []segment, infos []segmentSli
 				Children: map[string]*node{},
 			}
 		}
-		current.Slices = append(current.Slices, infos...)
+		current.Slices = append(current.Slices, slices...)
 		parent.Children[segment.Text] = current
 		parent = current
 	}

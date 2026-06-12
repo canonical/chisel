@@ -149,29 +149,29 @@ func (s *S) TestConflictTree(c *C) {
 		Children: map[string]*setup.PathNode{
 			"a/": {
 				Segment: setup.PathSegment{Text: "a/"},
-				Slices:  []setup.PathSegmentSlice{pathInfo, globInfo},
+				Slices:  []*setup.PathSegmentSlice{&pathInfo, &globInfo},
 				Children: map[string]*setup.PathNode{
 					"*": {
 						Segment: setup.PathSegment{Text: "*", HasGlob: true},
-						Slices:  []setup.PathSegmentSlice{globInfo},
+						Slices:  []*setup.PathSegmentSlice{&globInfo},
 						Children: map[string]*setup.PathNode{
 							"": {
 								Segment: setup.PathSegment{Text: ""},
-								Slices:  []setup.PathSegmentSlice{globInfo},
+								Slices:  []*setup.PathSegmentSlice{&globInfo},
 							},
 						},
 					},
 					"*/": {
 						Segment: setup.PathSegment{Text: "*/", HasGlob: true},
-						Slices:  []setup.PathSegmentSlice{pathInfo},
+						Slices:  []*setup.PathSegmentSlice{&pathInfo},
 						Children: map[string]*setup.PathNode{
 							"b": {
 								Segment: setup.PathSegment{Text: "b"},
-								Slices:  []setup.PathSegmentSlice{pathInfo},
+								Slices:  []*setup.PathSegmentSlice{&pathInfo},
 								Children: map[string]*setup.PathNode{
 									"": {
 										Segment: setup.PathSegment{Text: ""},
-										Slices:  []setup.PathSegmentSlice{pathInfo},
+										Slices:  []*setup.PathSegmentSlice{&pathInfo},
 									},
 								},
 							},
@@ -187,10 +187,10 @@ func (s *S) TestConflictTree(c *C) {
 func assertTreeEquals(c *C, obtained, expected *setup.PathNode) {
 	c.Assert(obtained.Segment, DeepEquals, expected.Segment)
 
-	slices.SortFunc(obtained.Slices, func(a, b setup.PathSegmentSlice) int {
+	slices.SortFunc(obtained.Slices, func(a, b *setup.PathSegmentSlice) int {
 		return strings.Compare(a.Slice.String(), b.Slice.String())
 	})
-	slices.SortFunc(expected.Slices, func(a, b setup.PathSegmentSlice) int {
+	slices.SortFunc(expected.Slices, func(a, b *setup.PathSegmentSlice) int {
 		return strings.Compare(a.Slice.String(), b.Slice.String())
 	})
 	c.Assert(obtained.Slices, DeepEquals, expected.Slices)
