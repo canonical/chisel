@@ -63,7 +63,12 @@ func newConflictTree(pathToSlices map[string][]*Slice) pathConflictTree {
 }
 
 func (g *pathConflictTree) HasConflict() error {
-	for path, slices := range g.PathToSlices {
+	// Make errors deterministic.
+	paths := slices.Collect(maps.Keys(g.PathToSlices))
+	slices.Sort(paths)
+
+	for _, path := range paths {
+		slices := g.PathToSlices[path]
 		var oldInfos []segmentSlice
 		for _, oldSlice := range slices {
 			oldInfos = append(oldInfos, segmentSlice{oldSlice, oldSlice.Contents[path], path})
