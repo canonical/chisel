@@ -20,7 +20,6 @@ func (s *S) TestPathToSegments(c *C) {
 			{Text: "/"},
 			{Text: "foo/"},
 			{Text: "bar"},
-			{Text: ""},
 		},
 	}, {
 		path: "/foo/",
@@ -40,7 +39,6 @@ func (s *S) TestPathToSegments(c *C) {
 		segments: []setup.PathSegment{
 			{Text: "/"},
 			{Text: "*", HasGlob: true},
-			{Text: ""},
 		},
 	}, {
 		path: "/*/",
@@ -54,14 +52,12 @@ func (s *S) TestPathToSegments(c *C) {
 		segments: []setup.PathSegment{
 			{Text: "/"},
 			{Text: "**", HasGlob: true, HasDoubleGlob: true},
-			{Text: ""},
 		},
 	}, {
 		path: "/**/bar",
 		segments: []setup.PathSegment{
 			{Text: "/"},
 			{Text: "**/bar", HasGlob: true, HasDoubleGlob: true},
-			{Text: ""},
 		},
 	}, {
 		path: "/foo*/bar",
@@ -69,7 +65,6 @@ func (s *S) TestPathToSegments(c *C) {
 			{Text: "/"},
 			{Text: "foo*/", HasGlob: true},
 			{Text: "bar"},
-			{Text: ""},
 		},
 	}, {
 		path: "/foo?/bar",
@@ -77,7 +72,6 @@ func (s *S) TestPathToSegments(c *C) {
 			{Text: "/"},
 			{Text: "foo?/", HasGlob: true},
 			{Text: "bar"},
-			{Text: ""},
 		},
 	}, {
 		path: "/f*oo/f**/bar",
@@ -85,14 +79,12 @@ func (s *S) TestPathToSegments(c *C) {
 			{Text: "/"},
 			{Text: "f*oo/", HasGlob: true},
 			{Text: "f**/bar", HasGlob: true, HasDoubleGlob: true},
-			{Text: ""},
 		},
 	}, {
 		path: "/foo**/bar/baz",
 		segments: []setup.PathSegment{
 			{Text: "/"},
 			{Text: "foo**/bar/baz", HasGlob: true, HasDoubleGlob: true},
-			{Text: ""},
 		},
 	}, {
 		path: "foo/bar",
@@ -100,6 +92,7 @@ func (s *S) TestPathToSegments(c *C) {
 	}}
 
 	for _, test := range tests {
+		c.Logf("Test: %q", test.path)
 		segments, err := setup.PathToSegments(test.path)
 		if test.err != "" {
 			c.Assert(err, ErrorMatches, test.err)
@@ -154,12 +147,6 @@ func (s *S) TestConflictTree(c *C) {
 					"*": {
 						Segment: setup.PathSegment{Text: "*", HasGlob: true},
 						Slices:  []*setup.PathSegmentSlice{&globInfo},
-						Children: map[string]*setup.PathNode{
-							"": {
-								Segment: setup.PathSegment{Text: ""},
-								Slices:  []*setup.PathSegmentSlice{&globInfo},
-							},
-						},
 					},
 					"*/": {
 						Segment: setup.PathSegment{Text: "*/", HasGlob: true},
@@ -168,12 +155,6 @@ func (s *S) TestConflictTree(c *C) {
 							"b": {
 								Segment: setup.PathSegment{Text: "b"},
 								Slices:  []*setup.PathSegmentSlice{&pathInfo},
-								Children: map[string]*setup.PathNode{
-									"": {
-										Segment: setup.PathSegment{Text: ""},
-										Slices:  []*setup.PathSegmentSlice{&pathInfo},
-									},
-								},
 							},
 						},
 					},

@@ -105,7 +105,9 @@ func (g *pathConflictTree) pathHasConflict(oldSegments []segment, oldSlices []*s
 	currentQueue = slices.Collect(maps.Values(g.Root.Children))
 	oldSegments = oldSegments[1:]
 
-	for len(currentQueue) > 0 {
+	// If we run out of segments from the graph or the path there cannot be a
+	// conflict (note paths with "**" are collapsed to one segment).
+	for len(currentQueue) > 0 && len(oldSegments) > 0 {
 		oldSegment := oldSegments[0]
 		for _, newNode := range currentQueue {
 		newNodeLoop:
@@ -140,16 +142,9 @@ func (g *pathConflictTree) pathHasConflict(oldSegments []segment, oldSlices []*s
 						if strdist.GlobPath(oldSegment.Text, newSegment.Text) {
 							// Only when we get to leaf (i.e. no children, can
 							// we have a conflict).
-							if len(newNode.Children) == 0 {
-								if len(oldSegments) == 1 {
-									// If we are at the terminal node of both paths we found a conflict.
-									return conflictErrMsg(oldSegmentSlice, newSegmentSlice)
-								} else {
-									// If oldSegments is not yet finished we will keep comparing
-									// it against this segment. Example: ["/", "a/", "*", ""]
-									// and ["/", "a/", ""]; the segments ["*", ""] match [""].
-									nextQueue = append(nextQueue, newNode)
-								}
+							if len(newNode.Children) == 0 && len(oldSegments) == 1 {
+								// If we are at the terminal node of both paths we found a conflict.
+								return conflictErrMsg(oldSegmentSlice, newSegmentSlice)
 							}
 							for _, child := range newNode.Children {
 								nextQueue = append(nextQueue, child)
@@ -180,10 +175,7 @@ func (g *pathConflictTree) pathHasConflict(oldSegments []segment, oldSlices []*s
 		currentQueue, nextQueue = nextQueue, currentQueue
 		nextQueue = nextQueue[0:0]
 
-		if len(oldSegments) > 1 {
-			// If the segment is a termination node keep it. See example in case 2.
-			oldSegments = oldSegments[1:]
-		}
+		oldSegments = oldSegments[1:]
 	}
 
 	return nil
@@ -210,8 +202,10 @@ func (g *pathConflictTree) insertSegments(segments []segment, slices []*segmentS
 	}
 }
 
-// pathToSegments returns the list of segments that compose the path plus the
-// empty segment "" for explicit termination in the trie.
+// pathToSegments returns the list of segments that compose the path.
+// Directories, i.e. paths that end with "/", contain the empty segment "" for
+// explicit termination in the trie to distinguish them from parent directories
+// of other paths.
 func pathToSegments(path string) ([]segment, error) {
 	if path[0] != '/' {
 		return nil, errors.New("internal error: path does not start with '/'")
@@ -227,7 +221,12 @@ func pathToSegments(path string) ([]segment, error) {
 		}
 		segments = append(segments, segment)
 		path = path[end+1:]
+		if path == "" && !strings.HasSuffix(segment.Text, "/") {
+			// Non-directories: last segment is also termination node.
+			break
+		}
 		if segment.Text == "" {
+			// Directories: add the termination node.
 			break
 		}
 	}
