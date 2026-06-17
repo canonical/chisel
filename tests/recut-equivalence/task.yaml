@@ -1,0 +1,35 @@
+summary: Recut produce the exact same result as two consecutive cuts.
+
+variants:
+  - noble
+
+environment:
+  ROOTFS: rootfs
+  ROOTFS_RECUT: rootfs-recut
+
+execute: |
+  mkdir -p ${ROOTFS} ${ROOTFS_RECUT}
+
+  # TODO: remove this env var when final upgrade strategy is in place.
+  export CHISEL_RECUT_EXPERIMENTAL=1
+
+  # First cut single cut
+  chisel cut --release ./chisel-releases/ \
+    --root ${ROOTFS} \
+    hello_bins \
+    base-files_manifest \
+    base-files_slice-a \
+    base-files_slice-b
+
+  # Cut a rootfs twice.
+  chisel cut --release ./chisel-releases/ \
+    --root ${ROOTFS_RECUT} \
+    hello_bins \
+    base-files_manifest \
+    base-files_slice-a
+  chisel cut --release ./chisel-releases/ \
+    --root ${ROOTFS_RECUT} \
+    base-files_slice-b
+
+  # Compares both rootfs.
+  diff -q -r ${ROOTFS} ${ROOTFS_RECUT}

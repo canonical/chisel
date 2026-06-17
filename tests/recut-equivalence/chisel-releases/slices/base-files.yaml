@@ -1,0 +1,13 @@
+package: base-files
+slices:
+  slice-a:
+    contents:
+      /etc/debian_version:
+      /etc/foo:
+        text: bar
+  slice-b:
+    contents:
+      /etc/issue:
+  manifest:
+    contents:
+      /chisel/**: {generate: manifest}
