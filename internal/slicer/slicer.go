@@ -126,8 +126,9 @@ func Run(options *RunOptions) error {
 					sourcePath = targetPath
 				}
 				extractPackage[sourcePath] = append(extractPackage[sourcePath], deb.ExtractInfo{
-					Path:    targetPath,
-					Context: slice,
+					Path:         targetPath,
+					Context:      slice,
+					SpecialGlobs: pathInfo.SpecialGlobs,
 				})
 			} else {
 				// When the content is not extracted from the package (i.e. path is
