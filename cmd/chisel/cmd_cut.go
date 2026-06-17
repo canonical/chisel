@@ -1,7 +1,10 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"slices"
 	"time"
 
@@ -11,6 +14,7 @@ import (
 	"github.com/canonical/chisel/internal/cache"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/slicer"
+	"github.com/canonical/chisel/public/manifest"
 )
 
 var shortCutHelp = "Cut a tree with selected slices"
@@ -73,6 +77,35 @@ func (cmd *cmdCut) Execute(args []string) error {
 		}
 	}
 
+	targetDir := filepath.Clean(cmd.RootDir)
+	if !filepath.IsAbs(targetDir) {
+		dir, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("cannot obtain current directory: %w", err)
+		}
+		targetDir = filepath.Join(dir, targetDir)
+	}
+
+	var mfest *manifest.Manifest
+	// TODO: Remove this gating once the final upgrading strategy is in place.
+	if os.Getenv("CHISEL_RECUT_EXPERIMENTAL") != "" {
+		mfest, err = slicer.SelectValidManifest(targetDir, release)
+		if err == nil {
+			err = mfest.IterateSlices("", func(slice *manifest.Slice) error {
+				sk, err := setup.ParseSliceKey(slice.Name)
+				if err != nil {
+					return err
+				}
+				sliceKeys = append(sliceKeys, sk)
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+		} else if !errors.Is(err, slicer.ErrNoManifest) {
+			return err
+		}
+	}
 	selection, err := setup.Select(release, sliceKeys, cmd.Arch)
 	if err != nil {
 		return err
@@ -124,7 +157,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 	err = slicer.Run(&slicer.RunOptions{
 		Selection: selection,
 		Archives:  archives,
-		TargetDir: cmd.RootDir,
+		TargetDir: targetDir,
 	})
 	return err
 }

@@ -3,6 +3,9 @@ package slicer
 import (
 	"archive/tar"
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -21,6 +24,7 @@ import (
 	"github.com/canonical/chisel/internal/manifestutil"
 	"github.com/canonical/chisel/internal/scripts"
 	"github.com/canonical/chisel/internal/setup"
+	"github.com/canonical/chisel/public/manifest"
 )
 
 const manifestMode fs.FileMode = 0644
@@ -83,11 +87,7 @@ func Run(options *RunOptions) error {
 
 	targetDir := filepath.Clean(options.TargetDir)
 	if !filepath.IsAbs(targetDir) {
-		dir, err := os.Getwd()
-		if err != nil {
-			return fmt.Errorf("cannot obtain current directory: %w", err)
-		}
-		targetDir = filepath.Join(dir, targetDir)
+		return fmt.Errorf("internal error: cannot use a relative target directory %s", targetDir)
 	}
 
 	pkgArchive, err := selectPkgArchives(options.Archives, options.Selection)
@@ -536,4 +536,104 @@ func selectPkgArchives(archives map[string]archive.Archive, selection *setup.Sel
 		pkgArchive[pkg.Name] = chosen
 	}
 	return pkgArchive, nil
+}
+
+var ErrNoManifest = errors.New("cannot find valid manifest file")
+
+// SelectValidManifest looks in the targetDir for manifests declared in the
+// release, reads and validates those found. The selection ensures that all
+// valid manifests found are identical, so only one is kept and returned.
+//
+// A file matching a manifest path declared in the release is considered valid
+// if it is a zstd file, readable by manifest.Read (with a known schema
+// version) and successfully validated by manifestutil.Validate.
+//
+// Finding only manifests with unknown schema version means the targetDir may
+// have been produced by Chisel, but possibly by a future/incompatible version.
+// Chisel cannot safely proceed and so errors out.
+func SelectValidManifest(targetDir string, release *setup.Release) (*manifest.Manifest, error) {
+	targetDir = filepath.Clean(targetDir)
+	if !filepath.IsAbs(targetDir) {
+		return nil, fmt.Errorf("internal error: cannot use a relative target directory %s", targetDir)
+	}
+	manifestPaths := manifestutil.FindPathsInRelease(release)
+	if len(manifestPaths) == 0 {
+		return nil, ErrNoManifest
+	}
+
+	var selected *manifest.Manifest
+	var selectedHash string
+	var selectedPath string
+	foundUnknownSchema := false
+	for _, manifestPath := range manifestPaths {
+		manifestFullPath := filepath.Join(targetDir, manifestPath)
+		mfest, manifestHash, err := tryLoadManifest(manifestFullPath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			var unknownSchemaError *manifest.UnknownSchemaError
+			if errors.As(err, &unknownSchemaError) {
+				foundUnknownSchema = true
+				// Ignore manifests with unknown (potentially future) schema versions.
+				continue
+			}
+			return nil, err
+		}
+		if selected == nil {
+			selected = mfest
+			selectedHash = manifestHash
+			selectedPath = manifestPath
+		} else if selectedHash != manifestHash {
+			return nil, fmt.Errorf("cannot select between conflicting manifests: %q != %q", selectedPath, manifestPath)
+		}
+	}
+	if selected == nil {
+		if foundUnknownSchema {
+			return nil, fmt.Errorf("cannot select a manifest: schema version is unknown")
+		} else {
+			return nil, ErrNoManifest
+		}
+	}
+	return selected, nil
+}
+
+func tryLoadManifest(manifestFullPath string) (*manifest.Manifest, string, error) {
+	f, err := os.Open(manifestFullPath)
+	if err != nil {
+		return nil, "", err
+	}
+	defer f.Close()
+	r, err := zstd.NewReader(f)
+	if err != nil {
+		return nil, "", err
+	}
+	defer r.Close()
+	mfest, err := manifest.Read(r)
+	if err != nil {
+		return nil, "", err
+	}
+	err = manifestutil.Validate(mfest)
+	if err != nil {
+		return nil, "", err
+	}
+	manifestHash, err := contentHash(manifestFullPath)
+	if err != nil {
+		return nil, "", fmt.Errorf("cannot compute hash for %q: %s", manifestFullPath, err)
+	}
+	return mfest, manifestHash, nil
+}
+
+func contentHash(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
 }

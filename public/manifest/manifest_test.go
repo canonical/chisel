@@ -76,7 +76,7 @@ var readManifestTests = []struct {
 		{"jsonwall":"1.0","schema":"2.0","count":1}
 		{"kind":"package","name":"pkg1","version":"v1","sha256":"hash1","arch":"arch1"}
 	`,
-	error: `cannot read manifest: unknown schema version "2.0"`,
+	error: `cannot read manifest: unknown manifest schema version "2.0"`,
 }}
 
 func (s *S) TestManifestRead(c *C) {
