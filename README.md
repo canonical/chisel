@@ -109,6 +109,13 @@ sudo chmod u+r /etc/apt/auth.conf.d/90ubuntu-advantage
 The location of the credentials can be configured using the environment variable
 `CHISEL_AUTH_DIR`.
 
+For custom Ubuntu mirrors, the following environment variables can be used to
+override default archive URLs:
+
+- `CHISEL_UBUNTU_REPO_ARCHIVE_URL` (default: `http://archive.ubuntu.com/ubuntu/`)
+- `CHISEL_UBUNTU_REPO_OLD_RELEASES_URL` (default: `http://old-releases.ubuntu.com/ubuntu/`)
+- `CHISEL_UBUNTU_REPO_PORTS_URL` (default: `http://ports.ubuntu.com/ubuntu-ports/`)
+
 ## Reference
 
 ### Chisel releases
