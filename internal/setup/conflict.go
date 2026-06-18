@@ -108,7 +108,7 @@ func (g *pathConflictTree) pathHasConflict(newSegments []segment, newSegmentSlic
 	newSegments = newSegments[1:]
 
 	// If we run out of segments from the graph or the path there cannot be a
-	// conflict (note paths with "**" are collapsed to one segment).
+	// conflict.
 	for len(currentQueue) > 0 && len(newSegments) > 0 {
 		newSegment := newSegments[0]
 		for _, oldNode := range currentQueue {
@@ -132,9 +132,8 @@ func (g *pathConflictTree) pathHasConflict(newSegments []segment, newSegmentSlic
 					}
 
 					if oldSegment.HasDoubleGlob || newSegment.HasDoubleGlob {
-						// Case 1: One of the strings has a double glob, we
-						// need to check the whole remaining path against
-						// each other.
+						// Case 1: Either segment has a double glob, we need to
+						// check the whole remaining path against each other.
 						if strdist.GlobPath(newSegmentSlice.WholePath, oldSegmentSlice.WholePath) {
 							return conflictErrMsg(oldSegmentSlice, newSegmentSlice)
 						}
@@ -142,8 +141,8 @@ func (g *pathConflictTree) pathHasConflict(newSegments []segment, newSegmentSlic
 						// Case 2: Either segment has a single glob (* or ?).
 						// We only need to check the segment.
 						if strdist.GlobPath(newSegment.Text, oldSegment.Text) {
-							// Only when we get to leaf (i.e. no children, can
-							// we have a conflict).
+							// Only when we get to leaf (i.e. no children) can
+							// we have a conflict.
 							if len(oldNode.Children) == 0 && len(newSegments) == 1 {
 								// If we are at the terminal node of both paths we found a conflict.
 								return conflictErrMsg(oldSegmentSlice, newSegmentSlice)
@@ -158,7 +157,7 @@ func (g *pathConflictTree) pathHasConflict(newSegments []segment, newSegmentSlic
 							break newNodeLoop
 						}
 					} else {
-						// Case 3: No globs, we can compare the strings directly.
+						// Case 3: No globs, we can compare the segments directly.
 						if newSegment.Text == oldSegment.Text {
 							if len(oldNode.Children) == 0 && len(newSegments) == 1 {
 								// If these are both terminal nodes, conflict found.
