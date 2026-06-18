@@ -162,20 +162,20 @@ func (s *S) TestConflictTree(c *C) {
 		Segment: setup.PathSegment{Text: "/"},
 		Children: map[string]*setup.PathNode{
 			"a/": {
-				Segment: setup.PathSegment{Text: "a/"},
-				Slices:  []*setup.PathSegmentSlice{&pathInfo, &globInfo},
+				Segment:       setup.PathSegment{Text: "a/"},
+				SegmentSlices: []*setup.PathSegmentSlice{&pathInfo, &globInfo},
 				Children: map[string]*setup.PathNode{
 					"*": {
-						Segment: setup.PathSegment{Text: "*", HasGlob: true},
-						Slices:  []*setup.PathSegmentSlice{&globInfo},
+						Segment:       setup.PathSegment{Text: "*", HasGlob: true},
+						SegmentSlices: []*setup.PathSegmentSlice{&globInfo},
 					},
 					"*/": {
-						Segment: setup.PathSegment{Text: "*/", HasGlob: true},
-						Slices:  []*setup.PathSegmentSlice{&pathInfo},
+						Segment:       setup.PathSegment{Text: "*/", HasGlob: true},
+						SegmentSlices: []*setup.PathSegmentSlice{&pathInfo},
 						Children: map[string]*setup.PathNode{
 							"b": {
-								Segment: setup.PathSegment{Text: "b"},
-								Slices:  []*setup.PathSegmentSlice{&pathInfo},
+								Segment:       setup.PathSegment{Text: "b"},
+								SegmentSlices: []*setup.PathSegmentSlice{&pathInfo},
 							},
 						},
 					},
@@ -189,13 +189,13 @@ func (s *S) TestConflictTree(c *C) {
 func assertTreeEquals(c *C, obtained, expected *setup.PathNode) {
 	c.Assert(obtained.Segment, DeepEquals, expected.Segment)
 
-	slices.SortFunc(obtained.Slices, func(a, b *setup.PathSegmentSlice) int {
+	slices.SortFunc(obtained.SegmentSlices, func(a, b *setup.PathSegmentSlice) int {
 		return strings.Compare(a.Slice.String(), b.Slice.String())
 	})
-	slices.SortFunc(expected.Slices, func(a, b *setup.PathSegmentSlice) int {
+	slices.SortFunc(expected.SegmentSlices, func(a, b *setup.PathSegmentSlice) int {
 		return strings.Compare(a.Slice.String(), b.Slice.String())
 	})
-	c.Assert(obtained.Slices, DeepEquals, expected.Slices)
+	c.Assert(obtained.SegmentSlices, DeepEquals, expected.SegmentSlices)
 
 	c.Assert(len(obtained.Children), Equals, len(expected.Children))
 	for name, expectedChild := range expected.Children {

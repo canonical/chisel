@@ -29,9 +29,9 @@ type segment struct {
 }
 
 type node struct {
-	Segment  segment
-	Slices   []*segmentSlice
-	Children map[string]*node
+	Segment       segment
+	SegmentSlices []*segmentSlice
+	Children      map[string]*node
 }
 
 // pathConflictTree uses a custom trie to find conflicts that might arise from
@@ -71,24 +71,24 @@ func (g *pathConflictTree) HasConflict() error {
 
 	for _, path := range paths {
 		slices := g.PathToSlices[path]
-		var oldSlices []*segmentSlice
-		for _, oldSlice := range slices {
-			oldSlices = append(oldSlices, &segmentSlice{oldSlice, oldSlice.Contents[path], path})
+		var segmentSlices []*segmentSlice
+		for _, slice := range slices {
+			segmentSlices = append(segmentSlices, &segmentSlice{slice, slice.Contents[path], path})
 		}
 		segments, err := pathToSegments(path)
 		if err != nil {
 			return err
 		}
-		err = g.pathHasConflict(segments, oldSlices)
+		err = g.pathHasConflict(segments, segmentSlices)
 		if err != nil {
 			return err
 		}
-		g.insertSegments(segments, oldSlices)
+		g.insertSegments(segments, segmentSlices)
 	}
 	return nil
 }
 
-func (g *pathConflictTree) pathHasConflict(newSegments []segment, newSlices []*segmentSlice) error {
+func (g *pathConflictTree) pathHasConflict(newSegments []segment, newSegmentSlices []*segmentSlice) error {
 	conflictErrMsg := func(oldSegmentSlice, newSegmentSlice *segmentSlice) error {
 		oldSlice, oldPath := oldSegmentSlice.Slice, oldSegmentSlice.WholePath
 		newSlice, newPath := newSegmentSlice.Slice, newSegmentSlice.WholePath
@@ -113,10 +113,10 @@ func (g *pathConflictTree) pathHasConflict(newSegments []segment, newSlices []*s
 		newSegment := newSegments[0]
 		for _, oldNode := range currentQueue {
 		newNodeLoop:
-			for _, newSegmentSlice := range newSlices {
+			for _, newSegmentSlice := range newSegmentSlices {
 				newSlice := newSegmentSlice.Slice
 				newPathInfo := newSegmentSlice.PathInfo
-				for _, oldSegmentSlice := range oldNode.Slices {
+				for _, oldSegmentSlice := range oldNode.SegmentSlices {
 					oldSlice := oldSegmentSlice.Slice
 					oldPathInfo := oldSegmentSlice.PathInfo
 					oldSegment := oldNode.Segment
@@ -184,7 +184,7 @@ func (g *pathConflictTree) pathHasConflict(newSegments []segment, newSlices []*s
 
 // insertSegments inserts the path's segments blindly in the graph without
 // looking at conflicts.
-func (g *pathConflictTree) insertSegments(segments []segment, slices []*segmentSlice) {
+func (g *pathConflictTree) insertSegments(segments []segment, segmentSlices []*segmentSlice) {
 	parent := g.Root
 	// Skip "/".
 	segments = segments[1:]
@@ -197,7 +197,7 @@ func (g *pathConflictTree) insertSegments(segments []segment, slices []*segmentS
 				Children: map[string]*node{},
 			}
 		}
-		current.Slices = append(current.Slices, slices...)
+		current.SegmentSlices = append(current.SegmentSlices, segmentSlices...)
 		parent.Children[segment.Text] = current
 		parent = current
 	}
