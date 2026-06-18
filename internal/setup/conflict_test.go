@@ -125,14 +125,14 @@ func (s *S) TestPathToSegments(c *C) {
 }
 
 func (s *S) TestConflictTree(c *C) {
-	slicePath := &setup.Slice{
+	sliceOne := &setup.Slice{
 		Package: "pkg1",
 		Name:    "path",
 		Contents: map[string]setup.PathInfo{
-			"/a/*/b": {Kind: setup.CopyPath},
+			"/a/*/b": {Kind: setup.GlobPath},
 		},
 	}
-	sliceGlob := &setup.Slice{
+	sliceTwo := &setup.Slice{
 		Package: "pkg2",
 		Name:    "glob",
 		Contents: map[string]setup.PathInfo{
@@ -140,20 +140,20 @@ func (s *S) TestConflictTree(c *C) {
 		},
 	}
 
-	pathInfo := setup.PathSegmentSlice{
-		Slice:     slicePath,
-		PathInfo:  setup.PathInfo{Kind: setup.CopyPath},
+	pathOne := setup.PathSegmentSlice{
+		Slice:     sliceOne,
+		PathInfo:  setup.PathInfo{Kind: setup.GlobPath},
 		WholePath: "/a/*/b",
 	}
-	globInfo := setup.PathSegmentSlice{
-		Slice:     sliceGlob,
+	pathTwo := setup.PathSegmentSlice{
+		Slice:     sliceTwo,
 		PathInfo:  setup.PathInfo{Kind: setup.GlobPath},
 		WholePath: "/a/*",
 	}
 
 	tree := setup.NewConflictTree(map[string][]*setup.Slice{
-		"/a/*/b": {slicePath},
-		"/a/*":   {sliceGlob},
+		"/a/*/b": {sliceOne},
+		"/a/*":   {sliceTwo},
 	})
 	err := tree.HasConflict()
 	c.Assert(err, IsNil)
@@ -163,19 +163,19 @@ func (s *S) TestConflictTree(c *C) {
 		Children: map[string]*setup.PathNode{
 			"a/": {
 				Segment:       setup.PathSegment{Text: "a/"},
-				SegmentSlices: []*setup.PathSegmentSlice{&pathInfo, &globInfo},
+				SegmentSlices: []*setup.PathSegmentSlice{&pathOne, &pathTwo},
 				Children: map[string]*setup.PathNode{
 					"*": {
 						Segment:       setup.PathSegment{Text: "*", HasGlob: true},
-						SegmentSlices: []*setup.PathSegmentSlice{&globInfo},
+						SegmentSlices: []*setup.PathSegmentSlice{&pathTwo},
 					},
 					"*/": {
 						Segment:       setup.PathSegment{Text: "*/", HasGlob: true},
-						SegmentSlices: []*setup.PathSegmentSlice{&pathInfo},
+						SegmentSlices: []*setup.PathSegmentSlice{&pathOne},
 						Children: map[string]*setup.PathNode{
 							"b": {
 								Segment:       setup.PathSegment{Text: "b"},
-								SegmentSlices: []*setup.PathSegmentSlice{&pathInfo},
+								SegmentSlices: []*setup.PathSegmentSlice{&pathOne},
 							},
 						},
 					},
