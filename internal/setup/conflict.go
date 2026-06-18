@@ -217,12 +217,12 @@ func pathToSegments(path string) ([]segment, error) {
 	for {
 		end, singleGlob, doubleGlob := segmentEnd(path)
 		segment := segment{
-			Text:          path[:end+1],
+			Text:          path[:end],
 			HasGlob:       singleGlob,
 			HasDoubleGlob: doubleGlob,
 		}
 		segments = append(segments, segment)
-		path = path[end+1:]
+		path = path[end:]
 		if path == "" && !strings.HasSuffix(segment.Text, "/") {
 			// Non-directories: last segment is also termination node.
 			break
@@ -249,15 +249,15 @@ func segmentEnd(s string) (end int, hasGlob bool, hasDoubleGlob bool) {
 	} else if s[end] == '*' || s[end] == '?' {
 		hasGlob = true
 		slash := strings.IndexRune(s[end:], '/')
-		if slash != -1 {
-			end = end + slash
-		} else {
+		if slash == -1 {
 			end = len(s) - 1
+		} else {
+			end = end + slash
 		}
 		hasDoubleGlob = strings.Contains(s[:end+1], "**")
 		if hasDoubleGlob {
 			end = len(s) - 1
 		}
 	}
-	return end, hasGlob, hasDoubleGlob
+	return end + 1, hasGlob, hasDoubleGlob
 }
