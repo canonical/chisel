@@ -112,7 +112,7 @@ func (g *pathConflictTree) pathHasConflict(newSegments []segment, newSegmentSlic
 	for len(currentQueue) > 0 && len(newSegments) > 0 {
 		newSegment := newSegments[0]
 		for _, oldNode := range currentQueue {
-		newNodeLoop:
+		oldNodeLoop:
 			for _, newSegmentSlice := range newSegmentSlices {
 				newSlice := newSegmentSlice.Slice
 				newPathInfo := newSegmentSlice.PathInfo
@@ -137,12 +137,17 @@ func (g *pathConflictTree) pathHasConflict(newSegments []segment, newSegmentSlic
 						if strdist.GlobPath(newSegmentSlice.WholePath, oldSegmentSlice.WholePath) {
 							return conflictErrMsg(oldSegmentSlice, newSegmentSlice)
 						}
-					} else if oldSegment.HasGlob || newSegment.HasGlob {
-						// Case 2: Either segment has a single glob (* or ?).
-						// We only need to check the segment.
-						if strdist.GlobPath(newSegment.Text, oldSegment.Text) {
-							// Only when we get to leaf (i.e. no children) can
-							// we have a conflict.
+					} else {
+						var matched bool
+						if oldSegment.HasGlob || newSegment.HasGlob {
+							// Case 2: Either segment has a single glob (* or ?).
+							// We only need to check the segment.
+							matched = strdist.GlobPath(newSegment.Text, oldSegment.Text)
+						} else {
+							// Case 3: No globs, we can compare the segments directly.
+							matched = newSegment.Text == oldSegment.Text
+						}
+						if matched {
 							if len(oldNode.Children) == 0 && len(newSegments) == 1 {
 								// If we are at the terminal node of both paths we found a conflict.
 								return conflictErrMsg(oldSegmentSlice, newSegmentSlice)
@@ -150,23 +155,11 @@ func (g *pathConflictTree) pathHasConflict(newSegments []segment, newSegmentSlic
 							for _, child := range oldNode.Children {
 								nextQueue = append(nextQueue, child)
 							}
-							break newNodeLoop
+							break oldNodeLoop
 						} else {
 							// Once GlobPath returns false there cannot be a
 							// conflict between both paths, we can break here.
-							break newNodeLoop
-						}
-					} else {
-						// Case 3: No globs, we can compare the segments directly.
-						if newSegment.Text == oldSegment.Text {
-							if len(oldNode.Children) == 0 && len(newSegments) == 1 {
-								// If these are both terminal nodes, conflict found.
-								return conflictErrMsg(oldSegmentSlice, newSegmentSlice)
-							}
-							for _, child := range oldNode.Children {
-								nextQueue = append(nextQueue, child)
-							}
-							break newNodeLoop
+							break oldNodeLoop
 						}
 					}
 				}
