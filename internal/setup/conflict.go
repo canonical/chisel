@@ -37,9 +37,9 @@ type node struct {
 // pathConflictTree uses a custom trie to find conflicts that might arise from
 // extracting different paths into the same root directory.
 //
-// It optimizes conflict resolution by calling strdist.GlobPath only when
+// It optimizes finding conflicts by calling strdist.GlobPath only when
 // strictly necessary and by passing it less data to compare. It relies on the
-// fact that real chisel releases most paths often share a very long prefix
+// fact that in real chisel releases most paths often share a very long prefix
 // that does not need to be compared each time. Additionally, our grammar is
 // very restrictive (only "*", "?" and "**") meaning that unless "**" is used,
 // any symbol can only match until a "/" is found.
@@ -54,9 +54,11 @@ type pathConflictTree struct {
 	PathToSlices map[string][]*Slice
 }
 
+var rootSegment = segment{"/", false, false}
+
 func newConflictTree(pathToSlices map[string][]*Slice) pathConflictTree {
 	root := &node{
-		Segment:  segment{"/", false, false},
+		Segment:  rootSegment,
 		Children: map[string]*node{},
 	}
 	return pathConflictTree{Root: root, PathToSlices: pathToSlices}
@@ -210,7 +212,7 @@ func pathToSegments(path string) ([]segment, error) {
 	if path[0] != '/' {
 		return nil, errors.New("internal error: path does not start with '/'")
 	}
-	segments := []segment{segment{"/", false, false}}
+	segments := []segment{rootSegment}
 	path = path[1:]
 	for {
 		end, singleGlob, doubleGlob := segmentEnd(path)

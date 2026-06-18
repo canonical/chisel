@@ -74,6 +74,20 @@ func (s *S) TestPathToSegments(c *C) {
 			{Text: "bar"},
 		},
 	}, {
+		path: "/fo??/bar",
+		segments: []setup.PathSegment{
+			{Text: "/"},
+			{Text: "fo??/", HasGlob: true},
+			{Text: "bar"},
+		},
+	}, {
+		path: "/f*o?/bar",
+		segments: []setup.PathSegment{
+			{Text: "/"},
+			{Text: "f*o?/", HasGlob: true},
+			{Text: "bar"},
+		},
+	}, {
 		path: "/f*oo/f**/bar",
 		segments: []setup.PathSegment{
 			{Text: "/"},
@@ -85,6 +99,13 @@ func (s *S) TestPathToSegments(c *C) {
 		segments: []setup.PathSegment{
 			{Text: "/"},
 			{Text: "foo**/bar/baz", HasGlob: true, HasDoubleGlob: true},
+		},
+	}, {
+		path: "/foo/**/sub/**/bar",
+		segments: []setup.PathSegment{
+			{Text: "/"},
+			{Text: "foo/"},
+			{Text: "**/sub/**/bar", HasGlob: true, HasDoubleGlob: true},
 		},
 	}, {
 		path: "foo/bar",
