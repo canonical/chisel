@@ -88,7 +88,7 @@ func (g *pathConflictTree) HasConflict() error {
 	return nil
 }
 
-func (g *pathConflictTree) pathHasConflict(oldSegments []segment, oldSlices []*segmentSlice) error {
+func (g *pathConflictTree) pathHasConflict(newSegments []segment, newSlices []*segmentSlice) error {
 	conflictErrMsg := func(oldSegmentSlice, newSegmentSlice *segmentSlice) error {
 		oldSlice, oldPath := oldSegmentSlice.Slice, oldSegmentSlice.WholePath
 		newSlice, newPath := newSegmentSlice.Slice, newSegmentSlice.WholePath
@@ -105,67 +105,66 @@ func (g *pathConflictTree) pathHasConflict(oldSegments []segment, oldSlices []*s
 
 	// Skip "/".
 	currentQueue = slices.Collect(maps.Values(g.Root.Children))
-	oldSegments = oldSegments[1:]
+	newSegments = newSegments[1:]
 
 	// If we run out of segments from the graph or the path there cannot be a
 	// conflict (note paths with "**" are collapsed to one segment).
-	for len(currentQueue) > 0 && len(oldSegments) > 0 {
-		oldSegment := oldSegments[0]
-		for _, newNode := range currentQueue {
+	for len(currentQueue) > 0 && len(newSegments) > 0 {
+		newSegment := newSegments[0]
+		for _, oldNode := range currentQueue {
 		newNodeLoop:
-			for _, oldSegmentSlice := range oldSlices {
-				oldSlice := oldSegmentSlice.Slice
-				oldPathInfo := oldSegmentSlice.PathInfo
-				for _, newSegmentSlice := range newNode.Slices {
-					newSlice := newSegmentSlice.Slice
-					newPathInfo := newSegmentSlice.PathInfo
-					newSegment := newNode.Segment
+			for _, newSegmentSlice := range newSlices {
+				newSlice := newSegmentSlice.Slice
+				newPathInfo := newSegmentSlice.PathInfo
+				for _, oldSegmentSlice := range oldNode.Slices {
+					oldSlice := oldSegmentSlice.Slice
+					oldPathInfo := oldSegmentSlice.PathInfo
+					oldSegment := oldNode.Segment
 
 					// If slices cannot conflict then skip the more expensive
 					// checks.
-					if (oldPathInfo.Kind == GlobPath || oldPathInfo.Kind == CopyPath) && (newPathInfo.Kind == GlobPath || newPathInfo.Kind == CopyPath) {
-						if newSlice.Package == oldSlice.Package {
+					if (newPathInfo.Kind == GlobPath || newPathInfo.Kind == CopyPath) && (oldPathInfo.Kind == GlobPath || oldPathInfo.Kind == CopyPath) {
+						if oldSlice.Package == newSlice.Package {
 							// If content is **extracted** from the same
 							// package, it will necessarily be the same.
 							continue
 						}
 					}
 
-					if newSegment.HasDoubleGlob || oldSegment.HasDoubleGlob {
+					if oldSegment.HasDoubleGlob || newSegment.HasDoubleGlob {
 						// Case 1: One of the strings has a double glob, we
 						// need to check the whole remaining path against
 						// each other.
-						if strdist.GlobPath(oldSegmentSlice.WholePath, newSegmentSlice.WholePath) {
+						if strdist.GlobPath(newSegmentSlice.WholePath, oldSegmentSlice.WholePath) {
 							return conflictErrMsg(oldSegmentSlice, newSegmentSlice)
 						}
-					} else if newSegment.HasGlob || oldSegment.HasGlob {
+					} else if oldSegment.HasGlob || newSegment.HasGlob {
 						// Case 2: Either segment has a single glob (* or ?).
 						// We only need to check the segment.
-						if strdist.GlobPath(oldSegment.Text, newSegment.Text) {
+						if strdist.GlobPath(newSegment.Text, oldSegment.Text) {
 							// Only when we get to leaf (i.e. no children, can
 							// we have a conflict).
-							if len(newNode.Children) == 0 && len(oldSegments) == 1 {
+							if len(oldNode.Children) == 0 && len(newSegments) == 1 {
 								// If we are at the terminal node of both paths we found a conflict.
 								return conflictErrMsg(oldSegmentSlice, newSegmentSlice)
 							}
-							for _, child := range newNode.Children {
+							for _, child := range oldNode.Children {
 								nextQueue = append(nextQueue, child)
 							}
 							break newNodeLoop
 						} else {
 							// Once GlobPath returns false there cannot be a
-							// conflict between both paths, we can
-							// break here.
+							// conflict between both paths, we can break here.
 							break newNodeLoop
 						}
 					} else {
 						// Case 3: No globs, we can compare the strings directly.
-						if oldSegment.Text == newSegment.Text {
-							if len(newNode.Children) == 0 && len(oldSegments) == 1 {
+						if newSegment.Text == oldSegment.Text {
+							if len(oldNode.Children) == 0 && len(newSegments) == 1 {
 								// If these are both terminal nodes, conflict found.
 								return conflictErrMsg(oldSegmentSlice, newSegmentSlice)
 							}
-							for _, child := range newNode.Children {
+							for _, child := range oldNode.Children {
 								nextQueue = append(nextQueue, child)
 							}
 							break newNodeLoop
@@ -177,7 +176,7 @@ func (g *pathConflictTree) pathHasConflict(oldSegments []segment, oldSlices []*s
 		currentQueue, nextQueue = nextQueue, currentQueue
 		nextQueue = nextQueue[0:0]
 
-		oldSegments = oldSegments[1:]
+		newSegments = newSegments[1:]
 	}
 
 	return nil
