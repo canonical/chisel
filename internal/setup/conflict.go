@@ -230,9 +230,6 @@ func pathToSegments(path string) ([]segment, error) {
 //   - If s contains "/" then segment will finish at the first "/" found unless
 //     there is a "**" before that, in that case segment = s.
 //   - Else segment = s.
-//
-// hasGlob is set to true if "*", "?" or "**" is found in the segment.
-// hasDoubleGlob is set to true if "**" is found in the segment.
 func segmentEnd(s string) (end int, hasGlob bool, hasDoubleGlob bool) {
 	end = strings.IndexAny(s, "*?/")
 	if end == -1 {
