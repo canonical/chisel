@@ -233,19 +233,22 @@ func pathToSegments(path string) ([]segment, error) {
 func segmentEnd(s string) (end int, hasGlob bool, hasDoubleGlob bool) {
 	end = strings.IndexAny(s, "*?/")
 	if end == -1 {
-		end = len(s) - 1
+		end = len(s)
 	} else if s[end] == '*' || s[end] == '?' {
 		hasGlob = true
 		slash := strings.IndexRune(s[end:], '/')
 		if slash == -1 {
-			end = len(s) - 1
+			end = len(s)
 		} else {
-			end = end + slash
+			end = end + slash + 1
 		}
-		hasDoubleGlob = strings.Contains(s[:end+1], "**")
+		hasDoubleGlob = strings.Contains(s[:end], "**")
 		if hasDoubleGlob {
-			end = len(s) - 1
+			end = len(s)
 		}
+	} else {
+		// Case where s[end] == "/":
+		end++
 	}
-	return end + 1, hasGlob, hasDoubleGlob
+	return end, hasGlob, hasDoubleGlob
 }
