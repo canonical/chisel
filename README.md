@@ -109,6 +109,11 @@ sudo chmod u+r /etc/apt/auth.conf.d/90ubuntu-advantage
 The location of the credentials can be configured using the environment variable
 `CHISEL_AUTH_DIR`.
 
+## Documentation
+
+The [Chisel documentation](https://ubuntu.com/chisel/docs/latest/) provides further
+details on slicing a package, package slices, the command reference, and much more. 
+
 ## Reference
 
 ### Chisel releases
