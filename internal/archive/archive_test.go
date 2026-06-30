@@ -18,7 +18,7 @@ import (
 
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/archive/testarchive"
-	"github.com/canonical/chisel/internal/deb"
+	"github.com/canonical/chisel/internal/tarball"
 	"github.com/canonical/chisel/internal/testutil"
 )
 
@@ -983,10 +983,10 @@ func (s *S) testOpenArchiveArch(c *C, test realArchiveTest, arch string) {
 	c.Assert(info.Name, DeepEquals, test.pkg)
 	c.Assert(info.Arch, DeepEquals, arch)
 
-	err = deb.Extract(pkg, &deb.ExtractOptions{
+	err = tarball.Extract(pkg, &tarball.ExtractOptions{
 		Package:   test.pkg,
 		TargetDir: extractDir,
-		Extract: map[string][]deb.ExtractInfo{
+		Extract: map[string][]tarball.ExtractInfo{
 			fmt.Sprintf("/usr/share/doc/%s/copyright", test.pkg): {
 				{Path: "/copyright"},
 			},

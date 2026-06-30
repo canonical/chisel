@@ -16,6 +16,7 @@ import (
 	"github.com/canonical/chisel/internal/deb"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/slicer"
+	"github.com/canonical/chisel/internal/tarball"
 	//"github.com/canonical/chisel/internal/logger"
 )
 
@@ -327,6 +328,7 @@ func run() error {
 	deb.SetLogger(log.Default())
 	setup.SetLogger(log.Default())
 	slicer.SetLogger(log.Default())
+	tarball.SetLogger(log.Default())
 	SetLogger(log.Default())
 
 	parser := Parser()
