@@ -8,6 +8,7 @@ import (
 
 	"github.com/blakesmith/ar"
 	"github.com/klauspost/compress/zstd"
+	"github.com/ulikunitz/xz"
 )
 
 var PackageData = map[string][]byte{}
@@ -154,6 +155,42 @@ func MakeDeb(entries []TarEntry) ([]byte, error) {
 
 func MustMakeDeb(entries []TarEntry) []byte {
 	data, err := MakeDeb(entries)
+	if err != nil {
+		panic(err)
+	}
+	return data
+}
+
+// compressBytesXz compresses the input using XZ, the compression format used by
+// store (bin) packages.
+func compressBytesXz(input []byte) ([]byte, error) {
+	var buf bytes.Buffer
+	writer, err := xz.NewWriter(&buf)
+	if err != nil {
+		return nil, err
+	}
+	if _, err = writer.Write(input); err != nil {
+		return nil, err
+	}
+	if err = writer.Close(); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// MakeBin builds a store (bin) package from the given tar entries: an
+// XZ-compressed plain tarball. Unlike MakeDeb, there is no ar container.
+func MakeBin(entries []TarEntry) ([]byte, error) {
+	tarData, err := makeTar(entries)
+	if err != nil {
+		return nil, err
+	}
+	return compressBytesXz(tarData)
+}
+
+// MustMakeBin is the panicking variant of MakeBin.
+func MustMakeBin(entries []TarEntry) []byte {
+	data, err := MakeBin(entries)
 	if err != nil {
 		panic(err)
 	}

@@ -10,6 +10,7 @@ import (
 
 	. "gopkg.in/check.v1"
 
+	"github.com/canonical/chisel/internal/deb"
 	"github.com/canonical/chisel/internal/fsutil"
 	"github.com/canonical/chisel/internal/tarball"
 	"github.com/canonical/chisel/internal/testutil"
@@ -496,6 +497,8 @@ func (s *S) TestExtract(c *C) {
 		options := test.options
 		options.Package = "test-package"
 		options.TargetDir = dir
+		// The test fixtures are .deb archives, so use the deb data opener.
+		options.OpenData = deb.DataReader
 		createdPaths := make(map[string]bool)
 		options.Create = func(_ []tarball.ExtractInfo, o *fsutil.CreateOptions) error {
 			relPath := filepath.Clean("/" + strings.TrimPrefix(o.Path, dir))
@@ -605,6 +608,8 @@ func (s *S) TestExtractCreateCallback(c *C) {
 		options := test.options
 		options.Package = "test-package"
 		options.TargetDir = dir
+		// The test fixtures are .deb archives, so use the deb data opener.
+		options.OpenData = deb.DataReader
 		createExtractInfos := map[string][]tarball.ExtractInfo{}
 		options.Create = func(extractInfos []tarball.ExtractInfo, o *fsutil.CreateOptions) error {
 			if extractInfos == nil {
@@ -627,4 +632,16 @@ func (s *S) TestExtractCreateCallback(c *C) {
 
 		c.Assert(createExtractInfos, DeepEquals, test.calls)
 	}
+}
+
+func (s *S) TestExtractMissingOpenData(c *C) {
+	options := tarball.ExtractOptions{
+		Package:   "test-package",
+		TargetDir: c.MkDir(),
+		Extract: map[string][]tarball.ExtractInfo{
+			"/dir/file": {{Path: "/dir/file"}},
+		},
+	}
+	err := tarball.Extract(bytes.NewReader(testutil.PackageData["test-package"]), &options)
+	c.Assert(err, ErrorMatches, `cannot extract from package "test-package": internal error: ExtractOptions.OpenData is unset`)
 }

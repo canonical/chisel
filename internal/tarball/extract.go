@@ -12,7 +12,6 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/canonical/chisel/internal/deb"
 	"github.com/canonical/chisel/internal/fsutil"
 	"github.com/canonical/chisel/internal/strdist"
 )
@@ -21,6 +20,11 @@ type ExtractOptions struct {
 	Package   string
 	TargetDir string
 	Extract   map[string][]ExtractInfo
+	// OpenData opens the uncompressed tar data stream of the package. It
+	// abstracts over the package format (e.g. a deb archive opener or a plain
+	// tarball opener), allowing Extract to operate on any package whose data
+	// payload is a tar stream.
+	OpenData func(io.ReadSeeker) (io.ReadCloser, error)
 	// Create can optionally be set to control the creation of extracted entries.
 	// extractInfos is set to the matching entries in Extract, and is nil in cases where
 	// the created entry is implicit and unlisted (for example, parent directories).
@@ -35,6 +39,9 @@ type ExtractInfo struct {
 }
 
 func getValidOptions(options *ExtractOptions) (*ExtractOptions, error) {
+	if options.OpenData == nil {
+		return nil, fmt.Errorf("internal error: ExtractOptions.OpenData is unset")
+	}
 	for extractPath, extractInfos := range options.Extract {
 		isGlob := strings.ContainsAny(extractPath, "*?")
 		if isGlob {
@@ -83,7 +90,7 @@ func Extract(pkgReader io.ReadSeeker, options *ExtractOptions) (err error) {
 }
 
 func extractData(pkgReader io.ReadSeeker, options *ExtractOptions) error {
-	dataReader, err := deb.DataReader(pkgReader)
+	dataReader, err := options.OpenData(pkgReader)
 	if err != nil {
 		return err
 	}
@@ -300,7 +307,7 @@ type extractHardLinkOptions struct {
 // extractHardLinks iterates through the tarball a second time to extract the
 // hard links that were not extracted in the first pass.
 func extractHardLinks(pkgReader io.ReadSeeker, opts *extractHardLinkOptions) error {
-	dataReader, err := deb.DataReader(pkgReader)
+	dataReader, err := opts.OpenData(pkgReader)
 	if err != nil {
 		return err
 	}
