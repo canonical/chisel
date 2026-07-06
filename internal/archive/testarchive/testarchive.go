@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"crypto/sha256"
+	"crypto/sha512"
 	"fmt"
 	"path"
 	"strings"
@@ -63,6 +64,8 @@ type Package struct {
 	Arch      string
 	Component string
 	Data      []byte
+	// Digest names the checksum field published for this package ("SHA256" when empty).
+	Digest string
 }
 
 func (p *Package) Path() string {
@@ -86,11 +89,11 @@ func (p *Package) Section() []byte {
 		Installed-Size: 10
 		Filename: %s
 		Size: %d
-		SHA256: %s
+		%s: %s
 		Description: Description of %s
 		Task: minimal
 
-	`)), p.Name, p.Arch, p.Version, p.Path(), len(content), makeSha256(content), p.Name)
+	`)), p.Name, p.Arch, p.Version, p.Path(), len(content), digestField(p.Digest), makeDigest(p.Digest, content), p.Name)
 	return []byte(section)
 }
 
@@ -107,6 +110,8 @@ type Release struct {
 	Label   string
 	Items   []Item
 	PrivKey *packet.PrivateKey
+	// Digest names the checksum field published for the index table ("SHA256" when empty).
+	Digest string
 }
 
 func (r *Release) Walk(f func(Item) error) error {
@@ -125,7 +130,7 @@ func (r *Release) Content() []byte {
 	digests := bytes.Buffer{}
 	for _, item := range r.Items {
 		content := item.Content()
-		fmt.Fprintf(&digests, " %s  %d  %s\n", makeSha256(content), len(content), item.Path())
+		fmt.Fprintf(&digests, " %s  %d  %s\n", makeDigest(r.Digest, content), len(content), item.Path())
 	}
 	content := fmt.Sprintf(string(testutil.Reindent(`
 		Origin: Ubuntu
@@ -137,9 +142,9 @@ func (r *Release) Content() []byte {
 		Architectures: amd64 arm64 armhf i386 ppc64el riscv64 s390x
 		Components: main restricted universe multiverse
 		Description: Ubuntu %s
-		SHA256:
+		%s:
 		%s
-	`)), r.Label, r.Suite, r.Version, r.Version, digests.String())
+	`)), r.Label, r.Suite, r.Version, r.Version, digestField(r.Digest), digests.String())
 
 	var buf bytes.Buffer
 	writer, err := clearsign.Encode(&buf, r.PrivKey, nil)
@@ -202,6 +207,22 @@ func (pi *PackageIndex) Content() []byte {
 
 func makeSha256(b []byte) string {
 	return fmt.Sprintf("%x", sha256.Sum256(b))
+}
+
+// digestField maps a digest kind to its Release/Packages field name, defaulting
+// to SHA256.
+func digestField(kind string) string {
+	if kind == "" {
+		return "SHA256"
+	}
+	return kind
+}
+
+func makeDigest(kind string, b []byte) string {
+	if kind == "SHA512" {
+		return fmt.Sprintf("%x", sha512.Sum512(b))
+	}
+	return makeSha256(b)
 }
 
 func makeGzip(b []byte) []byte {

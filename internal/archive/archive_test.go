@@ -252,6 +252,38 @@ func (s *httpSuite) TestFetchPackage(c *C) {
 	c.Assert(read(pkg), Equals, "mypkg4 1.4 data")
 }
 
+func (s *httpSuite) TestFetchSHA512Digests(c *C) {
+	// Ubuntu 26.10+ publishes SHA512-only indices (no SHA256 section), so both
+	// the index digest and the package digest must be read from SHA512.
+	s.prepareArchiveAdjustRelease("questing", "25.10", "amd64", []string{"main", "universe"},
+		func(release *testarchive.Release) {
+			release.Digest = "SHA512"
+			release.Walk(func(item testarchive.Item) error {
+				if p, ok := item.(*testarchive.Package); ok {
+					p.Digest = "SHA512"
+				}
+				return nil
+			})
+		})
+
+	options := archive.Options{
+		Label:      "ubuntu",
+		Version:    "25.10",
+		Arch:       "amd64",
+		Suites:     []string{"questing"},
+		Components: []string{"main", "universe"},
+		CacheDir:   c.MkDir(),
+		PubKeys:    []*packet.PublicKey{s.pubKey},
+	}
+
+	testArchive, err := archive.Open(&options)
+	c.Assert(err, IsNil)
+
+	pkg, _, err := testArchive.Fetch("mypkg1")
+	c.Assert(err, IsNil)
+	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
+}
+
 func (s *httpSuite) TestFetchPortsPackage(c *C) {
 
 	s.base = "http://ports.ubuntu.com/ubuntu-ports/"

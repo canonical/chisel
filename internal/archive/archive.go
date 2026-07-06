@@ -136,8 +136,9 @@ func (a *ubuntuArchive) Fetch(pkg string) (io.ReadSeekCloser, *PackageInfo, erro
 		return nil, nil, err
 	}
 	path := section.Get("Filename")
+	digest, digestKind := packageDigest(section)
 	logf("Fetching %s...", path)
-	reader, err := index.fetch(path, section.Get("SHA256"), fetchBulk)
+	reader, err := index.fetch(path, digest, digestKind, fetchBulk)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -277,7 +278,7 @@ func openUbuntu(options *Options) (Archive, error) {
 
 func (index *ubuntuIndex) fetchRelease() error {
 	logf("Fetching %s %s %s suite details...", index.displayName(), index.version, index.suite)
-	reader, err := index.fetch(index.distPath("InRelease"), "", fetchDefault)
+	reader, err := index.fetch(index.distPath("InRelease"), "", cache.SHA256, fetchDefault)
 	if err != nil {
 		return err
 	}
@@ -325,16 +326,50 @@ func (index *ubuntuIndex) fetchRelease() error {
 	return nil
 }
 
+// digestFields lists the archive checksum fields chisel can verify, in order of
+// preference. SHA256 stays first so existing archives keep their cache keys;
+// Ubuntu 26.10 and later publish SHA512-only indices, handled by the fallback.
+var digestFields = []struct {
+	name string
+	kind cache.DigestKind
+}{
+	{"SHA256", cache.SHA256},
+	{"SHA512", cache.SHA512},
+}
+
+// releaseDigest returns the checksum recorded for path in a Release "<hash>
+// <size> <path>" table, along with the hash kind it came from.
+func releaseDigest(release control.Section, path string) (digest string, kind cache.DigestKind) {
+	for _, f := range digestFields {
+		if d, _, _ := control.ParsePathInfo(release.Get(f.name), path); d != "" {
+			return d, f.kind
+		}
+	}
+	return "", ""
+}
+
+// packageDigest returns a package's own checksum from its Packages stanza, along
+// with the hash kind it came from.
+func packageDigest(section control.Section) (digest string, kind cache.DigestKind) {
+	for _, f := range digestFields {
+		if d := section.Get(f.name); d != "" {
+			return d, f.kind
+		}
+	}
+	// No digest advertised; the package is fetched unverified and cached under
+	// its computed SHA256, matching the previous behavior.
+	return "", cache.SHA256
+}
+
 func (index *ubuntuIndex) fetchIndex() error {
-	digests := index.release.Get("SHA256")
 	packagesPath := fmt.Sprintf("%s/binary-%s/Packages", index.component, index.arch)
-	digest, _, _ := control.ParsePathInfo(digests, packagesPath)
+	digest, digestKind := releaseDigest(index.release, packagesPath)
 	if digest == "" {
 		return fmt.Errorf("%s is missing from %s %s component digests", packagesPath, index.suite, index.component)
 	}
 
 	logf("Fetching index for %s %s %s %s component...", index.displayName(), index.version, index.suite, index.component)
-	reader, err := index.fetch(index.distPath(packagesPath+".gz"), digest, fetchBulk)
+	reader, err := index.fetch(index.distPath(packagesPath+".gz"), digest, digestKind, fetchBulk)
 	if err != nil {
 		return err
 	}
@@ -373,8 +408,7 @@ func (index *ubuntuIndex) distPath(suffix string) string {
 	return "dists/" + index.suite + "/" + suffix
 }
 
-func (index *ubuntuIndex) fetch(path, digest string, flags fetchFlags) (io.ReadSeekCloser, error) {
-	const digestKind = cache.SHA256
+func (index *ubuntuIndex) fetch(path, digest string, digestKind cache.DigestKind, flags fetchFlags) (io.ReadSeekCloser, error) {
 	reader, err := index.archive.cache.Open(digestKind, digest)
 	if err == nil {
 		return reader, nil
