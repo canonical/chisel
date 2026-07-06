@@ -278,6 +278,8 @@ func openUbuntu(options *Options) (Archive, error) {
 
 func (index *ubuntuIndex) fetchRelease() error {
 	logf("Fetching %s %s %s suite details...", index.displayName(), index.version, index.suite)
+	// InRelease has no digest to check against (it is verified by its PGP
+	// signature below), so the digest kind here is arbitrary.
 	reader, err := index.fetch(index.distPath("InRelease"), "", cache.SHA256, fetchDefault)
 	if err != nil {
 		return err
