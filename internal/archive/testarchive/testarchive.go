@@ -64,8 +64,8 @@ type Package struct {
 	Arch      string
 	Component string
 	Data      []byte
-	// Digest names the checksum field published for this package ("SHA256" when empty).
-	Digest string
+	// Hashes names the checksum fields published for this package (["SHA256"] when empty).
+	Hashes []string
 }
 
 func (p *Package) Path() string {
@@ -78,6 +78,13 @@ func (p *Package) Walk(f func(Item) error) error {
 
 func (p *Package) Section() []byte {
 	content := p.Content()
+	digests := strings.Builder{}
+	for i, kind := range hashKinds(p.Hashes) {
+		if i > 0 {
+			digests.WriteByte('\n')
+		}
+		fmt.Fprintf(&digests, "%s: %s", digestField(kind), makeDigest(kind, content))
+	}
 	section := fmt.Sprintf(string(testutil.Reindent(`
 		Package: %s
 		Architecture: %s
@@ -89,11 +96,11 @@ func (p *Package) Section() []byte {
 		Installed-Size: 10
 		Filename: %s
 		Size: %d
-		%s: %s
+		%s
 		Description: Description of %s
 		Task: minimal
 
-	`)), p.Name, p.Arch, p.Version, p.Path(), len(content), digestField(p.Digest), makeDigest(p.Digest, content), p.Name)
+	`)), p.Name, p.Arch, p.Version, p.Path(), len(content), digests.String(), p.Name)
 	return []byte(section)
 }
 
@@ -110,8 +117,8 @@ type Release struct {
 	Label   string
 	Items   []Item
 	PrivKey *packet.PrivateKey
-	// Digest names the checksum field published for the index table ("SHA256" when empty).
-	Digest string
+	// Hashes names the checksum fields published for the index table (["SHA256"] when empty).
+	Hashes []string
 	// ByHash enables the Acquire-By-Hash flag in the Release file
 	// and renders by-hash URLs alongside named paths.
 	ByHash bool
@@ -131,9 +138,12 @@ func (r *Release) Section() []byte {
 
 func (r *Release) Content() []byte {
 	digests := bytes.Buffer{}
-	for _, item := range r.Items {
-		content := item.Content()
-		fmt.Fprintf(&digests, " %s  %d  %s\n", makeDigest(r.Digest, content), len(content), item.Path())
+	for _, kind := range hashKinds(r.Hashes) {
+		fmt.Fprintf(&digests, "%s:\n", digestField(kind))
+		for _, item := range r.Items {
+			content := item.Content()
+			fmt.Fprintf(&digests, " %s  %d  %s\n", makeDigest(kind, content), len(content), item.Path())
+		}
 	}
 	acquireByHash := ""
 	if r.ByHash {
@@ -149,9 +159,8 @@ func (r *Release) Content() []byte {
 		Architectures: amd64 arm64 armhf i386 ppc64el riscv64 s390x
 		Components: main restricted universe multiverse
 		Description: Ubuntu %s
-		%s%s:
-		%s
-	`)), r.Label, r.Suite, r.Version, r.Version, acquireByHash, digestField(r.Digest), digests.String())
+		%s%s
+	`)), r.Label, r.Suite, r.Version, r.Version, acquireByHash, digests.String())
 
 	var buf bytes.Buffer
 	writer, err := clearsign.Encode(&buf, r.PrivKey, nil)
@@ -180,8 +189,10 @@ func (r *Release) Render(prefix string, content map[string][]byte) error {
 		distItemPath := path.Join(prefix, "dists", r.Suite, itemPath)
 		content[distItemPath] = itemContent
 		if r.ByHash && itemPath != r.Path() {
-			byHashPath := path.Join(prefix, "dists", r.Suite, path.Dir(itemPath), "by-hash", digestField(r.Digest), makeDigest(r.Digest, itemContent))
-			content[byHashPath] = itemContent
+			for _, kind := range hashKinds(r.Hashes) {
+				byHashPath := path.Join(prefix, "dists", r.Suite, path.Dir(itemPath), "by-hash", digestField(kind), makeDigest(kind, itemContent))
+				content[byHashPath] = itemContent
+			}
 		}
 		return nil
 	})
@@ -219,6 +230,15 @@ func (pi *PackageIndex) Content() []byte {
 
 func makeSha256(b []byte) string {
 	return fmt.Sprintf("%x", sha256.Sum256(b))
+}
+
+// hashKinds returns the digest kinds to publish, defaulting to ["SHA256"] when
+// none are set.
+func hashKinds(hashes []string) []string {
+	if len(hashes) == 0 {
+		return []string{"SHA256"}
+	}
+	return hashes
 }
 
 // digestField maps a digest kind to its Release/Packages field name, defaulting

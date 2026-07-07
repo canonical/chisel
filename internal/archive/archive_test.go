@@ -160,8 +160,8 @@ func (s *httpSuite) prepareArchiveAdjustRelease(suite, version, arch string, com
 	}
 	// Packages inherit the release's digest kind unless they set their own.
 	err = release.Walk(func(item testarchive.Item) error {
-		if p, ok := item.(*testarchive.Package); ok && p.Digest == "" {
-			p.Digest = release.Digest
+		if p, ok := item.(*testarchive.Package); ok && len(p.Hashes) == 0 {
+			p.Hashes = release.Hashes
 		}
 		return nil
 	})
@@ -279,7 +279,7 @@ func (s *httpSuite) TestFetchSHA512Digests(c *C) {
 	// the index digest and the package digest must be read from SHA512.
 	s.prepareArchiveAdjustRelease("stonking", "25.10", "amd64", []string{"main", "universe"},
 		func(release *testarchive.Release) {
-			release.Digest = "SHA512"
+			release.Hashes = []string{"SHA512"}
 		})
 
 	options := archive.Options{
@@ -297,6 +297,39 @@ func (s *httpSuite) TestFetchSHA512Digests(c *C) {
 
 	pkg, _, err := testArchive.Fetch("mypkg1")
 	c.Assert(err, IsNil)
+	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
+}
+
+func (s *httpSuite) TestFetchBothDigests(c *C) {
+	// An archive publishing both SHA256 and SHA512 sections (index table and
+	// package fields) must be handled, with SHA256 preferred per digestFields
+	// ordering -- so PackageInfo.SHA256 is the field that surfaces.
+	s.prepareArchiveAdjustRelease("stonking", "25.10", "amd64", []string{"main", "universe"},
+		func(release *testarchive.Release) {
+			release.Hashes = []string{"SHA256", "SHA512"}
+		})
+
+	options := archive.Options{
+		Label:      "ubuntu",
+		Version:    "25.10",
+		Arch:       "amd64",
+		Suites:     []string{"stonking"},
+		Components: []string{"main", "universe"},
+		CacheDir:   c.MkDir(),
+		PubKeys:    []*packet.PublicKey{s.pubKey},
+	}
+
+	testArchive, err := archive.Open(&options)
+	c.Assert(err, IsNil)
+
+	pkg, info, err := testArchive.Fetch("mypkg1")
+	c.Assert(err, IsNil)
+	c.Assert(info, DeepEquals, &archive.PackageInfo{
+		Name:    "mypkg1",
+		Version: "1.1",
+		Arch:    "amd64",
+		SHA256:  "1f08ef04cfe7a8087ee38a1ea35fa1810246648136c3c42d5a61ad6503d85e05",
+	})
 	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
 }
 
@@ -728,7 +761,7 @@ func (s *httpSuite) TestFetchByHashSHA512(c *C) {
 	// the by-hash URL must be built under the SHA512 directory.
 	s.prepareArchiveAdjustRelease("stonking", "26.10", "amd64", []string{"main"}, func(release *testarchive.Release) {
 		release.ByHash = true
-		release.Digest = "SHA512"
+		release.Hashes = []string{"SHA512"}
 	})
 
 	// Stale content at the named Packages.gz path, so a fallback would fail
@@ -761,6 +794,48 @@ func (s *httpSuite) TestFetchByHashSHA512(c *C) {
 	attempted, status := s.fetchRequestStatus("/by-hash/SHA512/")
 	c.Assert(attempted, Equals, true)
 	c.Assert(status, Equals, 200)
+}
+
+func (s *httpSuite) TestFetchByHashBothDigests(c *C) {
+	// When a by-hash archive publishes both digests, the by-hash URL must be
+	// built under SHA256 (preferred) and SHA512 must not be requested.
+	s.prepareArchiveAdjustRelease("stonking", "26.10", "amd64", []string{"main"}, func(release *testarchive.Release) {
+		release.ByHash = true
+		release.Hashes = []string{"SHA256", "SHA512"}
+	})
+
+	// Stale content at the named Packages.gz path, so a fallback would fail
+	// the digest check -- only the by-hash path serves the correct bytes.
+	for p := range s.responses {
+		if strings.Contains(p, "Packages.gz") && !strings.Contains(p, "/by-hash/") {
+			s.responses[p] = testarchive.MakeGzip([]byte("stale Packages from previous publication"))
+		}
+	}
+
+	options := archive.Options{
+		Label:      "ubuntu",
+		Version:    "26.10",
+		Arch:       "amd64",
+		Suites:     []string{"stonking"},
+		Components: []string{"main"},
+		CacheDir:   c.MkDir(),
+		PubKeys:    []*packet.PublicKey{s.pubKey},
+	}
+
+	testArchive, err := archive.Open(&options)
+	c.Assert(err, IsNil)
+
+	pkg, _, err := testArchive.Fetch("mypkg1")
+	c.Assert(err, IsNil)
+	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
+
+	// The SHA256 by-hash request must have been made and succeeded; the SHA512
+	// by-hash directory must never be touched.
+	attempted, status := s.fetchRequestStatus("/by-hash/SHA256/")
+	c.Assert(attempted, Equals, true)
+	c.Assert(status, Equals, 200)
+	attempted, _ = s.fetchRequestStatus("/by-hash/SHA512/")
+	c.Assert(attempted, Equals, false)
 }
 
 func (s *httpSuite) TestFetchByHashFallsBackOnNotFound(c *C) {
