@@ -55,7 +55,7 @@ func (gz *Gzip) Section() []byte {
 }
 
 func (gz *Gzip) Content() []byte {
-	return makeGzip(gz.Item.Content())
+	return MakeGzip(gz.Item.Content())
 }
 
 type Package struct {
@@ -112,6 +112,9 @@ type Release struct {
 	PrivKey *packet.PrivateKey
 	// Digest names the checksum field published for the index table ("SHA256" when empty).
 	Digest string
+	// ByHash enables the Acquire-By-Hash flag in the Release file
+	// and renders by-hash URLs alongside named paths.
+	ByHash bool
 }
 
 func (r *Release) Walk(f func(Item) error) error {
@@ -132,6 +135,10 @@ func (r *Release) Content() []byte {
 		content := item.Content()
 		fmt.Fprintf(&digests, " %s  %d  %s\n", makeDigest(r.Digest, content), len(content), item.Path())
 	}
+	acquireByHash := ""
+	if r.ByHash {
+		acquireByHash = "Acquire-By-Hash: yes\n"
+	}
 	content := fmt.Sprintf(string(testutil.Reindent(`
 		Origin: Ubuntu
 		Label: %s
@@ -142,9 +149,9 @@ func (r *Release) Content() []byte {
 		Architectures: amd64 arm64 armhf i386 ppc64el riscv64 s390x
 		Components: main restricted universe multiverse
 		Description: Ubuntu %s
-		%s:
+		%s%s:
 		%s
-	`)), r.Label, r.Suite, r.Version, r.Version, digestField(r.Digest), digests.String())
+	`)), r.Label, r.Suite, r.Version, r.Version, acquireByHash, digestField(r.Digest), digests.String())
 
 	var buf bytes.Buffer
 	writer, err := clearsign.Encode(&buf, r.PrivKey, nil)
@@ -165,12 +172,17 @@ func (r *Release) Content() []byte {
 func (r *Release) Render(prefix string, content map[string][]byte) error {
 	return r.Walk(func(item Item) error {
 		itemPath := item.Path()
+		itemContent := item.Content()
 		if strings.HasPrefix(itemPath, "pool/") {
-			itemPath = path.Join(prefix, itemPath)
-		} else {
-			itemPath = path.Join(prefix, "dists", r.Suite, itemPath)
+			content[path.Join(prefix, itemPath)] = itemContent
+			return nil
 		}
-		content[itemPath] = item.Content()
+		distItemPath := path.Join(prefix, "dists", r.Suite, itemPath)
+		content[distItemPath] = itemContent
+		if r.ByHash && itemPath != r.Path() {
+			byHashPath := path.Join(prefix, "dists", r.Suite, path.Dir(itemPath), "by-hash", "SHA256", makeSha256(itemContent))
+			content[byHashPath] = itemContent
+		}
 		return nil
 	})
 }
@@ -225,7 +237,7 @@ func makeDigest(kind string, b []byte) string {
 	return makeSha256(b)
 }
 
-func makeGzip(b []byte) []byte {
+func MakeGzip(b []byte) []byte {
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
 	_, err := gz.Write(b)

@@ -64,9 +64,12 @@ func Open(options *Options) (Archive, error) {
 type fetchFlags uint
 
 const (
-	fetchBulk    fetchFlags = 1 << iota
+	fetchBulk fetchFlags = 1 << iota
+	fetchGzip
 	fetchDefault fetchFlags = 0
 )
+
+var errNotFound = fmt.Errorf("cannot find archive data")
 
 var httpClient = &http.Client{
 	Timeout: 30 * time.Second,
@@ -328,24 +331,30 @@ func (index *ubuntuIndex) fetchRelease() error {
 	return nil
 }
 
-// digestFields lists the archive checksum fields Chisel can verify, in order of
-// preference. SHA256 is first so existing archives keep their cache keys;
-// Ubuntu 26.10 and later publish SHA512-only indices, handled by the fallback.
-var digestFields = []struct {
+// digestField is an archive checksum field Chisel can verify. Its name doubles
+// as the by-hash directory name in the archive layout.
+type digestField struct {
 	name string
 	kind cache.DigestKind
-}{
+}
+
+// digestFields lists the checksum fields Chisel can verify, in order of
+// preference. SHA256 is first so existing archives keep their cache keys;
+// Ubuntu 26.10 and later publish SHA512-only indices, handled by the fallback.
+var digestFields = []digestField{
 	{"SHA256", cache.SHA256},
 	{"SHA512", cache.SHA512},
 }
 
-func releaseDigest(release control.Section, path string) (digest string, kind cache.DigestKind) {
+// releaseDigest returns the checksum recorded for path in a Release "<hash>
+// <size> <path>" table, along with the field it was found in.
+func releaseDigest(release control.Section, path string) (digest string, field digestField) {
 	for _, f := range digestFields {
 		if d, _, ok := control.ParsePathInfo(release.Get(f.name), path); ok {
-			return d, f.kind
+			return d, f
 		}
 	}
-	return "", ""
+	return "", digestField{}
 }
 
 func packageDigest(section control.Section) (digest string, kind cache.DigestKind) {
@@ -361,15 +370,38 @@ func packageDigest(section control.Section) (digest string, kind cache.DigestKin
 
 func (index *ubuntuIndex) fetchIndex() error {
 	packagesPath := fmt.Sprintf("%s/binary-%s/Packages", index.component, index.arch)
-	digest, digestKind := releaseDigest(index.release, packagesPath)
-	if digest == "" {
+	packagesDigest, field := releaseDigest(index.release, packagesPath)
+	if packagesDigest == "" {
 		return fmt.Errorf("%s is missing from %s %s component digests", packagesPath, index.suite, index.component)
 	}
 
 	logf("Fetching index for %s %s %s %s component...", index.displayName(), index.version, index.suite, index.component)
-	reader, err := index.fetch(index.distPath(packagesPath+".gz"), digest, digestKind, fetchBulk)
-	if err != nil {
-		return err
+
+	// Prefer acquire-by-hash when the archive advertises it. By-hash URLs
+	// are content-addressed and so are immune to the inconsistent view of
+	// InRelease vs Packages.gz that mirrors and CDNs can serve while a
+	// publication is propagating. See https://wiki.ubuntu.com/AptByHash.
+	packagesGzPath := packagesPath + ".gz"
+	var reader io.ReadSeekCloser
+	if index.release.Get("Acquire-By-Hash") == "yes" {
+		packagesGzDigest, _, _ := control.ParsePathInfo(index.release.Get(field.name), packagesGzPath)
+		if packagesGzDigest != "" {
+			packagesByHashPath := fmt.Sprintf("%s/binary-%s/by-hash/%s/%s", index.component, index.arch, field.name, packagesGzDigest)
+			r, err := index.fetch(index.distPath(packagesByHashPath), packagesDigest, field.kind, fetchBulk|fetchGzip)
+			if err != nil && err != errNotFound {
+				return err
+			}
+			// On 404 fall through to the named-path fetch below: the hash
+			// may have been garbage-collected on the mirror.
+			reader = r
+		}
+	}
+	if reader == nil {
+		r, err := index.fetch(index.distPath(packagesGzPath), packagesDigest, field.kind, fetchBulk|fetchGzip)
+		if err != nil {
+			return err
+		}
+		reader = r
 	}
 	ctrl, err := control.ParseReader("Package", reader)
 	if err != nil {
@@ -443,13 +475,13 @@ func (index *ubuntuIndex) fetch(path, digest string, digestKind cache.DigestKind
 	case 401:
 		return nil, fmt.Errorf("cannot fetch from %q: unauthorized", index.label)
 	case 404:
-		return nil, fmt.Errorf("cannot find archive data")
+		return nil, errNotFound
 	default:
 		return nil, fmt.Errorf("error from archive: %v", resp.Status)
 	}
 
 	body := resp.Body
-	if strings.HasSuffix(path, ".gz") {
+	if flags&fetchGzip != 0 {
 		reader, err := gzip.NewReader(body)
 		if err != nil {
 			return nil, fmt.Errorf("cannot decompress data: %v", err)

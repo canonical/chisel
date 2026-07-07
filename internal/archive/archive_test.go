@@ -22,19 +22,25 @@ import (
 	"github.com/canonical/chisel/internal/testutil"
 )
 
+type requestResult struct {
+	path   string
+	status int
+}
+
 type httpSuite struct {
-	logf      func(string, ...any)
-	base      string
-	request   *http.Request
-	requests  []*http.Request
-	response  string
-	responses map[string][]byte
-	err       error
-	header    http.Header
-	status    int
-	restore   func()
-	privKey   *packet.PrivateKey
-	pubKey    *packet.PublicKey
+	logf           func(string, ...any)
+	base           string
+	request        *http.Request
+	requests       []*http.Request
+	requestResults []requestResult
+	response       string
+	responses      map[string][]byte
+	err            error
+	header         http.Header
+	status         int
+	restore        func()
+	privKey        *packet.PrivateKey
+	pubKey         *packet.PublicKey
 }
 
 var _ = Suite(&httpSuite{})
@@ -54,6 +60,7 @@ func (s *httpSuite) SetUpTest(c *C) {
 	s.base = "http://archive.ubuntu.com/ubuntu/"
 	s.request = nil
 	s.requests = nil
+	s.requestResults = nil
 	s.response = ""
 	s.responses = make(map[string][]byte)
 	s.header = nil
@@ -83,14 +90,19 @@ func (s *httpSuite) Do(req *http.Request) (*http.Response, error) {
 	s.request = req
 	s.requests = append(s.requests, req)
 	body := s.response
+	status := s.status
 	s.logf("Request: %s", req.URL.String())
 	if response, ok := s.responses[path.Clean(req.URL.Path)]; ok {
 		body = string(response)
+	} else if len(s.responses) > 0 && s.status == 200 {
+		// Unknown path with responses populated: behave like a real archive.
+		status = 404
 	}
+	s.requestResults = append(s.requestResults, requestResult{path: req.URL.Path, status: status})
 	rsp := &http.Response{
 		Body:       io.NopCloser(strings.NewReader(body)),
 		Header:     s.header,
-		StatusCode: s.status,
+		StatusCode: status,
 	}
 	return rsp, s.err
 }
@@ -655,6 +667,121 @@ func read(r io.Reader) string {
 		panic(err)
 	}
 	return string(data)
+}
+
+// fetchRequestStatus checks whether a request was made whose URL path
+// contains the given substring. If so, it returns true and the HTTP status
+// code from the most recent matching request. If not, it returns false, 0.
+func (s *httpSuite) fetchRequestStatus(pathSubstring string) (bool, int) {
+	for i := len(s.requestResults) - 1; i >= 0; i-- {
+		if strings.Contains(s.requestResults[i].path, pathSubstring) {
+			return true, s.requestResults[i].status
+		}
+	}
+	return false, 0
+}
+
+func (s *httpSuite) TestFetchByHashSucceedsWhenNamedPathIsStale(c *C) {
+	s.prepareArchiveAdjustRelease("jammy", "22.04", "amd64", []string{"main"}, func(r *testarchive.Release) {
+		r.ByHash = true
+	})
+
+	// Simulate a mirror serving stale content at the named Packages.gz path
+	// while the by-hash path still has the correct data.
+	for p := range s.responses {
+		if strings.Contains(p, "Packages.gz") && !strings.Contains(p, "/by-hash/") {
+			s.responses[p] = testarchive.MakeGzip([]byte("stale Packages from previous publication"))
+		}
+	}
+
+	options := archive.Options{
+		Label:      "ubuntu",
+		Version:    "22.04",
+		Arch:       "amd64",
+		Suites:     []string{"jammy"},
+		Components: []string{"main"},
+		CacheDir:   c.MkDir(),
+		PubKeys:    []*packet.PublicKey{s.pubKey},
+	}
+
+	testArchive, err := archive.Open(&options)
+	c.Assert(err, IsNil)
+
+	pkg, _, err := testArchive.Fetch("mypkg1")
+	c.Assert(err, IsNil)
+	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
+
+	// The by-hash request must have been attempted and succeeded with 200,
+	// since the named path has stale content and only by-hash has the
+	// correct data.
+	attempted, status := s.fetchRequestStatus("/by-hash/SHA256/")
+	c.Assert(attempted, Equals, true)
+	c.Assert(status, Equals, 200)
+}
+
+func (s *httpSuite) TestFetchByHashFallsBackOnNotFound(c *C) {
+	s.prepareArchiveAdjustRelease("jammy", "22.04", "amd64", []string{"main"}, func(r *testarchive.Release) {
+		r.ByHash = true
+	})
+
+	// Simulate a mirror that garbage-collected the by-hash entries.
+	for p := range s.responses {
+		if strings.Contains(p, "/by-hash/") {
+			delete(s.responses, p)
+		}
+	}
+
+	options := archive.Options{
+		Label:      "ubuntu",
+		Version:    "22.04",
+		Arch:       "amd64",
+		Suites:     []string{"jammy"},
+		Components: []string{"main"},
+		CacheDir:   c.MkDir(),
+		PubKeys:    []*packet.PublicKey{s.pubKey},
+	}
+
+	testArchive, err := archive.Open(&options)
+	c.Assert(err, IsNil)
+
+	pkg, _, err := testArchive.Fetch("mypkg1")
+	c.Assert(err, IsNil)
+	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
+
+	// The by-hash request must have been attempted but got 404 (the hash
+	// was garbage-collected), so we fell back to the named path which
+	// returned 200 with the correct data.
+	attempted, status := s.fetchRequestStatus("/by-hash/SHA256/")
+	c.Assert(attempted, Equals, true)
+	c.Assert(status, Equals, 404)
+	attempted, status = s.fetchRequestStatus("Packages.gz")
+	c.Assert(attempted, Equals, true)
+	c.Assert(status, Equals, 200)
+}
+
+func (s *httpSuite) TestFetchSkipsByHashWhenNotAdvertised(c *C) {
+	s.prepareArchive("jammy", "22.04", "amd64", []string{"main"})
+
+	options := archive.Options{
+		Label:      "ubuntu",
+		Version:    "22.04",
+		Arch:       "amd64",
+		Suites:     []string{"jammy"},
+		Components: []string{"main"},
+		CacheDir:   c.MkDir(),
+		PubKeys:    []*packet.PublicKey{s.pubKey},
+	}
+
+	_, err := archive.Open(&options)
+	c.Assert(err, IsNil)
+
+	// When by-hash is not advertised, no by-hash request should be
+	// attempted; only the named Packages.gz path is fetched.
+	attempted, _ := s.fetchRequestStatus("/by-hash/SHA256/")
+	c.Assert(attempted, Equals, false)
+	attempted, status := s.fetchRequestStatus("Packages.gz")
+	c.Assert(attempted, Equals, true)
+	c.Assert(status, Equals, 200)
 }
 
 // ----------------------------------------------------------------------------------------
