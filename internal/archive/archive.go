@@ -341,7 +341,7 @@ var digestFields = []struct {
 
 func releaseDigest(release control.Section, path string) (digest string, kind cache.DigestKind) {
 	for _, f := range digestFields {
-		if d, _, _ := control.ParsePathInfo(release.Get(f.name), path); d != "" {
+		if d, _, ok := control.ParsePathInfo(release.Get(f.name), path); ok {
 			return d, f.kind
 		}
 	}
