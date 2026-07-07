@@ -158,6 +158,16 @@ func (s *httpSuite) prepareArchiveAdjustRelease(suite, version, arch string, com
 	if adjustRelease != nil {
 		adjustRelease(release)
 	}
+	// Packages inherit the release's digest kind unless they set their own.
+	err = release.Walk(func(item testarchive.Item) error {
+		if p, ok := item.(*testarchive.Package); ok && p.Digest == "" {
+			p.Digest = release.Digest
+		}
+		return nil
+	})
+	if err != nil {
+		panic(err)
+	}
 	release.Render(base.Path, s.responses)
 	return release
 }
@@ -270,12 +280,6 @@ func (s *httpSuite) TestFetchSHA512Digests(c *C) {
 	s.prepareArchiveAdjustRelease("stonking", "25.10", "amd64", []string{"main", "universe"},
 		func(release *testarchive.Release) {
 			release.Digest = "SHA512"
-			release.Walk(func(item testarchive.Item) error {
-				if p, ok := item.(*testarchive.Package); ok {
-					p.Digest = "SHA512"
-				}
-				return nil
-			})
 		})
 
 	options := archive.Options{
@@ -722,15 +726,9 @@ func (s *httpSuite) TestFetchByHashSucceedsWhenNamedPathIsStale(c *C) {
 func (s *httpSuite) TestFetchByHashSHA512(c *C) {
 	// Ubuntu 26.10+ advertises Acquire-By-Hash with SHA512-only indices, so
 	// the by-hash URL must be built under the SHA512 directory.
-	s.prepareArchiveAdjustRelease("stonking", "26.10", "amd64", []string{"main"}, func(r *testarchive.Release) {
-		r.ByHash = true
-		r.Digest = "SHA512"
-		r.Walk(func(item testarchive.Item) error {
-			if p, ok := item.(*testarchive.Package); ok {
-				p.Digest = "SHA512"
-			}
-			return nil
-		})
+	s.prepareArchiveAdjustRelease("stonking", "26.10", "amd64", []string{"main"}, func(release *testarchive.Release) {
+		release.ByHash = true
+		release.Digest = "SHA512"
 	})
 
 	// Stale content at the named Packages.gz path, so a fallback would fail
