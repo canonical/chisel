@@ -145,7 +145,8 @@ func (r *Release) Section() []byte {
 // render time and idempotent, so it always sees the final release state.
 func (r *Release) inheritDigestKinds() {
 	for _, item := range r.Items {
-		item.Walk(func(item Item) error {
+		// The callback never errors, so neither can Walk.
+		_ = item.Walk(func(item Item) error {
 			if p, ok := item.(*Package); ok {
 				p.digestKinds = r.DigestKinds
 			}
