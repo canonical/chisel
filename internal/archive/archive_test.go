@@ -719,6 +719,52 @@ func (s *httpSuite) TestFetchByHashSucceedsWhenNamedPathIsStale(c *C) {
 	c.Assert(status, Equals, 200)
 }
 
+func (s *httpSuite) TestFetchByHashSHA512(c *C) {
+	// Ubuntu 26.10+ advertises Acquire-By-Hash with SHA512-only indices, so
+	// the by-hash URL must be built under the SHA512 directory.
+	s.prepareArchiveAdjustRelease("stonking", "26.10", "amd64", []string{"main"}, func(r *testarchive.Release) {
+		r.ByHash = true
+		r.Digest = "SHA512"
+		r.Walk(func(item testarchive.Item) error {
+			if p, ok := item.(*testarchive.Package); ok {
+				p.Digest = "SHA512"
+			}
+			return nil
+		})
+	})
+
+	// Stale content at the named Packages.gz path, so a fallback would fail
+	// the digest check -- only the by-hash path serves the correct bytes.
+	for p := range s.responses {
+		if strings.Contains(p, "Packages.gz") && !strings.Contains(p, "/by-hash/") {
+			s.responses[p] = testarchive.MakeGzip([]byte("stale Packages from previous publication"))
+		}
+	}
+
+	options := archive.Options{
+		Label:      "ubuntu",
+		Version:    "26.10",
+		Arch:       "amd64",
+		Suites:     []string{"stonking"},
+		Components: []string{"main"},
+		CacheDir:   c.MkDir(),
+		PubKeys:    []*packet.PublicKey{s.pubKey},
+	}
+
+	testArchive, err := archive.Open(&options)
+	c.Assert(err, IsNil)
+
+	pkg, _, err := testArchive.Fetch("mypkg1")
+	c.Assert(err, IsNil)
+	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
+
+	// The SHA512 by-hash request must have been attempted and succeeded;
+	// the named path only has stale content.
+	attempted, status := s.fetchRequestStatus("/by-hash/SHA512/")
+	c.Assert(attempted, Equals, true)
+	c.Assert(status, Equals, 200)
+}
+
 func (s *httpSuite) TestFetchByHashFallsBackOnNotFound(c *C) {
 	s.prepareArchiveAdjustRelease("jammy", "22.04", "amd64", []string{"main"}, func(r *testarchive.Release) {
 		r.ByHash = true

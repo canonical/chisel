@@ -180,7 +180,7 @@ func (r *Release) Render(prefix string, content map[string][]byte) error {
 		distItemPath := path.Join(prefix, "dists", r.Suite, itemPath)
 		content[distItemPath] = itemContent
 		if r.ByHash && itemPath != r.Path() {
-			byHashPath := path.Join(prefix, "dists", r.Suite, path.Dir(itemPath), "by-hash", "SHA256", makeSha256(itemContent))
+			byHashPath := path.Join(prefix, "dists", r.Suite, path.Dir(itemPath), "by-hash", digestField(r.Digest), makeDigest(r.Digest, itemContent))
 			content[byHashPath] = itemContent
 		}
 		return nil
