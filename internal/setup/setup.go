@@ -60,11 +60,8 @@ type Archive struct {
 
 // Package holds a collection of slices that represent parts of themselves.
 type Package struct {
-	// Name is the unique package identifier (e.g. "bin-curl" for store packages,
-	// "curl" for archive packages).
-	Name string
-	// RealName is the bare name visible in the Debian archive (e.g. "curl").
-	RealName     string
+	Name         string // Unique across all known packages (e.g. "bin-curl")
+	RealName     string // Actual name as known in the archive or store (e.g. "curl")
 	Path         string
 	Archive      string
 	Store        string
