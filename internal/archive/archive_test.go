@@ -129,10 +129,11 @@ func (s *httpSuite) prepareArchive(suite, version, arch string, components []str
 
 func (s *httpSuite) prepareArchiveAdjustRelease(suite, version, arch string, components []string, adjustRelease func(*testarchive.Release)) *testarchive.Release {
 	release := &testarchive.Release{
-		Suite:   suite,
-		Version: version,
-		Label:   "Ubuntu",
-		PrivKey: s.privKey,
+		Suite:       suite,
+		Version:     version,
+		Label:       "Ubuntu",
+		PrivKey:     s.privKey,
+		DigestKinds: []string{"SHA256"},
 	}
 	for i, component := range components {
 		index := &testarchive.PackageIndex{
@@ -158,8 +159,6 @@ func (s *httpSuite) prepareArchiveAdjustRelease(suite, version, arch string, com
 	if adjustRelease != nil {
 		adjustRelease(release)
 	}
-	// Packages inherit the release's digest kinds at render time (see
-	// Release.inheritDigestKinds).
 	release.Render(base.Path, s.responses)
 	return release
 }

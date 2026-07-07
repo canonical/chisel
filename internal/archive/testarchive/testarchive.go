@@ -81,11 +81,11 @@ func (p *Package) Walk(f func(Item) error) error {
 func (p *Package) Section() []byte {
 	content := p.Content()
 	digests := strings.Builder{}
-	for i, kind := range resolveDigestKinds(p.digestKinds) {
+	for i, kind := range p.digestKinds {
 		if i > 0 {
 			digests.WriteByte('\n')
 		}
-		fmt.Fprintf(&digests, "%s: %s", digestField(kind), makeDigest(kind, content))
+		fmt.Fprintf(&digests, "%s: %s", kind, makeDigest(kind, content))
 	}
 	section := fmt.Sprintf(string(testutil.Reindent(`
 		Package: %s
@@ -119,8 +119,9 @@ type Release struct {
 	Label   string
 	Items   []Item
 	PrivKey *packet.PrivateKey
-	// DigestKinds names the digest kinds published across this archive (["SHA256"]
-	// when empty): the index table and every package it publishes.
+	// DigestKinds names the digest kinds published across this archive: the
+	// index table and every package it publishes. Callers must set it
+	// explicitly; an empty list publishes no digest sections at all.
 	DigestKinds []string
 	// ByHash enables the Acquire-By-Hash flag in the Release file
 	// and renders by-hash URLs alongside named paths.
@@ -156,8 +157,8 @@ func (r *Release) inheritDigestKinds() {
 func (r *Release) Content() []byte {
 	r.inheritDigestKinds()
 	digests := bytes.Buffer{}
-	for _, kind := range resolveDigestKinds(r.DigestKinds) {
-		fmt.Fprintf(&digests, "%s:\n", digestField(kind))
+	for _, kind := range r.DigestKinds {
+		fmt.Fprintf(&digests, "%s:\n", kind)
 		for _, item := range r.Items {
 			content := item.Content()
 			fmt.Fprintf(&digests, " %s  %d  %s\n", makeDigest(kind, content), len(content), item.Path())
@@ -208,8 +209,8 @@ func (r *Release) Render(prefix string, content map[string][]byte) error {
 		distItemPath := path.Join(prefix, "dists", r.Suite, itemPath)
 		content[distItemPath] = itemContent
 		if r.ByHash && itemPath != r.Path() {
-			for _, kind := range resolveDigestKinds(r.DigestKinds) {
-				byHashPath := path.Join(prefix, "dists", r.Suite, path.Dir(itemPath), "by-hash", digestField(kind), makeDigest(kind, itemContent))
+			for _, kind := range r.DigestKinds {
+				byHashPath := path.Join(prefix, "dists", r.Suite, path.Dir(itemPath), "by-hash", kind, makeDigest(kind, itemContent))
 				content[byHashPath] = itemContent
 			}
 		}
@@ -245,24 +246,6 @@ func (pi *PackageIndex) Section() []byte {
 
 func (pi *PackageIndex) Content() []byte {
 	return MergeSections(pi.Packages)
-}
-
-// resolveDigestKinds returns the digest kinds to publish, defaulting to
-// ["SHA256"] when none are set.
-func resolveDigestKinds(kinds []string) []string {
-	if len(kinds) == 0 {
-		return []string{"SHA256"}
-	}
-	return kinds
-}
-
-// digestField maps a digest kind to its Release/Packages field name, defaulting
-// to SHA256.
-func digestField(kind string) string {
-	if kind == "" {
-		return "SHA256"
-	}
-	return kind
 }
 
 func makeDigest(kind string, b []byte) string {
