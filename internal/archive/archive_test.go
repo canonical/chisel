@@ -255,7 +255,7 @@ func (s *httpSuite) TestFetchPackage(c *C) {
 func (s *httpSuite) TestFetchSHA512Digests(c *C) {
 	// Ubuntu 26.10+ publishes SHA512-only indices (no SHA256 section), so both
 	// the index digest and the package digest must be read from SHA512.
-	s.prepareArchiveAdjustRelease("questing", "25.10", "amd64", []string{"main", "universe"},
+	s.prepareArchiveAdjustRelease("stonking", "25.10", "amd64", []string{"main", "universe"},
 		func(release *testarchive.Release) {
 			release.Digest = "SHA512"
 			release.Walk(func(item testarchive.Item) error {
@@ -270,7 +270,7 @@ func (s *httpSuite) TestFetchSHA512Digests(c *C) {
 		Label:      "ubuntu",
 		Version:    "25.10",
 		Arch:       "amd64",
-		Suites:     []string{"questing"},
+		Suites:     []string{"stonking"},
 		Components: []string{"main", "universe"},
 		CacheDir:   c.MkDir(),
 		PubKeys:    []*packet.PublicKey{s.pubKey},
