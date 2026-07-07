@@ -331,36 +331,36 @@ func (index *ubuntuIndex) fetchRelease() error {
 	return nil
 }
 
-// digestField is an archive checksum field Chisel can verify. Its name doubles
-// as the by-hash directory name in the archive layout.
-type digestField struct {
+// digestSection is an archive checksum section Chisel can verify. Its name
+// doubles as the by-hash directory name in the archive layout.
+type digestSection struct {
 	name string
 	kind cache.DigestKind
 }
 
-// digestFields lists the checksum fields Chisel can verify, in order of
+// digestSections lists the checksum sections Chisel can verify, in order of
 // preference. SHA256 is first so existing archives keep their cache keys;
 // Ubuntu 26.10 and later publish SHA512-only indices, handled by the fallback.
-var digestFields = []digestField{
+var digestSections = []digestSection{
 	{"SHA256", cache.SHA256},
 	{"SHA512", cache.SHA512},
 }
 
 // releaseDigest returns the checksum recorded for path in a Release "<hash>
-// <size> <path>" table, along with the field it was found in.
-func releaseDigest(release control.Section, path string) (digest string, field digestField) {
-	for _, f := range digestFields {
-		if d, _, ok := control.ParsePathInfo(release.Get(f.name), path); ok {
-			return d, f
+// <size> <path>" table, along with the section it was found in.
+func releaseDigest(release control.Section, path string) (digest string, section digestSection) {
+	for _, s := range digestSections {
+		if d, _, ok := control.ParsePathInfo(release.Get(s.name), path); ok {
+			return d, s
 		}
 	}
-	return "", digestField{}
+	return "", digestSection{}
 }
 
 func packageDigest(section control.Section) (digest string, kind cache.DigestKind) {
-	for _, f := range digestFields {
-		if d := section.Get(f.name); d != "" {
-			return d, f.kind
+	for _, s := range digestSections {
+		if d := section.Get(s.name); d != "" {
+			return d, s.kind
 		}
 	}
 	// No digest advertised; fall back to SHA256 so the package can still be
@@ -370,7 +370,7 @@ func packageDigest(section control.Section) (digest string, kind cache.DigestKin
 
 func (index *ubuntuIndex) fetchIndex() error {
 	packagesPath := fmt.Sprintf("%s/binary-%s/Packages", index.component, index.arch)
-	packagesDigest, field := releaseDigest(index.release, packagesPath)
+	packagesDigest, section := releaseDigest(index.release, packagesPath)
 	if packagesDigest == "" {
 		return fmt.Errorf("%s is missing from %s %s component digests", packagesPath, index.suite, index.component)
 	}
@@ -384,10 +384,10 @@ func (index *ubuntuIndex) fetchIndex() error {
 	packagesGzPath := packagesPath + ".gz"
 	var reader io.ReadSeekCloser
 	if index.release.Get("Acquire-By-Hash") == "yes" {
-		packagesGzDigest, _, _ := control.ParsePathInfo(index.release.Get(field.name), packagesGzPath)
+		packagesGzDigest, _, _ := control.ParsePathInfo(index.release.Get(section.name), packagesGzPath)
 		if packagesGzDigest != "" {
-			packagesByHashPath := fmt.Sprintf("%s/binary-%s/by-hash/%s/%s", index.component, index.arch, field.name, packagesGzDigest)
-			r, err := index.fetch(index.distPath(packagesByHashPath), packagesDigest, field.kind, fetchBulk|fetchGzip)
+			packagesByHashPath := fmt.Sprintf("%s/binary-%s/by-hash/%s/%s", index.component, index.arch, section.name, packagesGzDigest)
+			r, err := index.fetch(index.distPath(packagesByHashPath), packagesDigest, section.kind, fetchBulk|fetchGzip)
 			if err != nil && err != errNotFound {
 				return err
 			}
@@ -397,7 +397,7 @@ func (index *ubuntuIndex) fetchIndex() error {
 		}
 	}
 	if reader == nil {
-		r, err := index.fetch(index.distPath(packagesGzPath), packagesDigest, field.kind, fetchBulk|fetchGzip)
+		r, err := index.fetch(index.distPath(packagesGzPath), packagesDigest, section.kind, fetchBulk|fetchGzip)
 		if err != nil {
 			return err
 		}
