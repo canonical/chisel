@@ -328,8 +328,8 @@ func (index *ubuntuIndex) fetchRelease() error {
 	return nil
 }
 
-// digestFields lists the archive checksum fields chisel can verify, in order of
-// preference. SHA256 stays first so existing archives keep their cache keys;
+// digestFields lists the archive checksum fields Chisel can verify, in order of
+// preference. SHA256 is first so existing archives keep their cache keys;
 // Ubuntu 26.10 and later publish SHA512-only indices, handled by the fallback.
 var digestFields = []struct {
 	name string
@@ -339,8 +339,6 @@ var digestFields = []struct {
 	{"SHA512", cache.SHA512},
 }
 
-// releaseDigest returns the checksum recorded for path in a Release "<hash>
-// <size> <path>" table, along with the hash kind it came from.
 func releaseDigest(release control.Section, path string) (digest string, kind cache.DigestKind) {
 	for _, f := range digestFields {
 		if d, _, _ := control.ParsePathInfo(release.Get(f.name), path); d != "" {
@@ -350,16 +348,14 @@ func releaseDigest(release control.Section, path string) (digest string, kind ca
 	return "", ""
 }
 
-// packageDigest returns a package's own checksum from its Packages stanza, along
-// with the hash kind it came from.
 func packageDigest(section control.Section) (digest string, kind cache.DigestKind) {
 	for _, f := range digestFields {
 		if d := section.Get(f.name); d != "" {
 			return d, f.kind
 		}
 	}
-	// No digest advertised; the package is fetched unverified and cached under
-	// its computed SHA256, matching the previous behavior.
+	// No digest advertised; fall back to SHA256 so the package can still be
+	// cached and retrieved by its computed digest.
 	return "", cache.SHA256
 }
 
