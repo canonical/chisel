@@ -158,16 +158,8 @@ func (s *httpSuite) prepareArchiveAdjustRelease(suite, version, arch string, com
 	if adjustRelease != nil {
 		adjustRelease(release)
 	}
-	// Packages inherit the release's digest kind unless they set their own.
-	err = release.Walk(func(item testarchive.Item) error {
-		if p, ok := item.(*testarchive.Package); ok && len(p.Hashes) == 0 {
-			p.Hashes = release.Hashes
-		}
-		return nil
-	})
-	if err != nil {
-		panic(err)
-	}
+	// Packages inherit the release's digest kinds at render time (see
+	// Release.inheritDigestKinds).
 	release.Render(base.Path, s.responses)
 	return release
 }
@@ -279,7 +271,7 @@ func (s *httpSuite) TestFetchSHA512Digests(c *C) {
 	// the index digest and the package digest must be read from SHA512.
 	s.prepareArchiveAdjustRelease("stonking", "25.10", "amd64", []string{"main", "universe"},
 		func(release *testarchive.Release) {
-			release.Hashes = []string{"SHA512"}
+			release.DigestKinds = []string{"SHA512"}
 		})
 
 	options := archive.Options{
@@ -302,11 +294,11 @@ func (s *httpSuite) TestFetchSHA512Digests(c *C) {
 
 func (s *httpSuite) TestFetchBothDigests(c *C) {
 	// An archive publishing both SHA256 and SHA512 sections (index table and
-	// package fields) must be handled, with SHA256 preferred per digestFields
+	// package fields) must be handled, with SHA256 preferred per digestSections
 	// ordering -- so PackageInfo.SHA256 is the field that surfaces.
 	s.prepareArchiveAdjustRelease("stonking", "25.10", "amd64", []string{"main", "universe"},
 		func(release *testarchive.Release) {
-			release.Hashes = []string{"SHA256", "SHA512"}
+			release.DigestKinds = []string{"SHA256", "SHA512"}
 		})
 
 	options := archive.Options{
@@ -761,7 +753,7 @@ func (s *httpSuite) TestFetchByHashSHA512(c *C) {
 	// the by-hash URL must be built under the SHA512 directory.
 	s.prepareArchiveAdjustRelease("stonking", "26.10", "amd64", []string{"main"}, func(release *testarchive.Release) {
 		release.ByHash = true
-		release.Hashes = []string{"SHA512"}
+		release.DigestKinds = []string{"SHA512"}
 	})
 
 	// Stale content at the named Packages.gz path, so a fallback would fail
@@ -801,7 +793,7 @@ func (s *httpSuite) TestFetchByHashBothDigests(c *C) {
 	// built under SHA256 (preferred) and SHA512 must not be requested.
 	s.prepareArchiveAdjustRelease("stonking", "26.10", "amd64", []string{"main"}, func(release *testarchive.Release) {
 		release.ByHash = true
-		release.Hashes = []string{"SHA256", "SHA512"}
+		release.DigestKinds = []string{"SHA256", "SHA512"}
 	})
 
 	// Stale content at the named Packages.gz path, so a fallback would fail
