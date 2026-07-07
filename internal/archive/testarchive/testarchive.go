@@ -228,10 +228,6 @@ func (pi *PackageIndex) Content() []byte {
 	return MergeSections(pi.Packages)
 }
 
-func makeSha256(b []byte) string {
-	return fmt.Sprintf("%x", sha256.Sum256(b))
-}
-
 // hashKinds returns the digest kinds to publish, defaulting to ["SHA256"] when
 // none are set.
 func hashKinds(hashes []string) []string {
@@ -254,7 +250,7 @@ func makeDigest(kind string, b []byte) string {
 	if kind == "SHA512" {
 		return fmt.Sprintf("%x", sha512.Sum512(b))
 	}
-	return makeSha256(b)
+	return fmt.Sprintf("%x", sha256.Sum256(b))
 }
 
 func MakeGzip(b []byte) []byte {
