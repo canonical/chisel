@@ -65,9 +65,9 @@ type Package struct {
 	Arch      string
 	Component string
 	Data      []byte
-	// digestKinds is filled from the release at render time (see
-	// inheritDigestKinds). Digest kinds are an archive-wide choice, so tests set
-	// them on the Release, not per package.
+	// digestKinds names the digest kinds published in this package's section.
+	// It is copied from Release.DigestKinds at render time, digest kinds being
+	// an archive-wide choice rather than a per-package one.
 	digestKinds []string
 }
 
