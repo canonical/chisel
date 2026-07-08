@@ -356,9 +356,8 @@ var cacheDigestFields = []digestField{
 	{"SHA512", cache.SHA512},
 }
 
-// findDigest returns the checksum recorded for path in a Release "<hash>
-// <size> <path>" table, along with the field it was found in, trying the
-// fields in order.
+// findDigest returns the digest recorded for path in the release, along with
+// the field it was found in, trying the given fields in order.
 func findDigest(release control.Section, path string, order []digestField) (digest string, field digestField) {
 	for _, f := range order {
 		if d, _, ok := control.ParsePathInfo(release.Get(f.name), path); ok {
