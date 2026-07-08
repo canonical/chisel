@@ -148,18 +148,12 @@ func (r *Release) Section() []byte {
 // the package sections access to the archive-wide digest kinds. Render calls
 // it before walking the items.
 func (r *Release) adoptPackages() error {
-	for _, item := range r.Items {
-		err := item.Walk(func(item Item) error {
-			if p, ok := item.(*Package); ok {
-				p.release = r
-			}
-			return nil
-		})
-		if err != nil {
-			return err
+	return r.Walk(func(item Item) error {
+		if p, ok := item.(*Package); ok {
+			p.release = r
 		}
-	}
-	return nil
+		return nil
+	})
 }
 
 func (r *Release) Content() []byte {
