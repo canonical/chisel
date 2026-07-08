@@ -159,7 +159,10 @@ func (s *httpSuite) prepareArchiveAdjustRelease(suite, version, arch string, com
 	if adjustRelease != nil {
 		adjustRelease(release)
 	}
-	release.Render(base.Path, s.responses)
+	err = release.Render(base.Path, s.responses)
+	if err != nil {
+		panic(err)
+	}
 	return release
 }
 
@@ -375,14 +378,16 @@ func (s *httpSuite) TestFetchSecurityPackage(c *C) {
 
 	for i, suite := range []string{"jammy", "jammy-updates", "jammy-security"} {
 		release := s.prepareArchive(suite, "22.04", "amd64", []string{"main", "universe"})
-		release.Walk(func(item testarchive.Item) error {
+		err := release.Walk(func(item testarchive.Item) error {
 			if p, ok := item.(*testarchive.Package); ok && p.Name == "mypkg1" {
 				p.Version = fmt.Sprintf("%s.%d", p.Version, i)
 				p.Data = []byte("package from " + suite)
 			}
 			return nil
 		})
-		release.Render("/ubuntu", s.responses)
+		c.Assert(err, IsNil)
+		err = release.Render("/ubuntu", s.responses)
+		c.Assert(err, IsNil)
 	}
 
 	options := archive.Options{

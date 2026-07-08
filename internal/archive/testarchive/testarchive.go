@@ -145,16 +145,19 @@ func (r *Release) Section() []byte {
 // publishes, so the archive-wide choice reaches each package section. Render
 // calls it before walking the items, so it always sees the final release
 // state.
-func (r *Release) inheritDigestKinds() {
+func (r *Release) inheritDigestKinds() error {
 	for _, item := range r.Items {
-		// The callback never errors, so neither can Walk.
-		_ = item.Walk(func(item Item) error {
+		err := item.Walk(func(item Item) error {
 			if p, ok := item.(*Package); ok {
 				p.digestKinds = r.DigestKinds
 			}
 			return nil
 		})
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func (r *Release) Content() []byte {
@@ -200,7 +203,10 @@ func (r *Release) Content() []byte {
 }
 
 func (r *Release) Render(prefix string, content map[string][]byte) error {
-	r.inheritDigestKinds()
+	err := r.inheritDigestKinds()
+	if err != nil {
+		return err
+	}
 	return r.Walk(func(item Item) error {
 		itemPath := item.Path()
 		itemContent := item.Content()
