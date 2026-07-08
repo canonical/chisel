@@ -144,10 +144,10 @@ func (r *Release) Section() []byte {
 	return nil
 }
 
-// adoptPackages points every published package back at this release, giving
+// wirePackages points every published package back at this release, giving
 // the package sections access to the archive-wide digest kinds. Render calls
 // it before walking the items.
-func (r *Release) adoptPackages() error {
+func (r *Release) wirePackages() error {
 	return r.Walk(func(item Item) error {
 		if p, ok := item.(*Package); ok {
 			p.release = r
@@ -199,7 +199,7 @@ func (r *Release) Content() []byte {
 }
 
 func (r *Release) Render(prefix string, content map[string][]byte) error {
-	err := r.adoptPackages()
+	err := r.wirePackages()
 	if err != nil {
 		return err
 	}
