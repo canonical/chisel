@@ -253,22 +253,28 @@ func (pi *PackageIndex) Content() []byte {
 	return MergeSections(pi.Packages)
 }
 
-// strongestKind returns the strongest digest kind in kinds, or "" if none is
-// known.
+// digestKinds lists the digest kinds this package can render, strongest first.
+var digestKinds = []string{"SHA512", "SHA256"}
+
+// strongestKind returns the strongest of kinds, or "" if kinds holds none of
+// digestKinds.
 func strongestKind(kinds []string) string {
-	for _, k := range []string{"SHA512", "SHA256"} {
-		if slices.Contains(kinds, k) {
-			return k
+	for _, kind := range digestKinds {
+		if slices.Contains(kinds, kind) {
+			return kind
 		}
 	}
 	return ""
 }
 
 func makeDigest(kind string, b []byte) string {
-	if kind == "SHA512" {
+	switch kind {
+	case "SHA512":
 		return fmt.Sprintf("%x", sha512.Sum512(b))
+	case "SHA256":
+		return fmt.Sprintf("%x", sha256.Sum256(b))
 	}
-	return fmt.Sprintf("%x", sha256.Sum256(b))
+	panic("unknown digest kind: " + kind)
 }
 
 func MakeGzip(b []byte) []byte {
