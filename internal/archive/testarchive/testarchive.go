@@ -213,9 +213,11 @@ func (r *Release) Render(prefix string, content map[string][]byte) error {
 		distItemPath := path.Join(prefix, "dists", r.Suite, itemPath)
 		content[distItemPath] = itemContent
 		if r.ByHash && itemPath != r.Path() {
-			// Real archives (ftpmaster) only publish by-hash directories for
-			// the strongest hash they advertise; mirror that so tests catch
-			// clients building by-hash URLs from a weaker hash.
+			// Archives only guarantee a by-hash directory for the strongest
+			// hash they advertise, though they may publish more. Render the
+			// guaranteed one only, so tests catch clients building by-hash
+			// URLs from a weaker hash; tests wanting extra directories add
+			// them on top of the rendered content.
 			if kind := strongestKind(r.DigestKinds); kind != "" {
 				byHashPath := path.Join(prefix, "dists", r.Suite, path.Dir(itemPath), "by-hash", kind, makeDigest(kind, itemContent))
 				content[byHashPath] = itemContent
