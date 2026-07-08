@@ -60,7 +60,7 @@ type yamlStore struct {
 }
 
 type yamlPackage struct {
-	Name         string `yaml:"package"`
+	RealName     string `yaml:"package"`
 	Archive      string `yaml:"archive,omitempty"`
 	Store        string `yaml:"store,omitempty"`
 	DefaultTrack string `yaml:"default-track,omitempty"`
@@ -485,8 +485,8 @@ func parsePackage(release *Release, pkgName, pkgPath string, data []byte) (*Pack
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse package %q slice definitions: %v", pkgName, err)
 	}
-	if yamlPkg.Name != pkg.RealName {
-		return nil, fmt.Errorf("%s: filename and 'package' field (%q) disagree", pkgPath, yamlPkg.Name)
+	if yamlPkg.RealName != pkg.RealName {
+		return nil, fmt.Errorf("%s: filename and 'package' field (%q) disagree", pkgPath, yamlPkg.RealName)
 	}
 
 	if (yamlPkg.Store != "" || yamlPkg.DefaultTrack != "") && (release.Format == "v1" || release.Format == "v2") {
@@ -755,7 +755,7 @@ func sliceToYAML(s *Slice) (*yamlSlice, error) {
 // packageToYAML converts a Package object to a yamlPackage object.
 func packageToYAML(p *Package) (*yamlPackage, error) {
 	pkg := &yamlPackage{
-		Name:         p.RealName,
+		RealName:     p.RealName,
 		Archive:      p.Archive,
 		Store:        p.Store,
 		DefaultTrack: p.DefaultTrack,
@@ -866,14 +866,14 @@ func parseEssentials(yamlPkg *yamlPackage, yamlSlice *yamlSlice, pkgPath string,
 	addPackageEssential := func(refName string, essentialInfo *yamlEssential) error {
 		sliceKey, err := ParseSliceKey(refName)
 		if err != nil {
-			return fmt.Errorf("package %q has invalid essential slice reference: %q", yamlPkg.Name, refName)
+			return fmt.Errorf("package %q has invalid essential slice reference: %q", yamlPkg.RealName, refName)
 		}
 		if sliceKey.Package == slice.Package && sliceKey.Slice == slice.Name {
 			// Do not add the slice to its own essentials list.
 			return nil
 		}
 		if _, ok := slice.Essential[sliceKey]; ok {
-			return fmt.Errorf("package %q repeats %s in essential fields", yamlPkg.Name, refName)
+			return fmt.Errorf("package %q repeats %s in essential fields", yamlPkg.RealName, refName)
 		}
 		if slice.Essential == nil {
 			slice.Essential = map[SliceKey]EssentialInfo{}
@@ -888,7 +888,7 @@ func parseEssentials(yamlPkg *yamlPackage, yamlSlice *yamlSlice, pkgPath string,
 	addSliceEssential := func(refName string, essentialInfo *yamlEssential) error {
 		sliceKey, err := ParseSliceKey(refName)
 		if err != nil {
-			return fmt.Errorf("package %q has invalid essential slice reference: %q", yamlPkg.Name, refName)
+			return fmt.Errorf("package %q has invalid essential slice reference: %q", yamlPkg.RealName, refName)
 		}
 		if sliceKey.Package == slice.Package && sliceKey.Slice == slice.Name {
 			return fmt.Errorf("cannot add slice to itself as essential %s in %s", refName, pkgPath)
