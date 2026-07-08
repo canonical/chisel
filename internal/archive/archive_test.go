@@ -4,6 +4,7 @@ import (
 	"golang.org/x/crypto/openpgp/packet"
 	. "gopkg.in/check.v1"
 
+	"crypto/sha256"
 	"debug/elf"
 	"errors"
 	"flag"
@@ -838,6 +839,108 @@ func (s *httpSuite) TestFetchByHashBothDigests(c *C) {
 	c.Assert(status, Equals, 200)
 	attempted, _ = s.fetchRequestStatus("/by-hash/SHA256/")
 	c.Assert(attempted, Equals, false)
+}
+
+// addSha256ByHashDirs mirrors every published by-hash/SHA512 entry under a
+// by-hash/SHA256 path, like archives publishing by-hash directories for
+// more hashes than just the strongest one (e.g. stonking).
+func (s *httpSuite) addSha256ByHashDirs() {
+	mirrored := make(map[string][]byte)
+	for p, content := range s.responses {
+		prefix, _, found := strings.Cut(p, "/by-hash/SHA512/")
+		if !found {
+			continue
+		}
+		mirrored[fmt.Sprintf("%s/by-hash/SHA256/%x", prefix, sha256.Sum256(content))] = content
+	}
+	for p, content := range mirrored {
+		s.responses[p] = content
+	}
+}
+
+func (s *httpSuite) TestFetchByHashManyDigestDirs(c *C) {
+	// An archive may publish by-hash directories for more hashes than the
+	// strongest one it advertises. The by-hash URL must still be built under
+	// SHA512, and the SHA256 directory left alone, even though a request
+	// there would now succeed.
+	s.prepareArchiveAdjustRelease("stonking", "26.10", "amd64", []string{"main"}, func(release *testarchive.Release) {
+		release.ByHash = true
+		release.DigestKinds = []string{"SHA256", "SHA512"}
+	})
+	s.addSha256ByHashDirs()
+
+	// Stale content at the named Packages.gz path, so a fallback would fail
+	// the digest check -- only the by-hash paths serve the correct bytes.
+	for p := range s.responses {
+		if strings.Contains(p, "Packages.gz") && !strings.Contains(p, "/by-hash/") {
+			s.responses[p] = testarchive.MakeGzip([]byte("stale Packages from previous publication"))
+		}
+	}
+
+	options := archive.Options{
+		Label:      "ubuntu",
+		Version:    "26.10",
+		Arch:       "amd64",
+		Suites:     []string{"stonking"},
+		Components: []string{"main"},
+		CacheDir:   c.MkDir(),
+		PubKeys:    []*packet.PublicKey{s.pubKey},
+	}
+
+	testArchive, err := archive.Open(&options)
+	c.Assert(err, IsNil)
+
+	pkg, _, err := testArchive.Fetch("mypkg1")
+	c.Assert(err, IsNil)
+	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
+
+	attempted, status := s.fetchRequestStatus("/by-hash/SHA512/")
+	c.Assert(attempted, Equals, true)
+	c.Assert(status, Equals, 200)
+	attempted, _ = s.fetchRequestStatus("/by-hash/SHA256/")
+	c.Assert(attempted, Equals, false)
+}
+
+func (s *httpSuite) TestFetchByHashOnlyWeakerDigestDir(c *C) {
+	// A buggy archive advertising both digests but publishing a by-hash
+	// directory only for the weaker one. The SHA512 by-hash request 404s and
+	// the named path takes over; the SHA256 directory must not be tried.
+	s.prepareArchiveAdjustRelease("stonking", "26.10", "amd64", []string{"main"}, func(release *testarchive.Release) {
+		release.ByHash = true
+		release.DigestKinds = []string{"SHA256", "SHA512"}
+	})
+	s.addSha256ByHashDirs()
+	for p := range s.responses {
+		if strings.Contains(p, "/by-hash/SHA512/") {
+			delete(s.responses, p)
+		}
+	}
+
+	options := archive.Options{
+		Label:      "ubuntu",
+		Version:    "26.10",
+		Arch:       "amd64",
+		Suites:     []string{"stonking"},
+		Components: []string{"main"},
+		CacheDir:   c.MkDir(),
+		PubKeys:    []*packet.PublicKey{s.pubKey},
+	}
+
+	testArchive, err := archive.Open(&options)
+	c.Assert(err, IsNil)
+
+	pkg, _, err := testArchive.Fetch("mypkg1")
+	c.Assert(err, IsNil)
+	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
+
+	attempted, status := s.fetchRequestStatus("/by-hash/SHA512/")
+	c.Assert(attempted, Equals, true)
+	c.Assert(status, Equals, 404)
+	attempted, _ = s.fetchRequestStatus("/by-hash/SHA256/")
+	c.Assert(attempted, Equals, false)
+	attempted, status = s.fetchRequestStatus("Packages.gz")
+	c.Assert(attempted, Equals, true)
+	c.Assert(status, Equals, 200)
 }
 
 func (s *httpSuite) TestFetchByHashFallsBackOnNotFound(c *C) {
