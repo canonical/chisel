@@ -293,7 +293,7 @@ func (s *httpSuite) TestFetchSHA512Digests(c *C) {
 
 func (s *httpSuite) TestFetchBothDigests(c *C) {
 	// An archive publishing both SHA256 and SHA512 sections (index table and
-	// package fields) must be handled, with SHA256 preferred per digestSections
+	// package fields) must be handled, with SHA256 preferred per the cache
 	// ordering -- so PackageInfo.SHA256 is the field that surfaces.
 	s.prepareArchiveAdjustRelease("stonking", "25.10", "amd64", []string{"main", "universe"},
 		func(release *testarchive.Release) {
@@ -322,6 +322,11 @@ func (s *httpSuite) TestFetchBothDigests(c *C) {
 		SHA256:  "1f08ef04cfe7a8087ee38a1ea35fa1810246648136c3c42d5a61ad6503d85e05",
 	})
 	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
+
+	// Pin the cache key: with both digests advertised, packages must stay
+	// cached under their SHA256 so existing caches keep their entries.
+	_, err = os.Stat(filepath.Join(options.CacheDir, "sha256", info.SHA256))
+	c.Assert(err, IsNil)
 }
 
 func (s *httpSuite) TestFetchPortsPackage(c *C) {
@@ -789,7 +794,8 @@ func (s *httpSuite) TestFetchByHashSHA512(c *C) {
 
 func (s *httpSuite) TestFetchByHashBothDigests(c *C) {
 	// When a by-hash archive publishes both digests, the by-hash URL must be
-	// built under SHA256 (preferred) and SHA512 must not be requested.
+	// built under SHA512: archives only guarantee a by-hash directory for the
+	// strongest hash they advertise. SHA256 by-hash must not be requested.
 	s.prepareArchiveAdjustRelease("stonking", "26.10", "amd64", []string{"main"}, func(release *testarchive.Release) {
 		release.ByHash = true
 		release.DigestKinds = []string{"SHA256", "SHA512"}
@@ -820,12 +826,12 @@ func (s *httpSuite) TestFetchByHashBothDigests(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
 
-	// The SHA256 by-hash request must have been made and succeeded; the SHA512
+	// The SHA512 by-hash request must have been made and succeeded; the SHA256
 	// by-hash directory must never be touched.
-	attempted, status := s.fetchRequestStatus("/by-hash/SHA256/")
+	attempted, status := s.fetchRequestStatus("/by-hash/SHA512/")
 	c.Assert(attempted, Equals, true)
 	c.Assert(status, Equals, 200)
-	attempted, _ = s.fetchRequestStatus("/by-hash/SHA512/")
+	attempted, _ = s.fetchRequestStatus("/by-hash/SHA256/")
 	c.Assert(attempted, Equals, false)
 }
 

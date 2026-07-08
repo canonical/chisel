@@ -7,6 +7,7 @@ import (
 	"crypto/sha512"
 	"fmt"
 	"path"
+	"slices"
 	"strings"
 
 	"golang.org/x/crypto/openpgp/clearsign"
@@ -210,7 +211,10 @@ func (r *Release) Render(prefix string, content map[string][]byte) error {
 		distItemPath := path.Join(prefix, "dists", r.Suite, itemPath)
 		content[distItemPath] = itemContent
 		if r.ByHash && itemPath != r.Path() {
-			for _, kind := range r.DigestKinds {
+			// Real archives (ftpmaster) only publish by-hash directories for
+			// the strongest hash they advertise; mirror that so tests catch
+			// clients building by-hash URLs from a weaker hash.
+			if kind := strongestKind(r.DigestKinds); kind != "" {
 				byHashPath := path.Join(prefix, "dists", r.Suite, path.Dir(itemPath), "by-hash", kind, makeDigest(kind, itemContent))
 				content[byHashPath] = itemContent
 			}
@@ -247,6 +251,17 @@ func (pi *PackageIndex) Section() []byte {
 
 func (pi *PackageIndex) Content() []byte {
 	return MergeSections(pi.Packages)
+}
+
+// strongestKind returns the strongest digest kind in kinds, or "" if none is
+// known.
+func strongestKind(kinds []string) string {
+	for _, k := range []string{"SHA512", "SHA256"} {
+		if slices.Contains(kinds, k) {
+			return k
+		}
+	}
+	return ""
 }
 
 func makeDigest(kind string, b []byte) string {

@@ -338,18 +338,30 @@ type digestSection struct {
 	kind cache.DigestKind
 }
 
-// digestSections lists the checksum sections Chisel can verify, in order of
-// preference. SHA256 is first so existing archives keep their cache keys;
-// Ubuntu 26.10 and later publish SHA512-only indices, handled by the fallback.
+// digestSections lists the checksum sections Chisel can verify, strongest
+// first. This order matches the by-hash archive layout: an archive is only
+// guaranteed to publish a by-hash directory for the strongest hash it
+// advertises.
 var digestSections = []digestSection{
+	{"SHA512", cache.SHA512},
+	{"SHA256", cache.SHA256},
+}
+
+// cacheDigestSections is digestSections reordered to prefer SHA256, so that
+// existing caches keep their keys. It picks the digest used to verify content
+// and key the cache, and nothing else.
+// TODO Drop this in favour of digestSections. That changes cache keys for
+// archives publishing both digests, so it must wait for a minor release.
+var cacheDigestSections = []digestSection{
 	{"SHA256", cache.SHA256},
 	{"SHA512", cache.SHA512},
 }
 
-// releaseDigest returns the checksum recorded for path in a Release "<hash>
-// <size> <path>" table, along with the section it was found in.
-func releaseDigest(release control.Section, path string) (digest string, section digestSection) {
-	for _, s := range digestSections {
+// findDigest returns the checksum recorded for path in a Release "<hash>
+// <size> <path>" table, along with the section it was found in, trying the
+// sections in order.
+func findDigest(release control.Section, path string, order []digestSection) (digest string, section digestSection) {
+	for _, s := range order {
 		if d, _, ok := control.ParsePathInfo(release.Get(s.name), path); ok {
 			return d, s
 		}
@@ -358,7 +370,7 @@ func releaseDigest(release control.Section, path string) (digest string, section
 }
 
 func packageDigest(section control.Section) (digest string, kind cache.DigestKind) {
-	for _, s := range digestSections {
+	for _, s := range cacheDigestSections {
 		if d := section.Get(s.name); d != "" {
 			return d, s.kind
 		}
@@ -370,7 +382,7 @@ func packageDigest(section control.Section) (digest string, kind cache.DigestKin
 
 func (index *ubuntuIndex) fetchIndex() error {
 	packagesPath := fmt.Sprintf("%s/binary-%s/Packages", index.component, index.arch)
-	packagesDigest, section := releaseDigest(index.release, packagesPath)
+	packagesDigest, section := findDigest(index.release, packagesPath, cacheDigestSections)
 	if packagesDigest == "" {
 		return fmt.Errorf("%s is missing from %s %s component digests", packagesPath, index.suite, index.component)
 	}
@@ -384,9 +396,14 @@ func (index *ubuntuIndex) fetchIndex() error {
 	packagesGzPath := packagesPath + ".gz"
 	var reader io.ReadSeekCloser
 	if index.release.Get("Acquire-By-Hash") == "yes" {
-		packagesGzDigest, _, _ := control.ParsePathInfo(index.release.Get(section.name), packagesGzPath)
+		// By-hash directories are only guaranteed to exist for the strongest
+		// hash the archive advertises, so the URL is built from the strongest
+		// section, independently of the digest used for verification and the
+		// cache. If the archive advertises a hash stronger than any Chisel
+		// knows, the URL may 404 and the named-path fallback below applies.
+		packagesGzDigest, byHashSection := findDigest(index.release, packagesGzPath, digestSections)
 		if packagesGzDigest != "" {
-			packagesByHashPath := fmt.Sprintf("%s/binary-%s/by-hash/%s/%s", index.component, index.arch, section.name, packagesGzDigest)
+			packagesByHashPath := fmt.Sprintf("%s/binary-%s/by-hash/%s/%s", index.component, index.arch, byHashSection.name, packagesGzDigest)
 			r, err := index.fetch(index.distPath(packagesByHashPath), packagesDigest, section.kind, fetchBulk|fetchGzip)
 			if err != nil && err != errNotFound {
 				return err
