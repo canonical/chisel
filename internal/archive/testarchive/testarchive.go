@@ -142,8 +142,9 @@ func (r *Release) Section() []byte {
 }
 
 // inheritDigestKinds copies the release's digest kinds onto every package it
-// publishes, so the archive-wide choice reaches each package section. Run at
-// render time and idempotent, so it always sees the final release state.
+// publishes, so the archive-wide choice reaches each package section. Render
+// calls it before walking the items, so it always sees the final release
+// state.
 func (r *Release) inheritDigestKinds() {
 	for _, item := range r.Items {
 		// The callback never errors, so neither can Walk.
@@ -157,7 +158,6 @@ func (r *Release) inheritDigestKinds() {
 }
 
 func (r *Release) Content() []byte {
-	r.inheritDigestKinds()
 	digests := bytes.Buffer{}
 	for _, kind := range r.DigestKinds {
 		fmt.Fprintf(&digests, "%s:\n", kind)
