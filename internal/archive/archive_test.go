@@ -5,6 +5,7 @@ import (
 	. "gopkg.in/check.v1"
 
 	"crypto/sha256"
+	"crypto/sha512"
 	"debug/elf"
 	"errors"
 	"flag"
@@ -297,8 +298,9 @@ func (s *httpSuite) TestFetchSHA512Digests(c *C) {
 
 func (s *httpSuite) TestFetchBothDigests(c *C) {
 	// An archive publishing both SHA256 and SHA512 sections (index table and
-	// package fields) must be handled, with SHA256 preferred per the cache
-	// ordering -- so PackageInfo.SHA256 is the field that surfaces.
+	// package fields) must be handled, with the strongest digest preferred
+	// for verification and caching. PackageInfo.SHA256 still surfaces: it is
+	// read from the package section directly, not from the preference order.
 	s.prepareArchiveAdjustRelease("stonking", "25.10", "amd64", []string{"main", "universe"},
 		func(release *testarchive.Release) {
 			release.DigestKinds = []string{"SHA256", "SHA512"}
@@ -327,9 +329,10 @@ func (s *httpSuite) TestFetchBothDigests(c *C) {
 	})
 	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
 
-	// Pin the cache key: with both digests advertised, packages must stay
-	// cached under their SHA256 so existing caches keep their entries.
-	_, err = os.Stat(filepath.Join(options.CacheDir, "sha256", info.SHA256))
+	// Pin the cache key: with both digests advertised, the package is cached
+	// under its strongest digest.
+	sha512Digest := fmt.Sprintf("%x", sha512.Sum512([]byte("mypkg1 1.1 data")))
+	_, err = os.Stat(filepath.Join(options.CacheDir, "sha512", sha512Digest))
 	c.Assert(err, IsNil)
 }
 
