@@ -3935,7 +3935,7 @@ var setupTests = []setupTest{{
 	summary: "Store package is parsed correctly",
 	input: map[string]string{
 		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
-		"slices/bin/mypkg.yaml": `
+		"bin-slices/mypkg.yaml": `
 			package: mypkg
 			store: bin
 			default-track: "3.0"
@@ -3965,7 +3965,7 @@ var setupTests = []setupTest{{
 			"bin-mypkg": {
 				RealName:     "mypkg",
 				Name:         "bin-mypkg",
-				Path:         "slices/bin/mypkg.yaml",
+				Path:         "bin-slices/mypkg.yaml",
 				Store:        "bin",
 				DefaultTrack: "3.0",
 				Slices:       map[string]*setup.Slice{},
@@ -3980,7 +3980,7 @@ var setupTests = []setupTest{{
 	summary: "Store used with older format (v1/v2) is not allowed",
 	input: map[string]string{
 		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYaml, "format: v1", "format: v2"),
-		"slices/bin/mypkg.yaml": `
+		"slices/mypkg.yaml": `
 			package: mypkg
 			store: bin
 			default-track: "3.0"
@@ -3991,7 +3991,7 @@ var setupTests = []setupTest{{
 	summary: "Store and archive are mutually exclusive",
 	input: map[string]string{
 		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
-		"slices/bin/mypkg.yaml": `
+		"bin-slices/mypkg.yaml": `
 			package: mypkg
 			store: bin
 			archive: ubuntu
@@ -4003,7 +4003,7 @@ var setupTests = []setupTest{{
 	summary: "Store and archive are mutually exclusive",
 	input: map[string]string{
 		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
-		"slices/bin/mypkg.yaml": `
+		"bin-slices/mypkg.yaml": `
 			package: mypkg
 			archive: ubuntu
 			store: bin
@@ -4015,7 +4015,7 @@ var setupTests = []setupTest{{
 	summary: "Store package missing default-track (v3)",
 	input: map[string]string{
 		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
-		"slices/bin/mypkg.yaml": `
+		"bin-slices/mypkg.yaml": `
 			package: mypkg
 			store: bin
 		`,
@@ -4025,7 +4025,7 @@ var setupTests = []setupTest{{
 	summary: "default-track without store (v3)",
 	input: map[string]string{
 		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
-		"slices/bin/mypkg.yaml": `
+		"bin-slices/mypkg.yaml": `
 			package: mypkg
 			default-track: "3.0"
 		`,
@@ -4035,7 +4035,7 @@ var setupTests = []setupTest{{
 	summary: "default-track must not contain / (v3)",
 	input: map[string]string{
 		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
-		"slices/bin/mypkg.yaml": `
+		"bin-slices/mypkg.yaml": `
 			package: mypkg
 			store: bin
 			default-track: "3.0/stable"
@@ -4046,7 +4046,7 @@ var setupTests = []setupTest{{
 	summary: "Package store references undefined store (v3)",
 	input: map[string]string{
 		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
-		"slices/bin/mypkg.yaml": `
+		"bin-slices/mypkg.yaml": `
 			package: mypkg
 			store: non-existing
 			default-track: "3.0"
@@ -4142,7 +4142,7 @@ var setupTests = []setupTest{{
 					contents:
 						/usr/bin/curl:
 		`,
-		"slices/bin/curl.yaml": `
+		"bin-slices/curl.yaml": `
 			package: curl
 			store: bin
 			default-track: "3.0"
@@ -4197,7 +4197,7 @@ var setupTests = []setupTest{{
 			"bin-curl": {
 				RealName:     "curl",
 				Name:         "bin-curl",
-				Path:         "slices/bin/curl.yaml",
+				Path:         "bin-slices/curl.yaml",
 				Store:        "bin",
 				DefaultTrack: "3.0",
 				Slices: map[string]*setup.Slice{
@@ -4216,6 +4216,211 @@ var setupTests = []setupTest{{
 			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
 		},
 	},
+}, {
+	summary: "Store package in slices/ is parsed correctly (v4)",
+	input: map[string]string{
+		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYamlWithStores, "format: v3", "format: v4"),
+		"slices/mypkg.yaml": `
+			package: mypkg
+			store: bin
+			default-track: "3.0"
+		`,
+	},
+	release: &setup.Release{
+		Format: "v4",
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
+			},
+		},
+		Stores: map[string]*setup.Store{
+			"bin": {
+				Name:          "bin",
+				Kind:          "bin",
+				Version:       "26.10",
+				DefaultPrefix: "bin-",
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"bin-mypkg": {
+				RealName:     "mypkg",
+				Name:         "bin-mypkg",
+				Path:         "slices/mypkg.yaml",
+				Store:        "bin",
+				DefaultTrack: "3.0",
+				Slices:       map[string]*setup.Slice{},
+			},
+		},
+		Maintenance: &setup.Maintenance{
+				Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+				EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
+		},
+	},
+}, {
+	summary: "bin-slices/ directory is ignored (v4)",
+	input: map[string]string{
+		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYamlWithStores, "format: v3", "format: v4"),
+		"bin-slices/mypkg.yaml": `
+			package: mypkg
+			store: bin
+			default-track: "3.0"
+		`,
+	},
+	release: &setup.Release{
+		Format: "v4",
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
+			},
+		},
+		Stores: map[string]*setup.Store{
+			"bin": {
+				Name:          "bin",
+				Kind:          "bin",
+				Version:       "26.10",
+				DefaultPrefix: "bin-",
+			},
+		},
+		Packages: map[string]*setup.Package{},
+		Maintenance: &setup.Maintenance{
+				Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+				EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
+		},
+	},
+}, {
+	summary: "Same-named package in archive and store under slices/ (v4)",
+	input: map[string]string{
+		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYamlWithStores, "format: v3", "format: v4"),
+		"slices/curl.yaml": `
+			package: curl
+			slices:
+				libs:
+					contents:
+						/usr/lib/libcurl.so:
+				bins:
+					contents:
+						/usr/bin/curl:
+		`,
+		"slices/bins/curl.yaml": `
+			package: curl
+			store: bin
+			default-track: "3.0"
+			slices:
+				bins:
+					contents:
+						/usr/bin/curl-bin:
+		`,
+	},
+	release: &setup.Release{
+		Format: "v4",
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
+			},
+		},
+		Stores: map[string]*setup.Store{
+			"bin": {
+				Name:          "bin",
+				Kind:          "bin",
+				Version:       "26.10",
+				DefaultPrefix: "bin-",
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"curl": {
+				RealName: "curl",
+				Name:     "curl",
+				Path:     "slices/curl.yaml",
+				Slices: map[string]*setup.Slice{
+					"libs": {
+						Package: "curl",
+						Name:    "libs",
+						Contents: map[string]setup.PathInfo{
+							"/usr/lib/libcurl.so": {Kind: setup.CopyPath},
+						},
+					},
+					"bins": {
+						Package: "curl",
+						Name:    "bins",
+						Contents: map[string]setup.PathInfo{
+							"/usr/bin/curl": {Kind: setup.CopyPath},
+						},
+					},
+				},
+			},
+			"bin-curl": {
+				RealName:     "curl",
+				Name:         "bin-curl",
+				Path:         "slices/bins/curl.yaml",
+				Store:        "bin",
+				DefaultTrack: "3.0",
+				Slices: map[string]*setup.Slice{
+					"bins": {
+						Package: "bin-curl",
+						Name:    "bins",
+						Contents: map[string]setup.PathInfo{
+							"/usr/bin/curl-bin": {Kind: setup.CopyPath},
+						},
+					},
+				},
+			},
+		},
+		Maintenance: &setup.Maintenance{
+				Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+				EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
+		},
+	},
+}, {
+	summary: "Store unknown kind",
+	selslices: []setup.SliceKey{{Package: "bin-mypkg", Slice: "myslice"}},
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v3
+			maintenance:
+				standard: 2025-01-01
+				end-of-life: 2100-01-01
+			archives:
+				ubuntu:
+					version: 26.10
+					components: [main, universe]
+					suites: [stonking]
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+			stores:
+				bin:
+					kind: unknown
+					version: 26.10
+					default-prefix: "bin-"
+		`,
+		"bin-slices/mypkg.yaml": `
+			package: mypkg
+			store: bin
+			default-track: "3.0"
+			slices:
+				myslice:
+					contents:
+						/dir/file: {}
+		`,
+	},
+	selerror: `slice bin-mypkg_myslice refers to store "bin" with unknown kind "unknown"`,
 }}
 
 func (s *S) TestParseRelease(c *C) {
@@ -4246,6 +4451,7 @@ func (s *S) TestParseRelease(c *C) {
 		for k, v := range t.input {
 			if strings.Contains(v, "format: v2") ||
 				strings.Contains(v, "format: v3") ||
+				strings.Contains(v, "format: v4") ||
 				strings.Contains(v, "v2-archives:") ||
 				strings.Contains(v, "default: true") {
 				skip = true
@@ -4279,6 +4485,7 @@ func (s *S) TestParseRelease(c *C) {
 		}
 		for k, v := range t.input {
 			if strings.Contains(v, "format: v3") ||
+				strings.Contains(v, "format: v4") ||
 				strings.Contains(v, "v2-archives:") ||
 				strings.Contains(v, "default: true") {
 				skip = true
@@ -4304,48 +4511,6 @@ func (s *S) TestParseRelease(c *C) {
 	runParseReleaseTests(c, v3FormatTests)
 }
 
-// TestSelectStoreUnknownKind is a dedicated test because the unknown store kind
-// is only reported at selection time and only makes sense for the v3 format.
-func (s *S) TestSelectStoreUnknownKind(c *C) {
-	runParseReleaseTests(c, []setupTest{{
-		summary:   "Store unknown kind",
-		selslices: []setup.SliceKey{{Package: "bin-mypkg", Slice: "myslice"}},
-		input: map[string]string{
-			"chisel.yaml": `
-				format: v3
-				maintenance:
-					standard: 2025-01-01
-					end-of-life: 2100-01-01
-				archives:
-					ubuntu:
-						version: 26.10
-						components: [main, universe]
-						suites: [stonking]
-						public-keys: [test-key]
-				public-keys:
-					test-key:
-						id: ` + testKey.ID + `
-						armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t\t") + `
-				stores:
-					bin:
-						kind: unknown
-						version: 26.10
-						default-prefix: "bin-"
-			`,
-			"slices/bin/mypkg.yaml": `
-				package: mypkg
-				store: bin
-				default-track: "3.0"
-				slices:
-					myslice:
-						contents:
-							/dir/file: {}
-			`,
-		},
-		selerror: `slice bin-mypkg_myslice refers to store "bin" with unknown kind "unknown"`,
-	}})
-}
-
 func runParseReleaseTests(c *C, tests []setupTest) {
 	for _, test := range tests {
 		c.Logf("Summary: %s", test.summary)
@@ -4365,6 +4530,10 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 			err = os.WriteFile(fpath, testutil.Reindent(data), 0644)
 			c.Assert(err, IsNil)
 		}
+		// Ensure the "slices" directory always exists, even if no slice
+		// definition files are provided.
+		err := os.MkdirAll(filepath.Join(dir, "slices"), 0o755)
+		c.Assert(err, IsNil)
 
 		release, err := setup.ReadRelease(dir)
 		if err != nil || test.relerror != "" {
@@ -4435,6 +4604,10 @@ func (s *S) TestPackageMarshalYAML(c *C) {
 			err = os.WriteFile(fpath, testutil.Reindent(string(pkgData)), 0644)
 			c.Assert(err, IsNil)
 		}
+		// Ensure the "slices" directory always exists, even if no slice
+		// definition files are provided.
+		err = os.MkdirAll(filepath.Join(dir, "slices"), 0o755)
+		c.Assert(err, IsNil)
 
 		release, err := setup.ReadRelease(dir)
 		c.Assert(err, IsNil)
@@ -4618,7 +4791,21 @@ func (s *S) TestPackageYAMLFormat(c *C) {
 						id: ` + testKey.ID + `
 						armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t\t") + `
 			`,
-			"slices/bin/mypkg.yaml": `
+			"bin-slices/mypkg.yaml": `
+				package: mypkg
+				store: bin
+				default-track: "3.0"
+				slices:
+					myslice:
+						contents:
+							/usr/bin/mypkg: {}
+			`,
+		},
+	}, {
+		summary: "Store package fields in slices/ (v4)",
+		input: map[string]string{
+			"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYamlWithStores, "format: v3", "format: v4"),
+			"slices/mypkg.yaml": `
 				package: mypkg
 				store: bin
 				default-track: "3.0"
@@ -4645,6 +4832,10 @@ func (s *S) TestPackageYAMLFormat(c *C) {
 			err = os.WriteFile(fpath, testutil.Reindent(data), 0644)
 			c.Assert(err, IsNil)
 		}
+		// Ensure the "slices" directory always exists, even if no slice
+		// definition files are provided.
+		err := os.MkdirAll(filepath.Join(dir, "slices"), 0o755)
+		c.Assert(err, IsNil)
 
 		release, err := setup.ReadRelease(dir)
 		c.Assert(err, IsNil)

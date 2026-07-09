@@ -264,7 +264,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s: cannot parse release definition: %v", fileName, err)
 	}
-	if yamlVar.Format != "v1" && yamlVar.Format != "v2" && yamlVar.Format != "v3" {
+	if yamlVar.Format != "v1" && yamlVar.Format != "v2" && yamlVar.Format != "v3" && yamlVar.Format != "v4" {
 		return nil, fmt.Errorf("%s: unknown format %q", fileName, yamlVar.Format)
 	}
 	release.Format = yamlVar.Format
