@@ -152,7 +152,8 @@ func Run(options *RunOptions) error {
 		if packages[slice.Package] != nil {
 			continue
 		}
-		reader, info, err := pkgArchive[slice.Package].Fetch(slice.Package)
+		pkg := options.Selection.Release.Packages[slice.Package]
+		reader, info, err := pkgArchive[slice.Package].Fetch(pkg.RealName)
 		if err != nil {
 			return err
 		}
@@ -513,6 +514,10 @@ func selectPkgArchives(archives map[string]archive.Archive, selection *setup.Sel
 		}
 		pkg := selection.Release.Packages[s.Package]
 
+		if pkg.Store != "" {
+			return nil, fmt.Errorf("cannot fetch package %q from store %q: not implemented", pkg.Name, pkg.Store)
+		}
+
 		var candidates []*setup.Archive
 		if pkg.Archive == "" {
 			// If the package has not pinned any archive, choose the highest
@@ -535,6 +540,5 @@ func selectPkgArchives(archives map[string]archive.Archive, selection *setup.Sel
 		}
 		pkgArchive[pkg.Name] = chosen
 	}
-
 	return pkgArchive, nil
 }
