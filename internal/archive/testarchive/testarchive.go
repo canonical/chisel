@@ -144,9 +144,7 @@ func (r *Release) Section() []byte {
 	return nil
 }
 
-// wirePackages points every published package back at this release, giving
-// the package sections access to the archive-wide digest kinds. Render calls
-// it before walking the items.
+// wirePackages gives the package sections access to the archive-wide digest kinds.
 func (r *Release) wirePackages() error {
 	return r.Walk(func(item Item) error {
 		if p, ok := item.(*Package); ok {
