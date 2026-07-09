@@ -41,6 +41,15 @@ type contentChecker struct {
 	knownPaths map[string]pathData
 }
 
+// pkgSource holds the resolved source for a package: its architecture and a
+// fetch function returning the package reader and metadata. The fetch
+// function is bound at resolution time, so callers are agnostic to whether
+// the package comes from an archive or a store.
+type pkgSource struct {
+	arch  string
+	fetch func() (io.ReadSeekCloser, *archive.PackageInfo, error)
+}
+
 func (cc *contentChecker) checkMutable(path string) error {
 	if !cc.knownPaths[path].mutable {
 		return fmt.Errorf("cannot write file which is not mutable: %s", path)
@@ -90,7 +99,7 @@ func Run(options *RunOptions) error {
 		targetDir = filepath.Join(dir, targetDir)
 	}
 
-	pkgArchive, err := selectPkgArchives(options.Archives, options.Selection)
+	pkgSources, err := resolvePkgSources(options.Archives, options.Selection)
 	if err != nil {
 		return err
 	}
@@ -108,12 +117,12 @@ func Run(options *RunOptions) error {
 			extractPackage = make(map[string][]tarball.ExtractInfo)
 			extract[slice.Package] = extractPackage
 		}
-		arch := pkgArchive[slice.Package].Options().Arch
+		src := pkgSources[slice.Package]
 		for targetPath, pathInfo := range slice.Contents {
 			if targetPath == "" {
 				continue
 			}
-			if len(pathInfo.Arch) > 0 && !slices.Contains(pathInfo.Arch, arch) {
+			if len(pathInfo.Arch) > 0 && !slices.Contains(pathInfo.Arch, src.arch) {
 				continue
 			}
 			if preferredPkg, ok := prefers[targetPath]; ok && preferredPkg.Name != slice.Package {
@@ -153,7 +162,8 @@ func Run(options *RunOptions) error {
 			continue
 		}
 		pkg := options.Selection.Release.Packages[slice.Package]
-		reader, info, err := pkgArchive[slice.Package].Fetch(pkg.RealName)
+		src := pkgSources[pkg]
+		reader, info, err := src.fetch()
 		if err != nil {
 			return err
 		}
@@ -270,9 +280,9 @@ func Run(options *RunOptions) error {
 	// them to the appropriate slices.
 	relPaths := map[string][]*setup.Slice{}
 	for _, slice := range options.Selection.Slices {
-		arch := pkgArchive[slice.Package].Options().Arch
+		src := pkgSources[slice.Package]
 		for relPath, pathInfo := range slice.Contents {
-			if len(pathInfo.Arch) > 0 && !slices.Contains(pathInfo.Arch, arch) {
+			if len(pathInfo.Arch) > 0 && !slices.Contains(pathInfo.Arch, src.arch) {
 				continue
 			}
 			if pathInfo.Kind == setup.CopyPath || pathInfo.Kind == setup.GlobPath ||
@@ -490,10 +500,13 @@ func createFile(targetDir, relPath string, pathInfo setup.PathInfo) (*fsutil.Ent
 	})
 }
 
-// selectPkgArchives selects the highest priority archive containing the package
-// unless a particular archive is pinned within the slice definition file. It
-// returns a map of archives indexed by package names.
-func selectPkgArchives(archives map[string]archive.Archive, selection *setup.Selection) (map[string]archive.Archive, error) {
+// resolvePkgSources determines the source for each package in the selection.
+// For archive packages it selects the highest priority archive containing the
+// package unless a particular archive is pinned within the slice definition
+// file. For store packages it records a fetch function that returns an error
+// until store support is implemented. It returns a map of pkgSource indexed by
+// package names.
+func resolvePkgSources(archives map[string]archive.Archive, selection *setup.Selection) (map[string]pkgSource, error) {
 	sortedArchives := make([]*setup.Archive, 0, len(selection.Release.Archives))
 	for _, archive := range selection.Release.Archives {
 		if archive.Priority < 0 {
@@ -507,12 +520,20 @@ func selectPkgArchives(archives map[string]archive.Archive, selection *setup.Sel
 		return b.Priority - a.Priority
 	})
 
-	pkgArchive := make(map[string]archive.Archive)
+	pkgSources := make(map[string]pkgSource)
 	for _, s := range selection.Slices {
-		if _, ok := pkgArchive[s.Package]; ok {
+		if _, ok := pkgSources[s.Package]; ok {
 			continue
 		}
 		pkg := selection.Release.Packages[s.Package]
+		if pkg.Store != "" {
+			pkgSources[pkg.Name] = pkgSource{
+				fetch: func() (io.ReadSeekCloser, *archive.PackageInfo, error) {
+					return nil, nil, fmt.Errorf("cannot fetch package %q from store: store packages are not yet supported", pkg.Name)
+				},
+			}
+			continue
+		}
 
 		if pkg.Store != "" {
 			return nil, fmt.Errorf("cannot fetch package %q from store %q: not implemented", pkg.Name, pkg.Store)
@@ -538,7 +559,32 @@ func selectPkgArchives(archives map[string]archive.Archive, selection *setup.Sel
 		if chosen == nil {
 			return nil, fmt.Errorf("cannot find package %q in archive(s)", pkg.RealName)
 		}
-		pkgArchive[pkg.Name] = chosen
+		chosenArchive := chosen
+		pkgSources[pkg.Name] = pkgSource{
+			arch: chosen.Options().Arch,
+			fetch: func() (io.ReadSeekCloser, *archive.PackageInfo, error) {
+				return chosenArchive.Fetch(pkg.RealName)
+			},
+		}
 	}
-	return pkgArchive, nil
+
+	// Until a store is implemented as a package source there is no proper way to
+	// determine the architecture for store packages.
+	// So relying on the fact that all packages in a selection share the same architecture,
+	// we can borrow it from any archive package that was already resolved.
+	var arch string
+	for _, src := range pkgSources {
+		if src.arch != "" {
+			arch = src.arch
+			break
+		}
+	}
+	for name, src := range pkgSources {
+		if src.arch == "" {
+			src.arch = arch
+			pkgSources[name] = src
+		}
+	}
+
+	return pkgSources, nil
 }

@@ -1994,6 +1994,30 @@ var slicerTests = []slicerTest{{
 		`,
 	},
 	error: `cannot fetch package "bin-curl" from store "bin": not implemented`,
+}, {
+	summary: "Store package fails as it is not yet supported",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}, {"bin-store-pkg", "myslice"}},
+	arch:    "amd64",
+	release: map[string]string{
+		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/dir/file:
+		`,
+		"slices/mydir/store-pkg.yaml": `
+			package: store-pkg
+			store: bin
+			default-track: stable
+			slices:
+				myslice:
+					contents:
+						/dir/store-file:
+		`,
+	},
+	error: `cannot fetch package "bin-store-pkg" from store: store packages are not yet supported`,
 }}
 
 func (s *S) TestRun(c *C) {
