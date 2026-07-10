@@ -52,6 +52,10 @@ type node struct {
 type pathConflictTree struct {
 	Root         *node
 	PathToSlices map[string][]*Slice
+	// currentQueue and nextQueue are kept across pathHasConflict calls so
+	// that the traversal does not have to grow fresh queues for every path.
+	currentQueue []*node
+	nextQueue    []*node
 }
 
 var rootSegment = segment{"/", false, false}
@@ -100,11 +104,17 @@ func (g *pathConflictTree) pathHasConflict(newSegments []segment, newSegmentSlic
 		return fmt.Errorf("slices %s and %s conflict on %s and %s", oldSlice, newSlice, oldPath, newPath)
 	}
 
-	var currentQueue []*node
-	var nextQueue []*node
+	currentQueue := g.currentQueue[:0]
+	nextQueue := g.nextQueue[:0]
+	defer func() {
+		// Keep the grown queues for the next call.
+		g.currentQueue, g.nextQueue = currentQueue, nextQueue
+	}()
 
 	// Skip "/".
-	currentQueue = slices.Collect(maps.Values(g.Root.Children))
+	for _, child := range g.Root.Children {
+		currentQueue = append(currentQueue, child)
+	}
 	newSegments = newSegments[1:]
 
 	// If we run out of segments from the graph or the path there cannot be a
