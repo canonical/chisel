@@ -117,12 +117,12 @@ func Run(options *RunOptions) error {
 			extractPackage = make(map[string][]tarball.ExtractInfo)
 			extract[slice.Package] = extractPackage
 		}
-		src := pkgSources[slice.Package]
+		arch := pkgSources[slice.Package].arch
 		for targetPath, pathInfo := range slice.Contents {
 			if targetPath == "" {
 				continue
 			}
-			if len(pathInfo.Arch) > 0 && !slices.Contains(pathInfo.Arch, src.arch) {
+			if len(pathInfo.Arch) > 0 && !slices.Contains(pathInfo.Arch, arch) {
 				continue
 			}
 			if preferredPkg, ok := prefers[targetPath]; ok && preferredPkg.Name != slice.Package {
@@ -162,8 +162,7 @@ func Run(options *RunOptions) error {
 			continue
 		}
 		pkg := options.Selection.Release.Packages[slice.Package]
-		src := pkgSources[pkg.Name]
-		reader, info, err := src.fetch()
+		reader, info, err := pkgSources[pkg.Name].fetch()
 		if err != nil {
 			return err
 		}
@@ -280,9 +279,9 @@ func Run(options *RunOptions) error {
 	// them to the appropriate slices.
 	relPaths := map[string][]*setup.Slice{}
 	for _, slice := range options.Selection.Slices {
-		src := pkgSources[slice.Package]
+		arch := pkgSources[slice.Package].arch
 		for relPath, pathInfo := range slice.Contents {
-			if len(pathInfo.Arch) > 0 && !slices.Contains(pathInfo.Arch, src.arch) {
+			if len(pathInfo.Arch) > 0 && !slices.Contains(pathInfo.Arch, arch) {
 				continue
 			}
 			if pathInfo.Kind == setup.CopyPath || pathInfo.Kind == setup.GlobPath ||
@@ -555,11 +554,10 @@ func resolvePkgSources(archives map[string]archive.Archive, selection *setup.Sel
 		if chosen == nil {
 			return nil, fmt.Errorf("cannot find package %q in archive(s)", pkg.RealName)
 		}
-		chosenArchive := chosen
 		pkgSources[pkg.Name] = pkgSource{
 			arch: chosen.Options().Arch,
 			fetch: func() (io.ReadSeekCloser, *archive.PackageInfo, error) {
-				return chosenArchive.Fetch(pkg.RealName)
+				return chosen.Fetch(pkg.RealName)
 			},
 		}
 	}

@@ -1978,8 +1978,8 @@ var slicerTests = []slicerTest{{
 	manifestPaths: map[string]string{
 		"/dir/file": "file 0644 cc55e2ec {test-package_third}",
 	},
-},{
-	summary: "Store package fails as it is not yet supported",
+}, {
+	summary: "Store package fails as not yet implemented",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}, {"bin-store-pkg", "myslice"}},
 	arch:    "amd64",
 	release: map[string]string{
