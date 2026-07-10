@@ -426,12 +426,13 @@ func readRelease(baseDir string) (*Release, error) {
 	if err != nil {
 		return nil, err
 	}
-	// In format v3, bin slice definitions are stored in a separate "bin-slices/"
-	// directory. This is a backwards compatibility mechanism for Chisel versions
-	// that do not support stores: those old versions only read "slices/" and
-	// are unaware of "bin-slices/", so they are not affected by the new store
-	// fields. From format v4 onwards, bin slice definitions live in "slices/"
-	// alongside regular ones, so "bin-slices/" is not read.
+	// In format v3, bin slice definitions must be stored in a separate
+	// "bin-slices/" directory. This is a backwards compatibility mechanism
+	// for Chisel versions that do not support stores: those old versions only
+	// read "slices/" and are unaware of "bin-slices/", so they are not
+	// affected by the new store fields. From format v4 onwards, bin slice
+	// definitions live in "slices/" alongside regular ones, so "bin-slices/"
+	// is not read.
 	if release.Format == "v3" {
 		binSlicesDir := filepath.Join(baseDir, "bin-slices")
 		if _, err := os.Stat(binSlicesDir); err == nil {
