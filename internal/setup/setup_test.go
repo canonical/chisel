@@ -3998,19 +3998,7 @@ var setupTests = []setupTest{{
 			default-track: "3.0"
 		`,
 	},
-	relerror: `cannot parse package "mypkg": both 'store' and 'archive' fields are set`,
-}, {
-	summary: "Store and archive are mutually exclusive",
-	input: map[string]string{
-		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
-		"bin-slices/mypkg.yaml": `
-			package: mypkg
-			archive: ubuntu
-			store: bin
-			default-track: "3.0"
-		`,
-	},
-	relerror: `cannot parse package "mypkg": both 'store' and 'archive' fields are set`,
+	relerror: `cannot parse package "bin-mypkg": both 'store' and 'archive' fields are set`,
 }, {
 	summary: "Store package missing default-track (v3)",
 	input: map[string]string{
@@ -4020,7 +4008,7 @@ var setupTests = []setupTest{{
 			store: bin
 		`,
 	},
-	relerror: `cannot parse package "mypkg": 'store' requires 'default-track'`,
+	relerror: `cannot parse package "bin-mypkg": 'store' requires 'default-track'`,
 }, {
 	summary: "default-track without store (v3)",
 	input: map[string]string{
@@ -4041,7 +4029,7 @@ var setupTests = []setupTest{{
 			default-track: "3.0/stable"
 		`,
 	},
-	relerror: `cannot parse package "mypkg": 'default-track' must not contain /`,
+	relerror: `cannot parse package "bin-mypkg": 'default-track' must not contain /`,
 }, {
 	summary: "Package store references undefined store (v3)",
 	input: map[string]string{

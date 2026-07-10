@@ -485,62 +485,61 @@ func parsePackage(release *Release, pkgName, pkgPath string, data []byte) (*Pack
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse package %q slice definitions: %v", pkgName, err)
 	}
+	pkg.Store = yamlPkg.Store
+	pkg.DefaultTrack = yamlPkg.DefaultTrack
+
 	if yamlPkg.RealName != pkg.RealName {
 		return nil, fmt.Errorf("%s: filename and 'package' field (%q) disagree", pkgPath, yamlPkg.RealName)
 	}
-
-	if (yamlPkg.Store != "" || yamlPkg.DefaultTrack != "") && (release.Format == "v1" || release.Format == "v2") {
-		return nil, fmt.Errorf("cannot parse package %q: 'store' and 'default-track' are unsupported before format v3", pkgName)
-	}
-	if yamlPkg.Store != "" && yamlPkg.Archive != "" {
-		return nil, fmt.Errorf("cannot parse package %q: both 'store' and 'archive' fields are set", pkgName)
-	}
-	if yamlPkg.Store != "" {
-		if yamlPkg.DefaultTrack == "" {
-			return nil, fmt.Errorf("cannot parse package %q: 'store' requires 'default-track'", pkgName)
-		}
-		if strings.Contains(yamlPkg.DefaultTrack, "/") {
-			return nil, fmt.Errorf("cannot parse package %q: 'default-track' must not contain /", pkgName)
-		}
-		pkg.Store = yamlPkg.Store
-		pkg.DefaultTrack = yamlPkg.DefaultTrack
-	} else {
-		if yamlPkg.DefaultTrack != "" {
-			return nil, fmt.Errorf("cannot parse package %q: 'default-track' requires 'store'", pkgName)
-		}
+	if (pkg.Store != "" || pkg.DefaultTrack != "") && (release.Format == "v1" || release.Format == "v2") {
+		return nil, fmt.Errorf("cannot parse package %q: 'store' and 'default-track' are unsupported before format v3", pkg.Name)
 	}
 
 	// Derive the package unique name from its store prefix if applicable.
 	if pkg.Store != "" {
 		store, ok := release.Stores[pkg.Store]
 		if !ok {
-			return nil, fmt.Errorf("cannot parse package %q: store %q not defined in release", pkgName, pkg.Store)
+			return nil, fmt.Errorf("cannot parse package %q: store %q not defined in release", pkg.Name, pkg.Store)
 		}
 		pkg.Name = store.DefaultPrefix + pkg.Name
 	}
 
+	if pkg.Store != "" && yamlPkg.Archive != "" {
+		return nil, fmt.Errorf("cannot parse package %q: both 'store' and 'archive' fields are set", pkg.Name)
+	}
+	if pkg.Store != "" {
+		if pkg.DefaultTrack == "" {
+			return nil, fmt.Errorf("cannot parse package %q: 'store' requires 'default-track'", pkg.Name)
+		}
+		if strings.Contains(pkg.DefaultTrack, "/") {
+			return nil, fmt.Errorf("cannot parse package %q: 'default-track' must not contain /", pkg.Name)
+		}
+	} else if pkg.DefaultTrack != "" {
+		return nil, fmt.Errorf("cannot parse package %q: 'default-track' requires 'store'", pkg.Name)
+	}
+
 	if release.Format == "v1" || release.Format == "v2" {
 		if yamlPkg.Essential.style != unsetEssential && yamlPkg.Essential.style != listEssential {
-			return nil, fmt.Errorf("cannot parse package %q: essential expects a list", pkgName)
+			return nil, fmt.Errorf("cannot parse package %q: essential expects a list", pkg.Name)
 		}
 		for sliceName, yamlSlice := range yamlPkg.Slices {
 			if yamlSlice.Essential.style != unsetEssential && yamlSlice.Essential.style != listEssential {
-				return nil, fmt.Errorf("cannot parse slice %s: essential expects a list", SliceKey{pkgName, sliceName})
+				return nil, fmt.Errorf("cannot parse slice %s: essential expects a list", SliceKey{pkg.Name, sliceName})
 			}
 		}
 	} else {
 		if yamlPkg.V3Essential != nil {
-			return nil, fmt.Errorf("cannot parse package %q: v3-essential is obsolete since format v3", pkgName)
+			return nil, fmt.Errorf("cannot parse package %q: v3-essential is obsolete since format v3", pkg.Name)
 		}
 		if yamlPkg.Essential.style != unsetEssential && yamlPkg.Essential.style != mapEssential {
-			return nil, fmt.Errorf("cannot parse package %q: essential expects a map", pkgName)
+			return nil, fmt.Errorf("cannot parse package %q: essential expects a map", pkg.Name)
 		}
 		for sliceName, yamlSlice := range yamlPkg.Slices {
 			if yamlSlice.V3Essential != nil {
-				return nil, fmt.Errorf("cannot parse slice %s: v3-essential is obsolete since format v3", SliceKey{pkgName, sliceName})
+				return nil, fmt.Errorf("cannot parse slice %s: v3-essential is obsolete since format v3", SliceKey{pkg.Name, sliceName})
 			}
 			if yamlSlice.Essential.style != unsetEssential && yamlSlice.Essential.style != mapEssential {
-				return nil, fmt.Errorf("cannot parse slice %s: essential expects a map", SliceKey{pkgName, sliceName})
+				return nil, fmt.Errorf("cannot parse slice %s: essential expects a map", SliceKey{pkg.Name, sliceName})
 			}
 		}
 	}
@@ -556,7 +555,7 @@ func parsePackage(release *Release, pkgName, pkgPath string, data []byte) (*Pack
 			return !unicode.IsPrint(r)
 		})
 		if len(yamlSlice.Hint) > 40 || hintNotPrintable {
-			return nil, fmt.Errorf("slice %s has invalid hint %q (must be len <= 40, only contain letters, numbers, symbols and \" \")", SliceKey{pkgName, sliceName}, yamlSlice.Hint)
+			return nil, fmt.Errorf("slice %s has invalid hint %q (must be len <= 40, only contain letters, numbers, symbols and \" \")", SliceKey{pkg.Name, sliceName}, yamlSlice.Hint)
 		}
 		slice := &Slice{
 			Package: pkg.Name,
@@ -581,9 +580,9 @@ func parsePackage(release *Release, pkgName, pkgPath string, data []byte) (*Pack
 				comparePath = comparePath[:len(comparePath)-1]
 			}
 			if !path.IsAbs(contPath) || path.Clean(contPath) != comparePath {
-				return nil, fmt.Errorf("slice %s_%s has invalid content path: %s", pkgName, sliceName, contPath)
+				return nil, fmt.Errorf("slice %s_%s has invalid content path: %s", pkg.Name, sliceName, contPath)
 			}
-			var kinds = make([]PathKind, 0, 3)
+			kinds := make([]PathKind, 0, 3)
 			var info string
 			var mode uint
 			var mutable bool
@@ -596,17 +595,17 @@ func parsePackage(release *Release, pkgName, pkgPath string, data []byte) (*Pack
 				zeroPathGenerate.Generate = yamlPath.Generate
 				if !yamlPath.SameContent(&zeroPathGenerate) || yamlPath.Prefer != "" || yamlPath.Until != UntilNone {
 					return nil, fmt.Errorf("slice %s_%s path %s has invalid generate options",
-						pkgName, sliceName, contPath)
+						pkg.Name, sliceName, contPath)
 				}
 				if _, err := validateGeneratePath(contPath); err != nil {
-					return nil, fmt.Errorf("slice %s_%s has invalid generate path: %s", pkgName, sliceName, err)
+					return nil, fmt.Errorf("slice %s_%s has invalid generate path: %s", pkg.Name, sliceName, err)
 				}
 				kinds = append(kinds, GeneratePath)
 			} else if strings.ContainsAny(contPath, "*?") {
 				if yamlPath != nil {
 					if !yamlPath.SameContent(&zeroPath) || yamlPath.Prefer != "" {
 						return nil, fmt.Errorf("slice %s_%s path %s has invalid wildcard options",
-							pkgName, sliceName, contPath)
+							pkg.Name, sliceName, contPath)
 					}
 				}
 				kinds = append(kinds, GlobPath)
@@ -619,7 +618,7 @@ func parsePackage(release *Release, pkgName, pkgPath string, data []byte) (*Pack
 				if yamlPath.Dir {
 					if !strings.HasSuffix(contPath, "/") {
 						return nil, fmt.Errorf("slice %s_%s path %s must end in / for 'make' to be valid",
-							pkgName, sliceName, contPath)
+							pkg.Name, sliceName, contPath)
 					}
 					kinds = append(kinds, DirPath)
 				}
@@ -642,17 +641,17 @@ func parsePackage(release *Release, pkgName, pkgPath string, data []byte) (*Pack
 				switch until {
 				case UntilNone, UntilMutate:
 				default:
-					return nil, fmt.Errorf("slice %s_%s has invalid 'until' for path %s: %q", pkgName, sliceName, contPath, until)
+					return nil, fmt.Errorf("slice %s_%s has invalid 'until' for path %s: %q", pkg.Name, sliceName, contPath, until)
 				}
 				arch = yamlPath.Arch.List
 				for _, s := range arch {
 					if deb.ValidateArch(s) != nil {
-						return nil, fmt.Errorf("slice %s_%s has invalid 'arch' for path %s: %q", pkgName, sliceName, contPath, s)
+						return nil, fmt.Errorf("slice %s_%s has invalid 'arch' for path %s: %q", pkg.Name, sliceName, contPath, s)
 					}
 				}
 			}
 			if prefer == pkg.Name {
-				return nil, fmt.Errorf("slice %s_%s cannot 'prefer' its own package for path %s", pkgName, sliceName, contPath)
+				return nil, fmt.Errorf("slice %s_%s cannot 'prefer' its own package for path %s", pkg.Name, sliceName, contPath)
 			}
 			if len(kinds) == 0 {
 				kinds = append(kinds, CopyPath)
@@ -662,10 +661,10 @@ func parsePackage(release *Release, pkgName, pkgPath string, data []byte) (*Pack
 				for i, s := range kinds {
 					list[i] = string(s)
 				}
-				return nil, fmt.Errorf("conflict in slice %s_%s definition for path %s: %s", pkgName, sliceName, contPath, strings.Join(list, ", "))
+				return nil, fmt.Errorf("conflict in slice %s_%s definition for path %s: %s", pkg.Name, sliceName, contPath, strings.Join(list, ", "))
 			}
 			if mutable && kinds[0] != TextPath && (kinds[0] != CopyPath || isDir) {
-				return nil, fmt.Errorf("slice %s_%s mutable is not a regular file: %s", pkgName, sliceName, contPath)
+				return nil, fmt.Errorf("slice %s_%s mutable is not a regular file: %s", pkg.Name, sliceName, contPath)
 			}
 			slice.Contents[contPath] = PathInfo{
 				Kind:     kinds[0],
