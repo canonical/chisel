@@ -92,9 +92,10 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
-				Slices: map[string]*setup.Slice{},
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
+				Slices:   map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -139,8 +140,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name: "mypkg",
-				Path: "slices/mydir/mypkg.yaml",
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice1": {
 						Package: "mypkg",
@@ -204,8 +206,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name: "mypkg",
-				Path: "slices/mydir/mypkg.yaml",
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice1": {
 						Package: "mypkg",
@@ -270,9 +273,10 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
-				Slices: map[string]*setup.Slice{},
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
+				Slices:   map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -327,9 +331,10 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
-				Slices: map[string]*setup.Slice{},
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
+				Slices:   map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -582,8 +587,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name: "mypkg",
-				Path: "slices/mydir/mypkg.yaml",
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice1": {
 						Package: "mypkg",
@@ -800,8 +806,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name: "mypkg",
-				Path: "slices/mydir/mypkg.yaml",
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg",
@@ -843,8 +850,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name: "mypkg",
-				Path: "slices/mydir/mypkg.yaml",
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg",
@@ -887,8 +895,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name: "mypkg",
-				Path: "slices/mydir/mypkg.yaml",
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg",
@@ -960,9 +969,10 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
-				Slices: map[string]*setup.Slice{},
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
+				Slices:   map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -1166,8 +1176,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name: "mypkg",
-				Path: "slices/mydir/mypkg.yaml",
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg",
@@ -1241,9 +1252,10 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
-				Slices: map[string]*setup.Slice{},
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
+				Slices:   map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -1354,8 +1366,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"jq": {
-				Name: "jq",
-				Path: "slices/mydir/jq.yaml",
+				RealName: "jq",
+				Name:     "jq",
+				Path:     "slices/mydir/jq.yaml",
 				Slices: map[string]*setup.Slice{
 					"bins": {
 						Package: "jq",
@@ -1465,8 +1478,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name: "mypkg",
-				Path: "slices/mydir/mypkg.yaml",
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"slice1": {
 						Package: "mypkg",
@@ -1538,8 +1552,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name: "mypkg",
-				Path: "slices/mydir/mypkg.yaml",
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"slice1": {
 						Package: "mypkg",
@@ -1560,8 +1575,9 @@ var setupTests = []setupTest{{
 				},
 			},
 			"myotherpkg": {
-				Name: "myotherpkg",
-				Path: "slices/mydir/myotherpkg.yaml",
+				RealName: "myotherpkg",
+				Name:     "myotherpkg",
+				Path:     "slices/mydir/myotherpkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"slice1": {
 						Package: "myotherpkg",
@@ -1721,8 +1737,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name: "mypkg",
-				Path: "slices/mydir/mypkg.yaml",
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg",
@@ -1774,8 +1791,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name: "mypkg",
-				Path: "slices/mydir/mypkg.yaml",
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg",
@@ -1869,8 +1887,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name: "mypkg",
-				Path: "slices/mydir/mypkg.yaml",
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg",
@@ -1882,8 +1901,9 @@ var setupTests = []setupTest{{
 				},
 			},
 			"mypkg2": {
-				Name: "mypkg2",
-				Path: "slices/mydir/mypkg2.yaml",
+				RealName: "mypkg2",
+				Name:     "mypkg2",
+				Path:     "slices/mydir/mypkg2.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice": {
 						Package: "mypkg2",
@@ -2040,9 +2060,10 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
-				Slices: map[string]*setup.Slice{},
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
+				Slices:   map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -2166,9 +2187,10 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
-				Slices: map[string]*setup.Slice{},
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
+				Slices:   map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -2233,9 +2255,10 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
-				Slices: map[string]*setup.Slice{},
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
+				Slices:   map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -2328,9 +2351,10 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
-				Slices: map[string]*setup.Slice{},
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
+				Slices:   map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -2454,8 +2478,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg1": {
-				Name: "mypkg1",
-				Path: "slices/mydir/mypkg1.yaml",
+				RealName: "mypkg1",
+				Name:     "mypkg1",
+				Path:     "slices/mydir/mypkg1.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice1": {
 						Package: "mypkg1",
@@ -2475,8 +2500,9 @@ var setupTests = []setupTest{{
 				},
 			},
 			"mypkg2": {
-				Name: "mypkg2",
-				Path: "slices/mydir/mypkg2.yaml",
+				RealName: "mypkg2",
+				Name:     "mypkg2",
+				Path:     "slices/mydir/mypkg2.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice1": {
 						Package: "mypkg2",
@@ -2489,8 +2515,9 @@ var setupTests = []setupTest{{
 				},
 			},
 			"mypkg3": {
-				Name: "mypkg3",
-				Path: "slices/mydir/mypkg3.yaml",
+				RealName: "mypkg3",
+				Name:     "mypkg3",
+				Path:     "slices/mydir/mypkg3.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice1": {
 						Package: "mypkg3",
@@ -2889,9 +2916,10 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
-				Slices: map[string]*setup.Slice{},
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
+				Slices:   map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -2939,9 +2967,10 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
-				Slices: map[string]*setup.Slice{},
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
+				Slices:   map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -3128,9 +3157,10 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
-				Slices: map[string]*setup.Slice{},
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
+				Slices:   map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -3250,9 +3280,10 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
-				Slices: map[string]*setup.Slice{},
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
+				Slices:   map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -3372,9 +3403,10 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
-				Slices: map[string]*setup.Slice{},
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
+				Slices:   map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -3494,9 +3526,10 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
-				Slices: map[string]*setup.Slice{},
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
+				Slices:   map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -3614,9 +3647,10 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name:   "mypkg",
-				Path:   "slices/mydir/mypkg.yaml",
-				Slices: map[string]*setup.Slice{},
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
+				Slices:   map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -3657,8 +3691,9 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"mypkg": {
-				Name: "mypkg",
-				Path: "slices/mydir/mypkg.yaml",
+				RealName: "mypkg",
+				Name:     "mypkg",
+				Path:     "slices/mydir/mypkg.yaml",
 				Slices: map[string]*setup.Slice{
 					"myslice1": {
 						Package: "mypkg",
@@ -3896,6 +3931,484 @@ var setupTests = []setupTest{{
 		`,
 	},
 	relerror: `package "mypkg" slices defined more than once: slices/dir1/mypkg.yaml and slices/dir2/mypkg.yaml`,
+}, {
+	summary: "Store package is parsed correctly",
+	input: map[string]string{
+		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
+		"bin-slices/mypkg.yaml": `
+			package: mypkg
+			store: bin
+			default-track: "3.0"
+		`,
+	},
+	release: &setup.Release{
+		Format: "v3",
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
+			},
+		},
+		Stores: map[string]*setup.Store{
+			"bin": {
+				Name:          "bin",
+				Kind:          "bin",
+				Version:       "26.10",
+				DefaultPrefix: "bin-",
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"bin-mypkg": {
+				RealName:     "mypkg",
+				Name:         "bin-mypkg",
+				Path:         "bin-slices/mypkg.yaml",
+				Store:        "bin",
+				DefaultTrack: "3.0",
+				Slices:       map[string]*setup.Slice{},
+			},
+		},
+		Maintenance: &setup.Maintenance{
+			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
+		},
+	},
+}, {
+	summary: "Store used with older format (v1/v2) is not allowed",
+	input: map[string]string{
+		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYaml, "format: v1", "format: v2"),
+		"slices/mypkg.yaml": `
+			package: mypkg
+			store: bin
+			default-track: "3.0"
+		`,
+	},
+	relerror: `cannot parse package "mypkg": 'store' and 'default-track' are unsupported before format v3`,
+}, {
+	summary: "Store and archive are mutually exclusive",
+	input: map[string]string{
+		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
+		"bin-slices/mypkg.yaml": `
+			package: mypkg
+			store: bin
+			archive: ubuntu
+			default-track: "3.0"
+		`,
+	},
+	relerror: `cannot parse package "bin-mypkg": both 'store' and 'archive' fields are set`,
+}, {
+	summary: "Store package missing default-track (v3)",
+	input: map[string]string{
+		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
+		"bin-slices/mypkg.yaml": `
+			package: mypkg
+			store: bin
+		`,
+	},
+	relerror: `cannot parse package "bin-mypkg": 'store' requires 'default-track'`,
+}, {
+	summary: "default-track without store (v3)",
+	input: map[string]string{
+		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
+		"bin-slices/mypkg.yaml": `
+			package: mypkg
+			default-track: "3.0"
+		`,
+	},
+	relerror: `cannot parse package "mypkg": 'default-track' requires 'store'`,
+}, {
+	summary: "default-track must not contain / (v3)",
+	input: map[string]string{
+		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
+		"bin-slices/mypkg.yaml": `
+			package: mypkg
+			store: bin
+			default-track: "3.0/stable"
+		`,
+	},
+	relerror: `cannot parse package "bin-mypkg": 'default-track' must not contain /`,
+}, {
+	summary: "Package store references undefined store (v3)",
+	input: map[string]string{
+		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
+		"bin-slices/mypkg.yaml": `
+			package: mypkg
+			store: non-existing
+			default-track: "3.0"
+		`,
+	},
+	relerror: `cannot parse package "mypkg": store "non-existing" not defined in release`,
+}, {
+	summary: "Store missing version",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v3
+			maintenance:
+				standard: 2025-01-01
+				end-of-life: 2100-01-01
+			archives:
+				ubuntu:
+					version: 26.10
+					components: [main, universe]
+					suites: [stonking]
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+			stores:
+				bin:
+					kind: bin
+					default-prefix: "bin-"
+		`,
+	},
+	relerror: `chisel.yaml: store "bin" missing version field`,
+}, {
+	summary: "Store missing kind",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v3
+			maintenance:
+				standard: 2025-01-01
+				end-of-life: 2100-01-01
+			archives:
+				ubuntu:
+					version: 26.10
+					components: [main, universe]
+					suites: [stonking]
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+			stores:
+				bin:
+					version: 26.10
+					default-prefix: "bin-"
+		`,
+	},
+	relerror: `chisel.yaml: store "bin" missing kind field`,
+}, {
+	summary: "Store missing default-prefix",
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v3
+			maintenance:
+				standard: 2025-01-01
+				end-of-life: 2100-01-01
+			archives:
+				ubuntu:
+					version: 26.10
+					components: [main, universe]
+					suites: [stonking]
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+			stores:
+				bin:
+					kind: bin
+					version: 26.10
+		`,
+	},
+	relerror: `chisel.yaml: store "bin" missing default-prefix field`,
+}, {
+	summary: "Same-named package in archive and store",
+	input: map[string]string{
+		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
+		"slices/curl.yaml": `
+			package: curl
+			slices:
+				libs:
+					contents:
+						/usr/lib/libcurl.so:
+				bins:
+					contents:
+						/usr/bin/curl:
+		`,
+		"bin-slices/curl.yaml": `
+			package: curl
+			store: bin
+			default-track: "3.0"
+			slices:
+				bins:
+					contents:
+						/usr/bin/curl-bin:
+		`,
+	},
+	release: &setup.Release{
+		Format: "v3",
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
+			},
+		},
+		Stores: map[string]*setup.Store{
+			"bin": {
+				Name:          "bin",
+				Kind:          "bin",
+				Version:       "26.10",
+				DefaultPrefix: "bin-",
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"curl": {
+				RealName: "curl",
+				Name:     "curl",
+				Path:     "slices/curl.yaml",
+				Slices: map[string]*setup.Slice{
+					"libs": {
+						Package: "curl",
+						Name:    "libs",
+						Contents: map[string]setup.PathInfo{
+							"/usr/lib/libcurl.so": {Kind: setup.CopyPath},
+						},
+					},
+					"bins": {
+						Package: "curl",
+						Name:    "bins",
+						Contents: map[string]setup.PathInfo{
+							"/usr/bin/curl": {Kind: setup.CopyPath},
+						},
+					},
+				},
+			},
+			"bin-curl": {
+				RealName:     "curl",
+				Name:         "bin-curl",
+				Path:         "bin-slices/curl.yaml",
+				Store:        "bin",
+				DefaultTrack: "3.0",
+				Slices: map[string]*setup.Slice{
+					"bins": {
+						Package: "bin-curl",
+						Name:    "bins",
+						Contents: map[string]setup.PathInfo{
+							"/usr/bin/curl-bin": {Kind: setup.CopyPath},
+						},
+					},
+				},
+			},
+		},
+		Maintenance: &setup.Maintenance{
+			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
+		},
+	},
+}, {
+	summary: "Store package in slices/ is parsed correctly (v4)",
+	input: map[string]string{
+		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYamlWithStores, "format: v3", "format: v4"),
+		"slices/mypkg.yaml": `
+			package: mypkg
+			store: bin
+			default-track: "3.0"
+		`,
+	},
+	release: &setup.Release{
+		Format: "v4",
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
+			},
+		},
+		Stores: map[string]*setup.Store{
+			"bin": {
+				Name:          "bin",
+				Kind:          "bin",
+				Version:       "26.10",
+				DefaultPrefix: "bin-",
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"bin-mypkg": {
+				RealName:     "mypkg",
+				Name:         "bin-mypkg",
+				Path:         "slices/mypkg.yaml",
+				Store:        "bin",
+				DefaultTrack: "3.0",
+				Slices:       map[string]*setup.Slice{},
+			},
+		},
+		Maintenance: &setup.Maintenance{
+			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
+		},
+	},
+}, {
+	summary: "bin-slices/ directory is ignored (v4)",
+	input: map[string]string{
+		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYamlWithStores, "format: v3", "format: v4"),
+		"bin-slices/mypkg.yaml": `
+			package: mypkg
+			store: bin
+			default-track: "3.0"
+		`,
+	},
+	release: &setup.Release{
+		Format: "v4",
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
+			},
+		},
+		Stores: map[string]*setup.Store{
+			"bin": {
+				Name:          "bin",
+				Kind:          "bin",
+				Version:       "26.10",
+				DefaultPrefix: "bin-",
+			},
+		},
+		Packages: map[string]*setup.Package{},
+		Maintenance: &setup.Maintenance{
+			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
+		},
+	},
+}, {
+	summary: "Same-named package in archive and store under slices/ (v4)",
+	input: map[string]string{
+		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYamlWithStores, "format: v3", "format: v4"),
+		"slices/curl.yaml": `
+			package: curl
+			slices:
+				libs:
+					contents:
+						/usr/lib/libcurl.so:
+				bins:
+					contents:
+						/usr/bin/curl:
+		`,
+		"slices/bins/curl.yaml": `
+			package: curl
+			store: bin
+			default-track: "3.0"
+			slices:
+				bins:
+					contents:
+						/usr/bin/curl-bin:
+		`,
+	},
+	release: &setup.Release{
+		Format: "v4",
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
+			},
+		},
+		Stores: map[string]*setup.Store{
+			"bin": {
+				Name:          "bin",
+				Kind:          "bin",
+				Version:       "26.10",
+				DefaultPrefix: "bin-",
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"curl": {
+				RealName: "curl",
+				Name:     "curl",
+				Path:     "slices/curl.yaml",
+				Slices: map[string]*setup.Slice{
+					"libs": {
+						Package: "curl",
+						Name:    "libs",
+						Contents: map[string]setup.PathInfo{
+							"/usr/lib/libcurl.so": {Kind: setup.CopyPath},
+						},
+					},
+					"bins": {
+						Package: "curl",
+						Name:    "bins",
+						Contents: map[string]setup.PathInfo{
+							"/usr/bin/curl": {Kind: setup.CopyPath},
+						},
+					},
+				},
+			},
+			"bin-curl": {
+				RealName:     "curl",
+				Name:         "bin-curl",
+				Path:         "slices/bins/curl.yaml",
+				Store:        "bin",
+				DefaultTrack: "3.0",
+				Slices: map[string]*setup.Slice{
+					"bins": {
+						Package: "bin-curl",
+						Name:    "bins",
+						Contents: map[string]setup.PathInfo{
+							"/usr/bin/curl-bin": {Kind: setup.CopyPath},
+						},
+					},
+				},
+			},
+		},
+		Maintenance: &setup.Maintenance{
+			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
+		},
+	},
+}, {
+	summary:   "Store unknown kind",
+	selslices: []setup.SliceKey{{Package: "bin-mypkg", Slice: "myslice"}},
+	input: map[string]string{
+		"chisel.yaml": `
+			format: v3
+			maintenance:
+				standard: 2025-01-01
+				end-of-life: 2100-01-01
+			archives:
+				ubuntu:
+					version: 26.10
+					components: [main, universe]
+					suites: [stonking]
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+			stores:
+				bin:
+					kind: unknown
+					version: 26.10
+					default-prefix: "bin-"
+		`,
+		"bin-slices/mypkg.yaml": `
+			package: mypkg
+			store: bin
+			default-track: "3.0"
+			slices:
+				myslice:
+					contents:
+						/dir/file: {}
+		`,
+	},
+	selerror: `slice bin-mypkg_myslice refers to store "bin" with unknown kind "unknown"`,
 }}
 
 func (s *S) TestParseRelease(c *C) {
@@ -3926,6 +4439,7 @@ func (s *S) TestParseRelease(c *C) {
 		for k, v := range t.input {
 			if strings.Contains(v, "format: v2") ||
 				strings.Contains(v, "format: v3") ||
+				strings.Contains(v, "format: v4") ||
 				strings.Contains(v, "v2-archives:") ||
 				strings.Contains(v, "default: true") {
 				skip = true
@@ -3959,6 +4473,7 @@ func (s *S) TestParseRelease(c *C) {
 		}
 		for k, v := range t.input {
 			if strings.Contains(v, "format: v3") ||
+				strings.Contains(v, "format: v4") ||
 				strings.Contains(v, "v2-archives:") ||
 				strings.Contains(v, "default: true") {
 				skip = true
@@ -4003,6 +4518,10 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 			err = os.WriteFile(fpath, testutil.Reindent(data), 0644)
 			c.Assert(err, IsNil)
 		}
+		// Ensure the "slices" directory always exists, even if no slice
+		// definition files are provided.
+		err := os.MkdirAll(filepath.Join(dir, "slices"), 0o755)
+		c.Assert(err, IsNil)
 
 		release, err := setup.ReadRelease(dir)
 		if err != nil || test.relerror != "" {
@@ -4073,6 +4592,10 @@ func (s *S) TestPackageMarshalYAML(c *C) {
 			err = os.WriteFile(fpath, testutil.Reindent(string(pkgData)), 0644)
 			c.Assert(err, IsNil)
 		}
+		// Ensure the "slices" directory always exists, even if no slice
+		// definition files are provided.
+		err = os.MkdirAll(filepath.Join(dir, "slices"), 0o755)
+		c.Assert(err, IsNil)
 
 		release, err := setup.ReadRelease(dir)
 		c.Assert(err, IsNil)
@@ -4232,6 +4755,54 @@ func (s *S) TestPackageYAMLFormat(c *C) {
 							mypkg_three: {arch: i386}
 			`,
 		},
+	}, {
+		summary: "Store package fields",
+		input: map[string]string{
+			"chisel.yaml": `
+				format: v3
+				maintenance:
+					standard: 2025-01-01
+					end-of-life: 2100-01-01
+				archives:
+					ubuntu:
+						version: 26.10
+						components: [main, universe]
+						suites: [stonking]
+						public-keys: [test-key]
+				stores:
+					bin:
+						kind: bin
+						version: 26.10
+						default-prefix: "bin-"
+				public-keys:
+					test-key:
+						id: ` + testKey.ID + `
+						armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t\t") + `
+			`,
+			"bin-slices/mypkg.yaml": `
+				package: mypkg
+				store: bin
+				default-track: "3.0"
+				slices:
+					myslice:
+						contents:
+							/usr/bin/mypkg: {}
+			`,
+		},
+	}, {
+		summary: "Store package fields in slices/ (v4)",
+		input: map[string]string{
+			"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYamlWithStores, "format: v3", "format: v4"),
+			"slices/mypkg.yaml": `
+				package: mypkg
+				store: bin
+				default-track: "3.0"
+				slices:
+					myslice:
+						contents:
+							/usr/bin/mypkg: {}
+			`,
+		},
 	}}
 
 	for _, test := range tests {
@@ -4249,6 +4820,10 @@ func (s *S) TestPackageYAMLFormat(c *C) {
 			err = os.WriteFile(fpath, testutil.Reindent(data), 0644)
 			c.Assert(err, IsNil)
 		}
+		// Ensure the "slices" directory always exists, even if no slice
+		// definition files are provided.
+		err := os.MkdirAll(filepath.Join(dir, "slices"), 0o755)
+		c.Assert(err, IsNil)
 
 		release, err := setup.ReadRelease(dir)
 		c.Assert(err, IsNil)

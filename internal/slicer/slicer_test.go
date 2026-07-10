@@ -1978,6 +1978,22 @@ var slicerTests = []slicerTest{{
 	manifestPaths: map[string]string{
 		"/dir/file": "file 0644 cc55e2ec {test-package_third}",
 	},
+}, {
+	summary: "Store package is not yet implemented",
+	slices:  []setup.SliceKey{{"bin-curl", "bin"}},
+	release: map[string]string{
+		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
+		"slices/curl.yaml": `
+			package: curl
+			store: bin
+			default-track: latest
+			slices:
+				bin:
+					contents:
+						/usr/bin/curl:
+		`,
+	},
+	error: `cannot fetch package "bin-curl" from store "bin": not implemented`,
 }}
 
 func (s *S) TestRun(c *C) {
@@ -1989,7 +2005,7 @@ func (s *S) TestRun(c *C) {
 	for _, t := range slicerTests {
 		m := make(map[string]string)
 		for k, v := range t.release {
-			if !strings.Contains(v, "v2-archives:") {
+			if !strings.Contains(v, "v2-archives:") && strings.Contains(v, "format: v1") {
 				v = strings.ReplaceAll(v, "archives:", "v2-archives:")
 			}
 			m[k] = v

@@ -142,10 +142,11 @@ func computePathObservations(release *setup.Release, archives map[string]archive
 		archive := archives[archiveName]
 		logf("Processing archive %s...", archiveName)
 		for _, pkgName := range orderedPkgs {
-			if !archive.Exists(pkgName) {
+			pkg := release.Packages[pkgName]
+			if !archive.Exists(pkg.RealName) {
 				continue
 			}
-			pkgReader, _, err := archive.Fetch(pkgName)
+			pkgReader, _, err := archive.Fetch(pkg.RealName)
 			if err != nil {
 				return nil, err
 			}

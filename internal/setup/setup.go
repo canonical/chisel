@@ -16,6 +16,14 @@ import (
 	"github.com/canonical/chisel/internal/strdist"
 )
 
+// Store is the location from which packages are obtained via a store API.
+type Store struct {
+	Name          string
+	Kind          string
+	Version       string
+	DefaultPrefix string
+}
+
 // Release is a collection of package slices targeting a particular
 // distribution version.
 type Release struct {
@@ -23,6 +31,7 @@ type Release struct {
 	Path        string
 	Packages    map[string]*Package
 	Archives    map[string]*Archive
+	Stores      map[string]*Store
 	Maintenance *Maintenance
 }
 
@@ -51,10 +60,13 @@ type Archive struct {
 
 // Package holds a collection of slices that represent parts of themselves.
 type Package struct {
-	Name    string
-	Path    string
-	Archive string
-	Slices  map[string]*Slice
+	Name         string // Unique across all known packages (e.g. "bin-curl")
+	RealName     string // Actual name as known in the archive or store (e.g. "curl")
+	Path         string
+	Archive      string
+	Store        string
+	DefaultTrack string
+	Slices       map[string]*Slice
 }
 
 // Slice holds the details about a package slice.
@@ -414,6 +426,22 @@ func readRelease(baseDir string) (*Release, error) {
 	if err != nil {
 		return nil, err
 	}
+	// In format v3, bin slice definitions must be stored in a separate
+	// "bin-slices/" directory. This is a backwards compatibility mechanism
+	// for Chisel versions that do not support stores: those old versions only
+	// read "slices/" and are unaware of "bin-slices/", so they are not
+	// affected by the new store fields. From format v4 onwards, bin slice
+	// definitions live in "slices/" alongside regular ones, so "bin-slices/"
+	// is not read.
+	if release.Format == "v3" {
+		binSlicesDir := filepath.Join(baseDir, "bin-slices")
+		if _, err := os.Stat(binSlicesDir); err == nil {
+			err = readSlices(release, baseDir, binSlicesDir)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
 	return release, err
 }
 
@@ -441,20 +469,20 @@ func readSlices(release *Release, baseDir, dirName string) error {
 
 		pkgName := match[1]
 		pkgPath := filepath.Join(dirName, entry.Name())
-		if pkg, ok := release.Packages[pkgName]; ok {
-			return fmt.Errorf("package %q slices defined more than once: %s and %s", pkgName, pkg.Path, stripBase(baseDir, pkgPath))
-		}
 		data, err := os.ReadFile(pkgPath)
 		if err != nil {
 			// Errors from package os generally include the path.
 			return fmt.Errorf("cannot read slice definition file: %v", err)
 		}
 
-		pkg, err := parsePackage(release.Format, pkgName, stripBase(baseDir, pkgPath), data)
+		pkg, err := parsePackage(release, pkgName, stripBase(baseDir, pkgPath), data)
 		if err != nil {
 			return err
 		}
 
+		if existing, ok := release.Packages[pkg.Name]; ok {
+			return fmt.Errorf("package %q slices defined more than once: %s and %s", pkg.Name, existing.Path, stripBase(baseDir, pkgPath))
+		}
 		release.Packages[pkg.Name] = pkg
 	}
 	return nil
@@ -501,6 +529,21 @@ func Select(release *Release, slices []SliceKey, arch string) (*Selection, error
 				return nil, fmt.Errorf("slice %s has invalid 'generate' for path %s: %q",
 					new, newPath, newInfo.Generate)
 			}
+		}
+		// An invalid store kind should only throw an error if a slice references it.
+		// Hence, the check is here.
+		pkg := release.Packages[new.Package]
+		if pkg.Store == "" {
+			continue
+		}
+		store, ok := selection.Release.Stores[pkg.Store]
+		if !ok {
+			return nil, fmt.Errorf("internal error: slice %s refers to missing store %q", new, pkg.Store)
+		}
+		switch store.Kind {
+		case "bin":
+		default:
+			return nil, fmt.Errorf("slice %s refers to store %q with unknown kind %q", new, pkg.Store, store.Kind)
 		}
 	}
 

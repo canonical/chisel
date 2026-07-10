@@ -1,5 +1,7 @@
 package testutil
 
+import "strings"
+
 var testKey = PGPKeys["key1"]
 
 var DefaultChiselYaml = `
@@ -17,3 +19,11 @@ var DefaultChiselYaml = `
 		test-key:
 			id: ` + testKey.ID + `
 			armor: |` + "\n" + PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t")
+
+var DefaultChiselYamlWithStores = strings.ReplaceAll(DefaultChiselYaml, "format: v1", "format: v3") + `
+	stores:
+		bin:
+			kind: bin
+			version: 26.10
+			default-prefix: "bin-"
+`
