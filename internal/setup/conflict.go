@@ -32,6 +32,10 @@ type node struct {
 	Segment       segment
 	SegmentSlices []*segmentSlice
 	Children      map[string]*node
+	// GlobChildren lists the children whose segment contains a wildcard, so
+	// that a literal segment can find its exact match in Children and only
+	// scan these.
+	GlobChildren []*node
 }
 
 // pathConflictTree uses a custom trie to find conflicts that might arise from
@@ -112,10 +116,11 @@ func (g *pathConflictTree) pathHasConflict(newSegments []segment, newSegmentSlic
 	}()
 
 	// Skip "/".
-	for _, child := range g.Root.Children {
-		currentQueue = append(currentQueue, child)
-	}
 	newSegments = newSegments[1:]
+	if len(newSegments) == 0 {
+		return nil
+	}
+	currentQueue = appendCandidates(currentQueue, g.Root, newSegments[0])
 
 	// If we run out of segments from the graph or the path there cannot be a
 	// conflict.
@@ -162,8 +167,8 @@ func (g *pathConflictTree) pathHasConflict(newSegments []segment, newSegmentSlic
 								// If we are at the terminal node of both paths we found a conflict.
 								return conflictErrMsg(oldSegmentSlice, newSegmentSlice)
 							}
-							for _, child := range oldNode.Children {
-								nextQueue = append(nextQueue, child)
+							if len(newSegments) > 1 {
+								nextQueue = appendCandidates(nextQueue, oldNode, newSegments[1])
 							}
 							break oldNodeLoop
 						} else {
@@ -184,6 +189,23 @@ func (g *pathConflictTree) pathHasConflict(newSegments []segment, newSegmentSlic
 	return nil
 }
 
+// appendCandidates appends the children of parent that can possibly match
+// seg. A segment with a wildcard can match any child, but a literal segment
+// can only match the child with the exact same text or children with
+// wildcards.
+func appendCandidates(queue []*node, parent *node, seg segment) []*node {
+	if seg.HasGlob {
+		for _, child := range parent.Children {
+			queue = append(queue, child)
+		}
+		return queue
+	}
+	if child, ok := parent.Children[seg.Text]; ok {
+		queue = append(queue, child)
+	}
+	return append(queue, parent.GlobChildren...)
+}
+
 // insertSegments inserts the path's segments blindly in the graph without
 // looking at conflicts.
 func (g *pathConflictTree) insertSegments(segments []segment, segmentSlices []*segmentSlice) {
@@ -198,9 +220,12 @@ func (g *pathConflictTree) insertSegments(segments []segment, segmentSlices []*s
 				Segment:  segment,
 				Children: map[string]*node{},
 			}
+			parent.Children[segment.Text] = current
+			if segment.HasGlob {
+				parent.GlobChildren = append(parent.GlobChildren, current)
+			}
 		}
 		current.SegmentSlices = append(current.SegmentSlices, segmentSlices...)
-		parent.Children[segment.Text] = current
 		parent = current
 	}
 }
