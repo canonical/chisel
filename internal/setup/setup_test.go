@@ -4257,8 +4257,8 @@ var setupTests = []setupTest{{
 			},
 		},
 		Maintenance: &setup.Maintenance{
-				Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
-				EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
 		},
 	},
 }, {
@@ -4293,8 +4293,8 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{},
 		Maintenance: &setup.Maintenance{
-				Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
-				EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
 		},
 	},
 }, {
@@ -4381,12 +4381,12 @@ var setupTests = []setupTest{{
 			},
 		},
 		Maintenance: &setup.Maintenance{
-				Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
-				EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
+			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
 		},
 	},
 }, {
-	summary: "Store unknown kind",
+	summary:   "Store unknown kind",
 	selslices: []setup.SliceKey{{Package: "bin-mypkg", Slice: "myslice"}},
 	input: map[string]string{
 		"chisel.yaml": `
