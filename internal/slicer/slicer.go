@@ -16,11 +16,11 @@ import (
 	"github.com/klauspost/compress/zstd"
 
 	"github.com/canonical/chisel/internal/archive"
-	"github.com/canonical/chisel/internal/deb"
 	"github.com/canonical/chisel/internal/fsutil"
 	"github.com/canonical/chisel/internal/manifestutil"
 	"github.com/canonical/chisel/internal/scripts"
 	"github.com/canonical/chisel/internal/setup"
+	"github.com/canonical/chisel/internal/tarball"
 )
 
 const manifestMode fs.FileMode = 0644
@@ -101,11 +101,11 @@ func Run(options *RunOptions) error {
 	}
 
 	// Build information to process the selection.
-	extract := make(map[string]map[string][]deb.ExtractInfo)
+	extract := make(map[string]map[string][]tarball.ExtractInfo)
 	for _, slice := range options.Selection.Slices {
 		extractPackage := extract[slice.Package]
 		if extractPackage == nil {
-			extractPackage = make(map[string][]deb.ExtractInfo)
+			extractPackage = make(map[string][]tarball.ExtractInfo)
 			extract[slice.Package] = extractPackage
 		}
 		arch := pkgArchive[slice.Package].Options().Arch
@@ -125,7 +125,7 @@ func Run(options *RunOptions) error {
 				if sourcePath == "" {
 					sourcePath = targetPath
 				}
-				extractPackage[sourcePath] = append(extractPackage[sourcePath], deb.ExtractInfo{
+				extractPackage[sourcePath] = append(extractPackage[sourcePath], tarball.ExtractInfo{
 					Path:    targetPath,
 					Context: slice,
 				})
@@ -137,7 +137,7 @@ func Run(options *RunOptions) error {
 				if targetDir == "" || targetDir == "/" {
 					continue
 				}
-				extractPackage[targetDir] = append(extractPackage[targetDir], deb.ExtractInfo{
+				extractPackage[targetDir] = append(extractPackage[targetDir], tarball.ExtractInfo{
 					Path:     targetDir,
 					Optional: true,
 				})
@@ -177,7 +177,7 @@ func Run(options *RunOptions) error {
 	var implicitConflicts []string
 	// Creates the filesystem entry and adds it to the report. It also updates
 	// knownPaths with the files created.
-	create := func(extractInfos []deb.ExtractInfo, o *fsutil.CreateOptions) error {
+	create := func(extractInfos []tarball.ExtractInfo, o *fsutil.CreateOptions) error {
 		entry, err := fsutil.Create(o)
 		if err != nil {
 			return err
@@ -238,7 +238,7 @@ func Run(options *RunOptions) error {
 		if reader == nil {
 			continue
 		}
-		err := deb.Extract(reader, &deb.ExtractOptions{
+		err := tarball.Extract(reader, &tarball.ExtractOptions{
 			Package:   slice.Package,
 			Extract:   extract[slice.Package],
 			TargetDir: targetDir,
