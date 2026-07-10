@@ -162,7 +162,7 @@ func Run(options *RunOptions) error {
 			continue
 		}
 		pkg := options.Selection.Release.Packages[slice.Package]
-		src := pkgSources[pkg]
+		src := pkgSources[pkg.Name]
 		reader, info, err := src.fetch()
 		if err != nil {
 			return err
@@ -529,14 +529,10 @@ func resolvePkgSources(archives map[string]archive.Archive, selection *setup.Sel
 		if pkg.Store != "" {
 			pkgSources[pkg.Name] = pkgSource{
 				fetch: func() (io.ReadSeekCloser, *archive.PackageInfo, error) {
-					return nil, nil, fmt.Errorf("cannot fetch package %q from store: store packages are not yet supported", pkg.Name)
+					return nil, nil, fmt.Errorf("cannot fetch package %q from store %q: not implemented", pkg.Name, pkg.Store)
 				},
 			}
 			continue
-		}
-
-		if pkg.Store != "" {
-			return nil, fmt.Errorf("cannot fetch package %q from store %q: not implemented", pkg.Name, pkg.Store)
 		}
 
 		var candidates []*setup.Archive

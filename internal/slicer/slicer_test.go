@@ -1978,23 +1978,7 @@ var slicerTests = []slicerTest{{
 	manifestPaths: map[string]string{
 		"/dir/file": "file 0644 cc55e2ec {test-package_third}",
 	},
-}, {
-	summary: "Store package is not yet implemented",
-	slices:  []setup.SliceKey{{"bin-curl", "bin"}},
-	release: map[string]string{
-		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
-		"slices/curl.yaml": `
-			package: curl
-			store: bin
-			default-track: latest
-			slices:
-				bin:
-					contents:
-						/usr/bin/curl:
-		`,
-	},
-	error: `cannot fetch package "bin-curl" from store "bin": not implemented`,
-}, {
+},{
 	summary: "Store package fails as it is not yet supported",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}, {"bin-store-pkg", "myslice"}},
 	arch:    "amd64",
@@ -2017,7 +2001,7 @@ var slicerTests = []slicerTest{{
 						/dir/store-file:
 		`,
 	},
-	error: `cannot fetch package "bin-store-pkg" from store: store packages are not yet supported`,
+	error: `cannot fetch package "bin-store-pkg" from store "bin": not implemented`,
 }}
 
 func (s *S) TestRun(c *C) {
