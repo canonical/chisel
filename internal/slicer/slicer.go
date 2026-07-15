@@ -527,6 +527,7 @@ func resolvePkgSources(archives map[string]archive.Archive, selection *setup.Sel
 		pkg := selection.Release.Packages[s.Package]
 		if pkg.Store != "" {
 			pkgSources[pkg.Name] = pkgSource{
+				// TODO: set the arch when implementing fetching from the store.
 				fetch: func() (io.ReadSeekCloser, *archive.PackageInfo, error) {
 					return nil, nil, fmt.Errorf("cannot fetch package %q from store %q: not implemented", pkg.Name, pkg.Store)
 				},
@@ -561,24 +562,5 @@ func resolvePkgSources(archives map[string]archive.Archive, selection *setup.Sel
 			},
 		}
 	}
-
-	// Until a store is implemented as a package source there is no proper way to
-	// determine the architecture for store packages.
-	// So relying on the fact that all packages in a selection share the same architecture,
-	// we can borrow it from any archive package that was already resolved.
-	var arch string
-	for _, src := range pkgSources {
-		if src.arch != "" {
-			arch = src.arch
-			break
-		}
-	}
-	for name, src := range pkgSources {
-		if src.arch == "" {
-			src.arch = arch
-			pkgSources[name] = src
-		}
-	}
-
 	return pkgSources, nil
 }
