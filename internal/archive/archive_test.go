@@ -137,6 +137,9 @@ func (s *httpSuite) prepareArchiveAdjustRelease(suite, version, arch string, com
 		PrivKey:     s.privKey,
 		DigestKinds: []string{"SHA256"},
 	}
+	if adjustRelease != nil {
+		adjustRelease(release)
+	}
 	for i, component := range components {
 		index := &testarchive.PackageIndex{
 			Component: component,
@@ -145,10 +148,11 @@ func (s *httpSuite) prepareArchiveAdjustRelease(suite, version, arch string, com
 		for j := range 2 {
 			seq := 1 + i*2 + j
 			index.Packages = append(index.Packages, &testarchive.Package{
-				Name:      fmt.Sprintf("mypkg%d", seq),
-				Version:   fmt.Sprintf("1.%d", seq),
-				Arch:      arch,
-				Component: component,
+				Name:        fmt.Sprintf("mypkg%d", seq),
+				Version:     fmt.Sprintf("1.%d", seq),
+				Arch:        arch,
+				Component:   component,
+				DigestKinds: release.DigestKinds,
 			})
 		}
 		release.Items = append(release.Items, index)
@@ -157,9 +161,6 @@ func (s *httpSuite) prepareArchiveAdjustRelease(suite, version, arch string, com
 	base, err := url.Parse(s.base)
 	if err != nil {
 		panic(err)
-	}
-	if adjustRelease != nil {
-		adjustRelease(release)
 	}
 	err = release.Render(base.Path, s.responses)
 	if err != nil {

@@ -60,15 +60,12 @@ func (gz *Gzip) Content() []byte {
 }
 
 type Package struct {
-	Name      string
-	Version   string
-	Arch      string
-	Component string
-	Data      []byte
-	// release is set when a release adopts this package at render time.
-	// Section reads the archive-wide digest kinds through it, so the package
-	// always sees the release's current choice.
-	release *Release
+	Name        string
+	Version     string
+	Arch        string
+	Component   string
+	Data        []byte
+	DigestKinds []string
 }
 
 func (p *Package) Path() string {
@@ -80,12 +77,9 @@ func (p *Package) Walk(f func(Item) error) error {
 }
 
 func (p *Package) Section() []byte {
-	if p.release == nil {
-		panic("package section rendered before a release adopted the package; render via Release.Render")
-	}
 	content := p.Content()
 	digests := strings.Builder{}
-	for i, kind := range p.release.DigestKinds {
+	for i, kind := range p.DigestKinds {
 		if i > 0 {
 			digests.WriteByte('\n')
 		}
@@ -144,16 +138,6 @@ func (r *Release) Section() []byte {
 	return nil
 }
 
-// wirePackages gives the package sections access to the archive-wide digest kinds.
-func (r *Release) wirePackages() error {
-	return r.Walk(func(item Item) error {
-		if p, ok := item.(*Package); ok {
-			p.release = r
-		}
-		return nil
-	})
-}
-
 func (r *Release) Content() []byte {
 	digests := bytes.Buffer{}
 	for _, kind := range r.DigestKinds {
@@ -197,10 +181,6 @@ func (r *Release) Content() []byte {
 }
 
 func (r *Release) Render(prefix string, content map[string][]byte) error {
-	err := r.wirePackages()
-	if err != nil {
-		return err
-	}
 	return r.Walk(func(item Item) error {
 		itemPath := item.Path()
 		itemContent := item.Content()
