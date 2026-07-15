@@ -181,6 +181,7 @@ func (r *Release) Content() []byte {
 }
 
 func (r *Release) Render(prefix string, content map[string][]byte) error {
+	byHashKind := strongestKind(r.DigestKinds)
 	return r.Walk(func(item Item) error {
 		itemPath := item.Path()
 		itemContent := item.Content()
@@ -190,16 +191,14 @@ func (r *Release) Render(prefix string, content map[string][]byte) error {
 		}
 		distItemPath := path.Join(prefix, "dists", r.Suite, itemPath)
 		content[distItemPath] = itemContent
-		if r.ByHash && itemPath != r.Path() {
-			// Archives only guarantee a by-hash directory for the strongest
-			// hash they advertise, though they may publish more. Render the
-			// guaranteed one only, so tests catch clients building by-hash
-			// URLs from a weaker hash; tests wanting extra directories add
-			// them on top of the rendered content.
-			if kind := strongestKind(r.DigestKinds); kind != "" {
-				byHashPath := path.Join(prefix, "dists", r.Suite, path.Dir(itemPath), "by-hash", kind, makeDigest(kind, itemContent))
-				content[byHashPath] = itemContent
-			}
+		// Archives only guarantee a by-hash directory for the strongest
+		// hash they advertise, though they may publish more. Render the
+		// guaranteed one only, so tests catch clients building by-hash
+		// URLs from a weaker hash; tests wanting extra directories add
+		// them on top of the rendered content.
+		if r.ByHash && itemPath != r.Path() && byHashKind != "" {
+			byHashPath := path.Join(prefix, "dists", r.Suite, path.Dir(itemPath), "by-hash", byHashKind, makeDigest(byHashKind, itemContent))
+			content[byHashPath] = itemContent
 		}
 		return nil
 	})
