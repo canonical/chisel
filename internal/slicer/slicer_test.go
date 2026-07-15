@@ -1979,7 +1979,7 @@ var slicerTests = []slicerTest{{
 		"/dir/file": "file 0644 cc55e2ec {test-package_third}",
 	},
 }, {
-	summary: "Store package fails as not yet implemented",
+	summary: "Store package fetching not yet implemented",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}, {"bin-store-pkg", "myslice"}},
 	arch:    "amd64",
 	release: map[string]string{
@@ -1994,7 +1994,7 @@ var slicerTests = []slicerTest{{
 		"slices/mydir/store-pkg.yaml": `
 			package: store-pkg
 			store: bin
-			default-track: stable
+			default-track: 3.1
 			slices:
 				myslice:
 					contents:
