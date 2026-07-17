@@ -2,6 +2,8 @@
 
 This document describes the scope of the `public/` directory, which contains Chisel's public API packages intended for consumption by external tools.
 
+Read the top-level `.kb/agents.md` file before continuing below.
+
 # Overview
 
 The `public/` directory houses the two packages that form Chisel's stable public contract. These packages define the on-disk format and data schema for the Chisel manifest, enabling third-party tools such as SBOM generators and vulnerability scanners to consume Chisel output without depending on internal packages.

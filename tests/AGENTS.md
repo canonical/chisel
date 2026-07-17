@@ -2,6 +2,8 @@
 
 This file serves as the local knowledge base index for the `tests/` directory. It outlines the scope and procedures for end-to-end integration testing within the Chisel repository.
 
+Read the top-level `.kb/agents.md` file before continuing below.
+
 # Overview
 
 The `tests/` directory contains the integration test suite for the project. These tests exercise the actual `chisel` binary against real or mock Ubuntu package archives, verifying end-to-end behaviors such as slice extraction, manifest generation, and error handling. The suite is built on the [Spread](https://github.com/canonical/spread) framework for multi-system test execution.

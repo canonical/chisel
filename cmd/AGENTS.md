@@ -2,6 +2,8 @@
 
 This document serves as the local knowledge base index for the `cmd/` directory. It outlines the scope and purpose of the entry points for the `chisel` binary.
 
+Read the top-level `.kb/agents.md` file before continuing below.
+
 # Overview
 
 The `cmd/` directory contains the main binary entry points for the `chisel` application. Instead of housing core business logic, this directory is responsible for initializing the application, wiring up the CLI subsystem, and handling version information. Core logic is deferred to the packages in `internal/`.
