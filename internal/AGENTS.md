@@ -12,7 +12,8 @@ The `internal/` directory houses the core business logic, components, and utilit
 
 - `slicer/` - Main orchestrator for a Chisel run. Receives a slice selection, drives all other internal packages (setup, archive, cache, deb, fsutil, scripts, manifestutil) to completion, and writes the final filesystem and manifest.
 - `setup/` - Parses chisel-releases YAML definitions into the `Release` model and resolves slice dependencies, path conflicts, and package contention.
-- `deb/` - Extracts files from `.deb` archives (AR format with tar/gzip/xz/zstd inner layers).
+- `deb/` - Debian package utilities: data tarball access, version comparison, and architecture handling.
+- `tarball/` - Extracts selected files from a package data tarball into a target directory.
 - `archive/` - Manages remote Ubuntu package archive sources over HTTP/HTTPS.
 - `cache/` - Content-addressable on-disk store keyed by SHA256 digest, with time-based eviction.
 - `fsutil/` - Core filesystem operations for writing files, directories, and symlinks into the target root filesystem.
@@ -42,6 +43,7 @@ flowchart LR
 
     subgraph base["Extraction & Storage"]
         deb["deb<br/>.deb file extractor"]
+        tarball["tarball<br/>Data tarball extractor"]
         fsutil["fsutil<br/>Filesystem writer"]
         cache["cache<br/>Content-addressable store"]
     end
@@ -52,10 +54,11 @@ flowchart LR
         strdist["strdist<br/>Glob & distance matching"]
     end
 
-    slicer --> setup & archive & deb & fsutil & scripts & manifestutil
+    slicer --> setup & archive & tarball & fsutil & scripts & manifestutil
     setup --> archive & deb & cache & strdist
     manifestutil --> archive & setup
     archive --> cache & control & pgputil & deb
+    tarball --> deb & fsutil & strdist
     deb --> fsutil & strdist
     scripts --> fsutil
 ```
