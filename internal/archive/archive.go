@@ -189,28 +189,31 @@ var proArchiveInfo = map[string]struct {
 	},
 }
 
-func archiveURL(pro, arch string, oldRelease bool) (string, *credentials, error) {
+func archiveURL(pro, arch string, oldRelease bool) (string, string, *credentials, error) {
 	if pro != "" {
 		archiveInfo, ok := proArchiveInfo[pro]
 		if !ok {
-			return "", nil, fmt.Errorf("invalid pro value: %q", pro)
+			return "", "", nil, fmt.Errorf("invalid pro value: %q", pro)
 		}
 		url := archiveInfo.BaseURL
 		creds, err := findCredentials(url)
 		if err != nil {
-			return "", nil, err
+			return "", "", nil, err
 		}
-		return url, creds, nil
+		return url, "", creds, nil
 	}
 
+	current := ubuntuURL
+	if arch != "amd64" && arch != "i386" {
+		current = ubuntuPortsURL
+	}
 	if oldRelease {
-		return ubuntuOldReleasesURL, nil, nil
+		// The old release may not have moved from archive.ubuntu.com
+		// to old-releases.ubuntu.com yet. So return the current
+		// archive as a fallback.
+		return ubuntuOldReleasesURL, current, nil, nil
 	}
-
-	if arch == "amd64" || arch == "i386" {
-		return ubuntuURL, nil, nil
-	}
-	return ubuntuPortsURL, nil, nil
+	return current, "", nil, nil
 }
 
 func openUbuntu(options *Options) (Archive, error) {
@@ -224,19 +227,35 @@ func openUbuntu(options *Options) (Archive, error) {
 		return nil, fmt.Errorf("archive options missing version")
 	}
 
-	baseURL, creds, err := archiveURL(options.Pro, options.Arch, options.OldRelease)
+	baseURL, fallbackURL, creds, err := archiveURL(options.Pro, options.Arch, options.OldRelease)
 	if err != nil {
 		return nil, err
 	}
 
 	archive := &ubuntuArchive{
 		options: *options,
-		cache: &cache.Cache{
-			Dir: options.CacheDir,
-		},
+		cache:   &cache.Cache{Dir: options.CacheDir},
 		pubKeys: options.PubKeys,
 		baseURL: baseURL,
 		creds:   creds,
+	}
+
+	if fallbackURL != "" {
+		// Check if the release is in the expected archive, use the
+		// fallback one if not.
+		probe := &ubuntuIndex{
+			label:   options.Label,
+			version: options.Version,
+			arch:    options.Arch,
+			suite:   options.Suites[0],
+			archive: archive,
+		}
+		_, err := probe.fetch(probe.distPath("InRelease"), "", fetchDefault)
+		if err == errNotFound {
+			archive.baseURL = fallbackURL
+		} else if err != nil {
+			return nil, err
+		}
 	}
 
 	for _, suite := range options.Suites {

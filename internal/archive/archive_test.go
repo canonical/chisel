@@ -536,6 +536,54 @@ func (s *httpSuite) TestOpenUnmaintainedArchives(c *C) {
 	c.Assert(err, IsNil)
 }
 
+// TestOpenOldReleaseFallback verifies that when OldRelease is set and the
+// old-releases mirror returns 404 (because the release has not yet been
+// physically moved), Chisel uses the current archive.
+func (s *httpSuite) TestOpenOldReleaseFallback(c *C) {
+	s.prepareArchive("plucky", "25.04", "amd64", []string{"main"})
+
+	// Override Do: return 404 for old-releases, delegate to s.Do (which
+	// serves the prepared content) for the current archive.
+	s.restore()
+	s.restore = archive.FakeDo(func(req *http.Request) (*http.Response, error) {
+		if strings.HasPrefix(req.URL.String(), "http://old-releases.ubuntu.com/ubuntu/") {
+			s.requestResults = append(s.requestResults, requestResult{path: req.URL.Path, status: 404})
+			return &http.Response{
+				Body:       io.NopCloser(strings.NewReader("")),
+				StatusCode: 404,
+			}, nil
+		}
+		return s.Do(req)
+	})
+
+	options := archive.Options{
+		Label:      "ubuntu",
+		Version:    "25.04",
+		Arch:       "amd64",
+		Suites:     []string{"plucky"},
+		Components: []string{"main"},
+		CacheDir:   c.MkDir(),
+		PubKeys:    []*packet.PublicKey{s.pubKey},
+		OldRelease: true,
+	}
+
+	testArchive, err := archive.Open(&options)
+	c.Assert(err, IsNil)
+
+	_, _, err = testArchive.Fetch("mypkg1")
+	c.Assert(err, IsNil)
+
+	// Exactly one 404 (the probe to old-releases); all subsequent
+	// requests must be served by the current archive.
+	oldReleasesHits := 0
+	for _, r := range s.requestResults {
+		if r.status == 404 {
+			oldReleasesHits++
+		}
+	}
+	c.Assert(oldReleasesHits, Equals, 1)
+}
+
 type verifyArchiveReleaseTest struct {
 	summary string
 	pubKeys []*packet.PublicKey
