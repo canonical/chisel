@@ -26,7 +26,7 @@ type setupTest struct {
 	release   *setup.Release
 	relerror  string
 	prefers   map[string]string
-	selslices []setup.SliceKey
+	selrefs   []setup.SliceRef
 	selection *setup.Selection
 	selerror  string
 }
@@ -426,7 +426,7 @@ var setupTests = []setupTest{{
 				myslice2: {essential: [mypkg1_myslice1]}
 		`,
 	},
-	selslices: []setup.SliceKey{{"mypkg1", "myslice1"}},
+	selrefs: []setup.SliceRef{{Key: setup.SliceKey{"mypkg1", "myslice1"}}},
 	selection: &setup.Selection{
 		Slices: []*setup.Slice{{
 			Package: "mypkg1",
@@ -449,7 +449,7 @@ var setupTests = []setupTest{{
 				myslice2: {essential: [mypkg1_myslice1]}
 		`,
 	},
-	selslices: []setup.SliceKey{{"mypkg2", "myslice2"}},
+	selrefs: []setup.SliceRef{{Key: setup.SliceKey{"mypkg2", "myslice2"}}},
 	selection: &setup.Selection{
 		Slices: []*setup.Slice{{
 			Package: "mypkg1",
@@ -488,7 +488,11 @@ var setupTests = []setupTest{{
 						/path3: {symlink: /link}
 		`,
 	},
-	selslices: []setup.SliceKey{{"mypkg1", "myslice1"}, {"mypkg1", "myslice2"}, {"mypkg2", "myslice1"}},
+	selrefs: []setup.SliceRef{
+		{Key: setup.SliceKey{"mypkg1", "myslice1"}},
+		{Key: setup.SliceKey{"mypkg1", "myslice2"}},
+		{Key: setup.SliceKey{"mypkg2", "myslice1"}},
+	},
 }, {
 	summary: "Conflicting paths across slices",
 	input: map[string]string{
@@ -1756,7 +1760,7 @@ var setupTests = []setupTest{{
 			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
 		},
 	},
-	selslices: []setup.SliceKey{{"mypkg", "myslice"}},
+	selrefs: []setup.SliceRef{{Key: setup.SliceKey{"mypkg", "myslice"}}},
 	selection: &setup.Selection{
 		Slices: []*setup.Slice{{
 			Package: "mypkg",
@@ -1810,8 +1814,8 @@ var setupTests = []setupTest{{
 			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
 		},
 	},
-	selslices: []setup.SliceKey{{"mypkg", "myslice"}},
-	selerror:  `slice mypkg_myslice has invalid 'generate' for path /dir/\*\*: "foo"`,
+	selrefs:  []setup.SliceRef{{Key: setup.SliceKey{"mypkg", "myslice"}}},
+	selerror: `slice mypkg_myslice has invalid 'generate' for path /dir/\*\*: "foo"`,
 }, {
 	summary: "Paths with generate: manifest must have trailing /**",
 	input: map[string]string{
@@ -2430,11 +2434,11 @@ var setupTests = []setupTest{{
 	relerror: "slice mypkg1_myslice1 cannot 'prefer' its own package for path /file",
 }, {
 	summary: "Path conflicts with 'prefer'",
-	selslices: []setup.SliceKey{
-		{"mypkg1", "myslice1"},
-		{"mypkg1", "myslice2"},
-		{"mypkg2", "myslice1"},
-		{"mypkg3", "myslice1"},
+	selrefs: []setup.SliceRef{
+		{Key: setup.SliceKey{"mypkg1", "myslice1"}},
+		{Key: setup.SliceKey{"mypkg1", "myslice2"}},
+		{Key: setup.SliceKey{"mypkg2", "myslice1"}},
+		{Key: setup.SliceKey{"mypkg3", "myslice1"}},
 	},
 	input: map[string]string{
 		"slices/mydir/mypkg1.yaml": `
@@ -2540,10 +2544,10 @@ var setupTests = []setupTest{{
 	},
 }, {
 	summary: "Path conflicts with 'prefer' depends on selection",
-	selslices: []setup.SliceKey{
-		{"mypkg1", "myslice1"},
-		{"mypkg1", "myslice2"},
-		{"mypkg2", "myslice1"},
+	selrefs: []setup.SliceRef{
+		{Key: setup.SliceKey{"mypkg1", "myslice1"}},
+		{Key: setup.SliceKey{"mypkg1", "myslice2"}},
+		{Key: setup.SliceKey{"mypkg2", "myslice1"}},
 	},
 	input: map[string]string{
 		"slices/mydir/mypkg1.yaml": `
@@ -4374,8 +4378,8 @@ var setupTests = []setupTest{{
 		},
 	},
 }, {
-	summary:   "Store unknown kind",
-	selslices: []setup.SliceKey{{Package: "bin-mypkg", Slice: "myslice"}},
+	summary: "Store unknown kind",
+	selrefs: []setup.SliceRef{{Key: setup.SliceKey{Package: "bin-mypkg", Slice: "myslice"}}},
 	input: map[string]string{
 		"chisel.yaml": `
 			format: v3
@@ -4409,6 +4413,135 @@ var setupTests = []setupTest{{
 		`,
 	},
 	selerror: `slice bin-mypkg_myslice refers to store "bin" with unknown kind "unknown"`,
+}, {
+	summary: "Track on bin slice uses default-track when omitted",
+	selrefs: []setup.SliceRef{{Key: setup.SliceKey{Package: "bin-mypkg", Slice: "myslice"}}},
+	input: map[string]string{
+		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
+		"bin-slices/mypkg.yaml": `
+			package: mypkg
+			store: bin
+			default-track: "3.0"
+			slices:
+				myslice:
+					contents:
+						/dir/file: {}
+		`,
+	},
+	selection: &setup.Selection{
+		Slices: []*setup.Slice{{
+			Package: "bin-mypkg",
+			Name:    "myslice",
+			Contents: map[string]setup.PathInfo{
+				"/dir/file": {Kind: setup.CopyPath},
+			},
+		}},
+		Tracks: map[string]string{"bin-mypkg": "3.0"},
+	},
+}, {
+	summary: "Track on bin slice is set from CLI reference",
+	selrefs: []setup.SliceRef{{
+		Key:   setup.SliceKey{Package: "bin-mypkg", Slice: "myslice"},
+		Track: "2.0",
+	}},
+	input: map[string]string{
+		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
+		"bin-slices/mypkg.yaml": `
+			package: mypkg
+			store: bin
+			default-track: "3.0"
+			slices:
+				myslice:
+					contents:
+						/dir/file: {}
+		`,
+	},
+	selection: &setup.Selection{
+		Slices: []*setup.Slice{{
+			Package: "bin-mypkg",
+			Name:    "myslice",
+			Contents: map[string]setup.PathInfo{
+				"/dir/file": {Kind: setup.CopyPath},
+			},
+		}},
+		Tracks: map[string]string{"bin-mypkg": "2.0"},
+	},
+}, {
+	summary: "Same track on two slices of same bin package is allowed",
+	selrefs: []setup.SliceRef{
+		{Key: setup.SliceKey{Package: "bin-mypkg", Slice: "myslice"}, Track: "2.0"},
+		{Key: setup.SliceKey{Package: "bin-mypkg", Slice: "myslice2"}, Track: "2.0"},
+	},
+	input: map[string]string{
+		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
+		"bin-slices/mypkg.yaml": `
+			package: mypkg
+			store: bin
+			default-track: "3.0"
+			slices:
+				myslice:
+					contents:
+						/dir/file1: {}
+				myslice2:
+					contents:
+						/dir/file2: {}
+		`,
+	},
+	selection: &setup.Selection{
+		Slices: []*setup.Slice{{
+			Package: "bin-mypkg",
+			Name:    "myslice",
+			Contents: map[string]setup.PathInfo{
+				"/dir/file1": {Kind: setup.CopyPath},
+			},
+		}, {
+			Package: "bin-mypkg",
+			Name:    "myslice2",
+			Contents: map[string]setup.PathInfo{
+				"/dir/file2": {Kind: setup.CopyPath},
+			},
+		}},
+		Tracks: map[string]string{"bin-mypkg": "2.0"},
+	},
+}, {
+	summary: "Conflicting tracks on two slices of same bin package fails",
+	selrefs: []setup.SliceRef{
+		{Key: setup.SliceKey{Package: "bin-mypkg", Slice: "myslice"}, Track: "2.0"},
+		{Key: setup.SliceKey{Package: "bin-mypkg", Slice: "myslice2"}, Track: "3.0"},
+	},
+	input: map[string]string{
+		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
+		"bin-slices/mypkg.yaml": `
+			package: mypkg
+			store: bin
+			default-track: "3.0"
+			slices:
+				myslice:
+					contents:
+						/dir/file1: {}
+				myslice2:
+					contents:
+						/dir/file2: {}
+		`,
+	},
+	selerror: `slices of package "bin-mypkg" have conflicting tracks "2.0" and "3.0"`,
+}, {
+	summary: "Track on a non-store (deb) package fails",
+	selrefs: []setup.SliceRef{{
+		Key:   setup.SliceKey{Package: "mypkg", Slice: "myslice"},
+		Track: "2.0",
+	}},
+	input: map[string]string{
+		"chisel.yaml": testutil.DefaultChiselYaml,
+		"slices/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+					contents:
+						/dir/file: {}
+		`,
+	},
+	selerror: `slice mypkg_myslice has track but package "mypkg" is not in a store`,
 }}
 
 func (s *S) TestParseRelease(c *C) {
@@ -4540,8 +4673,8 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 			c.Assert(release, DeepEquals, test.release)
 		}
 
-		if test.selslices != nil {
-			selection, err := setup.Select(release, test.selslices, "amd64")
+		if test.selrefs != nil {
+			selection, err := setup.Select(release, test.selrefs, "amd64")
 			if test.selerror != "" {
 				c.Assert(err, ErrorMatches, test.selerror)
 				continue
@@ -4907,8 +5040,8 @@ func (s *S) TestSelectEmptyArch(c *C) {
 	release, err := setup.ReadRelease(dir)
 	c.Assert(err, IsNil)
 
-	selslice := []setup.SliceKey{{"mypkg", "myslice"}}
-	selection, err := setup.Select(release, selslice, "")
+	refs := []setup.SliceRef{{Key: setup.SliceKey{"mypkg", "myslice"}}}
+	selection, err := setup.Select(release, refs, "")
 	c.Assert(err, IsNil)
 
 	var sliceNames []string
@@ -4917,6 +5050,65 @@ func (s *S) TestSelectEmptyArch(c *C) {
 	}
 	expected := []string{"myotherslice", "myslice"}
 	c.Assert(sliceNames, DeepEquals, expected)
+}
+
+var parseSliceRefTests = []struct {
+	input    string
+	expected setup.SliceRef
+	err      string
+}{{
+	input:    "foo_bar",
+	expected: setup.SliceRef{Key: setup.SliceKey{Package: "foo", Slice: "bar"}},
+}, {
+	input: "foo_bar@3.0",
+	expected: setup.SliceRef{
+		Key:   setup.SliceKey{Package: "foo", Slice: "bar"},
+		Track: "3.0",
+	},
+}, {
+	input: "foo_bar@latest",
+	expected: setup.SliceRef{
+		Key:   setup.SliceKey{Package: "foo", Slice: "bar"},
+		Track: "latest",
+	},
+}, {
+	input: "foo-pkg_dashed-slice@3.0",
+	expected: setup.SliceRef{
+		Key:   setup.SliceKey{Package: "foo-pkg", Slice: "dashed-slice"},
+		Track: "3.0",
+	},
+}, {
+	// Split on the first '@'; the track may itself contain '@'.
+	input: "foo_bar@3.0@x",
+	expected: setup.SliceRef{
+		Key:   setup.SliceKey{Package: "foo", Slice: "bar"},
+		Track: "3.0@x",
+	},
+}, {
+	input: "foo_bar@",
+	err:   `invalid slice reference "foo_bar@": missing track`,
+}, {
+	input: "foo_bar@3.0/stable",
+	err:   `invalid slice reference "foo_bar@3.0/stable": track must not contain /`,
+}, {
+	// Identity part is still validated by ParseSliceKey.
+	input: "foo_ba@3.0",
+	err:   `invalid slice reference: "foo_ba"`,
+}, {
+	input: "foo_bar_baz@3.0",
+	err:   `invalid slice reference: "foo_bar_baz"`,
+}}
+
+func (s *S) TestParseSliceRef(c *C) {
+	for _, test := range parseSliceRefTests {
+		ref, err := setup.ParseSliceRef(test.input)
+		if test.err != "" {
+			c.Assert(err, ErrorMatches, test.err)
+			continue
+		}
+		c.Assert(err, IsNil)
+		c.Assert(ref, DeepEquals, test.expected)
+	}
 }
 
 // oldEssentialToV3 converts the essentials in v1 and v2, both 'essential', and

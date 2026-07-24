@@ -49,13 +49,13 @@ func (cmd *cmdCut) Execute(args []string) error {
 		return ErrExtraArgs
 	}
 
-	sliceKeys := make([]setup.SliceKey, len(cmd.Positional.SliceRefs))
+	sliceRefs := make([]setup.SliceRef, len(cmd.Positional.SliceRefs))
 	for i, sliceRef := range cmd.Positional.SliceRefs {
-		sliceKey, err := setup.ParseSliceKey(sliceRef)
+		ref, err := setup.ParseSliceRef(sliceRef)
 		if err != nil {
 			return err
 		}
-		sliceKeys[i] = sliceKey
+		sliceRefs[i] = ref
 	}
 
 	release, err := obtainRelease(cmd.Release)
@@ -73,7 +73,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 		}
 	}
 
-	selection, err := setup.Select(release, sliceKeys, cmd.Arch)
+	selection, err := setup.Select(release, sliceRefs, cmd.Arch)
 	if err != nil {
 		return err
 	}

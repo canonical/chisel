@@ -50,6 +50,12 @@ func (cmd *infoCmd) Execute(args []string) error {
 		return err
 	}
 
+	for _, query := range cmd.Positional.Queries {
+		if strings.Contains(query, "@") {
+			return fmt.Errorf("track suffix is unsupported for info: %q", query)
+		}
+	}
+
 	packages, notFound := selectPackageSlices(release, cmd.Positional.Queries)
 
 	for i, pkg := range packages {

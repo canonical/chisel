@@ -145,6 +145,37 @@ func ParseSliceKey(sliceKey string) (SliceKey, error) {
 	return apacheutil.ParseSliceKey(sliceKey)
 }
 
+// SliceRef is a slice reference with an optional track suffix for store
+// packages.
+type SliceRef struct {
+	Key   SliceKey
+	Track string
+}
+
+// ParseSliceRef parses a "pkg_slice[@track]" reference. The track, if
+// present, must be non-empty and must not contain '/'.
+func ParseSliceRef(ref string) (SliceRef, error) {
+	keyPart, track, ok := strings.Cut(ref, "@")
+	if !ok {
+		key, err := ParseSliceKey(ref)
+		if err != nil {
+			return SliceRef{}, err
+		}
+		return SliceRef{Key: key}, nil
+	}
+	key, err := ParseSliceKey(keyPart)
+	if err != nil {
+		return SliceRef{}, err
+	}
+	if track == "" {
+		return SliceRef{}, fmt.Errorf("invalid slice reference %q: missing track", ref)
+	}
+	if strings.Contains(track, "/") {
+		return SliceRef{}, fmt.Errorf("invalid slice reference %q: track must not contain /", ref)
+	}
+	return SliceRef{Key: key, Track: track}, nil
+}
+
 func (s *Slice) String() string { return s.Package + "_" + s.Name }
 
 // Selection holds the required configuration to create a Build for a selection
@@ -154,6 +185,8 @@ func (s *Slice) String() string { return s.Package + "_" + s.Name }
 type Selection struct {
 	Release *Release
 	Slices  []*Slice
+	// Tracks holds the resolved track per store package name.
+	Tracks map[string]string
 }
 
 // Prefers uses the prefer relationships and returns a map from each path to
@@ -493,7 +526,7 @@ func stripBase(baseDir, path string) string {
 	return strings.TrimPrefix(path, baseDir+string(filepath.Separator))
 }
 
-func Select(release *Release, slices []SliceKey, arch string) (*Selection, error) {
+func Select(release *Release, refs []SliceRef, arch string) (*Selection, error) {
 	logf("Selecting slices...")
 
 	var err error
@@ -506,10 +539,21 @@ func Select(release *Release, slices []SliceKey, arch string) (*Selection, error
 		return nil, err
 	}
 
-	selection := &Selection{
-		Release: release,
+	// Resolve the track per store package from the references.
+	tracks, err := resolveTracks(release, refs)
+	if err != nil {
+		return nil, err
 	}
 
+	selection := &Selection{
+		Release: release,
+		Tracks:  tracks,
+	}
+
+	slices := make([]SliceKey, len(refs))
+	for i, ref := range refs {
+		slices[i] = ref.Key
+	}
 	sorted, err := order(release.Packages, slices, arch)
 	if err != nil {
 		return nil, err
@@ -517,6 +561,22 @@ func Select(release *Release, slices []SliceKey, arch string) (*Selection, error
 	selection.Slices = make([]*Slice, len(sorted))
 	for i, key := range sorted {
 		selection.Slices[i] = release.Packages[key.Package].Slices[key.Slice]
+	}
+
+	// Fill in the default-track for store packages without an explicit track.
+	// Done after ordering so essentials-included packages get their track too.
+	for _, slice := range selection.Slices {
+		pkg := release.Packages[slice.Package]
+		if pkg.Store == "" {
+			continue
+		}
+		if _, ok := selection.Tracks[pkg.Name]; ok {
+			continue
+		}
+		if selection.Tracks == nil {
+			selection.Tracks = make(map[string]string)
+		}
+		selection.Tracks[pkg.Name] = pkg.DefaultTrack
 	}
 
 	for _, new := range selection.Slices {
@@ -548,6 +608,40 @@ func Select(release *Release, slices []SliceKey, arch string) (*Selection, error
 	}
 
 	return selection, nil
+}
+
+// resolveTracks collects the explicit track per store package from the
+// references. It errors if a track is set on a non-store package or if two
+// references to the same package specify different tracks. Default-track
+// fallback is applied later by Select, once the full selection is known.
+func resolveTracks(release *Release, refs []SliceRef) (map[string]string, error) {
+	var tracks map[string]string
+	for _, ref := range refs {
+		pkg, ok := release.Packages[ref.Key.Package]
+		if !ok {
+			// Package existence is reported later by order().
+			continue
+		}
+		if pkg.Store == "" {
+			if ref.Track != "" {
+				return nil, fmt.Errorf("slice %s has track but package %q is not in a store",
+					ref.Key, pkg.Name)
+			}
+			continue
+		}
+		if ref.Track == "" {
+			continue
+		}
+		if existing, ok := tracks[pkg.Name]; ok && existing != ref.Track {
+			return nil, fmt.Errorf("slices of package %q have conflicting tracks %q and %q",
+				pkg.Name, existing, ref.Track)
+		}
+		if tracks == nil {
+			tracks = make(map[string]string)
+		}
+		tracks[pkg.Name] = ref.Track
+	}
+	return tracks, nil
 }
 
 const (
