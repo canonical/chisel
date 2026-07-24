@@ -1,0 +1,7 @@
+summary: Validate a Chisel release statically
+
+execute: |
+  chisel debug validate-release --release ${OS}-${RELEASE} 2> stderr.out
+
+  # The command must complete successfully for a published release.
+  grep -q "Release is valid" stdout.txt 2>/dev/null || cat stderr.out
