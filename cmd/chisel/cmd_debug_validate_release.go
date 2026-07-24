@@ -13,11 +13,6 @@ The validate-release command performs the static validation of a Chisel
 release, checking the slice definition files (SDFs) and the chisel.yaml
 file for structural issues without downloading any package.
 
-It is a lightweight way to ensure that a release being authored or
-modified is well formed. For a deeper validation that also downloads
-packages and checks for content conflicts, see the
-"check-release-archives" command.
-
 By default it fetches the slices for the same Ubuntu version as the
 current host, unless the --release flag is used. Pointing --release to a
 local directory avoids any network access.
