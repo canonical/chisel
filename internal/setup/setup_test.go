@@ -432,6 +432,7 @@ var setupTests = []setupTest{{
 			Package: "mypkg1",
 			Name:    "myslice1",
 		}},
+		Tracks: map[string]string{},
 	},
 }, {
 	summary: "Selection with dependencies",
@@ -461,6 +462,7 @@ var setupTests = []setupTest{{
 				{"mypkg1", "myslice1"}: {},
 			},
 		}},
+		Tracks: map[string]string{},
 	},
 }, {
 	summary: "Selection with matching paths don't conflict",
@@ -1769,6 +1771,7 @@ var setupTests = []setupTest{{
 				"/dir/**": {Kind: "generate", Generate: "manifest"},
 			},
 		}},
+		Tracks: map[string]string{},
 	},
 }, {
 	summary: "Can specify generate with bogus value but cannot select those slices",

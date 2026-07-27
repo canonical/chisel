@@ -573,9 +573,6 @@ func Select(release *Release, refs []SliceRef, arch string) (*Selection, error) 
 		if _, ok := selection.Tracks[pkg.Name]; ok {
 			continue
 		}
-		if selection.Tracks == nil {
-			selection.Tracks = make(map[string]string)
-		}
 		selection.Tracks[pkg.Name] = pkg.DefaultTrack
 	}
 
@@ -612,14 +609,13 @@ func Select(release *Release, refs []SliceRef, arch string) (*Selection, error) 
 
 // resolveTracks collects the explicit track per store package from the
 // references. It errors if a track is set on a non-store package or if two
-// references to the same package specify different tracks. Default-track
-// fallback is applied later by Select, once the full selection is known.
+// references to the same package specify different tracks.
 func resolveTracks(release *Release, refs []SliceRef) (map[string]string, error) {
-	var tracks map[string]string
+	tracks := make(map[string]string)
 	for _, ref := range refs {
 		pkg, ok := release.Packages[ref.Key.Package]
 		if !ok {
-			// Package existence is reported later by order().
+			// Nothing to validate; the package is unknown.
 			continue
 		}
 		if pkg.Store == "" {
@@ -635,9 +631,6 @@ func resolveTracks(release *Release, refs []SliceRef) (map[string]string, error)
 		if existing, ok := tracks[pkg.Name]; ok && existing != ref.Track {
 			return nil, fmt.Errorf("slices of package %q have conflicting tracks %q and %q",
 				pkg.Name, existing, ref.Track)
-		}
-		if tracks == nil {
-			tracks = make(map[string]string)
 		}
 		tracks[pkg.Name] = ref.Track
 	}
