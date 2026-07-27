@@ -125,10 +125,10 @@ var findTests = []findTest{{
 	query:   []string{"python", "slice"},
 	result:  []*setup.Slice{},
 }, {
-	summary: "Track suffix is unsupported for find",
+	summary: "Channel is unsupported for find",
 	release: sampleRelease,
 	query:   []string{"python3.10_bins@3.0"},
-	err:     `track suffix is unsupported for find: "python3.10_bins@3.0"`,
+	err:     `channel is unsupported for find: "python3.10_bins@3.0"`,
 }}
 
 func (s *ChiselSuite) TestFindSlices(c *C) {

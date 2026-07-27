@@ -141,10 +141,10 @@ var infoTests = []infoTest{{
 	query:   []string{"foo_bar_foo", "a_b", "7_c", "a_b c", "a_b x_y"},
 	err:     `no slice definitions found for: "foo_bar_foo", "a_b", "7_c", "a_b c", "a_b x_y"`,
 }, {
-	summary: "Track suffix is unsupported for info",
+	summary: "Channel is unsupported for info",
 	input:   infoRelease,
 	query:   []string{"mypkg1_myslice1@3.0"},
-	err:     `track suffix is unsupported for info: "mypkg1_myslice1@3.0"`,
+	err:     `channel is unsupported for info: "mypkg1_myslice1@3.0"`,
 }}
 
 var infoRelease = map[string]string{

@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode"
 
 	"golang.org/x/crypto/openpgp/packet"
 
@@ -145,17 +146,23 @@ func ParseSliceKey(sliceKey string) (SliceKey, error) {
 	return apacheutil.ParseSliceKey(sliceKey)
 }
 
-// SliceRef is a slice reference with an optional track suffix for store
-// packages.
+// DefaultRisk is used when a channel does not specify a risk.
+const DefaultRisk = "stable"
+
+// SliceRef is a slice reference with an optional channel for store packages.
+// The channel always holds a risk, that is at least "<track>/<risk>".
 type SliceRef struct {
-	Key   SliceKey
-	Track string
+	Key     SliceKey
+	Channel string
 }
 
-// ParseSliceRef parses a "pkg_slice[@track]" reference. The track, if
-// present, must be non-empty and must not contain '/'.
+// ParseSliceRef parses a "pkg_slice[@channel]" reference. The channel is
+// either a track, in which case the default risk is used, or a
+// "<track>/<risk>" value. Validation is intentionally loose so that longer
+// channel forms, such as "<track>/<risk>/<branch>", are accepted without
+// changes here.
 func ParseSliceRef(ref string) (SliceRef, error) {
-	keyPart, track, ok := strings.Cut(ref, "@")
+	keyPart, channel, ok := strings.Cut(ref, "@")
 	if !ok {
 		key, err := ParseSliceKey(ref)
 		if err != nil {
@@ -167,13 +174,32 @@ func ParseSliceRef(ref string) (SliceRef, error) {
 	if err != nil {
 		return SliceRef{}, err
 	}
-	if track == "" {
-		return SliceRef{}, fmt.Errorf("invalid slice reference %q: missing track", ref)
+	channel, err = parseChannel(channel)
+	if err != nil {
+		return SliceRef{}, fmt.Errorf("invalid slice reference %q: %s", ref, err)
 	}
-	if strings.Contains(track, "/") {
-		return SliceRef{}, fmt.Errorf("invalid slice reference %q: track must not contain /", ref)
+	return SliceRef{Key: key, Channel: channel}, nil
+}
+
+// parseChannel validates a channel and returns it with the default risk
+// appended if it holds a track alone. Any number of segments is accepted so
+// that longer forms are not rejected here.
+func parseChannel(channel string) (string, error) {
+	if channel == "" {
+		return "", fmt.Errorf("missing channel")
 	}
-	return SliceRef{Key: key, Track: track}, nil
+	if strings.ContainsFunc(channel, unicode.IsSpace) {
+		return "", fmt.Errorf("channel must not contain spaces")
+	}
+	segments := strings.Split(channel, "/")
+	if slices.Contains(segments, "") {
+		return "", fmt.Errorf("channel must be <track> or <track>/<risk>")
+	}
+	if len(segments) == 1 {
+		// A track alone, the risk is implicit.
+		return channel + "/" + DefaultRisk, nil
+	}
+	return channel, nil
 }
 
 func (s *Slice) String() string { return s.Package + "_" + s.Name }
@@ -185,8 +211,8 @@ func (s *Slice) String() string { return s.Package + "_" + s.Name }
 type Selection struct {
 	Release *Release
 	Slices  []*Slice
-	// Tracks holds the resolved track per store package name.
-	Tracks map[string]string
+	// Channels holds the resolved channel per store package name.
+	Channels map[string]string
 }
 
 // Prefers uses the prefer relationships and returns a map from each path to
@@ -539,15 +565,15 @@ func Select(release *Release, refs []SliceRef, arch string) (*Selection, error) 
 		return nil, err
 	}
 
-	// Resolve the track per store package from the references.
-	tracks, err := resolveTracks(release, refs)
+	// Resolve the channel per store package from the references.
+	channels, err := resolveChannels(release, refs)
 	if err != nil {
 		return nil, err
 	}
 
 	selection := &Selection{
-		Release: release,
-		Tracks:  tracks,
+		Release:  release,
+		Channels: channels,
 	}
 
 	slices := make([]SliceKey, len(refs))
@@ -563,17 +589,19 @@ func Select(release *Release, refs []SliceRef, arch string) (*Selection, error) 
 		selection.Slices[i] = release.Packages[key.Package].Slices[key.Slice]
 	}
 
-	// Fill in the default-track for store packages without an explicit track.
-	// Done after ordering so essentials-included packages get their track too.
+	// Derive the channel from 'default-track' for store packages without an
+	// explicit one. Note the release only defines a track, the risk is
+	// implicit. Done after ordering so essentials-included packages get their
+	// channel too.
 	for _, slice := range selection.Slices {
 		pkg := release.Packages[slice.Package]
 		if pkg.Store == "" {
 			continue
 		}
-		if _, ok := selection.Tracks[pkg.Name]; ok {
+		if _, ok := selection.Channels[pkg.Name]; ok {
 			continue
 		}
-		selection.Tracks[pkg.Name] = pkg.DefaultTrack
+		selection.Channels[pkg.Name] = pkg.DefaultTrack + "/" + DefaultRisk
 	}
 
 	for _, new := range selection.Slices {
@@ -607,11 +635,11 @@ func Select(release *Release, refs []SliceRef, arch string) (*Selection, error) 
 	return selection, nil
 }
 
-// resolveTracks collects the explicit track per store package from the
-// references. It errors if a track is set on a non-store package or if two
-// references to the same package specify different tracks.
-func resolveTracks(release *Release, refs []SliceRef) (map[string]string, error) {
-	tracks := make(map[string]string)
+// resolveChannels collects the explicit channel per store package from the
+// references. It errors if a channel is set on a non-store package or if two
+// references to the same package specify different channels.
+func resolveChannels(release *Release, refs []SliceRef) (map[string]string, error) {
+	channels := make(map[string]string)
 	for _, ref := range refs {
 		pkg, ok := release.Packages[ref.Key.Package]
 		if !ok {
@@ -619,22 +647,22 @@ func resolveTracks(release *Release, refs []SliceRef) (map[string]string, error)
 			continue
 		}
 		if pkg.Store == "" {
-			if ref.Track != "" {
-				return nil, fmt.Errorf("slice %s has track but package %q is not in a store",
+			if ref.Channel != "" {
+				return nil, fmt.Errorf("slice %s has channel but package %q is not in a store",
 					ref.Key, pkg.Name)
 			}
 			continue
 		}
-		if ref.Track == "" {
+		if ref.Channel == "" {
 			continue
 		}
-		if existing, ok := tracks[pkg.Name]; ok && existing != ref.Track {
-			return nil, fmt.Errorf("slices of package %q have conflicting tracks %q and %q",
-				pkg.Name, existing, ref.Track)
+		if existing, ok := channels[pkg.Name]; ok && existing != ref.Channel {
+			return nil, fmt.Errorf("slices of package %q have conflicting channels %q and %q",
+				pkg.Name, existing, ref.Channel)
 		}
-		tracks[pkg.Name] = ref.Track
+		channels[pkg.Name] = ref.Channel
 	}
-	return tracks, nil
+	return channels, nil
 }
 
 const (

@@ -52,7 +52,7 @@ func (cmd *infoCmd) Execute(args []string) error {
 
 	for _, query := range cmd.Positional.Queries {
 		if strings.Contains(query, "@") {
-			return fmt.Errorf("track suffix is unsupported for info: %q", query)
+			return fmt.Errorf("channel is unsupported for info: %q", query)
 		}
 	}
 

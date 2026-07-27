@@ -91,7 +91,7 @@ func match(slice *setup.Slice, query string) bool {
 func findSlices(release *setup.Release, query []string) (slices []*setup.Slice, err error) {
 	for _, term := range query {
 		if strings.Contains(term, "@") {
-			return nil, fmt.Errorf("track suffix is unsupported for find: %q", term)
+			return nil, fmt.Errorf("channel is unsupported for find: %q", term)
 		}
 	}
 	slices = []*setup.Slice{}
