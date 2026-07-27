@@ -20,6 +20,14 @@ to create a new filesystem tree in the root location.
 
 By default it fetches the slices for the same Ubuntu version as the
 current host, unless the --release flag is used.
+
+Slices are named <package>_<slice>. For packages coming from a store, a
+channel may be appended to select which one to fetch, as in
+mybin_myslice@2.0/edge. A channel with no risk, such as @2.0, uses the
+stable risk.
+
+Slices of the same package must all agree on the channel. When it is
+omitted, the default track of the package is used.
 `
 
 var cutDescs = map[string]string{
