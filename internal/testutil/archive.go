@@ -6,6 +6,8 @@ import (
 	"io"
 
 	"github.com/canonical/chisel/internal/archive"
+	"github.com/canonical/chisel/internal/cache"
+	"github.com/canonical/chisel/internal/pkgutil"
 )
 
 type TestArchive struct {
@@ -26,18 +28,12 @@ func (a *TestArchive) Options() *archive.Options {
 	return &a.Opts
 }
 
-func (a *TestArchive) Fetch(pkgName string) (io.ReadSeekCloser, *archive.PackageInfo, error) {
+func (a *TestArchive) Fetch(pkgName string) (io.ReadSeekCloser, *pkgutil.Info, error) {
 	pkg, ok := a.Packages[pkgName]
 	if !ok {
 		return nil, nil, fmt.Errorf("cannot find package %q in archive", pkgName)
 	}
-	info := &archive.PackageInfo{
-		Name:    pkg.Name,
-		Version: pkg.Version,
-		SHA256:  pkg.Hash,
-		Arch:    pkg.Arch,
-	}
-	return ReadSeekNopCloser(bytes.NewReader(pkg.Data)), info, nil
+	return ReadSeekNopCloser(bytes.NewReader(pkg.Data)), pkg.info(), nil
 }
 
 func (a *TestArchive) Exists(pkg string) bool {
@@ -45,15 +41,21 @@ func (a *TestArchive) Exists(pkg string) bool {
 	return ok
 }
 
-func (a *TestArchive) Info(pkgName string) (*archive.PackageInfo, error) {
+func (a *TestArchive) Info(pkgName string) (*pkgutil.Info, error) {
 	pkg, ok := a.Packages[pkgName]
 	if !ok {
 		return nil, fmt.Errorf("cannot find package %q in archive", pkgName)
 	}
-	return &archive.PackageInfo{
-		Name:    pkg.Name,
-		Version: pkg.Version,
-		SHA256:  pkg.Hash,
-		Arch:    pkg.Arch,
-	}, nil
+	return pkg.info(), nil
+}
+
+// info returns the package information as a package source would report it.
+func (p *TestPackage) info() *pkgutil.Info {
+	return &pkgutil.Info{
+		Name:       p.Name,
+		Version:    p.Version,
+		Arch:       p.Arch,
+		DigestKind: cache.SHA256,
+		Digest:     p.Hash,
+	}
 }

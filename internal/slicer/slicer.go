@@ -18,6 +18,7 @@ import (
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/fsutil"
 	"github.com/canonical/chisel/internal/manifestutil"
+	"github.com/canonical/chisel/internal/pkgutil"
 	"github.com/canonical/chisel/internal/scripts"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/tarball"
@@ -147,7 +148,7 @@ func Run(options *RunOptions) error {
 
 	// Fetch all packages, using the selection order.
 	packages := make(map[string]io.ReadSeekCloser)
-	var pkgInfos []*archive.PackageInfo
+	var pkgInfos []*pkgutil.Info
 	for _, slice := range options.Selection.Slices {
 		if packages[slice.Package] != nil {
 			continue
@@ -352,7 +353,8 @@ func Run(options *RunOptions) error {
 }
 
 func generateManifests(targetDir string, selection *setup.Selection,
-	report *manifestutil.Report, pkgInfos []*archive.PackageInfo) error {
+	report *manifestutil.Report, pkgInfos []*pkgutil.Info,
+) error {
 	manifestSlices := manifestutil.FindPaths(selection.Slices)
 	if len(manifestSlices) == 0 {
 		// Nothing to do.

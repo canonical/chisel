@@ -12,8 +12,9 @@ import (
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/chisel/internal/apachetestutil"
-	"github.com/canonical/chisel/internal/archive"
+	"github.com/canonical/chisel/internal/cache"
 	"github.com/canonical/chisel/internal/manifestutil"
+	"github.com/canonical/chisel/internal/pkgutil"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/public/manifest"
 )
@@ -122,7 +123,7 @@ var slice2 = &setup.Slice{
 var generateManifestTests = []struct {
 	summary     string
 	report      *manifestutil.Report
-	packageInfo []*archive.PackageInfo
+	packageInfo []*pkgutil.Info
 	selection   []*setup.Slice
 	expected    *apachetestutil.ManifestContents
 	error       string
@@ -148,16 +149,18 @@ var generateManifestTests = []struct {
 			},
 		},
 	},
-	packageInfo: []*archive.PackageInfo{{
-		Name:    "package1",
-		Version: "v1",
-		Arch:    "a1",
-		SHA256:  "s1",
+	packageInfo: []*pkgutil.Info{{
+		Name:       "package1",
+		Version:    "v1",
+		Arch:       "a1",
+		DigestKind: cache.SHA256,
+		Digest:     "s1",
 	}, {
-		Name:    "package2",
-		Version: "v2",
-		Arch:    "a2",
-		SHA256:  "s2",
+		Name:       "package2",
+		Version:    "v2",
+		Arch:       "a2",
+		DigestKind: cache.SHA256,
+		Digest:     "s2",
 	}},
 	expected: &apachetestutil.ManifestContents{
 		Paths: []*manifest.Path{{
@@ -241,7 +244,7 @@ var generateManifestTests = []struct {
 			},
 		},
 	},
-	packageInfo: []*archive.PackageInfo{},
+	packageInfo: []*pkgutil.Info{},
 	error:       `internal error: invalid manifest: slice package1_slice1 refers to missing package "package1"`,
 }, {
 	summary: "Invalid path: slices is empty",
@@ -395,11 +398,12 @@ var generateManifestTests = []struct {
 			},
 		},
 	},
-	packageInfo: []*archive.PackageInfo{{
-		Name:    "package1",
-		Version: "v1",
-		Arch:    "a1",
-		SHA256:  "s1",
+	packageInfo: []*pkgutil.Info{{
+		Name:       "package1",
+		Version:    "v1",
+		Arch:       "a1",
+		DigestKind: cache.SHA256,
+		Digest:     "s1",
 	}},
 	expected: &apachetestutil.ManifestContents{
 		Paths: []*manifest.Path{{
@@ -494,36 +498,59 @@ var generateManifestTests = []struct {
 	error: `internal error: invalid manifest: hard linked paths "/file" and "/hardlink" have diverging contents`,
 }, {
 	summary: "Invalid package: missing name",
-	packageInfo: []*archive.PackageInfo{{
-		Version: "v1",
-		Arch:    "a1",
-		SHA256:  "s1",
+	packageInfo: []*pkgutil.Info{{
+		Version:    "v1",
+		Arch:       "a1",
+		DigestKind: cache.SHA256,
+		Digest:     "s1",
 	}},
 	error: `internal error: invalid manifest: package name not set`,
 }, {
 	summary: "Invalid package: missing version",
-	packageInfo: []*archive.PackageInfo{{
-		Name:   "package-1",
-		Arch:   "a1",
-		SHA256: "s1",
+	packageInfo: []*pkgutil.Info{{
+		Name:       "package-1",
+		Arch:       "a1",
+		DigestKind: cache.SHA256,
+		Digest:     "s1",
 	}},
 	error: `internal error: invalid manifest: package "package-1" missing version`,
 }, {
 	summary: "Invalid package: missing arch",
-	packageInfo: []*archive.PackageInfo{{
-		Name:    "package-1",
-		Version: "v1",
-		SHA256:  "s1",
+	packageInfo: []*pkgutil.Info{{
+		Name:       "package-1",
+		Version:    "v1",
+		DigestKind: cache.SHA256,
+		Digest:     "s1",
 	}},
 	error: `internal error: invalid manifest: package "package-1" missing arch`,
 }, {
-	summary: "Invalid package: missing sha256",
-	packageInfo: []*archive.PackageInfo{{
+	summary: "Invalid package: missing digest kind",
+	packageInfo: []*pkgutil.Info{{
 		Name:    "package-1",
 		Version: "v1",
 		Arch:    "a1",
+		Digest:  "s1",
 	}},
-	error: `internal error: invalid manifest: package "package-1" missing sha256`,
+	error: `internal error: invalid manifest: package "package-1" has unsupported digest kind ""`,
+}, {
+	summary: "Invalid package: unsupported digest kind",
+	packageInfo: []*pkgutil.Info{{
+		Name:       "package-1",
+		Version:    "v1",
+		Arch:       "a1",
+		DigestKind: cache.SHA384,
+		Digest:     "s1",
+	}},
+	error: `internal error: invalid manifest: package "package-1" has unsupported digest kind "sha384"`,
+}, {
+	summary: "Invalid package: missing digest",
+	packageInfo: []*pkgutil.Info{{
+		Name:       "package-1",
+		Version:    "v1",
+		Arch:       "a1",
+		DigestKind: cache.SHA256,
+	}},
+	error: `internal error: invalid manifest: package "package-1" missing digest`,
 }}
 
 func (s *S) TestGenerateManifests(c *C) {
@@ -533,11 +560,12 @@ func (s *S) TestGenerateManifests(c *C) {
 			test.selection = []*setup.Slice{slice1}
 		}
 		if test.packageInfo == nil {
-			test.packageInfo = []*archive.PackageInfo{{
-				Name:    "package1",
-				Version: "v1",
-				Arch:    "a1",
-				SHA256:  "s1",
+			test.packageInfo = []*pkgutil.Info{{
+				Name:       "package1",
+				Version:    "v1",
+				Arch:       "a1",
+				DigestKind: cache.SHA256,
+				Digest:     "s1",
 			}}
 		}
 

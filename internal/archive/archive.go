@@ -16,20 +16,14 @@ import (
 	"github.com/canonical/chisel/internal/control"
 	"github.com/canonical/chisel/internal/deb"
 	"github.com/canonical/chisel/internal/pgputil"
+	"github.com/canonical/chisel/internal/pkgutil"
 )
 
 type Archive interface {
 	Options() *Options
-	Fetch(pkg string) (io.ReadSeekCloser, *PackageInfo, error)
+	Fetch(pkg string) (io.ReadSeekCloser, *pkgutil.Info, error)
 	Exists(pkg string) bool
-	Info(pkg string) (*PackageInfo, error)
-}
-
-type PackageInfo struct {
-	Name    string
-	Version string
-	Arch    string
-	SHA256  string
+	Info(pkg string) (*pkgutil.Info, error)
 }
 
 type Options struct {
@@ -133,7 +127,7 @@ func (a *ubuntuArchive) selectPackage(pkg string) (control.Section, *ubuntuIndex
 	return selectedSection, selectedIndex, nil
 }
 
-func (a *ubuntuArchive) Fetch(pkg string) (io.ReadSeekCloser, *PackageInfo, error) {
+func (a *ubuntuArchive) Fetch(pkg string) (io.ReadSeekCloser, *pkgutil.Info, error) {
 	section, index, err := a.selectPackage(pkg)
 	if err != nil {
 		return nil, nil, err
@@ -148,7 +142,7 @@ func (a *ubuntuArchive) Fetch(pkg string) (io.ReadSeekCloser, *PackageInfo, erro
 	return reader, info, nil
 }
 
-func (a *ubuntuArchive) Info(pkg string) (*PackageInfo, error) {
+func (a *ubuntuArchive) Info(pkg string) (*pkgutil.Info, error) {
 	section, _, err := a.selectPackage(pkg)
 	if err != nil {
 		return nil, err
@@ -466,12 +460,13 @@ func (index *ubuntuIndex) fetch(path, digest string, flags fetchFlags) (io.ReadS
 	return index.archive.cache.Open(digestKind, writer.Digest())
 }
 
-func sectionPackageInfo(section control.Section) *PackageInfo {
-	return &PackageInfo{
-		Name:    section.Get("Package"),
-		Version: section.Get("Version"),
-		Arch:    section.Get("Architecture"),
-		SHA256:  section.Get("SHA256"),
+func sectionPackageInfo(section control.Section) *pkgutil.Info {
+	return &pkgutil.Info{
+		Name:       section.Get("Package"),
+		Version:    section.Get("Version"),
+		Arch:       section.Get("Architecture"),
+		DigestKind: cache.SHA256,
+		Digest:     section.Get("SHA256"),
 	}
 }
 

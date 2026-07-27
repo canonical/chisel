@@ -10,7 +10,8 @@ import (
 	"strings"
 
 	"github.com/canonical/chisel/internal/apacheutil"
-	"github.com/canonical/chisel/internal/archive"
+	"github.com/canonical/chisel/internal/cache"
+	"github.com/canonical/chisel/internal/pkgutil"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/public/jsonwall"
 	"github.com/canonical/chisel/public/manifest"
@@ -35,7 +36,7 @@ func FindPaths(slices []*setup.Slice) map[string][]*setup.Slice {
 }
 
 type WriteOptions struct {
-	PackageInfo []*archive.PackageInfo
+	PackageInfo []*pkgutil.Info
 	Selection   []*setup.Slice
 	Report      *Report
 }
@@ -69,13 +70,13 @@ func Write(options *WriteOptions, writer io.Writer) error {
 	return err
 }
 
-func manifestAddPackages(dbw *jsonwall.DBWriter, infos []*archive.PackageInfo) error {
+func manifestAddPackages(dbw *jsonwall.DBWriter, infos []*pkgutil.Info) error {
 	for _, info := range infos {
 		err := dbw.Add(&manifest.Package{
 			Kind:    "package",
 			Name:    info.Name,
 			Version: info.Version,
-			Digest:  info.SHA256,
+			Digest:  info.Digest,
 			Arch:    info.Arch,
 		})
 		if err != nil {
@@ -250,18 +251,30 @@ func validateReportEntry(entry *ReportEntry) (err error) {
 	return nil
 }
 
-func validatePackage(pkg *archive.PackageInfo) (err error) {
+func validatePackage(pkg *pkgutil.Info) (err error) {
 	if pkg.Name == "" {
 		return fmt.Errorf("package name not set")
 	}
 	if pkg.Arch == "" {
 		return fmt.Errorf("package %q missing arch", pkg.Name)
 	}
-	if pkg.SHA256 == "" {
-		return fmt.Errorf("package %q missing sha256", pkg.Name)
+	// The manifest records the package digest as a SHA256 one. Fail rather than
+	// recording a digest of another kind under that name.
+	// TODO: record packages whose digest is not a SHA256 one, such as the ones
+	// coming from a store. This also requires recording the release unique
+	// package name instead of the source one, as slices are recorded with the
+	// former.
+	if pkg.DigestKind != cache.SHA256 {
+		return fmt.Errorf("package %q has unsupported digest kind %q", pkg.Name, pkg.DigestKind)
+	}
+	if pkg.Digest == "" {
+		return fmt.Errorf("package %q missing digest", pkg.Name)
 	}
 	if pkg.Version == "" {
 		return fmt.Errorf("package %q missing version", pkg.Name)
+	}
+	if pkg.Revision < 0 {
+		return fmt.Errorf("package %q has invalid revision", pkg.Name)
 	}
 	return nil
 }
