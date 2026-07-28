@@ -585,7 +585,7 @@ func Select(release *Release, refs []SliceRef, arch string) (*Selection, error) 
 	}
 
 	selection := &Selection{
-		Release:  release,
+		Release: release,
 	}
 
 	slices := make([]SliceKey, len(refs))
