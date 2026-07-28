@@ -174,17 +174,17 @@ func ParseSliceRef(ref string) (SliceRef, error) {
 	if err != nil {
 		return SliceRef{}, err
 	}
-	channel, err = parseChannel(channel)
+	channel, err = validateChannel(channel)
 	if err != nil {
 		return SliceRef{}, fmt.Errorf("invalid slice reference %q: %s", ref, err)
 	}
 	return SliceRef{Key: key, Channel: channel}, nil
 }
 
-// parseChannel validates a channel and returns it with the default risk
-// appended if it holds a track alone. Any number of segments is accepted so
-// that longer forms are not rejected here.
-func parseChannel(channel string) (string, error) {
+// validateChannel returns the channel with the default risk appended if it
+// holds a track alone. Validation is intentionally loose, any number of
+// segments is accepted so that longer forms are not rejected here.
+func validateChannel(channel string) (string, error) {
 	if channel == "" {
 		return "", fmt.Errorf("missing channel")
 	}
