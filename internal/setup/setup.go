@@ -570,10 +570,22 @@ func Select(release *Release, refs []SliceRef, arch string) (*Selection, error) 
 	if err != nil {
 		return nil, err
 	}
+	// Derive the channel from 'default-track' for the store packages without an
+	// explicit one. Note the release only defines a track, the risk is
+	// implicit. This is done for every known package, before ordering, because
+	// ordering itself depends on the channel of the packages it traverses.
+	for _, pkg := range release.Packages {
+		if pkg.Store == "" {
+			continue
+		}
+		if _, ok := channels[pkg.Name]; ok {
+			continue
+		}
+		channels[pkg.Name] = pkg.DefaultTrack + "/" + DefaultRisk
+	}
 
 	selection := &Selection{
 		Release:  release,
-		Channels: channels,
 	}
 
 	slices := make([]SliceKey, len(refs))
@@ -589,19 +601,12 @@ func Select(release *Release, refs []SliceRef, arch string) (*Selection, error) 
 		selection.Slices[i] = release.Packages[key.Package].Slices[key.Slice]
 	}
 
-	// Derive the channel from 'default-track' for store packages without an
-	// explicit one. Note the release only defines a track, the risk is
-	// implicit. Done after ordering so essentials-included packages get their
-	// channel too.
+	// Only report the channels of the selected packages.
+	selection.Channels = make(map[string]string)
 	for _, slice := range selection.Slices {
-		pkg := release.Packages[slice.Package]
-		if pkg.Store == "" {
-			continue
+		if channel, ok := channels[slice.Package]; ok {
+			selection.Channels[slice.Package] = channel
 		}
-		if _, ok := selection.Channels[pkg.Name]; ok {
-			continue
-		}
-		selection.Channels[pkg.Name] = pkg.DefaultTrack + "/" + DefaultRisk
 	}
 
 	for _, new := range selection.Slices {
