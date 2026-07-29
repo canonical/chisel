@@ -11,9 +11,8 @@ import (
 )
 
 // OpenTar takes a Reader for the ar file belonging to a Debian package and
-// returns a Reader to the uncompressed inner tarball. It implements
-// tarball.OpenTarFunc.
-func OpenTar(pkgReader io.ReadSeeker) (io.ReadCloser, error) {
+// returns a Reader to the uncompressed inner tarball.
+func OpenTar(pkgReader io.Reader) (io.ReadCloser, error) {
 	arReader := ar.NewReader(pkgReader)
 	var dataReader io.ReadCloser
 	for dataReader == nil {

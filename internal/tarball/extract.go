@@ -23,19 +23,14 @@ import (
 // before decompressing (see deb.OpenTar) or decompress the package itself (see
 // OpenXZ).
 //
-// Implementations must satisfy the following contract:
-//
-//   - They must read pkgReader from its current offset, which is always the
-//     start of the package.
-//   - They must be stateless. Extract may call the same function more than once
-//     for the same package, rewinding pkgReader to the start beforehand, and
-//     each call must yield the complete tar stream again.
-//   - The caller closes the returned reader.
-type OpenTarFunc func(pkgReader io.ReadSeeker) (io.ReadCloser, error)
+// Extract reads pkgReader from the start of the package, closes the returned
+// reader, and may open the same package more than once, rewinding pkgReader
+// beforehand.
+type OpenTarFunc func(pkgReader io.Reader) (io.ReadCloser, error)
 
 // OpenXZ opens a package which is a plain XZ-compressed tarball, such as a
-// store (bin) package. It implements OpenTarFunc.
-func OpenXZ(pkgReader io.ReadSeeker) (io.ReadCloser, error) {
+// store (bin) package.
+func OpenXZ(pkgReader io.Reader) (io.ReadCloser, error) {
 	xzReader, err := xz.NewReader(pkgReader)
 	if err != nil {
 		return nil, err
@@ -84,9 +79,6 @@ func getValidOptions(options *ExtractOptions) (*ExtractOptions, error) {
 	return options, nil
 }
 
-// Extract extracts from pkgReader the entries listed in options.Extract.
-// openTar opens the tar stream carried by the package and must not be nil; see
-// OpenTarFunc for the contract it must satisfy.
 func Extract(pkgReader io.ReadSeeker, openTar OpenTarFunc, options *ExtractOptions) (err error) {
 	defer func() {
 		if err != nil {
