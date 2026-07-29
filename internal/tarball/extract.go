@@ -22,10 +22,6 @@ import (
 // the package format from Extract. An implementation may unwrap a container
 // before decompressing (see deb.OpenTar) or decompress the package itself (see
 // OpenXZ).
-//
-// Extract reads pkgReader from the start of the package, closes the returned
-// reader, and may open the same package more than once, rewinding pkgReader
-// beforehand.
 type OpenTarFunc func(pkgReader io.Reader) (io.ReadCloser, error)
 
 // OpenXZ opens a package which is a plain XZ-compressed tarball, such as a
@@ -190,7 +186,7 @@ func extractData(pkgReader io.ReadSeeker, openTar OpenTarFunc, options *ExtractO
 		}
 
 		var contentCache []byte
-		contentIsCached := len(targetPaths) > 1 && !sourceIsDir
+		var contentIsCached = len(targetPaths) > 1 && !sourceIsDir
 		if contentIsCached {
 			// Read and cache the content so it may be reused.
 			// As an alternative, to avoid having an entire file in

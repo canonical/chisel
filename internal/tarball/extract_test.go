@@ -19,6 +19,8 @@ import (
 type extractTest struct {
 	summary string
 	pkgdata []byte
+	// openTar must match the format of pkgdata. It defaults to deb.OpenTar.
+	openTar tarball.OpenTarFunc
 	options tarball.ExtractOptions
 	hackopt func(c *C, o *tarball.ExtractOptions)
 	result  map[string]string
@@ -512,8 +514,11 @@ func (s *S) TestExtract(c *C) {
 			test.hackopt(c, &options)
 		}
 
-		// The test fixtures are .deb archives, so use the deb tar opener.
-		err := tarball.Extract(bytes.NewReader(test.pkgdata), deb.OpenTar, &options)
+		openTar := test.openTar
+		if openTar == nil {
+			openTar = deb.OpenTar
+		}
+		err := tarball.Extract(bytes.NewReader(test.pkgdata), openTar, &options)
 		if test.error != "" {
 			c.Assert(err, ErrorMatches, test.error)
 			continue
@@ -541,6 +546,8 @@ func (s *S) TestExtract(c *C) {
 var extractCreateCallbackTests = []struct {
 	summary string
 	pkgdata []byte
+	// openTar must match the format of pkgdata. It defaults to deb.OpenTar.
+	openTar tarball.OpenTarFunc
 	options tarball.ExtractOptions
 	calls   map[string][]tarball.ExtractInfo
 }{{
@@ -624,8 +631,11 @@ func (s *S) TestExtractCreateCallback(c *C) {
 			return nil
 		}
 
-		// The test fixtures are .deb archives, so use the deb tar opener.
-		err := tarball.Extract(bytes.NewReader(test.pkgdata), deb.OpenTar, &options)
+		openTar := test.openTar
+		if openTar == nil {
+			openTar = deb.OpenTar
+		}
+		err := tarball.Extract(bytes.NewReader(test.pkgdata), openTar, &options)
 		c.Assert(err, IsNil)
 
 		c.Assert(createExtractInfos, DeepEquals, test.calls)
