@@ -150,7 +150,7 @@ func computePathObservations(release *setup.Release, archives map[string]archive
 			if err != nil {
 				return nil, err
 			}
-			dataReader, err := deb.DataReader(pkgReader)
+			dataReader, err := deb.OpenTar(pkgReader)
 			if err != nil {
 				return nil, err
 			}

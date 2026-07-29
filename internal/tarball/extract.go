@@ -12,19 +12,41 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/ulikunitz/xz"
+
 	"github.com/canonical/chisel/internal/fsutil"
 	"github.com/canonical/chisel/internal/strdist"
 )
+
+// OpenTarFunc opens the uncompressed tar stream carried by a package, hiding
+// the package format from Extract. An implementation may unwrap a container
+// before decompressing (see deb.OpenTar) or decompress the package itself (see
+// OpenXZ).
+//
+// Implementations must satisfy the following contract:
+//
+//   - They must read pkgReader from its current offset, which is always the
+//     start of the package.
+//   - They must be stateless. Extract may call the same function more than once
+//     for the same package, rewinding pkgReader to the start beforehand, and
+//     each call must yield the complete tar stream again.
+//   - The caller closes the returned reader.
+type OpenTarFunc func(pkgReader io.ReadSeeker) (io.ReadCloser, error)
+
+// OpenXZ opens a package which is a plain XZ-compressed tarball, such as a
+// store (bin) package. It implements OpenTarFunc.
+func OpenXZ(pkgReader io.ReadSeeker) (io.ReadCloser, error) {
+	xzReader, err := xz.NewReader(pkgReader)
+	if err != nil {
+		return nil, err
+	}
+	return io.NopCloser(xzReader), nil
+}
 
 type ExtractOptions struct {
 	Package   string
 	TargetDir string
 	Extract   map[string][]ExtractInfo
-	// OpenData opens the uncompressed tar data stream of the package. It
-	// abstracts over the package format (e.g. a deb archive opener or a plain
-	// tarball opener), allowing Extract to operate on any package whose data
-	// payload is a tar stream.
-	OpenData func(io.ReadSeeker) (io.ReadCloser, error)
 	// Create can optionally be set to control the creation of extracted entries.
 	// extractInfos is set to the matching entries in Extract, and is nil in cases where
 	// the created entry is implicit and unlisted (for example, parent directories).
@@ -39,9 +61,6 @@ type ExtractInfo struct {
 }
 
 func getValidOptions(options *ExtractOptions) (*ExtractOptions, error) {
-	if options.OpenData == nil {
-		return nil, fmt.Errorf("internal error: ExtractOptions.OpenData is unset")
-	}
 	for extractPath, extractInfos := range options.Extract {
 		isGlob := strings.ContainsAny(extractPath, "*?")
 		if isGlob {
@@ -65,7 +84,10 @@ func getValidOptions(options *ExtractOptions) (*ExtractOptions, error) {
 	return options, nil
 }
 
-func Extract(pkgReader io.ReadSeeker, options *ExtractOptions) (err error) {
+// Extract extracts from pkgReader the entries listed in options.Extract.
+// openTar opens the tar stream carried by the package and must not be nil; see
+// OpenTarFunc for the contract it must satisfy.
+func Extract(pkgReader io.ReadSeeker, openTar OpenTarFunc, options *ExtractOptions) (err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("cannot extract from package %q: %w", options.Package, err)
@@ -73,6 +95,10 @@ func Extract(pkgReader io.ReadSeeker, options *ExtractOptions) (err error) {
 	}()
 
 	logf("Extracting files from package %q...", options.Package)
+
+	if openTar == nil {
+		return fmt.Errorf("internal error: no tar opener provided")
+	}
 
 	validOpts, err := getValidOptions(options)
 	if err != nil {
@@ -86,11 +112,11 @@ func Extract(pkgReader io.ReadSeeker, options *ExtractOptions) (err error) {
 		return err
 	}
 
-	return extractData(pkgReader, validOpts)
+	return extractData(pkgReader, openTar, validOpts)
 }
 
-func extractData(pkgReader io.ReadSeeker, options *ExtractOptions) error {
-	dataReader, err := options.OpenData(pkgReader)
+func extractData(pkgReader io.ReadSeeker, openTar OpenTarFunc, options *ExtractOptions) error {
+	dataReader, err := openTar(pkgReader)
 	if err != nil {
 		return err
 	}
@@ -172,7 +198,7 @@ func extractData(pkgReader io.ReadSeeker, options *ExtractOptions) error {
 		}
 
 		var contentCache []byte
-		var contentIsCached = len(targetPaths) > 1 && !sourceIsDir
+		contentIsCached := len(targetPaths) > 1 && !sourceIsDir
 		if contentIsCached {
 			// Read and cache the content so it may be reused.
 			// As an alternative, to avoid having an entire file in
@@ -272,7 +298,7 @@ func extractData(pkgReader io.ReadSeeker, options *ExtractOptions) error {
 		if err != nil {
 			return err
 		}
-		err = extractHardLinks(pkgReader, extractHardLinkOptions)
+		err = extractHardLinks(pkgReader, openTar, extractHardLinkOptions)
 		if err != nil {
 			return err
 		}
@@ -306,8 +332,8 @@ type extractHardLinkOptions struct {
 
 // extractHardLinks iterates through the tarball a second time to extract the
 // hard links that were not extracted in the first pass.
-func extractHardLinks(pkgReader io.ReadSeeker, opts *extractHardLinkOptions) error {
-	dataReader, err := opts.OpenData(pkgReader)
+func extractHardLinks(pkgReader io.ReadSeeker, openTar OpenTarFunc, opts *extractHardLinkOptions) error {
+	dataReader, err := openTar(pkgReader)
 	if err != nil {
 		return err
 	}

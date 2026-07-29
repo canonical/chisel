@@ -497,8 +497,6 @@ func (s *S) TestExtract(c *C) {
 		options := test.options
 		options.Package = "test-package"
 		options.TargetDir = dir
-		// The test fixtures are .deb archives, so use the deb data opener.
-		options.OpenData = deb.DataReader
 		createdPaths := make(map[string]bool)
 		options.Create = func(_ []tarball.ExtractInfo, o *fsutil.CreateOptions) error {
 			relPath := filepath.Clean("/" + strings.TrimPrefix(o.Path, dir))
@@ -514,7 +512,8 @@ func (s *S) TestExtract(c *C) {
 			test.hackopt(c, &options)
 		}
 
-		err := tarball.Extract(bytes.NewReader(test.pkgdata), &options)
+		// The test fixtures are .deb archives, so use the deb tar opener.
+		err := tarball.Extract(bytes.NewReader(test.pkgdata), deb.OpenTar, &options)
 		if test.error != "" {
 			c.Assert(err, ErrorMatches, test.error)
 			continue
@@ -608,8 +607,6 @@ func (s *S) TestExtractCreateCallback(c *C) {
 		options := test.options
 		options.Package = "test-package"
 		options.TargetDir = dir
-		// The test fixtures are .deb archives, so use the deb data opener.
-		options.OpenData = deb.DataReader
 		createExtractInfos := map[string][]tarball.ExtractInfo{}
 		options.Create = func(extractInfos []tarball.ExtractInfo, o *fsutil.CreateOptions) error {
 			if extractInfos == nil {
@@ -627,14 +624,15 @@ func (s *S) TestExtractCreateCallback(c *C) {
 			return nil
 		}
 
-		err := tarball.Extract(bytes.NewReader(test.pkgdata), &options)
+		// The test fixtures are .deb archives, so use the deb tar opener.
+		err := tarball.Extract(bytes.NewReader(test.pkgdata), deb.OpenTar, &options)
 		c.Assert(err, IsNil)
 
 		c.Assert(createExtractInfos, DeepEquals, test.calls)
 	}
 }
 
-func (s *S) TestExtractMissingOpenData(c *C) {
+func (s *S) TestExtractMissingOpenTar(c *C) {
 	options := tarball.ExtractOptions{
 		Package:   "test-package",
 		TargetDir: c.MkDir(),
@@ -642,6 +640,6 @@ func (s *S) TestExtractMissingOpenData(c *C) {
 			"/dir/file": {{Path: "/dir/file"}},
 		},
 	}
-	err := tarball.Extract(bytes.NewReader(testutil.PackageData["test-package"]), &options)
-	c.Assert(err, ErrorMatches, `cannot extract from package "test-package": internal error: ExtractOptions.OpenData is unset`)
+	err := tarball.Extract(bytes.NewReader(testutil.PackageData["test-package"]), nil, &options)
+	c.Assert(err, ErrorMatches, `cannot extract from package "test-package": internal error: no tar opener provided`)
 }

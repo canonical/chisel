@@ -240,11 +240,10 @@ func Run(options *RunOptions) error {
 		if reader == nil {
 			continue
 		}
-		err := tarball.Extract(reader, &tarball.ExtractOptions{
+		err := tarball.Extract(reader, deb.OpenTar, &tarball.ExtractOptions{
 			Package:   slice.Package,
 			Extract:   extract[slice.Package],
 			TargetDir: targetDir,
-			OpenData:  deb.DataReader,
 			Create:    create,
 		})
 		reader.Close()
