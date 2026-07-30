@@ -4442,6 +4442,40 @@ var setupTests = []setupTest{{
 		Channels: map[string]setup.Channel{"bin-mypkg": {Track: "3.0", Risk: "stable"}},
 	},
 }, {
+	summary: "Channels of unselected bin packages are not reported",
+	selrefs: []setup.SliceRef{{SliceKey: setup.SliceKey{Package: "bin-mypkg", Slice: "myslice"}}},
+	input: map[string]string{
+		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
+		"bin-slices/mypkg.yaml": `
+			package: mypkg
+			store: bin
+			default-track: "3.0"
+			slices:
+				myslice:
+					contents:
+						/dir/file: {}
+		`,
+		"bin-slices/otherpkg.yaml": `
+			package: otherpkg
+			store: bin
+			default-track: "9.9"
+			slices:
+				myslice:
+					contents:
+						/other/file: {}
+		`,
+	},
+	selection: &setup.Selection{
+		Slices: []*setup.Slice{{
+			Package: "bin-mypkg",
+			Name:    "myslice",
+			Contents: map[string]setup.PathInfo{
+				"/dir/file": {Kind: setup.CopyPath},
+			},
+		}},
+		Channels: map[string]setup.Channel{"bin-mypkg": {Track: "3.0", Risk: "stable"}},
+	},
+}, {
 	summary: "Channel on bin slice is set from the reference",
 	selrefs: []setup.SliceRef{{
 		SliceKey: setup.SliceKey{Package: "bin-mypkg", Slice: "myslice"},
