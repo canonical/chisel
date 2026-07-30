@@ -152,8 +152,8 @@ const DefaultRisk = "stable"
 // SliceRef is a slice reference with an optional channel for store packages.
 // The channel always holds a risk, that is at least "<track>/<risk>".
 type SliceRef struct {
-	Key     SliceKey
-	Channel string
+	SliceKey SliceKey
+	Channel  string
 }
 
 // ParseSliceRef parses a "pkg_slice[@channel]" reference. The channel is
@@ -164,13 +164,13 @@ type SliceRef struct {
 func ParseSliceRef(ref string) (SliceRef, error) {
 	keyPart, channel, ok := strings.Cut(ref, "@")
 	if !ok {
-		key, err := ParseSliceKey(ref)
+		sliceKey, err := ParseSliceKey(ref)
 		if err != nil {
 			return SliceRef{}, err
 		}
-		return SliceRef{Key: key}, nil
+		return SliceRef{SliceKey: sliceKey}, nil
 	}
-	key, err := ParseSliceKey(keyPart)
+	sliceKey, err := ParseSliceKey(keyPart)
 	if err != nil {
 		return SliceRef{}, err
 	}
@@ -178,7 +178,7 @@ func ParseSliceRef(ref string) (SliceRef, error) {
 	if err != nil {
 		return SliceRef{}, fmt.Errorf("invalid slice reference %q: %s", ref, err)
 	}
-	return SliceRef{Key: key, Channel: channel}, nil
+	return SliceRef{SliceKey: sliceKey, Channel: channel}, nil
 }
 
 // validateChannel returns the channel with the default risk appended if it
@@ -590,7 +590,7 @@ func Select(release *Release, refs []SliceRef, arch string) (*Selection, error) 
 
 	slices := make([]SliceKey, len(refs))
 	for i, ref := range refs {
-		slices[i] = ref.Key
+		slices[i] = ref.SliceKey
 	}
 	sorted, err := order(release.Packages, slices, arch)
 	if err != nil {
@@ -646,7 +646,7 @@ func Select(release *Release, refs []SliceRef, arch string) (*Selection, error) 
 func resolveChannels(release *Release, refs []SliceRef) (map[string]string, error) {
 	channels := make(map[string]string)
 	for _, ref := range refs {
-		pkg, ok := release.Packages[ref.Key.Package]
+		pkg, ok := release.Packages[ref.SliceKey.Package]
 		if !ok {
 			// Nothing to validate; the package is unknown.
 			continue
@@ -654,7 +654,7 @@ func resolveChannels(release *Release, refs []SliceRef) (map[string]string, erro
 		if pkg.Store == "" {
 			if ref.Channel != "" {
 				return nil, fmt.Errorf("slice %s has channel but package %q is not in a store",
-					ref.Key, pkg.Name)
+					ref.SliceKey, pkg.Name)
 			}
 			continue
 		}

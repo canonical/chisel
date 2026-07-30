@@ -125,10 +125,10 @@ var findTests = []findTest{{
 	query:   []string{"python", "slice"},
 	result:  []*setup.Slice{},
 }, {
-	summary: "Channel is unsupported for find",
+	summary: "Slices are not specific to a channel",
 	release: sampleRelease,
 	query:   []string{"python3.10_bins@3.0"},
-	err:     `channel is unsupported for find: "python3.10_bins@3.0"`,
+	err:     `invalid slice reference "python3.10_bins@3.0": slices are not specific to a channel`,
 }}
 
 func (s *ChiselSuite) TestFindSlices(c *C) {

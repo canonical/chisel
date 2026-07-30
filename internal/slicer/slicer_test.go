@@ -2096,7 +2096,7 @@ func runSlicerTests(s *S, c *C, tests []slicerTest) {
 
 			refs := make([]setup.SliceRef, len(testSlices))
 			for i, key := range testSlices {
-				refs[i] = setup.SliceRef{Key: key}
+				refs[i] = setup.SliceRef{SliceKey: key}
 			}
 			selection, err := setup.Select(release, refs, test.arch)
 			c.Assert(err, IsNil)

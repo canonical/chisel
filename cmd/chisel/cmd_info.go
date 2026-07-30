@@ -52,7 +52,7 @@ func (cmd *infoCmd) Execute(args []string) error {
 
 	for _, query := range cmd.Positional.Queries {
 		if strings.Contains(query, "@") {
-			return fmt.Errorf("channel is unsupported for info: %q", query)
+			return fmt.Errorf("invalid slice reference %q: slices are not specific to a channel", query)
 		}
 	}
 
