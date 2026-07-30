@@ -432,7 +432,7 @@ var setupTests = []setupTest{{
 			Package: "mypkg1",
 			Name:    "myslice1",
 		}},
-		Channels: map[string]string{},
+		Channels: map[string]setup.Channel{},
 	},
 }, {
 	summary: "Selection with dependencies",
@@ -462,7 +462,7 @@ var setupTests = []setupTest{{
 				{"mypkg1", "myslice1"}: {},
 			},
 		}},
-		Channels: map[string]string{},
+		Channels: map[string]setup.Channel{},
 	},
 }, {
 	summary: "Selection with matching paths don't conflict",
@@ -1771,7 +1771,7 @@ var setupTests = []setupTest{{
 				"/dir/**": {Kind: "generate", Generate: "manifest"},
 			},
 		}},
-		Channels: map[string]string{},
+		Channels: map[string]setup.Channel{},
 	},
 }, {
 	summary: "Can specify generate with bogus value but cannot select those slices",
@@ -4439,13 +4439,13 @@ var setupTests = []setupTest{{
 				"/dir/file": {Kind: setup.CopyPath},
 			},
 		}},
-		Channels: map[string]string{"bin-mypkg": "3.0/stable"},
+		Channels: map[string]setup.Channel{"bin-mypkg": {Track: "3.0", Risk: "stable"}},
 	},
 }, {
 	summary: "Channel on bin slice is set from the reference",
 	selrefs: []setup.SliceRef{{
 		SliceKey: setup.SliceKey{Package: "bin-mypkg", Slice: "myslice"},
-		Channel:  "2.0/edge",
+		Channel:  setup.Channel{Track: "2.0", Risk: "edge"},
 	}},
 	input: map[string]string{
 		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
@@ -4467,13 +4467,13 @@ var setupTests = []setupTest{{
 				"/dir/file": {Kind: setup.CopyPath},
 			},
 		}},
-		Channels: map[string]string{"bin-mypkg": "2.0/edge"},
+		Channels: map[string]setup.Channel{"bin-mypkg": {Track: "2.0", Risk: "edge"}},
 	},
 }, {
 	summary: "Same channel on two slices of same bin package is allowed",
 	selrefs: []setup.SliceRef{
-		{SliceKey: setup.SliceKey{Package: "bin-mypkg", Slice: "myslice"}, Channel: "2.0/stable"},
-		{SliceKey: setup.SliceKey{Package: "bin-mypkg", Slice: "myslice2"}, Channel: "2.0/stable"},
+		{SliceKey: setup.SliceKey{Package: "bin-mypkg", Slice: "myslice"}, Channel: setup.Channel{Track: "2.0", Risk: "stable"}},
+		{SliceKey: setup.SliceKey{Package: "bin-mypkg", Slice: "myslice2"}, Channel: setup.Channel{Track: "2.0", Risk: "stable"}},
 	},
 	input: map[string]string{
 		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
@@ -4504,13 +4504,13 @@ var setupTests = []setupTest{{
 				"/dir/file2": {Kind: setup.CopyPath},
 			},
 		}},
-		Channels: map[string]string{"bin-mypkg": "2.0/stable"},
+		Channels: map[string]setup.Channel{"bin-mypkg": {Track: "2.0", Risk: "stable"}},
 	},
 }, {
 	summary: "Conflicting channels on two slices of same bin package fails",
 	selrefs: []setup.SliceRef{
-		{SliceKey: setup.SliceKey{Package: "bin-mypkg", Slice: "myslice"}, Channel: "2.0/stable"},
-		{SliceKey: setup.SliceKey{Package: "bin-mypkg", Slice: "myslice2"}, Channel: "2.0/edge"},
+		{SliceKey: setup.SliceKey{Package: "bin-mypkg", Slice: "myslice"}, Channel: setup.Channel{Track: "2.0", Risk: "stable"}},
+		{SliceKey: setup.SliceKey{Package: "bin-mypkg", Slice: "myslice2"}, Channel: setup.Channel{Track: "2.0", Risk: "edge"}},
 	},
 	input: map[string]string{
 		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
@@ -4532,7 +4532,7 @@ var setupTests = []setupTest{{
 	summary: "Channel on a non-store (deb) package fails",
 	selrefs: []setup.SliceRef{{
 		SliceKey: setup.SliceKey{Package: "mypkg", Slice: "myslice"},
-		Channel:  "2.0/stable",
+		Channel:  setup.Channel{Track: "2.0", Risk: "stable"},
 	}},
 	input: map[string]string{
 		"chisel.yaml": testutil.DefaultChiselYaml,
@@ -5067,66 +5067,73 @@ var parseSliceRefTests = []struct {
 	input: "foo_bar@3.0",
 	expected: setup.SliceRef{
 		SliceKey: setup.SliceKey{Package: "foo", Slice: "bar"},
-		Channel:  "3.0/stable",
+		Channel:  setup.Channel{Track: "3.0", Risk: "stable"},
 	},
 }, {
 	input: "foo_bar@latest",
 	expected: setup.SliceRef{
 		SliceKey: setup.SliceKey{Package: "foo", Slice: "bar"},
-		Channel:  "latest/stable",
+		Channel:  setup.Channel{Track: "latest", Risk: "stable"},
 	},
 }, {
 	input: "foo_bar@3.0/edge",
 	expected: setup.SliceRef{
 		SliceKey: setup.SliceKey{Package: "foo", Slice: "bar"},
-		Channel:  "3.0/edge",
+		Channel:  setup.Channel{Track: "3.0", Risk: "edge"},
 	},
 }, {
 	// An explicit default risk is kept as is.
 	input: "foo_bar@3.0/stable",
 	expected: setup.SliceRef{
 		SliceKey: setup.SliceKey{Package: "foo", Slice: "bar"},
-		Channel:  "3.0/stable",
+		Channel:  setup.Channel{Track: "3.0", Risk: "stable"},
 	},
 }, {
 	// Validation is loose, unknown risks are accepted.
 	input: "foo_bar@3.0/whatever",
 	expected: setup.SliceRef{
 		SliceKey: setup.SliceKey{Package: "foo", Slice: "bar"},
-		Channel:  "3.0/whatever",
+		Channel:  setup.Channel{Track: "3.0", Risk: "whatever"},
 	},
 }, {
 	input: "foo-pkg_dashed-slice@3.0/beta",
 	expected: setup.SliceRef{
 		SliceKey: setup.SliceKey{Package: "foo-pkg", Slice: "dashed-slice"},
-		Channel:  "3.0/beta",
+		Channel:  setup.Channel{Track: "3.0", Risk: "beta"},
 	},
 }, {
 	// Split on the first '@'; the channel may itself contain '@'.
 	input: "foo_bar@3.0@x",
 	expected: setup.SliceRef{
 		SliceKey: setup.SliceKey{Package: "foo", Slice: "bar"},
-		Channel:  "3.0@x/stable",
+		Channel:  setup.Channel{Track: "3.0@x", Risk: "stable"},
 	},
 }, {
-	// Longer forms, such as a branch, are not rejected.
+	// A branch is accepted, although not advertised yet.
 	input: "foo_bar@3.0/stable/mybranch",
 	expected: setup.SliceRef{
 		SliceKey: setup.SliceKey{Package: "foo", Slice: "bar"},
-		Channel:  "3.0/stable/mybranch",
+		Channel:  setup.Channel{Track: "3.0", Risk: "stable", Branch: "mybranch"},
 	},
 }, {
 	input: "foo_bar@",
 	err:   `invalid slice reference "foo_bar@": missing channel`,
 }, {
 	input: "foo_bar@/stable",
-	err:   `invalid slice reference "foo_bar@/stable": channel must be <track> or <track>/<risk>`,
+	err:   `invalid slice reference "foo_bar@/stable": channel must be <track>\[/<risk>\[/<branch>\]\]`,
 }, {
 	input: "foo_bar@3.0/",
-	err:   `invalid slice reference "foo_bar@3.0/": channel must be <track> or <track>/<risk>`,
+	err:   `invalid slice reference "foo_bar@3.0/": channel must be <track>\[/<risk>\[/<branch>\]\]`,
 }, {
 	input: "foo_bar@3.0//stable",
-	err:   `invalid slice reference "foo_bar@3.0//stable": channel must be <track> or <track>/<risk>`,
+	err:   `invalid slice reference "foo_bar@3.0//stable": channel must be <track>\[/<risk>\[/<branch>\]\]`,
+}, {
+	input: "foo_bar@3.0/stable/",
+	err:   `invalid slice reference "foo_bar@3.0/stable/": channel must be <track>\[/<risk>\[/<branch>\]\]`,
+}, {
+	// A branch must not contain a /, hence no more than three segments.
+	input: "foo_bar@3.0/stable/mybranch/extra",
+	err:   `invalid slice reference "foo_bar@3.0/stable/mybranch/extra": channel must be <track>\[/<risk>\[/<branch>\]\]`,
 }, {
 	input: "foo_bar@3.0 stable",
 	err:   `invalid slice reference "foo_bar@3.0 stable": channel must not contain spaces`,

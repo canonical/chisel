@@ -8,7 +8,6 @@ import (
 	"slices"
 	"strings"
 	"time"
-	"unicode"
 
 	"golang.org/x/crypto/openpgp/packet"
 
@@ -146,21 +145,19 @@ func ParseSliceKey(sliceKey string) (SliceKey, error) {
 	return apacheutil.ParseSliceKey(sliceKey)
 }
 
-// DefaultRisk is used when a channel does not specify a risk.
+// DefaultRisk is used when a slice reference does not specify a risk.
 const DefaultRisk = "stable"
 
 // SliceRef is a slice reference with an optional channel for store packages.
-// The channel always holds a risk, that is at least "<track>/<risk>".
+// The channel always holds a risk, the default one is used when the reference
+// does not specify it.
 type SliceRef struct {
 	SliceKey SliceKey
-	Channel  string
+	Channel  Channel
 }
 
-// ParseSliceRef parses a "pkg_slice[@channel]" reference. The channel is
-// either a track, in which case the default risk is used, or a
-// "<track>/<risk>" value. Validation is intentionally loose so that longer
-// channel forms, such as "<track>/<risk>/<branch>", are accepted without
-// changes here.
+// ParseSliceRef parses a "pkg_slice[@channel]" reference. See parseChannel
+// for the accepted channel forms.
 func ParseSliceRef(ref string) (SliceRef, error) {
 	keyPart, channel, ok := strings.Cut(ref, "@")
 	if !ok {
@@ -174,32 +171,14 @@ func ParseSliceRef(ref string) (SliceRef, error) {
 	if err != nil {
 		return SliceRef{}, err
 	}
-	channel, err = validateChannel(channel)
+	parsed, err := parseChannel(channel)
 	if err != nil {
 		return SliceRef{}, fmt.Errorf("invalid slice reference %q: %s", ref, err)
 	}
-	return SliceRef{SliceKey: sliceKey, Channel: channel}, nil
-}
-
-// validateChannel returns the channel with the default risk appended if it
-// holds a track alone. Validation is intentionally loose, any number of
-// segments is accepted so that longer forms are not rejected here.
-func validateChannel(channel string) (string, error) {
-	if channel == "" {
-		return "", fmt.Errorf("missing channel")
+	if parsed.Risk == "" {
+		parsed.Risk = DefaultRisk
 	}
-	if strings.ContainsFunc(channel, unicode.IsSpace) {
-		return "", fmt.Errorf("channel must not contain spaces")
-	}
-	segments := strings.Split(channel, "/")
-	if slices.Contains(segments, "") {
-		return "", fmt.Errorf("channel must be <track> or <track>/<risk>")
-	}
-	if len(segments) == 1 {
-		// A track alone, the risk is implicit.
-		return channel + "/" + DefaultRisk, nil
-	}
-	return channel, nil
+	return SliceRef{SliceKey: sliceKey, Channel: parsed}, nil
 }
 
 func (s *Slice) String() string { return s.Package + "_" + s.Name }
@@ -212,7 +191,7 @@ type Selection struct {
 	Release *Release
 	Slices  []*Slice
 	// Channels holds the resolved channel per store package name.
-	Channels map[string]string
+	Channels map[string]Channel
 }
 
 // Prefers uses the prefer relationships and returns a map from each path to
@@ -565,23 +544,12 @@ func Select(release *Release, refs []SliceRef, arch string) (*Selection, error) 
 		return nil, err
 	}
 
-	// Resolve the channel per store package from the references.
+	// Resolve the channel of every store package, whether it is selected or
+	// not, and before ordering, because ordering depends on the channel of the
+	// packages it traverses.
 	channels, err := resolveChannels(release, refs)
 	if err != nil {
 		return nil, err
-	}
-	// Derive the channel from 'default-track' for the store packages without an
-	// explicit one. Note the release only defines a track, the risk is
-	// implicit. This is done for every known package, before ordering, because
-	// ordering itself depends on the channel of the packages it traverses.
-	for _, pkg := range release.Packages {
-		if pkg.Store == "" {
-			continue
-		}
-		if _, ok := channels[pkg.Name]; ok {
-			continue
-		}
-		channels[pkg.Name] = pkg.DefaultTrack + "/" + DefaultRisk
 	}
 
 	selection := &Selection{
@@ -602,7 +570,7 @@ func Select(release *Release, refs []SliceRef, arch string) (*Selection, error) 
 	}
 
 	// Only report the channels of the selected packages.
-	selection.Channels = make(map[string]string)
+	selection.Channels = make(map[string]Channel)
 	for _, slice := range selection.Slices {
 		if channel, ok := channels[slice.Package]; ok {
 			selection.Channels[slice.Package] = channel
@@ -640,11 +608,15 @@ func Select(release *Release, refs []SliceRef, arch string) (*Selection, error) 
 	return selection, nil
 }
 
-// resolveChannels collects the explicit channel per store package from the
-// references. It errors if a channel is set on a non-store package or if two
-// references to the same package specify different channels.
-func resolveChannels(release *Release, refs []SliceRef) (map[string]string, error) {
-	channels := make(map[string]string)
+// resolveChannels returns the channel of every store package of the release,
+// taken from the references and falling back to the package 'default-track'
+// with the default risk. Note the release only defines a track, the risk is
+// implicit.
+//
+// It errors if a channel is set on a non-store package or if two references to
+// the same package specify different channels.
+func resolveChannels(release *Release, refs []SliceRef) (map[string]Channel, error) {
+	channels := make(map[string]Channel)
 	for _, ref := range refs {
 		pkg, ok := release.Packages[ref.SliceKey.Package]
 		if !ok {
@@ -652,13 +624,13 @@ func resolveChannels(release *Release, refs []SliceRef) (map[string]string, erro
 			continue
 		}
 		if pkg.Store == "" {
-			if ref.Channel != "" {
+			if ref.Channel != (Channel{}) {
 				return nil, fmt.Errorf("slice %s has channel but package %q is not in a store",
 					ref.SliceKey, pkg.Name)
 			}
 			continue
 		}
-		if ref.Channel == "" {
+		if ref.Channel == (Channel{}) {
 			continue
 		}
 		if existing, ok := channels[pkg.Name]; ok && existing != ref.Channel {
@@ -666,6 +638,16 @@ func resolveChannels(release *Release, refs []SliceRef) (map[string]string, erro
 				pkg.Name, existing, ref.Channel)
 		}
 		channels[pkg.Name] = ref.Channel
+	}
+	for _, pkg := range release.Packages {
+		if pkg.Store == "" {
+			continue
+		}
+		if _, ok := channels[pkg.Name]; ok {
+			// The references take precedence over the 'default-track'.
+			continue
+		}
+		channels[pkg.Name] = Channel{Track: pkg.DefaultTrack, Risk: DefaultRisk}
 	}
 	return channels, nil
 }
