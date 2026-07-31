@@ -14,13 +14,10 @@ type Channel struct {
 }
 
 func (c Channel) String() string {
-	if c.Track == "" {
+	if c == (Channel{}) {
 		return ""
 	}
-	channel := c.Track
-	if c.Risk != "" {
-		channel += "/" + c.Risk
-	}
+	channel := c.Track + "/" + c.Risk
 	if c.Branch != "" {
 		channel += "/" + c.Branch
 	}
