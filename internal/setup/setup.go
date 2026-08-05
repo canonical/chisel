@@ -56,6 +56,7 @@ type Archive struct {
 	// OldRelease is set for Ubuntu releases which are moved from the regular
 	// archive which happens after the release's end of life date.
 	OldRelease bool
+	Url        string
 }
 
 // Package holds a collection of slices that represent parts of themselves.
