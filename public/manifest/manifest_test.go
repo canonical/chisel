@@ -30,7 +30,7 @@ var readManifestTests = []struct {
 		{"kind":"content","slice":"pkg1_myslice","path":"/dir/hardlink"}
 		{"kind":"content","slice":"pkg1_myslice","path":"/dir/link/file"}
 		{"kind":"content","slice":"pkg2_myotherslice","path":"/dir/foo/bar/"}
-		{"kind":"package","name":"pkg1","version":"v1","sha256":"hash1","arch":"arch1"}
+		{"kind":"package","name":"pkg1","version":"v1","sha256":"hash1","arch":"arch1","source":"src1"}
 		{"kind":"package","name":"pkg2","version":"v2","sha256":"hash2","arch":"arch2"}
 		{"kind":"path","path":"/dir/file","mode":"0644","slices":["pkg1_myslice"],"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","final_sha256":"8067926c032c090867013d14fb0eb21ae858344f62ad07086fd32375845c91a6","size":21}
 		{"kind":"path","path":"/dir/file2","mode":"0644","slices":["pkg1_myslice"],"sha256":"b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c","size":3,"inode":1}
@@ -52,7 +52,7 @@ var readManifestTests = []struct {
 			{Kind: "path", Path: "/manifest/manifest.wall", Mode: "0644", Slices: []string{"pkg1_manifest"}, SHA256: "", FinalSHA256: "", Size: 0x0, Link: ""},
 		},
 		Packages: []*manifest.Package{
-			{Kind: "package", Name: "pkg1", Version: "v1", Digest: "hash1", Arch: "arch1"},
+			{Kind: "package", Name: "pkg1", Version: "v1", Digest: "hash1", Arch: "arch1", Source: "src1"},
 			{Kind: "package", Name: "pkg2", Version: "v2", Digest: "hash2", Arch: "arch2"},
 		},
 		Slices: []*manifest.Slice{

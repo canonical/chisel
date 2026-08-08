@@ -17,6 +17,7 @@ type Package struct {
 	Version string `json:"version,omitempty"`
 	Digest  string `json:"sha256,omitempty"`
 	Arch    string `json:"arch,omitempty"`
+	Source  string `json:"source,omitempty"`
 }
 
 type Slice struct {

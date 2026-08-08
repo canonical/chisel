@@ -153,6 +153,7 @@ var generateManifestTests = []struct {
 		Version: "v1",
 		Arch:    "a1",
 		SHA256:  "s1",
+		Source:  "source1",
 	}, {
 		Name:    "package2",
 		Version: "v2",
@@ -181,6 +182,7 @@ var generateManifestTests = []struct {
 			Version: "v1",
 			Digest:  "s1",
 			Arch:    "a1",
+			Source:  "source1",
 		}, {
 			Kind:    "package",
 			Name:    "package2",
