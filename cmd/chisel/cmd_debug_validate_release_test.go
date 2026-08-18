@@ -1,6 +1,7 @@
 package main_test
 
 import (
+	"log"
 	"os"
 	"path/filepath"
 
@@ -29,6 +30,10 @@ func writeRelease(c *C, files map[string]string) string {
 func (s *ChiselSuite) TestValidateReleaseSuccess(c *C) {
 	s.ResetStdStreams()
 
+	logger := log.New(s.stderr, "", 0)
+	chisel.SetLogger(logger)
+	defer chisel.SetLogger(nil)
+
 	dir := writeRelease(c, map[string]string{
 		"chisel.yaml": testutil.DefaultChiselYaml,
 		"slices/mydir/pkg-a.yaml": `
@@ -43,7 +48,8 @@ func (s *ChiselSuite) TestValidateReleaseSuccess(c *C) {
 		[]string{"debug", "validate-release", "--release", dir},
 	)
 	c.Assert(err, IsNil)
-	c.Assert(s.Stdout(), Equals, "Release is valid\n")
+	c.Assert(s.Stdout(), Equals, "")
+	c.Assert(s.Stderr(), Equals, "Release is valid.\n")
 }
 
 func (s *ChiselSuite) TestValidateReleaseErrorPropagation(c *C) {

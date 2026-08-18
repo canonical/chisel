@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/jessevdk/go-flags"
 )
 
@@ -10,12 +8,15 @@ var (
 	shortValidateReleaseHelp = "Validate a Chisel release"
 	longValidateReleaseHelp  = `
 The validate-release command performs the static validation of a Chisel
-release, checking the slice definition files (SDFs) and the chisel.yaml
-file for structural issues without downloading any package.
+release, checking the slice definition files (SDFs) and the chisel.yaml file
+for structural issues without downloading any package.
 
-By default it fetches the slices for the same Ubuntu version as the
-current host, unless the --release flag is used. Pointing --release to a
-local directory avoids any network access.
+By default it fetches the slices for the same Ubuntu version as the current
+host, unless the --release flag is used. Pointing --release to a local
+directory avoids any network access.
+
+This command, as any other command under debug, is unstable and will likely be
+removed inside a major release with no warnings. Do not build scripts on it.
 `
 )
 
@@ -41,6 +42,6 @@ func (cmd *cmdDebugValidateRelease) Execute(args []string) error {
 		return err
 	}
 
-	fmt.Fprintln(Stdout, "Release is valid")
+	logf("Release is valid.")
 	return nil
 }
