@@ -20,6 +20,7 @@ import (
 	"github.com/canonical/chisel/internal/manifestutil"
 	"github.com/canonical/chisel/internal/scripts"
 	"github.com/canonical/chisel/internal/setup"
+	"github.com/canonical/chisel/internal/source"
 	"github.com/canonical/chisel/internal/tarball"
 )
 
@@ -39,15 +40,6 @@ type pathData struct {
 
 type contentChecker struct {
 	knownPaths map[string]pathData
-}
-
-// pkgSource holds the resolved source for a package: its architecture and a
-// fetch function returning the package reader and metadata. The fetch
-// function is bound at resolution time, so callers are agnostic to whether
-// the package comes from an archive or a store.
-type pkgSource struct {
-	arch  string
-	fetch func() (io.ReadSeekCloser, *archive.PackageInfo, error)
 }
 
 func (cc *contentChecker) checkMutable(path string) error {
@@ -99,7 +91,7 @@ func Run(options *RunOptions) error {
 		targetDir = filepath.Join(dir, targetDir)
 	}
 
-	pkgSources, err := resolvePkgSources(options.Archives, options.Selection)
+	pkgSources, err := source.Resolve(options.Archives, options.Selection)
 	if err != nil {
 		return err
 	}
@@ -117,7 +109,7 @@ func Run(options *RunOptions) error {
 			extractPackage = make(map[string][]tarball.ExtractInfo)
 			extract[slice.Package] = extractPackage
 		}
-		arch := pkgSources[slice.Package].arch
+		arch := pkgSources[slice.Package].Arch()
 		for targetPath, pathInfo := range slice.Contents {
 			if targetPath == "" {
 				continue
@@ -162,7 +154,7 @@ func Run(options *RunOptions) error {
 			continue
 		}
 		pkg := options.Selection.Release.Packages[slice.Package]
-		reader, info, err := pkgSources[pkg.Name].fetch()
+		reader, info, err := pkgSources[pkg.Name].Fetch()
 		if err != nil {
 			return err
 		}
@@ -279,7 +271,7 @@ func Run(options *RunOptions) error {
 	// them to the appropriate slices.
 	relPaths := map[string][]*setup.Slice{}
 	for _, slice := range options.Selection.Slices {
-		arch := pkgSources[slice.Package].arch
+		arch := pkgSources[slice.Package].Arch()
 		for relPath, pathInfo := range slice.Contents {
 			if len(pathInfo.Arch) > 0 && !slices.Contains(pathInfo.Arch, arch) {
 				continue
@@ -497,70 +489,4 @@ func createFile(targetDir, relPath string, pathInfo setup.PathInfo) (*fsutil.Ent
 		Link:        linkTarget,
 		MakeParents: true,
 	})
-}
-
-// resolvePkgSources determines the source for each package in the selection.
-// For archive packages it selects the highest priority archive containing the
-// package unless a particular archive is pinned within the slice definition
-// file. For store packages it records a fetch function that returns an error
-// until store support is implemented. It returns a map of pkgSource indexed by
-// package names.
-func resolvePkgSources(archives map[string]archive.Archive, selection *setup.Selection) (map[string]pkgSource, error) {
-	sortedArchives := make([]*setup.Archive, 0, len(selection.Release.Archives))
-	for _, archive := range selection.Release.Archives {
-		if archive.Priority < 0 {
-			// Ignore negative priority archives unless a package specifically
-			// asks for it with the "archive" field.
-			continue
-		}
-		sortedArchives = append(sortedArchives, archive)
-	}
-	slices.SortFunc(sortedArchives, func(a, b *setup.Archive) int {
-		return b.Priority - a.Priority
-	})
-
-	pkgSources := make(map[string]pkgSource)
-	for _, s := range selection.Slices {
-		if _, ok := pkgSources[s.Package]; ok {
-			continue
-		}
-		pkg := selection.Release.Packages[s.Package]
-		if pkg.Store != "" {
-			pkgSources[pkg.Name] = pkgSource{
-				// TODO: set the arch when implementing fetching from the store.
-				fetch: func() (io.ReadSeekCloser, *archive.PackageInfo, error) {
-					return nil, nil, fmt.Errorf("cannot fetch package %q from store %q: not implemented", pkg.Name, pkg.Store)
-				},
-			}
-			continue
-		}
-
-		var candidates []*setup.Archive
-		if pkg.Archive == "" {
-			// If the package has not pinned any archive, choose the highest
-			// priority archive in which the package exists.
-			candidates = sortedArchives
-		} else {
-			candidates = []*setup.Archive{selection.Release.Archives[pkg.Archive]}
-		}
-
-		var chosen archive.Archive
-		for _, archiveInfo := range candidates {
-			archive := archives[archiveInfo.Name]
-			if archive != nil && archive.Exists(pkg.RealName) {
-				chosen = archive
-				break
-			}
-		}
-		if chosen == nil {
-			return nil, fmt.Errorf("cannot find package %q in archive(s)", pkg.RealName)
-		}
-		pkgSources[pkg.Name] = pkgSource{
-			arch: chosen.Options().Arch,
-			fetch: func() (io.ReadSeekCloser, *archive.PackageInfo, error) {
-				return chosen.Fetch(pkg.RealName)
-			},
-		}
-	}
-	return pkgSources, nil
 }

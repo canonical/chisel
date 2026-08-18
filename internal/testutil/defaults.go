@@ -27,3 +27,26 @@ var DefaultChiselYamlWithStores = strings.ReplaceAll(DefaultChiselYaml, "format:
 			version: 26.10
 			default-prefix: "bin-"
 `
+
+var DefaultChiselYamlTwoArchives = `
+	format: v1
+	maintenance:
+		standard: 2025-01-01
+		end-of-life: 2100-01-01
+	archives:
+		foo:
+			version: 22.04
+			components: [main, universe]
+			suites: [jammy]
+			priority: 20
+			public-keys: [test-key]
+		bar:
+			version: 22.04
+			components: [main]
+			suites: [jammy]
+			priority: 10
+			public-keys: [test-key]
+	public-keys:
+		test-key:
+			id: ` + testKey.ID + `
+			armor: |` + "\n" + PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t")
