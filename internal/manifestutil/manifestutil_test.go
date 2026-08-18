@@ -122,7 +122,7 @@ var slice2 = &setup.Slice{
 var generateManifestTests = []struct {
 	summary     string
 	report      *manifestutil.Report
-	packageInfo []*archive.PackageInfo
+	packageInfo []manifestutil.PackageInfo
 	selection   []*setup.Slice
 	expected    *apachetestutil.ManifestContents
 	error       string
@@ -148,17 +148,20 @@ var generateManifestTests = []struct {
 			},
 		},
 	},
-	packageInfo: []*archive.PackageInfo{{
-		Name:    "package1",
-		Version: "v1",
-		Arch:    "a1",
-		SHA256:  "s1",
-	}, {
-		Name:    "package2",
-		Version: "v2",
-		Arch:    "a2",
-		SHA256:  "s2",
-	}},
+	packageInfo: []manifestutil.PackageInfo{
+		&archive.PackageInfo{
+			Name:    "package1",
+			Version: "v1",
+			Arch:    "a1",
+			SHA256:  "s1",
+		},
+		&archive.PackageInfo{
+			Name:    "package2",
+			Version: "v2",
+			Arch:    "a2",
+			SHA256:  "s2",
+		},
+	},
 	expected: &apachetestutil.ManifestContents{
 		Paths: []*manifest.Path{{
 			Kind:        "path",
@@ -241,7 +244,7 @@ var generateManifestTests = []struct {
 			},
 		},
 	},
-	packageInfo: []*archive.PackageInfo{},
+	packageInfo: []manifestutil.PackageInfo{},
 	error:       `internal error: invalid manifest: slice package1_slice1 refers to missing package "package1"`,
 }, {
 	summary: "Invalid path: slices is empty",
@@ -395,12 +398,14 @@ var generateManifestTests = []struct {
 			},
 		},
 	},
-	packageInfo: []*archive.PackageInfo{{
-		Name:    "package1",
-		Version: "v1",
-		Arch:    "a1",
-		SHA256:  "s1",
-	}},
+	packageInfo: []manifestutil.PackageInfo{
+		&archive.PackageInfo{
+			Name:    "package1",
+			Version: "v1",
+			Arch:    "a1",
+			SHA256:  "s1",
+		},
+	},
 	expected: &apachetestutil.ManifestContents{
 		Paths: []*manifest.Path{{
 			Kind:        "path",
@@ -494,35 +499,43 @@ var generateManifestTests = []struct {
 	error: `internal error: invalid manifest: hard linked paths "/file" and "/hardlink" have diverging contents`,
 }, {
 	summary: "Invalid package: missing name",
-	packageInfo: []*archive.PackageInfo{{
-		Version: "v1",
-		Arch:    "a1",
-		SHA256:  "s1",
-	}},
+	packageInfo: []manifestutil.PackageInfo{
+		&archive.PackageInfo{
+			Version: "v1",
+			Arch:    "a1",
+			SHA256:  "s1",
+		},
+	},
 	error: `internal error: invalid manifest: package name not set`,
 }, {
 	summary: "Invalid package: missing version",
-	packageInfo: []*archive.PackageInfo{{
-		Name:   "package-1",
-		Arch:   "a1",
-		SHA256: "s1",
-	}},
+	packageInfo: []manifestutil.PackageInfo{
+		&archive.PackageInfo{
+			Name:   "package-1",
+			Arch:   "a1",
+			SHA256: "s1",
+		},
+	},
 	error: `internal error: invalid manifest: package "package-1" missing version`,
 }, {
 	summary: "Invalid package: missing arch",
-	packageInfo: []*archive.PackageInfo{{
-		Name:    "package-1",
-		Version: "v1",
-		SHA256:  "s1",
-	}},
+	packageInfo: []manifestutil.PackageInfo{
+		&archive.PackageInfo{
+			Name:    "package-1",
+			Version: "v1",
+			SHA256:  "s1",
+		},
+	},
 	error: `internal error: invalid manifest: package "package-1" missing arch`,
 }, {
 	summary: "Invalid package: missing sha256",
-	packageInfo: []*archive.PackageInfo{{
-		Name:    "package-1",
-		Version: "v1",
-		Arch:    "a1",
-	}},
+	packageInfo: []manifestutil.PackageInfo{
+		&archive.PackageInfo{
+			Name:    "package-1",
+			Version: "v1",
+			Arch:    "a1",
+		},
+	},
 	error: `internal error: invalid manifest: package "package-1" missing sha256`,
 }}
 
@@ -533,12 +546,14 @@ func (s *S) TestGenerateManifests(c *C) {
 			test.selection = []*setup.Slice{slice1}
 		}
 		if test.packageInfo == nil {
-			test.packageInfo = []*archive.PackageInfo{{
-				Name:    "package1",
-				Version: "v1",
-				Arch:    "a1",
-				SHA256:  "s1",
-			}}
+			test.packageInfo = []manifestutil.PackageInfo{
+				&archive.PackageInfo{
+					Name:    "package1",
+					Version: "v1",
+					Arch:    "a1",
+					SHA256:  "s1",
+				},
+			}
 		}
 
 		options := &manifestutil.WriteOptions{

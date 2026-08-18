@@ -10,11 +10,25 @@ import (
 	"strings"
 
 	"github.com/canonical/chisel/internal/apacheutil"
-	"github.com/canonical/chisel/internal/archive"
+	"github.com/canonical/chisel/internal/cache"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/public/jsonwall"
 	"github.com/canonical/chisel/public/manifest"
 )
+
+// PackageInfo describes a package as obtained from its source, abstracting
+// over archives, stores, and any other backend.
+type PackageInfo interface {
+	PkgName() string
+	PkgVersion() string
+	// PkgRevision further identifies the package when the source versions are
+	// not unique on their own. It returns 0 when the source does not use
+	// revisions.
+	PkgRevision() int
+	PkgArch() string
+	PkgDigestKind() cache.DigestKind
+	PkgDigest() string
+}
 
 const DefaultFilename = "manifest.wall"
 
@@ -35,7 +49,7 @@ func FindPaths(slices []*setup.Slice) map[string][]*setup.Slice {
 }
 
 type WriteOptions struct {
-	PackageInfo []*archive.PackageInfo
+	PackageInfo []PackageInfo
 	Selection   []*setup.Slice
 	Report      *Report
 }
@@ -69,14 +83,14 @@ func Write(options *WriteOptions, writer io.Writer) error {
 	return err
 }
 
-func manifestAddPackages(dbw *jsonwall.DBWriter, infos []*archive.PackageInfo) error {
+func manifestAddPackages(dbw *jsonwall.DBWriter, infos []PackageInfo) error {
 	for _, info := range infos {
 		err := dbw.Add(&manifest.Package{
 			Kind:    "package",
-			Name:    info.Name,
-			Version: info.Version,
-			Digest:  info.SHA256,
-			Arch:    info.Arch,
+			Name:    info.PkgName(),
+			Version: info.PkgVersion(),
+			Digest:  info.PkgDigest(),
+			Arch:    info.PkgArch(),
 		})
 		if err != nil {
 			return err
@@ -155,7 +169,7 @@ func fastValidate(options *WriteOptions) (err error) {
 		if err != nil {
 			return err
 		}
-		pkgExist[pkg.Name] = true
+		pkgExist[pkg.PkgName()] = true
 	}
 	sliceExist := map[string]bool{}
 	for _, slice := range options.Selection {
@@ -250,18 +264,24 @@ func validateReportEntry(entry *ReportEntry) (err error) {
 	return nil
 }
 
-func validatePackage(pkg *archive.PackageInfo) (err error) {
-	if pkg.Name == "" {
+func validatePackage(pkg PackageInfo) (err error) {
+	name := pkg.PkgName()
+	if name == "" {
 		return fmt.Errorf("package name not set")
 	}
-	if pkg.Arch == "" {
-		return fmt.Errorf("package %q missing arch", pkg.Name)
+	if pkg.PkgArch() == "" {
+		return fmt.Errorf("package %q missing arch", name)
 	}
-	if pkg.SHA256 == "" {
-		return fmt.Errorf("package %q missing sha256", pkg.Name)
+	// The manifest records the package digest as a SHA256 one. Fail rather
+	// than recording a digest of another kind under that name.
+	// TODO: record packages whose digest is not a SHA256 one, such as the
+	// ones coming from a store. This requires recording the digest kind in
+	// the manifest as well.
+	if pkg.PkgDigestKind() != cache.SHA256 || pkg.PkgDigest() == "" {
+		return fmt.Errorf("package %q missing sha256", name)
 	}
-	if pkg.Version == "" {
-		return fmt.Errorf("package %q missing version", pkg.Name)
+	if pkg.PkgVersion() == "" {
+		return fmt.Errorf("package %q missing version", name)
 	}
 	return nil
 }
