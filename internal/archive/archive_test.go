@@ -137,9 +137,6 @@ func (s *httpSuite) prepareArchiveAdjustRelease(suite, version, arch string, com
 		PrivKey:     s.privKey,
 		DigestKinds: []string{"SHA256"},
 	}
-	if adjustRelease != nil {
-		adjustRelease(release)
-	}
 	for i, component := range components {
 		index := &testarchive.PackageIndex{
 			Component: component,
@@ -148,15 +145,28 @@ func (s *httpSuite) prepareArchiveAdjustRelease(suite, version, arch string, com
 		for j := range 2 {
 			seq := 1 + i*2 + j
 			index.Packages = append(index.Packages, &testarchive.Package{
-				Name:        fmt.Sprintf("mypkg%d", seq),
-				Version:     fmt.Sprintf("1.%d", seq),
-				Arch:        arch,
-				Component:   component,
-				DigestKinds: release.DigestKinds,
+				Name:      fmt.Sprintf("mypkg%d", seq),
+				Version:   fmt.Sprintf("1.%d", seq),
+				Arch:      arch,
+				Component: component,
 			})
 		}
 		release.Items = append(release.Items, index)
 		release.Items = append(release.Items, &testarchive.Gzip{index})
+	}
+	if adjustRelease != nil {
+		adjustRelease(release)
+	}
+	// Propagate the release digest kinds to every package so that both
+	// the index table and the package stanzas advertise the same digests.
+	err := release.Walk(func(item testarchive.Item) error {
+		if p, ok := item.(*testarchive.Package); ok {
+			p.DigestKinds = release.DigestKinds
+		}
+		return nil
+	})
+	if err != nil {
+		panic(err)
 	}
 	base, err := url.Parse(s.base)
 	if err != nil {
