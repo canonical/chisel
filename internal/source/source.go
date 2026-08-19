@@ -35,8 +35,6 @@ type storeSource struct {
 	arch  string
 	name  string
 	store string
-	track string
-	risk  string
 }
 
 func (s *storeSource) Arch() string {
