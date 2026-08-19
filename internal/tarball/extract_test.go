@@ -19,7 +19,6 @@ import (
 type extractTest struct {
 	summary string
 	pkgdata []byte
-	// openTar must match the format of pkgdata. It defaults to deb.OpenTar.
 	openTar tarball.OpenTarFunc
 	options tarball.ExtractOptions
 	hackopt func(c *C, o *tarball.ExtractOptions)
@@ -546,7 +545,6 @@ func (s *S) TestExtract(c *C) {
 var extractCreateCallbackTests = []struct {
 	summary string
 	pkgdata []byte
-	// openTar must match the format of pkgdata. It defaults to deb.OpenTar.
 	openTar tarball.OpenTarFunc
 	options tarball.ExtractOptions
 	calls   map[string][]tarball.ExtractInfo

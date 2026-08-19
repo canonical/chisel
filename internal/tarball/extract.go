@@ -25,7 +25,7 @@ import (
 type OpenTarFunc func(pkgReader io.Reader) (io.ReadCloser, error)
 
 // OpenXZ opens a package which is a plain XZ-compressed tarball, such as a
-// store (bin) package.
+// bin package.
 func OpenXZ(pkgReader io.Reader) (io.ReadCloser, error) {
 	xzReader, err := xz.NewReader(pkgReader)
 	if err != nil {
