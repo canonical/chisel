@@ -155,12 +155,12 @@ func (s *httpSuite) prepareArchiveAdjustRelease(suite, version, arch string, com
 		release.Items = append(release.Items, index)
 		release.Items = append(release.Items, &testarchive.Gzip{index})
 	}
-	if adjustRelease != nil {
-		adjustRelease(release)
-	}
 	base, err := url.Parse(s.base)
 	if err != nil {
 		panic(err)
+	}
+	if adjustRelease != nil {
+		adjustRelease(release)
 	}
 	err = release.Render(base.Path, s.responses)
 	if err != nil {
