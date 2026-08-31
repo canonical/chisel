@@ -32,6 +32,13 @@ type PackageInfo struct {
 	SHA256  string
 }
 
+func (p *PackageInfo) PkgName() string                 { return p.Name }
+func (p *PackageInfo) PkgVersion() string              { return p.Version }
+func (p *PackageInfo) PkgRevision() int                { return 0 }
+func (p *PackageInfo) PkgArch() string                 { return p.Arch }
+func (p *PackageInfo) PkgDigestKind() cache.DigestKind { return cache.SHA256 }
+func (p *PackageInfo) PkgDigest() string               { return p.SHA256 }
+
 type Options struct {
 	Label      string
 	Version    string
