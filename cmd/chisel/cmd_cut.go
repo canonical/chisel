@@ -91,6 +91,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 			PubKeys:    archiveInfo.PubKeys,
 			Maintained: archiveInfo.Maintained,
 			OldRelease: archiveInfo.OldRelease,
+			Url:        archiveInfo.Url,
 		})
 		if err != nil {
 			if err == archive.ErrCredentialsNotFound {

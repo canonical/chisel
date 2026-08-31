@@ -53,6 +53,8 @@ type Options struct {
 	// OldRelease is set for Ubuntu releases which are moved from the regular
 	// archive which happens after the release's end of life date.
 	OldRelease bool
+	// Custom url for an archive. Can't be used with 'Pro', probably.
+	Url string
 }
 
 func Open(options *Options) (Archive, error) {
@@ -231,10 +233,23 @@ func openUbuntu(options *Options) (Archive, error) {
 	if len(options.Version) == 0 {
 		return nil, fmt.Errorf("archive options missing version")
 	}
+	var baseURL string
+	var creds *credentials
 
-	baseURL, creds, err := archiveURL(options.Pro, options.Arch, options.OldRelease)
-	if err != nil {
-		return nil, err
+	if options.Url == "" {
+		var err error
+		baseURL, creds, err = archiveURL(options.Pro, options.Arch, options.OldRelease)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		if strings.HasPrefix(options.Url, "http://") ||
+			strings.HasPrefix(options.Url, "https://") {
+			baseURL = options.Url
+			creds = nil
+		} else {
+			return nil, fmt.Errorf("archive url should start with http:// or https://. Got %q", options.Url)
+		}
 	}
 
 	archive := &ubuntuArchive{
@@ -327,6 +342,10 @@ func (index *ubuntuIndex) fetchRelease() error {
 	label := "Ubuntu"
 	if index.archive.options.Pro != "" {
 		label = proArchiveInfo[index.archive.options.Pro].Label
+	}
+	// Custom archive name must match it's label
+	if index.archive.options.Url != "" {
+		label = index.archive.options.Label
 	}
 	section := ctrl.Section(label)
 	if section == nil {

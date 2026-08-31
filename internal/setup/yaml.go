@@ -51,6 +51,7 @@ type yamlArchive struct {
 	Pro        string   `yaml:"pro"`
 	Default    bool     `yaml:"default"`
 	PubKeys    []string `yaml:"public-keys"`
+	Url        string   `yaml:"url"`
 }
 
 type yamlStore struct {
@@ -371,6 +372,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 			Pro:        details.Pro,
 			Priority:   priority,
 			PubKeys:    archiveKeys,
+			Url:        details.Url,
 		}
 	}
 	if (hasPriority && archiveNoPriority != "") ||
