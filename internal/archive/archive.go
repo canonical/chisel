@@ -139,8 +139,9 @@ func (a *ubuntuArchive) Fetch(pkg string) (io.ReadSeekCloser, *PackageInfo, erro
 		return nil, nil, err
 	}
 	path := section.Get("Filename")
+	digest, digestKind := packageDigest(section)
 	logf("Fetching %s...", path)
-	reader, err := index.fetch(path, section.Get("SHA256"), fetchBulk)
+	reader, err := index.fetch(path, digest, digestKind, fetchBulk)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -280,7 +281,9 @@ func openUbuntu(options *Options) (Archive, error) {
 
 func (index *ubuntuIndex) fetchRelease() error {
 	logf("Fetching %s %s %s suite details...", index.displayName(), index.version, index.suite)
-	reader, err := index.fetch(index.distPath("InRelease"), "", fetchDefault)
+	// InRelease has no digest to check against (it is verified by its PGP
+	// signature below), so the digest kind here is arbitrary.
+	reader, err := index.fetch(index.distPath("InRelease"), "", cache.SHA256, fetchDefault)
 	if err != nil {
 		return err
 	}
@@ -328,10 +331,47 @@ func (index *ubuntuIndex) fetchRelease() error {
 	return nil
 }
 
+// digestField is an archive checksum field Chisel can verify. Its name
+// doubles as the by-hash directory name in the archive layout.
+type digestField struct {
+	name string
+	kind cache.DigestKind
+}
+
+// digestFields lists the checksum fields Chisel can verify, in order of
+// preference: strongest first. The order also matches the by-hash archive
+// layout, where only the by-hash directory of the strongest advertised hash
+// is guaranteed to exist.
+var digestFields = []digestField{
+	{"SHA512", cache.SHA512},
+	{"SHA256", cache.SHA256},
+}
+
+// findDigest returns the digest recorded for path in the release, along with
+// the field it was found in, trying the given fields in order.
+func findDigest(release control.Section, path string, order []digestField) (digest string, field digestField) {
+	for _, f := range order {
+		if d, _, ok := control.ParsePathInfo(release.Get(f.name), path); ok {
+			return d, f
+		}
+	}
+	return "", digestField{}
+}
+
+func packageDigest(section control.Section) (digest string, kind cache.DigestKind) {
+	for _, f := range digestFields {
+		if d := section.Get(f.name); d != "" {
+			return d, f.kind
+		}
+	}
+	// No digest advertised; fall back to SHA256 so the package can still be
+	// cached and retrieved by its computed digest.
+	return "", cache.SHA256
+}
+
 func (index *ubuntuIndex) fetchIndex() error {
-	releaseDigests := index.release.Get("SHA256")
 	packagesPath := fmt.Sprintf("%s/binary-%s/Packages", index.component, index.arch)
-	packagesDigest, _, _ := control.ParsePathInfo(releaseDigests, packagesPath)
+	packagesDigest, field := findDigest(index.release, packagesPath, digestFields)
 	if packagesDigest == "" {
 		return fmt.Errorf("%s is missing from %s %s component digests", packagesPath, index.suite, index.component)
 	}
@@ -345,10 +385,14 @@ func (index *ubuntuIndex) fetchIndex() error {
 	packagesGzPath := packagesPath + ".gz"
 	var reader io.ReadSeekCloser
 	if index.release.Get("Acquire-By-Hash") == "yes" {
-		packagesGzDigest, _, _ := control.ParsePathInfo(releaseDigests, packagesGzPath)
+		// By-hash directories are only guaranteed to exist for the strongest
+		// hash the archive advertises, which is what findDigest prefers. If
+		// the archive advertises a hash stronger than any Chisel knows, the
+		// URL may 404 and the named-path fallback below applies.
+		packagesGzDigest, byHashField := findDigest(index.release, packagesGzPath, digestFields)
 		if packagesGzDigest != "" {
-			packagesByHashPath := fmt.Sprintf("%s/binary-%s/by-hash/SHA256/%s", index.component, index.arch, packagesGzDigest)
-			r, err := index.fetch(index.distPath(packagesByHashPath), packagesDigest, fetchBulk|fetchGzip)
+			packagesByHashPath := fmt.Sprintf("%s/binary-%s/by-hash/%s/%s", index.component, index.arch, byHashField.name, packagesGzDigest)
+			r, err := index.fetch(index.distPath(packagesByHashPath), packagesDigest, field.kind, fetchBulk|fetchGzip)
 			if err != nil && err != errNotFound {
 				return err
 			}
@@ -358,7 +402,7 @@ func (index *ubuntuIndex) fetchIndex() error {
 		}
 	}
 	if reader == nil {
-		r, err := index.fetch(index.distPath(packagesGzPath), packagesDigest, fetchBulk|fetchGzip)
+		r, err := index.fetch(index.distPath(packagesGzPath), packagesDigest, field.kind, fetchBulk|fetchGzip)
 		if err != nil {
 			return err
 		}
@@ -399,8 +443,7 @@ func (index *ubuntuIndex) distPath(suffix string) string {
 	return "dists/" + index.suite + "/" + suffix
 }
 
-func (index *ubuntuIndex) fetch(path, digest string, flags fetchFlags) (io.ReadSeekCloser, error) {
-	const digestKind = cache.SHA256
+func (index *ubuntuIndex) fetch(path, digest string, digestKind cache.DigestKind, flags fetchFlags) (io.ReadSeekCloser, error) {
 	reader, err := index.archive.cache.Open(digestKind, digest)
 	if err == nil {
 		return reader, nil

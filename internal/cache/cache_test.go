@@ -179,10 +179,37 @@ func (s *S) TestCacheSHA384(c *C) {
 	c.Assert(err, Equals, cache.ErrMiss)
 }
 
-func (s *S) TestCacheExpireBothDigestKinds(c *C) {
+func (s *S) TestCacheSHA512(c *C) {
 	cc := cache.Cache{Dir: c.MkDir()}
 
-	// Write entries under both digest kinds.
+	w := cc.Create(cache.SHA512, "")
+	_, err := w.Write([]byte("data1"))
+	c.Assert(err, IsNil)
+	err = w.Close()
+	c.Assert(err, IsNil)
+	sha512Digest := w.Digest()
+
+	c.Assert(sha512Digest, Not(Equals), data1Digest)
+
+	data, err := cc.Read(cache.SHA512, sha512Digest)
+	c.Assert(err, IsNil)
+	c.Assert(string(data), Equals, "data1")
+
+	// SHA512 entry must not be visible under SHA256.
+	_, err = cc.Open(cache.SHA256, sha512Digest)
+	c.Assert(err, Equals, cache.ErrMiss)
+
+	// SHA256 entry must not be visible under SHA512.
+	err = cc.Write(cache.SHA256, data1Digest, []byte("data1"))
+	c.Assert(err, IsNil)
+	_, err = cc.Open(cache.SHA512, data1Digest)
+	c.Assert(err, Equals, cache.ErrMiss)
+}
+
+func (s *S) TestCacheExpireAllDigestKinds(c *C) {
+	cc := cache.Cache{Dir: c.MkDir()}
+
+	// Write entries under all digest kinds.
 	err := cc.Write(cache.SHA256, data1Digest, []byte("data1"))
 	c.Assert(err, IsNil)
 	err = cc.Write(cache.SHA256, data2Digest, []byte("data2"))
@@ -202,10 +229,26 @@ func (s *S) TestCacheExpireBothDigestKinds(c *C) {
 	c.Assert(err, IsNil)
 	sha384Digest2 := w.Digest()
 
+	w = cc.Create(cache.SHA512, "")
+	_, err = w.Write([]byte("sha512data1"))
+	c.Assert(err, IsNil)
+	err = w.Close()
+	c.Assert(err, IsNil)
+	sha512Digest1 := w.Digest()
+
+	w = cc.Create(cache.SHA512, "")
+	_, err = w.Write([]byte("sha512data2"))
+	c.Assert(err, IsNil)
+	err = w.Close()
+	c.Assert(err, IsNil)
+	sha512Digest2 := w.Digest()
+
 	sha256Expired := filepath.Join(cc.Dir, "sha256", data1Digest)
 	sha256Fresh := filepath.Join(cc.Dir, "sha256", data2Digest)
 	sha384Expired := filepath.Join(cc.Dir, "sha384", sha384Digest1)
 	sha384Fresh := filepath.Join(cc.Dir, "sha384", sha384Digest2)
+	sha512Expired := filepath.Join(cc.Dir, "sha512", sha512Digest1)
+	sha512Fresh := filepath.Join(cc.Dir, "sha512", sha512Digest2)
 
 	// Mark one entry per digest kind as expired.
 	now := time.Now()
@@ -214,20 +257,26 @@ func (s *S) TestCacheExpireBothDigestKinds(c *C) {
 	c.Assert(err, IsNil)
 	err = os.Chtimes(sha384Expired, now, expiredTime)
 	c.Assert(err, IsNil)
+	err = os.Chtimes(sha512Expired, now, expiredTime)
+	c.Assert(err, IsNil)
 
 	err = cc.Expire(time.Hour)
 	c.Assert(err, IsNil)
 
-	// Expired entries must be removed from both digest kind directories.
+	// Expired entries must be removed from all digest kind directories.
 	_, err = os.Stat(sha256Expired)
 	c.Assert(os.IsNotExist(err), Equals, true)
 	_, err = os.Stat(sha384Expired)
 	c.Assert(os.IsNotExist(err), Equals, true)
+	_, err = os.Stat(sha512Expired)
+	c.Assert(os.IsNotExist(err), Equals, true)
 
-	// Fresh entries must remain in both digest kind directories.
+	// Fresh entries must remain in all digest kind directories.
 	_, err = os.Stat(sha256Fresh)
 	c.Assert(err, IsNil)
 	_, err = os.Stat(sha384Fresh)
+	c.Assert(err, IsNil)
+	_, err = os.Stat(sha512Fresh)
 	c.Assert(err, IsNil)
 }
 
