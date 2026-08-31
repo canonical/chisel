@@ -2094,7 +2094,11 @@ func runSlicerTests(s *S, c *C, tests []slicerTest) {
 				Slice:   "manifest",
 			})
 
-			selection, err := setup.Select(release, testSlices, test.arch)
+			refs := make([]setup.SliceRef, len(testSlices))
+			for i, key := range testSlices {
+				refs[i] = setup.SliceRef{SliceKey: key}
+			}
+			selection, err := setup.Select(release, refs, test.arch)
 			c.Assert(err, IsNil)
 
 			archives := map[string]archive.Archive{}

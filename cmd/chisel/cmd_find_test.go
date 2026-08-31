@@ -14,6 +14,7 @@ type findTest struct {
 	release *setup.Release
 	query   []string
 	result  []*setup.Slice
+	err     string
 }
 
 func makeSamplePackage(pkg string, slices []string) *setup.Package {
@@ -123,6 +124,11 @@ var findTests = []findTest{{
 	release: sampleRelease,
 	query:   []string{"python", "slice"},
 	result:  []*setup.Slice{},
+}, {
+	summary: "Slices are not specific to a channel",
+	release: sampleRelease,
+	query:   []string{"python3.10_bins@3.0"},
+	err:     `invalid slice reference "python3.10_bins@3.0": slices are not specific to a channel`,
 }}
 
 func (s *ChiselSuite) TestFindSlices(c *C) {
@@ -131,6 +137,10 @@ func (s *ChiselSuite) TestFindSlices(c *C) {
 
 		for _, query := range testutil.Permutations(test.query) {
 			slices, err := chisel.FindSlices(test.release, query)
+			if test.err != "" {
+				c.Assert(err, ErrorMatches, test.err)
+				continue
+			}
 			c.Assert(err, IsNil)
 			c.Assert(slices, DeepEquals, test.result)
 		}

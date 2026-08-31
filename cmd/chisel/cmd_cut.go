@@ -20,6 +20,15 @@ to create a new filesystem tree in the root location.
 
 By default it fetches the slices for the same Ubuntu version as the
 current host, unless the --release flag is used.
+
+Slices are named <package>_<slice>. For packages coming from a store, a
+channel can be appended to select which one to fetch, as in
+mybin_myslice@2.0/edge. A channel is a <track>/<risk> value.
+
+The risk defaults to stable, so @2.0 and @2.0/stable are equivalent. When
+no channel is given at all, the default track of the package is used,
+again with the stable risk. Slices of the same package must all agree on
+the channel.
 `
 
 var cutDescs = map[string]string{
@@ -49,13 +58,13 @@ func (cmd *cmdCut) Execute(args []string) error {
 		return ErrExtraArgs
 	}
 
-	sliceKeys := make([]setup.SliceKey, len(cmd.Positional.SliceRefs))
+	sliceRefs := make([]setup.SliceRef, len(cmd.Positional.SliceRefs))
 	for i, sliceRef := range cmd.Positional.SliceRefs {
-		sliceKey, err := setup.ParseSliceKey(sliceRef)
+		ref, err := setup.ParseSliceRef(sliceRef)
 		if err != nil {
 			return err
 		}
-		sliceKeys[i] = sliceKey
+		sliceRefs[i] = ref
 	}
 
 	release, err := obtainRelease(cmd.Release)
@@ -73,7 +82,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 		}
 	}
 
-	selection, err := setup.Select(release, sliceKeys, cmd.Arch)
+	selection, err := setup.Select(release, sliceRefs, cmd.Arch)
 	if err != nil {
 		return err
 	}

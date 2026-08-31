@@ -50,6 +50,12 @@ func (cmd *infoCmd) Execute(args []string) error {
 		return err
 	}
 
+	for _, query := range cmd.Positional.Queries {
+		if strings.Contains(query, "@") {
+			return fmt.Errorf("invalid slice reference %q: slices are not specific to a channel", query)
+		}
+	}
+
 	packages, notFound := selectPackageSlices(release, cmd.Positional.Queries)
 
 	for i, pkg := range packages {

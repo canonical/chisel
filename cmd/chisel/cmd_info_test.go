@@ -140,6 +140,11 @@ var infoTests = []infoTest{{
 	input:   infoRelease,
 	query:   []string{"foo_bar_foo", "a_b", "7_c", "a_b c", "a_b x_y"},
 	err:     `no slice definitions found for: "foo_bar_foo", "a_b", "7_c", "a_b c", "a_b x_y"`,
+}, {
+	summary: "Slices are not specific to a channel",
+	input:   infoRelease,
+	query:   []string{"mypkg1_myslice1@3.0"},
+	err:     `invalid slice reference "mypkg1_myslice1@3.0": slices are not specific to a channel`,
 }}
 
 var infoRelease = map[string]string{

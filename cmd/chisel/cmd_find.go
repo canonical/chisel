@@ -89,6 +89,11 @@ func match(slice *setup.Slice, query string) bool {
 // findSlices returns slices from the provided release that match all of the
 // query strings (AND).
 func findSlices(release *setup.Release, query []string) (slices []*setup.Slice, err error) {
+	for _, term := range query {
+		if strings.Contains(term, "@") {
+			return nil, fmt.Errorf("invalid slice reference %q: slices are not specific to a channel", term)
+		}
+	}
 	slices = []*setup.Slice{}
 	for _, pkg := range release.Packages {
 		for _, slice := range pkg.Slices {
