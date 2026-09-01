@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"compress/gzip"
 	"crypto/sha256"
+	"crypto/sha512"
 	"fmt"
 	"path"
+	"slices"
 	"strings"
 
 	"golang.org/x/crypto/openpgp/clearsign"
@@ -58,11 +60,12 @@ func (gz *Gzip) Content() []byte {
 }
 
 type Package struct {
-	Name      string
-	Version   string
-	Arch      string
-	Component string
-	Data      []byte
+	Name        string
+	Version     string
+	Arch        string
+	Component   string
+	Data        []byte
+	DigestKinds []string
 }
 
 func (p *Package) Path() string {
@@ -75,6 +78,13 @@ func (p *Package) Walk(f func(Item) error) error {
 
 func (p *Package) Section() []byte {
 	content := p.Content()
+	digests := strings.Builder{}
+	for i, kind := range p.DigestKinds {
+		if i > 0 {
+			digests.WriteByte('\n')
+		}
+		fmt.Fprintf(&digests, "%s: %s", kind, makeDigest(kind, content))
+	}
 	section := fmt.Sprintf(string(testutil.Reindent(`
 		Package: %s
 		Architecture: %s
@@ -86,11 +96,11 @@ func (p *Package) Section() []byte {
 		Installed-Size: 10
 		Filename: %s
 		Size: %d
-		SHA256: %s
+		%s
 		Description: Description of %s
 		Task: minimal
 
-	`)), p.Name, p.Arch, p.Version, p.Path(), len(content), makeSha256(content), p.Name)
+	`)), p.Name, p.Arch, p.Version, p.Path(), len(content), digests.String(), p.Name)
 	return []byte(section)
 }
 
@@ -107,6 +117,10 @@ type Release struct {
 	Label   string
 	Items   []Item
 	PrivKey *packet.PrivateKey
+	// DigestKinds names the digest kinds published across this archive: the
+	// index table and every package it publishes. Callers must set it
+	// explicitly; an empty list publishes no digest sections at all.
+	DigestKinds []string
 	// ByHash enables the Acquire-By-Hash flag in the Release file
 	// and renders by-hash URLs alongside named paths.
 	ByHash bool
@@ -126,9 +140,12 @@ func (r *Release) Section() []byte {
 
 func (r *Release) Content() []byte {
 	digests := bytes.Buffer{}
-	for _, item := range r.Items {
-		content := item.Content()
-		fmt.Fprintf(&digests, " %s  %d  %s\n", makeSha256(content), len(content), item.Path())
+	for _, kind := range r.DigestKinds {
+		fmt.Fprintf(&digests, "%s:\n", kind)
+		for _, item := range r.Items {
+			content := item.Content()
+			fmt.Fprintf(&digests, " %s  %d  %s\n", makeDigest(kind, content), len(content), item.Path())
+		}
 	}
 	acquireByHash := ""
 	if r.ByHash {
@@ -144,8 +161,7 @@ func (r *Release) Content() []byte {
 		Architectures: amd64 arm64 armhf i386 ppc64el riscv64 s390x
 		Components: main restricted universe multiverse
 		Description: Ubuntu %s
-		%sSHA256:
-		%s
+		%s%s
 	`)), r.Label, r.Suite, r.Version, r.Version, acquireByHash, digests.String())
 
 	var buf bytes.Buffer
@@ -165,6 +181,7 @@ func (r *Release) Content() []byte {
 }
 
 func (r *Release) Render(prefix string, content map[string][]byte) error {
+	byHashKind := strongestKind(r.DigestKinds)
 	return r.Walk(func(item Item) error {
 		itemPath := item.Path()
 		itemContent := item.Content()
@@ -174,8 +191,13 @@ func (r *Release) Render(prefix string, content map[string][]byte) error {
 		}
 		distItemPath := path.Join(prefix, "dists", r.Suite, itemPath)
 		content[distItemPath] = itemContent
-		if r.ByHash && itemPath != r.Path() {
-			byHashPath := path.Join(prefix, "dists", r.Suite, path.Dir(itemPath), "by-hash", "SHA256", makeSha256(itemContent))
+		// Archives only guarantee a by-hash directory for the strongest
+		// hash they advertise, though they may publish more. Render the
+		// guaranteed one only, so tests catch clients building by-hash
+		// URLs from a weaker hash; tests wanting extra directories add
+		// them on top of the rendered content.
+		if r.ByHash && itemPath != r.Path() && byHashKind != "" {
+			byHashPath := path.Join(prefix, "dists", r.Suite, path.Dir(itemPath), "by-hash", byHashKind, makeDigest(byHashKind, itemContent))
 			content[byHashPath] = itemContent
 		}
 		return nil
@@ -212,8 +234,28 @@ func (pi *PackageIndex) Content() []byte {
 	return MergeSections(pi.Packages)
 }
 
-func makeSha256(b []byte) string {
-	return fmt.Sprintf("%x", sha256.Sum256(b))
+// digestKinds lists the digest kinds this package can render, strongest first.
+var digestKinds = []string{"SHA512", "SHA256"}
+
+// strongestKind returns the strongest of kinds, or "" if kinds holds none of
+// digestKinds.
+func strongestKind(kinds []string) string {
+	for _, kind := range digestKinds {
+		if slices.Contains(kinds, kind) {
+			return kind
+		}
+	}
+	return ""
+}
+
+func makeDigest(kind string, b []byte) string {
+	switch kind {
+	case "SHA512":
+		return fmt.Sprintf("%x", sha512.Sum512(b))
+	case "SHA256":
+		return fmt.Sprintf("%x", sha256.Sum256(b))
+	}
+	panic("unknown digest kind: " + kind)
 }
 
 func MakeGzip(b []byte) []byte {

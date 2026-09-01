@@ -2,6 +2,7 @@ package cache
 
 import (
 	"crypto/sha256"
+	"crypto/sha512"
 	"encoding/hex"
 	"fmt"
 	"hash"
@@ -96,9 +97,10 @@ type DigestKind string
 const (
 	SHA256 DigestKind = "sha256"
 	SHA384 DigestKind = "sha384"
+	SHA512 DigestKind = "sha512"
 )
 
-var digestKinds = []DigestKind{SHA256, SHA384}
+var digestKinds = []DigestKind{SHA256, SHA384, SHA512}
 
 var ErrMiss = fmt.Errorf("not cached")
 
@@ -117,6 +119,8 @@ func (c *Cache) Create(digestKind DigestKind, digest string) *Writer {
 		h = sha256.New()
 	case SHA384:
 		h = sha3.New384()
+	case SHA512:
+		h = sha512.New()
 	default:
 		return &Writer{err: fmt.Errorf("internal error: unsupported digest kind: %q", digestKind)}
 	}

@@ -85,7 +85,7 @@ jobs:
         run: |
           while ! `snapcraft status ${{ env.SNAP_NAME }} --track ${{ env.TRACK }} --arch ${{ matrix.arch }} \
               | grep "${{ env.DEFAULT_RISK }}" \
-              | awk -F' ' '{print $2}' \
+              | awk -F' ' '{print $4}' \
               | grep -Fxq "${{ needs.test.outputs.chisel-version }}"`; do
             echo "[${{ matrix.arch }}] Waiting for ${{ needs.test.outputs.chisel-version }} \
               to be released to ${{ env.TRACK }}/${{ env.DEFAULT_RISK }}..."
