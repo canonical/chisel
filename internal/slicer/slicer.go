@@ -20,11 +20,10 @@ import (
 	"github.com/canonical/chisel/internal/manifestutil"
 	"github.com/canonical/chisel/internal/scripts"
 	"github.com/canonical/chisel/internal/setup"
-	"github.com/canonical/chisel/internal/source"
 	"github.com/canonical/chisel/internal/tarball"
 )
 
-const manifestMode fs.FileMode = 0644
+const manifestMode fs.FileMode = 0o644
 
 type RunOptions struct {
 	Selection *setup.Selection
@@ -91,7 +90,7 @@ func Run(options *RunOptions) error {
 		targetDir = filepath.Join(dir, targetDir)
 	}
 
-	pkgSources, err := source.Resolve(options.Archives, options.Selection)
+	pkgFetchers, err := resolveFetchers(options.Archives, options.Selection)
 	if err != nil {
 		return err
 	}
@@ -109,7 +108,7 @@ func Run(options *RunOptions) error {
 			extractPackage = make(map[string][]tarball.ExtractInfo)
 			extract[slice.Package] = extractPackage
 		}
-		arch := pkgSources[slice.Package].Arch()
+		arch := pkgFetchers[slice.Package].Arch()
 		for targetPath, pathInfo := range slice.Contents {
 			if targetPath == "" {
 				continue
@@ -154,7 +153,7 @@ func Run(options *RunOptions) error {
 			continue
 		}
 		pkg := options.Selection.Release.Packages[slice.Package]
-		reader, info, err := pkgSources[pkg.Name].Fetch()
+		reader, info, err := pkgFetchers[pkg.Name].Fetch()
 		if err != nil {
 			return err
 		}
@@ -271,7 +270,7 @@ func Run(options *RunOptions) error {
 	// them to the appropriate slices.
 	relPaths := map[string][]*setup.Slice{}
 	for _, slice := range options.Selection.Slices {
-		arch := pkgSources[slice.Package].Arch()
+		arch := pkgFetchers[slice.Package].Arch()
 		for relPath, pathInfo := range slice.Contents {
 			if len(pathInfo.Arch) > 0 && !slices.Contains(pathInfo.Arch, arch) {
 				continue

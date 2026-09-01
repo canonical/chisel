@@ -1,4 +1,4 @@
-package source_test
+package slicer_test
 
 import (
 	"os"
@@ -9,13 +9,13 @@ import (
 
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/setup"
-	"github.com/canonical/chisel/internal/source"
+	"github.com/canonical/chisel/internal/slicer"
 	"github.com/canonical/chisel/internal/testutil"
 )
 
-var testKey = testutil.PGPKeys["key1"]
+var fetchTestKey = testutil.PGPKeys["key1"]
 
-type sourceTest struct {
+type fetchTest struct {
 	summary     string
 	arch        string
 	release     map[string]string
@@ -26,7 +26,7 @@ type sourceTest struct {
 	error       string
 }
 
-var sourceTests = []sourceTest{{
+var fetchTests = []fetchTest{{
 	summary: "Highest priority archive is selected",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
@@ -35,7 +35,7 @@ var sourceTests = []sourceTest{{
 		Version: "v1",
 		Arch:    "amd64",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Reg(0644, "./file", "from foo"),
+			testutil.Reg(0o644, "./file", "from foo"),
 		}),
 		Archives: []string{"foo"},
 	}},
@@ -60,7 +60,7 @@ var sourceTests = []sourceTest{{
 		Version: "v1",
 		Arch:    "amd64",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Reg(0644, "./file", "from foo"),
+			testutil.Reg(0o644, "./file", "from foo"),
 		}),
 		Archives: []string{"foo"},
 	}, {
@@ -69,7 +69,7 @@ var sourceTests = []sourceTest{{
 		Version: "v2",
 		Arch:    "amd64",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Reg(0644, "./file", "from bar"),
+			testutil.Reg(0o644, "./file", "from bar"),
 		}),
 		Archives: []string{"bar"},
 	}},
@@ -95,7 +95,7 @@ var sourceTests = []sourceTest{{
 		Version: "v1",
 		Arch:    "amd64",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Reg(0644, "./file", "from foo"),
+			testutil.Reg(0o644, "./file", "from foo"),
 		}),
 		Archives: []string{"foo"},
 	}},
@@ -134,7 +134,7 @@ var sourceTests = []sourceTest{{
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Reg(0644, "./file", "from foo"),
+			testutil.Reg(0o644, "./file", "from foo"),
 		}),
 		Archives: []string{"foo"},
 	}},
@@ -154,8 +154,8 @@ var sourceTests = []sourceTest{{
 					public-keys: [test-key]
 			public-keys:
 				test-key:
-					id: ` + testKey.ID + `
-					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+					id: ` + fetchTestKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(fetchTestKey.PubKeyArmor, "\t\t\t\t\t\t") + `
 		`,
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -194,8 +194,8 @@ var sourceTests = []sourceTest{{
 	},
 }}
 
-func (s *S) TestResolve(c *C) {
-	for _, test := range sourceTests {
+func (s *S) TestResolveFetchers(c *C) {
+	for _, test := range fetchTests {
 		c.Logf("Summary: %s", test.summary)
 
 		if _, ok := test.release["chisel.yaml"]; !ok {
@@ -222,9 +222,9 @@ func (s *S) TestResolve(c *C) {
 		releaseDir := c.MkDir()
 		for path, data := range test.release {
 			fpath := filepath.Join(releaseDir, path)
-			err := os.MkdirAll(filepath.Dir(fpath), 0755)
+			err := os.MkdirAll(filepath.Dir(fpath), 0o755)
 			c.Assert(err, IsNil)
-			err = os.WriteFile(fpath, testutil.Reindent(data), 0644)
+			err = os.WriteFile(fpath, testutil.Reindent(data), 0o644)
 			c.Assert(err, IsNil)
 		}
 
@@ -242,7 +242,7 @@ func (s *S) TestResolve(c *C) {
 					pkgs[pkg.Name] = pkg
 				}
 			}
-			archive := &testutil.TestArchive{
+			arc := &testutil.TestArchive{
 				Opts: archive.Options{
 					Label:      setupArchive.Name,
 					Version:    setupArchive.Version,
@@ -253,10 +253,10 @@ func (s *S) TestResolve(c *C) {
 				},
 				Packages: pkgs,
 			}
-			archives[name] = archive
+			archives[name] = arc
 		}
 
-		sources, err := source.Resolve(archives, selection)
+		fetchers, err := slicer.ResolveFetchers(archives, selection)
 		if test.error != "" {
 			c.Assert(err, ErrorMatches, test.error)
 			continue
@@ -264,11 +264,11 @@ func (s *S) TestResolve(c *C) {
 		c.Assert(err, IsNil)
 
 		for pkgName, arch := range test.archs {
-			c.Assert(sources[pkgName].Arch(), Equals, arch)
+			c.Assert(fetchers[pkgName].Arch(), Equals, arch)
 		}
 
 		for pkgName, fetchErr := range test.fetchErrors {
-			_, _, err := sources[pkgName].Fetch()
+			_, _, err := fetchers[pkgName].Fetch()
 			c.Assert(err, ErrorMatches, fetchErr)
 		}
 	}
