@@ -18,14 +18,13 @@ import (
 	"github.com/canonical/chisel/internal/strdist"
 )
 
-// OpenTarFunc opens the uncompressed tar stream carried by a package, hiding
-// the package format from Extract. An implementation may unwrap a container
-// before decompressing (see deb.OpenTar) or decompress the package itself (see
-// OpenXZ).
+// OpenTarFunc returns a reader over the uncompressed tar stream contained in
+// its input, hiding the container and compression details from Extract. An
+// implementation may unwrap a container before decompressing (see deb.OpenTar)
+// or decompress the input directly (see OpenXZ).
 type OpenTarFunc func(pkgReader io.Reader) (io.ReadCloser, error)
 
-// OpenXZ opens a package which is a plain XZ-compressed tarball, such as a
-// bin package.
+// OpenXZ opens a plain XZ-compressed tarball.
 func OpenXZ(pkgReader io.Reader) (io.ReadCloser, error) {
 	xzReader, err := xz.NewReader(pkgReader)
 	if err != nil {
@@ -138,8 +137,8 @@ func extractData(pkgReader io.ReadSeeker, openTar OpenTarFunc, options *ExtractO
 	// create them with the permissions defined in the tarball.
 	//
 	// The assumption is that the tar entries of the parent directories appear
-	// before the entry for the file itself. This is the case for .deb files but
-	// not for all tarballs.
+	// before the entry for the file itself. This is the case for the tarballs
+	// produced by common packaging tools but not for all tarballs.
 	tarDirMode := make(map[string]fs.FileMode)
 	tarReader := tar.NewReader(dataReader)
 	for {
@@ -382,7 +381,7 @@ func extractHardLinks(pkgReader io.ReadSeeker, openTar OpenTarFunc, opts *extrac
 	}
 
 	// If there are pending links, that means the link targets do not come from
-	// this package.
+	// this tarball.
 	if len(opts.pendingLinks) > 0 {
 		var targets []string
 		for target := range opts.pendingLinks {
