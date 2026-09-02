@@ -126,13 +126,13 @@ func (s *S) TestManifestRead(c *C) {
 
 		tmpDir := c.MkDir()
 		manifestPath := path.Join(tmpDir, "manifest.wall")
-		w, err := os.OpenFile(manifestPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
+		w, err := os.OpenFile(manifestPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 		c.Assert(err, IsNil)
 		_, err = w.Write([]byte(test.input))
 		c.Assert(err, IsNil)
 		w.Close()
 
-		r, err := os.OpenFile(manifestPath, os.O_RDONLY, 0o644)
+		r, err := os.OpenFile(manifestPath, os.O_RDONLY, 0644)
 		c.Assert(err, IsNil)
 		defer r.Close()
 
