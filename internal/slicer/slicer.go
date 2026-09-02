@@ -23,7 +23,7 @@ import (
 	"github.com/canonical/chisel/internal/tarball"
 )
 
-const manifestMode fs.FileMode = 0o644
+const manifestMode fs.FileMode = 0644
 
 type RunOptions struct {
 	Selection *setup.Selection

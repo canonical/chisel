@@ -936,7 +936,7 @@ var slicerTests = []slicerTest{{
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Reg(0o644, "./file", "from foo"),
+			testutil.Reg(0644, "./file", "from foo"),
 		}),
 		Archives: []string{"foo"},
 	}},
@@ -975,7 +975,7 @@ var slicerTests = []slicerTest{{
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Reg(0o644, "./file", "from foo"),
+			testutil.Reg(0644, "./file", "from foo"),
 		}),
 		Archives: []string{"foo"},
 	}},
