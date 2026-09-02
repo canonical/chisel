@@ -138,23 +138,20 @@ func (s *S) TestManifestRead(c *C) {
 		defer r.Close()
 
 		mfest, err := manifest.Read(r)
-		if err != nil {
-			// Reading itself may fail (e.g. on an unknown schema version).
-			c.Assert(test.error, Not(Equals), "", Commentf("unexpected error: %s", err))
-			c.Assert(err, ErrorMatches, test.error)
-			continue
-		}
-		if test.mfest != nil {
-			c.Assert(apachetestutil.DumpManifestContents(c, mfest), DeepEquals, test.mfest)
-		}
-		if test.error != "" {
+		if err == nil {
 			// Entry-level errors surface while iterating, as the manifest
 			// is not fully decoded on read.
-			err := mfest.IteratePackages(func(pkg *manifest.Package) error {
+			err = mfest.IteratePackages(func(pkg *manifest.Package) error {
 				return nil
 			})
+		}
+		if test.error != "" {
 			c.Assert(err, ErrorMatches, test.error)
 			continue
+		}
+		c.Assert(err, IsNil)
+		if test.mfest != nil {
+			c.Assert(apachetestutil.DumpManifestContents(c, mfest), DeepEquals, test.mfest)
 		}
 	}
 }
