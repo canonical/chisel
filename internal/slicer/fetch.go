@@ -51,13 +51,13 @@ func (b *binFetcher) Fetch() (io.ReadSeekCloser, manifestutil.PackageInfo, error
 	return nil, nil, fmt.Errorf("cannot fetch package %q from store %q: not implemented", b.name, b.store)
 }
 
-// resolveFetchers determines the fetcher for each package in the selection.
+// selectPkgFetchers determines the fetcher for each package in the selection.
 // For packages from an archive it selects the highest priority archive
 // containing the package unless a particular archive is pinned within the
 // slice definition file. For packages from a store it selects the store
 // named in the slice definition file. It returns a map of Fetcher indexed
 // by package names.
-func resolveFetchers(archives map[string]archive.Archive, selection *setup.Selection) (map[string]Fetcher, error) {
+func selectPkgFetchers(archives map[string]archive.Archive, selection *setup.Selection) (map[string]Fetcher, error) {
 	sortedArchives := make([]*setup.Archive, 0, len(selection.Release.Archives))
 	for _, archive := range selection.Release.Archives {
 		if archive.Priority < 0 {

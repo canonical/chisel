@@ -90,7 +90,7 @@ func Run(options *RunOptions) error {
 		targetDir = filepath.Join(dir, targetDir)
 	}
 
-	pkgFetchers, err := resolveFetchers(options.Archives, options.Selection)
+	pkgFetchers, err := selectPkgFetchers(options.Archives, options.Selection)
 	if err != nil {
 		return err
 	}

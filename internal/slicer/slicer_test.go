@@ -931,6 +931,82 @@ var slicerTests = []slicerTest{{
 		"test-package": "test-package v2 a2 h2",
 	},
 }, {
+	summary: "Pinned archive does not have the package",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	pkgs: []*testutil.TestPackage{{
+		Name: "test-package",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Reg(0o644, "./file", "from foo"),
+		}),
+		Archives: []string{"foo"},
+	}},
+	release: map[string]string{
+		"chisel.yaml": testutil.DefaultChiselYamlTwoArchives,
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			archive: bar
+			slices:
+				myslice:
+					contents:
+						/file:
+		`,
+	},
+	// Although archive "foo" does have the package, since archive "bar" has
+	// been pinned in the slice definition, no other archives will be checked.
+	error: `cannot find package "test-package" in archive\(s\)`,
+}, {
+	summary: "No archives have the package",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	pkgs:    []*testutil.TestPackage{},
+	release: map[string]string{
+		"chisel.yaml": testutil.DefaultChiselYamlTwoArchives,
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/file:
+		`,
+	},
+	error: `cannot find package "test-package" in archive\(s\)`,
+}, {
+	summary: "Negative priority archives are ignored when not explicitly pinned in package",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	pkgs: []*testutil.TestPackage{{
+		Name: "test-package",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Reg(0o644, "./file", "from foo"),
+		}),
+		Archives: []string{"foo"},
+	}},
+	release: map[string]string{
+		"chisel.yaml": `
+			format: v1
+			maintenance:
+				standard: 2025-01-01
+				end-of-life: 2100-01-01
+			archives:
+				foo:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					priority: -20
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/file:
+		`,
+	},
+	error: `cannot find package "test-package" in archive\(s\)`,
+}, {
 	summary: "Negative priority archive explicitly pinned in package",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
@@ -1858,6 +1934,30 @@ var slicerTests = []slicerTest{{
 	manifestPaths: map[string]string{
 		"/dir/file": "file 0644 cc55e2ec {test-package_third}",
 	},
+}, {
+	summary: "Store package fetching not yet implemented",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}, {"bin-store-pkg", "myslice"}},
+	arch:    "amd64",
+	release: map[string]string{
+		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/dir/file:
+		`,
+		"slices/mydir/store-pkg.yaml": `
+			package: store-pkg
+			store: bin
+			default-track: 3.1
+			slices:
+				myslice:
+					contents:
+						/dir/store-file:
+		`,
+	},
+	error: `cannot fetch package "bin-store-pkg" from store "bin": not implemented`,
 }}
 
 func (s *S) TestRun(c *C) {
