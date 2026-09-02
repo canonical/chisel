@@ -46,7 +46,9 @@ func (p *Package) MarshalJSON() ([]byte, error) {
 	}
 	switch p.DigestKind {
 	case "":
-		// No digest recorded.
+		if p.Digest != "" {
+			return nil, fmt.Errorf("cannot marshal package %q: digest set without a digest kind", p.Name)
+		}
 	case "sha256":
 		pj.SHA256 = p.Digest
 	case "sha384":

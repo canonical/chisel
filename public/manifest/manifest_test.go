@@ -3,6 +3,7 @@
 package manifest_test
 
 import (
+	"encoding/json"
 	"os"
 	"path"
 	"slices"
@@ -155,5 +156,77 @@ func (s *S) TestManifestRead(c *C) {
 			c.Assert(err, ErrorMatches, test.error)
 			continue
 		}
+	}
+}
+
+var marshalPackageTests = []struct {
+	summary  string
+	pkg      *manifest.Package
+	expected string
+	error    string
+}{{
+	summary: "SHA256 digest",
+	pkg: &manifest.Package{
+		Kind:       "package",
+		Name:       "pkg1",
+		Version:    "v1",
+		Digest:     "hash1",
+		DigestKind: "sha256",
+		Arch:       "arch1",
+	},
+	expected: `{"kind":"package","name":"pkg1","version":"v1","sha256":"hash1","arch":"arch1"}`,
+}, {
+	summary: "SHA512 digest",
+	pkg: &manifest.Package{
+		Kind:       "package",
+		Name:       "pkg1",
+		Version:    "v1",
+		Digest:     "hash1",
+		DigestKind: "sha512",
+		Arch:       "arch1",
+	},
+	expected: `{"kind":"package","name":"pkg1","version":"v1","sha512":"hash1","arch":"arch1"}`,
+}, {
+	summary: "No digest recorded",
+	pkg: &manifest.Package{
+		Kind:    "package",
+		Name:    "pkg1",
+		Version: "v1",
+		Arch:    "arch1",
+	},
+	expected: `{"kind":"package","name":"pkg1","version":"v1","arch":"arch1"}`,
+}, {
+	summary: "Digest set without a digest kind",
+	pkg: &manifest.Package{
+		Kind:    "package",
+		Name:    "pkg1",
+		Version: "v1",
+		Digest:  "hash1",
+		Arch:    "arch1",
+	},
+	error: `json: error calling MarshalJSON for type \*manifest\.Package: cannot marshal package "pkg1": digest set without a digest kind`,
+}, {
+	summary: "Unsupported digest kind",
+	pkg: &manifest.Package{
+		Kind:       "package",
+		Name:       "pkg1",
+		Version:    "v1",
+		Digest:     "hash1",
+		DigestKind: "md5",
+		Arch:       "arch1",
+	},
+	error: `json: error calling MarshalJSON for type \*manifest\.Package: cannot marshal package "pkg1": unsupported digest kind "md5"`,
+}}
+
+func (s *S) TestMarshalPackage(c *C) {
+	for _, test := range marshalPackageTests {
+		c.Logf("Summary: %s", test.summary)
+		data, err := json.Marshal(test.pkg)
+		if test.error != "" {
+			c.Assert(err, ErrorMatches, test.error)
+			continue
+		}
+		c.Assert(err, IsNil)
+		c.Assert(string(data), Equals, test.expected)
 	}
 }
