@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"golang.org/x/crypto/sha3"
@@ -101,6 +102,15 @@ const (
 )
 
 var digestKinds = []DigestKind{SHA256, SHA384, SHA512}
+
+// ValidateKind returns an error unless kind is a digest kind Chisel
+// supports.
+func ValidateKind(kind DigestKind) error {
+	if !slices.Contains(digestKinds, kind) {
+		return fmt.Errorf("unsupported digest kind: %q", kind)
+	}
+	return nil
+}
 
 var ErrMiss = fmt.Errorf("not cached")
 

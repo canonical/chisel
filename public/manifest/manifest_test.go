@@ -52,8 +52,8 @@ var readManifestTests = []struct {
 			{Kind: "path", Path: "/manifest/manifest.wall", Mode: "0644", Slices: []string{"pkg1_manifest"}, SHA256: "", FinalSHA256: "", Size: 0x0, Link: ""},
 		},
 		Packages: []*manifest.Package{
-			{Kind: "package", Name: "pkg1", Version: "v1", Digest: "hash1", Arch: "arch1"},
-			{Kind: "package", Name: "pkg2", Version: "v2", Digest: "hash2", Arch: "arch2"},
+			{Kind: "package", Name: "pkg1", Version: "v1", Digest: "hash1", DigestKind: "sha256", Arch: "arch1"},
+			{Kind: "package", Name: "pkg2", Version: "v2", Digest: "hash2", DigestKind: "sha256", Arch: "arch2"},
 		},
 		Slices: []*manifest.Slice{
 			{Kind: "slice", Name: "pkg1_manifest"},
@@ -70,6 +70,35 @@ var readManifestTests = []struct {
 			{Kind: "content", Slice: "pkg2_myotherslice", Path: "/dir/foo/bar/"},
 		},
 	},
+}, {
+	summary: "SHA512 package digest",
+	input: `
+		{"jsonwall":"1.0","schema":"1.0","count":1}
+		{"kind":"package","name":"pkg1","version":"v1","sha512":"hash1","arch":"arch1"}
+	`,
+	mfest: &apachetestutil.ManifestContents{
+		Packages: []*manifest.Package{
+			{Kind: "package", Name: "pkg1", Version: "v1", Digest: "hash1", DigestKind: "sha512", Arch: "arch1"},
+		},
+	},
+}, {
+	summary: "SHA384 package digest",
+	input: `
+		{"jsonwall":"1.0","schema":"1.0","count":1}
+		{"kind":"package","name":"pkg1","version":"v1","sha384":"hash1","arch":"arch1"}
+	`,
+	mfest: &apachetestutil.ManifestContents{
+		Packages: []*manifest.Package{
+			{Kind: "package", Name: "pkg1", Version: "v1", Digest: "hash1", DigestKind: "sha384", Arch: "arch1"},
+		},
+	},
+}, {
+	summary: "Multiple digests recorded",
+	input: `
+		{"jsonwall":"1.0","schema":"1.0","count":1}
+		{"kind":"package","name":"pkg1","version":"v1","sha256":"hash1","sha512":"hash2","arch":"arch1"}
+	`,
+	error: `cannot read manifest: package "pkg1" has multiple digests recorded`,
 }, {
 	summary: "Unknown schema",
 	input: `
@@ -97,24 +126,34 @@ func (s *S) TestManifestRead(c *C) {
 
 		tmpDir := c.MkDir()
 		manifestPath := path.Join(tmpDir, "manifest.wall")
-		w, err := os.OpenFile(manifestPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+		w, err := os.OpenFile(manifestPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
 		c.Assert(err, IsNil)
 		_, err = w.Write([]byte(test.input))
 		c.Assert(err, IsNil)
 		w.Close()
 
-		r, err := os.OpenFile(manifestPath, os.O_RDONLY, 0644)
+		r, err := os.OpenFile(manifestPath, os.O_RDONLY, 0o644)
 		c.Assert(err, IsNil)
 		defer r.Close()
 
 		mfest, err := manifest.Read(r)
-		if test.error != "" {
+		if err != nil {
+			// Reading itself may fail (e.g. on an unknown schema version).
+			c.Assert(test.error, Not(Equals), "", Commentf("unexpected error: %s", err))
 			c.Assert(err, ErrorMatches, test.error)
 			continue
 		}
-		c.Assert(err, IsNil)
 		if test.mfest != nil {
 			c.Assert(apachetestutil.DumpManifestContents(c, mfest), DeepEquals, test.mfest)
+		}
+		if test.error != "" {
+			// Entry-level errors surface while iterating, as the manifest
+			// is not fully decoded on read.
+			err := mfest.IteratePackages(func(pkg *manifest.Package) error {
+				return nil
+			})
+			c.Assert(err, ErrorMatches, test.error)
+			continue
 		}
 	}
 }

@@ -26,18 +26,19 @@ type Archive interface {
 }
 
 type PackageInfo struct {
-	Name    string
-	Version string
-	Arch    string
-	SHA256  string
+	Name       string
+	Version    string
+	Arch       string
+	Digest     string
+	DigestKind cache.DigestKind
 }
 
 func (p *PackageInfo) PkgName() string                 { return p.Name }
 func (p *PackageInfo) PkgVersion() string              { return p.Version }
 func (p *PackageInfo) PkgRevision() int                { return 0 }
 func (p *PackageInfo) PkgArch() string                 { return p.Arch }
-func (p *PackageInfo) PkgDigestKind() cache.DigestKind { return cache.SHA256 }
-func (p *PackageInfo) PkgDigest() string               { return p.SHA256 }
+func (p *PackageInfo) PkgDigestKind() cache.DigestKind { return p.DigestKind }
+func (p *PackageInfo) PkgDigest() string               { return p.Digest }
 
 type Options struct {
 	Label      string
@@ -152,7 +153,7 @@ func (a *ubuntuArchive) Fetch(pkg string) (io.ReadSeekCloser, *PackageInfo, erro
 	if err != nil {
 		return nil, nil, err
 	}
-	info := sectionPackageInfo(section)
+	info := sectionPackageInfo(section, digest, digestKind)
 	return reader, info, nil
 }
 
@@ -161,7 +162,8 @@ func (a *ubuntuArchive) Info(pkg string) (*PackageInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	info := sectionPackageInfo(section)
+	digest, digestKind := packageDigest(section)
+	info := sectionPackageInfo(section, digest, digestKind)
 	return info, nil
 }
 
@@ -516,12 +518,13 @@ func (index *ubuntuIndex) fetch(path, digest string, digestKind cache.DigestKind
 	return index.archive.cache.Open(digestKind, writer.Digest())
 }
 
-func sectionPackageInfo(section control.Section) *PackageInfo {
+func sectionPackageInfo(section control.Section, digest string, digestKind cache.DigestKind) *PackageInfo {
 	return &PackageInfo{
-		Name:    section.Get("Package"),
-		Version: section.Get("Version"),
-		Arch:    section.Get("Architecture"),
-		SHA256:  section.Get("SHA256"),
+		Name:       section.Get("Package"),
+		Version:    section.Get("Version"),
+		Arch:       section.Get("Architecture"),
+		Digest:     digest,
+		DigestKind: digestKind,
 	}
 }
 

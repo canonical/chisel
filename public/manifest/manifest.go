@@ -3,6 +3,7 @@
 package manifest
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 
@@ -11,12 +12,97 @@ import (
 
 const Schema = "1.0"
 
+// Package describes a package installed in the target filesystem. DigestKind
+// names the algorithm used to compute Digest, and is one of "sha256", "sha384"
+// or "sha512", or empty when no digest is recorded. In the manifest the digest
+// is recorded under the JSON field named after its kind, so that it always
+// holds the same position in the entry regardless of the algorithm used.
 type Package struct {
+	Kind       string
+	Name       string
+	Version    string
+	Digest     string
+	DigestKind string
+	Arch       string
+}
+
+// packageJSON is the JSON encoding of a Package, with the digest recorded
+// under the field named after its kind. At most one of the digest fields may
+// be set.
+type packageJSON struct {
 	Kind    string `json:"kind"`
 	Name    string `json:"name,omitempty"`
 	Version string `json:"version,omitempty"`
-	Digest  string `json:"sha256,omitempty"`
+	SHA256  string `json:"sha256,omitempty"`
+	SHA384  string `json:"sha384,omitempty"`
+	SHA512  string `json:"sha512,omitempty"`
 	Arch    string `json:"arch,omitempty"`
+}
+
+func (p *Package) MarshalJSON() ([]byte, error) {
+	pj := packageJSON{
+		Kind:    p.Kind,
+		Name:    p.Name,
+		Version: p.Version,
+		Arch:    p.Arch,
+	}
+	switch p.DigestKind {
+	case "":
+		// No digest recorded.
+	case "sha256":
+		pj.SHA256 = p.Digest
+	case "sha384":
+		pj.SHA384 = p.Digest
+	case "sha512":
+		pj.SHA512 = p.Digest
+	default:
+		return nil, fmt.Errorf("cannot marshal package %q: unsupported digest kind %q", p.Name, p.DigestKind)
+	}
+	return json.Marshal(pj)
+}
+
+func (p *Package) UnmarshalJSON(data []byte) error {
+	var pj packageJSON
+	err := json.Unmarshal(data, &pj)
+	if err != nil {
+		return err
+	}
+	digest, kind, err := pj.digest()
+	if err != nil {
+		return err
+	}
+	*p = Package{
+		Kind:       pj.Kind,
+		Name:       pj.Name,
+		Version:    pj.Version,
+		Digest:     digest,
+		DigestKind: kind,
+		Arch:       pj.Arch,
+	}
+	return nil
+}
+
+// digest returns the package digest and its kind, as recorded in the wire
+// representation. At most one digest field may be set.
+func (pj *packageJSON) digest() (digest, kind string, err error) {
+	set := 0
+	for _, entry := range []struct {
+		kind   string
+		digest string
+	}{
+		{"sha256", pj.SHA256},
+		{"sha384", pj.SHA384},
+		{"sha512", pj.SHA512},
+	} {
+		if entry.digest != "" {
+			set++
+			digest, kind = entry.digest, entry.kind
+		}
+	}
+	if set > 1 {
+		return "", "", fmt.Errorf("package %q has multiple digests recorded", pj.Name)
+	}
+	return digest, kind, nil
 }
 
 type Slice struct {
