@@ -12,16 +12,14 @@ import (
 
 const Schema = "1.0"
 
-// Package describes a package installed in the target filesystem. DigestKind
-// names the algorithm used to compute Digest, and is one of "sha256", "sha384"
-// or "sha512", or empty when no digest is recorded. In the manifest the digest
-// is recorded under the JSON field named after its kind, so that it always
-// holds the same position in the entry regardless of the algorithm used.
+// Package describes a package installed in the target filesystem.
 type Package struct {
-	Kind       string
-	Name       string
-	Version    string
-	Digest     string
+	Kind    string
+	Name    string
+	Version string
+	Digest  string
+	// DigestKind is the algorithm used to compute Digest, and is empty when
+	// no digest is recorded.
 	DigestKind string
 	Arch       string
 }

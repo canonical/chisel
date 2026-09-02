@@ -299,7 +299,7 @@ func Validate(mfest *manifest.Manifest) (err error) {
 
 	pkgExist := map[string]bool{}
 	err = mfest.IteratePackages(func(pkg *manifest.Package) error {
-		// Same rules as validatePackage applies on the write side.
+		// Same rules as validatePackage apply on the write side.
 		name := pkg.Name
 		if name == "" {
 			return fmt.Errorf("package name not set")
