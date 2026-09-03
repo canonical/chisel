@@ -54,8 +54,8 @@ func (b *binFetcher) Fetch() (io.ReadSeekCloser, manifestutil.PackageInfo, error
 // selectPkgFetchers determines the fetcher for each package in the selection.
 // For packages from an archive it selects the highest priority archive
 // containing the package unless a particular archive is pinned within the
-// slice definition file. For packages from a store it selects the store
-// named in the slice definition file. It returns a map of Fetcher indexed
+// package slices file. For packages from a store it selects the store
+// named in the package slices file. It returns a map of Fetcher indexed
 // by package names.
 func selectPkgFetchers(archives map[string]archive.Archive, selection *setup.Selection) (map[string]Fetcher, error) {
 	sortedArchives := make([]*setup.Archive, 0, len(selection.Release.Archives))
