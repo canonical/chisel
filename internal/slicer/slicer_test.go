@@ -941,7 +941,29 @@ var slicerTests = []slicerTest{{
 		Archives: []string{"foo"},
 	}},
 	release: map[string]string{
-		"chisel.yaml": testutil.DefaultChiselYamlTwoArchives,
+		"chisel.yaml": `
+			format: v1
+			maintenance:
+				standard: 2025-01-01
+				end-of-life: 2100-01-01
+			archives:
+				foo:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					priority: 20
+					public-keys: [test-key]
+				bar:
+					version: 22.04
+					components: [main]
+					suites: [jammy]
+					priority: 10
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
 		"slices/mydir/test-package.yaml": `
 			package: test-package
 			archive: bar
@@ -959,7 +981,29 @@ var slicerTests = []slicerTest{{
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
 	pkgs:    []*testutil.TestPackage{},
 	release: map[string]string{
-		"chisel.yaml": testutil.DefaultChiselYamlTwoArchives,
+		"chisel.yaml": `
+			format: v1
+			maintenance:
+				standard: 2025-01-01
+				end-of-life: 2100-01-01
+			archives:
+				foo:
+					version: 22.04
+					components: [main, universe]
+					suites: [jammy]
+					priority: 20
+					public-keys: [test-key]
+				bar:
+					version: 22.04
+					components: [main]
+					suites: [jammy]
+					priority: 10
+					public-keys: [test-key]
+			public-keys:
+				test-key:
+					id: ` + testKey.ID + `
+					armor: |` + "\n" + testutil.PrefixEachLine(testKey.PubKeyArmor, "\t\t\t\t\t\t") + `
+		`,
 		"slices/mydir/test-package.yaml": `
 			package: test-package
 			slices:
