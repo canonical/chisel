@@ -4,6 +4,8 @@ import (
 	"golang.org/x/crypto/openpgp/packet"
 	. "gopkg.in/check.v1"
 
+	"crypto/sha256"
+	"crypto/sha512"
 	"debug/elf"
 	"errors"
 	"flag"
@@ -125,15 +127,16 @@ func (s *httpSuite) TestDoError(c *C) {
 }
 
 func (s *httpSuite) prepareArchive(suite, version, arch string, components []string) *testarchive.Release {
-	return s.prepareArchiveAdjustRelease(suite, version, arch, components, nil)
+	return s.prepareArchiveAdjustRelease(suite, version, arch, components, []string{"SHA256"}, nil)
 }
 
-func (s *httpSuite) prepareArchiveAdjustRelease(suite, version, arch string, components []string, adjustRelease func(*testarchive.Release)) *testarchive.Release {
+func (s *httpSuite) prepareArchiveAdjustRelease(suite, version, arch string, components []string, digestKinds []string, adjustRelease func(*testarchive.Release)) *testarchive.Release {
 	release := &testarchive.Release{
-		Suite:   suite,
-		Version: version,
-		Label:   "Ubuntu",
-		PrivKey: s.privKey,
+		Suite:       suite,
+		Version:     version,
+		Label:       "Ubuntu",
+		PrivKey:     s.privKey,
+		DigestKinds: digestKinds,
 	}
 	for i, component := range components {
 		index := &testarchive.PackageIndex{
@@ -143,10 +146,11 @@ func (s *httpSuite) prepareArchiveAdjustRelease(suite, version, arch string, com
 		for j := range 2 {
 			seq := 1 + i*2 + j
 			index.Packages = append(index.Packages, &testarchive.Package{
-				Name:      fmt.Sprintf("mypkg%d", seq),
-				Version:   fmt.Sprintf("1.%d", seq),
-				Arch:      arch,
-				Component: component,
+				Name:        fmt.Sprintf("mypkg%d", seq),
+				Version:     fmt.Sprintf("1.%d", seq),
+				Arch:        arch,
+				Component:   component,
+				DigestKinds: digestKinds,
 			})
 		}
 		release.Items = append(release.Items, index)
@@ -159,7 +163,10 @@ func (s *httpSuite) prepareArchiveAdjustRelease(suite, version, arch string, com
 	if adjustRelease != nil {
 		adjustRelease(release)
 	}
-	release.Render(base.Path, s.responses)
+	err = release.Render(base.Path, s.responses)
+	if err != nil {
+		panic(err)
+	}
 	return release
 }
 
@@ -265,6 +272,68 @@ func (s *httpSuite) TestFetchPackage(c *C) {
 	c.Assert(read(pkg), Equals, "mypkg4 1.4 data")
 }
 
+func (s *httpSuite) TestFetchSHA512Digests(c *C) {
+	// Ubuntu 26.10+ publishes SHA512-only indices (no SHA256 section), so both
+	// the index digest and the package digest must be read from SHA512.
+	s.prepareArchiveAdjustRelease("stonking", "25.10", "amd64", []string{"main", "universe"},
+		[]string{"SHA512"}, nil)
+
+	options := archive.Options{
+		Label:      "ubuntu",
+		Version:    "25.10",
+		Arch:       "amd64",
+		Suites:     []string{"stonking"},
+		Components: []string{"main", "universe"},
+		CacheDir:   c.MkDir(),
+		PubKeys:    []*packet.PublicKey{s.pubKey},
+	}
+
+	testArchive, err := archive.Open(&options)
+	c.Assert(err, IsNil)
+
+	pkg, _, err := testArchive.Fetch("mypkg1")
+	c.Assert(err, IsNil)
+	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
+}
+
+func (s *httpSuite) TestFetchBothDigests(c *C) {
+	// An archive publishing both SHA256 and SHA512 sections (index table and
+	// package fields) must be handled, with the strongest digest preferred
+	// for verification and caching. PackageInfo.SHA256 still surfaces: it is
+	// read from the package section directly, not from the preference order.
+	s.prepareArchiveAdjustRelease("stonking", "25.10", "amd64", []string{"main", "universe"},
+		[]string{"SHA256", "SHA512"}, nil)
+
+	options := archive.Options{
+		Label:      "ubuntu",
+		Version:    "25.10",
+		Arch:       "amd64",
+		Suites:     []string{"stonking"},
+		Components: []string{"main", "universe"},
+		CacheDir:   c.MkDir(),
+		PubKeys:    []*packet.PublicKey{s.pubKey},
+	}
+
+	testArchive, err := archive.Open(&options)
+	c.Assert(err, IsNil)
+
+	pkg, info, err := testArchive.Fetch("mypkg1")
+	c.Assert(err, IsNil)
+	c.Assert(info, DeepEquals, &archive.PackageInfo{
+		Name:    "mypkg1",
+		Version: "1.1",
+		Arch:    "amd64",
+		SHA256:  "1f08ef04cfe7a8087ee38a1ea35fa1810246648136c3c42d5a61ad6503d85e05",
+	})
+	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
+
+	// Pin the cache key: with both digests advertised, the package is cached
+	// under its strongest digest.
+	sha512Digest := fmt.Sprintf("%x", sha512.Sum512([]byte("mypkg1 1.1 data")))
+	_, err = os.Stat(filepath.Join(options.CacheDir, "sha512", sha512Digest))
+	c.Assert(err, IsNil)
+}
+
 func (s *httpSuite) TestFetchPortsPackage(c *C) {
 
 	s.base = "http://ports.ubuntu.com/ubuntu-ports/"
@@ -311,14 +380,16 @@ func (s *httpSuite) TestFetchSecurityPackage(c *C) {
 
 	for i, suite := range []string{"jammy", "jammy-updates", "jammy-security"} {
 		release := s.prepareArchive(suite, "22.04", "amd64", []string{"main", "universe"})
-		release.Walk(func(item testarchive.Item) error {
+		err := release.Walk(func(item testarchive.Item) error {
 			if p, ok := item.(*testarchive.Package); ok && p.Name == "mypkg1" {
 				p.Version = fmt.Sprintf("%s.%d", p.Version, i)
 				p.Data = []byte("package from " + suite)
 			}
 			return nil
 		})
-		release.Render("/ubuntu", s.responses)
+		c.Assert(err, IsNil)
+		err = release.Render("/ubuntu", s.responses)
+		c.Assert(err, IsNil)
 	}
 
 	options := archive.Options{
@@ -382,7 +453,7 @@ func (s *httpSuite) TestArchiveLabels(c *C) {
 		if test.label != "" {
 			adjust = setLabel(test.label)
 		}
-		s.prepareArchiveAdjustRelease("jammy", "22.04", "amd64", []string{"main", "universe"}, adjust)
+		s.prepareArchiveAdjustRelease("jammy", "22.04", "amd64", []string{"main", "universe"}, []string{"SHA256"}, adjust)
 
 		options := archive.Options{
 			Label:      "ubuntu",
@@ -433,7 +504,7 @@ func (s *httpSuite) TestProArchives(c *C) {
 
 	for pro, info := range archive.ProArchiveInfo {
 		s.base = info.BaseURL
-		s.prepareArchiveAdjustRelease("focal", "20.04", "amd64", []string{"main"}, setLabel(info.Label))
+		s.prepareArchiveAdjustRelease("focal", "20.04", "amd64", []string{"main"}, []string{"SHA256"}, setLabel(info.Label))
 
 		options := archive.Options{
 			Label:      "ubuntu",
@@ -491,7 +562,7 @@ func (s *httpSuite) TestProArchives(c *C) {
 
 	for pro, info := range archive.ProArchiveInfo {
 		s.base = info.BaseURL
-		s.prepareArchiveAdjustRelease("focal", "20.04", "amd64", []string{"main"}, setLabel(info.Label))
+		s.prepareArchiveAdjustRelease("focal", "20.04", "amd64", []string{"main"}, []string{"SHA256"}, setLabel(info.Label))
 
 		options := archive.Options{
 			Label:      "ubuntu",
@@ -651,7 +722,7 @@ func (s *httpSuite) fetchRequestStatus(pathSubstring string) (bool, int) {
 }
 
 func (s *httpSuite) TestFetchByHashSucceedsWhenNamedPathIsStale(c *C) {
-	s.prepareArchiveAdjustRelease("jammy", "22.04", "amd64", []string{"main"}, func(r *testarchive.Release) {
+	s.prepareArchiveAdjustRelease("jammy", "22.04", "amd64", []string{"main"}, []string{"SHA256"}, func(r *testarchive.Release) {
 		r.ByHash = true
 	})
 
@@ -688,8 +759,189 @@ func (s *httpSuite) TestFetchByHashSucceedsWhenNamedPathIsStale(c *C) {
 	c.Assert(status, Equals, 200)
 }
 
+func (s *httpSuite) TestFetchByHashSHA512(c *C) {
+	// Ubuntu 26.10+ advertises Acquire-By-Hash with SHA512-only indices, so
+	// the by-hash URL must be built under the SHA512 directory.
+	s.prepareArchiveAdjustRelease("stonking", "26.10", "amd64", []string{"main"}, []string{"SHA512"}, func(release *testarchive.Release) {
+		release.ByHash = true
+	})
+
+	// Stale content at the named Packages.gz path, so a fallback would fail
+	// the digest check -- only the by-hash path serves the correct bytes.
+	for p := range s.responses {
+		if strings.Contains(p, "Packages.gz") && !strings.Contains(p, "/by-hash/") {
+			s.responses[p] = testarchive.MakeGzip([]byte("stale Packages from previous publication"))
+		}
+	}
+
+	options := archive.Options{
+		Label:      "ubuntu",
+		Version:    "26.10",
+		Arch:       "amd64",
+		Suites:     []string{"stonking"},
+		Components: []string{"main"},
+		CacheDir:   c.MkDir(),
+		PubKeys:    []*packet.PublicKey{s.pubKey},
+	}
+
+	testArchive, err := archive.Open(&options)
+	c.Assert(err, IsNil)
+
+	pkg, _, err := testArchive.Fetch("mypkg1")
+	c.Assert(err, IsNil)
+	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
+
+	// The SHA512 by-hash request must have been attempted and succeeded;
+	// the named path only has stale content.
+	attempted, status := s.fetchRequestStatus("/by-hash/SHA512/")
+	c.Assert(attempted, Equals, true)
+	c.Assert(status, Equals, 200)
+}
+
+func (s *httpSuite) TestFetchByHashBothDigests(c *C) {
+	// When a by-hash archive publishes both digests, the by-hash URL must be
+	// built under SHA512: archives only guarantee a by-hash directory for the
+	// strongest hash they advertise. SHA256 by-hash must not be requested.
+	s.prepareArchiveAdjustRelease("stonking", "26.10", "amd64", []string{"main"}, []string{"SHA256", "SHA512"}, func(release *testarchive.Release) {
+		release.ByHash = true
+	})
+
+	// Stale content at the named Packages.gz path, so a fallback would fail
+	// the digest check -- only the by-hash path serves the correct bytes.
+	for p := range s.responses {
+		if strings.Contains(p, "Packages.gz") && !strings.Contains(p, "/by-hash/") {
+			s.responses[p] = testarchive.MakeGzip([]byte("stale Packages from previous publication"))
+		}
+	}
+
+	options := archive.Options{
+		Label:      "ubuntu",
+		Version:    "26.10",
+		Arch:       "amd64",
+		Suites:     []string{"stonking"},
+		Components: []string{"main"},
+		CacheDir:   c.MkDir(),
+		PubKeys:    []*packet.PublicKey{s.pubKey},
+	}
+
+	testArchive, err := archive.Open(&options)
+	c.Assert(err, IsNil)
+
+	pkg, _, err := testArchive.Fetch("mypkg1")
+	c.Assert(err, IsNil)
+	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
+
+	// The SHA512 by-hash request must have been made and succeeded; the SHA256
+	// by-hash directory must never be touched.
+	attempted, status := s.fetchRequestStatus("/by-hash/SHA512/")
+	c.Assert(attempted, Equals, true)
+	c.Assert(status, Equals, 200)
+	attempted, _ = s.fetchRequestStatus("/by-hash/SHA256/")
+	c.Assert(attempted, Equals, false)
+}
+
+// addSha256ByHashDirs mirrors every published by-hash/SHA512 entry under a
+// by-hash/SHA256 path, like archives publishing by-hash directories for
+// more hashes than just the strongest one (e.g. stonking).
+func (s *httpSuite) addSha256ByHashDirs() {
+	mirrored := make(map[string][]byte)
+	for p, content := range s.responses {
+		prefix, _, found := strings.Cut(p, "/by-hash/SHA512/")
+		if !found {
+			continue
+		}
+		mirrored[fmt.Sprintf("%s/by-hash/SHA256/%x", prefix, sha256.Sum256(content))] = content
+	}
+	for p, content := range mirrored {
+		s.responses[p] = content
+	}
+}
+
+func (s *httpSuite) TestFetchByHashManyDigestDirs(c *C) {
+	// An archive may publish by-hash directories for more hashes than the
+	// strongest one it advertises. The by-hash URL must still be built under
+	// SHA512, and the SHA256 directory left alone, even though a request
+	// there would now succeed.
+	s.prepareArchiveAdjustRelease("stonking", "26.10", "amd64", []string{"main"}, []string{"SHA256", "SHA512"}, func(release *testarchive.Release) {
+		release.ByHash = true
+	})
+	s.addSha256ByHashDirs()
+
+	// Stale content at the named Packages.gz path, so a fallback would fail
+	// the digest check -- only the by-hash paths serve the correct bytes.
+	for p := range s.responses {
+		if strings.Contains(p, "Packages.gz") && !strings.Contains(p, "/by-hash/") {
+			s.responses[p] = testarchive.MakeGzip([]byte("stale Packages from previous publication"))
+		}
+	}
+
+	options := archive.Options{
+		Label:      "ubuntu",
+		Version:    "26.10",
+		Arch:       "amd64",
+		Suites:     []string{"stonking"},
+		Components: []string{"main"},
+		CacheDir:   c.MkDir(),
+		PubKeys:    []*packet.PublicKey{s.pubKey},
+	}
+
+	testArchive, err := archive.Open(&options)
+	c.Assert(err, IsNil)
+
+	pkg, _, err := testArchive.Fetch("mypkg1")
+	c.Assert(err, IsNil)
+	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
+
+	attempted, status := s.fetchRequestStatus("/by-hash/SHA512/")
+	c.Assert(attempted, Equals, true)
+	c.Assert(status, Equals, 200)
+	attempted, _ = s.fetchRequestStatus("/by-hash/SHA256/")
+	c.Assert(attempted, Equals, false)
+}
+
+func (s *httpSuite) TestFetchByHashOnlyWeakerDigestDir(c *C) {
+	// A buggy archive advertising both digests but publishing a by-hash
+	// directory only for the weaker one. The SHA512 by-hash request 404s and
+	// the named path takes over; the SHA256 directory must not be tried.
+	s.prepareArchiveAdjustRelease("stonking", "26.10", "amd64", []string{"main"}, []string{"SHA256", "SHA512"}, func(release *testarchive.Release) {
+		release.ByHash = true
+	})
+	s.addSha256ByHashDirs()
+	for p := range s.responses {
+		if strings.Contains(p, "/by-hash/SHA512/") {
+			delete(s.responses, p)
+		}
+	}
+
+	options := archive.Options{
+		Label:      "ubuntu",
+		Version:    "26.10",
+		Arch:       "amd64",
+		Suites:     []string{"stonking"},
+		Components: []string{"main"},
+		CacheDir:   c.MkDir(),
+		PubKeys:    []*packet.PublicKey{s.pubKey},
+	}
+
+	testArchive, err := archive.Open(&options)
+	c.Assert(err, IsNil)
+
+	pkg, _, err := testArchive.Fetch("mypkg1")
+	c.Assert(err, IsNil)
+	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
+
+	attempted, status := s.fetchRequestStatus("/by-hash/SHA512/")
+	c.Assert(attempted, Equals, true)
+	c.Assert(status, Equals, 404)
+	attempted, _ = s.fetchRequestStatus("/by-hash/SHA256/")
+	c.Assert(attempted, Equals, false)
+	attempted, status = s.fetchRequestStatus("Packages.gz")
+	c.Assert(attempted, Equals, true)
+	c.Assert(status, Equals, 200)
+}
+
 func (s *httpSuite) TestFetchByHashFallsBackOnNotFound(c *C) {
-	s.prepareArchiveAdjustRelease("jammy", "22.04", "amd64", []string{"main"}, func(r *testarchive.Release) {
+	s.prepareArchiveAdjustRelease("jammy", "22.04", "amd64", []string{"main"}, []string{"SHA256"}, func(r *testarchive.Release) {
 		r.ByHash = true
 	})
 

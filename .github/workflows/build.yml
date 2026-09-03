@@ -16,6 +16,8 @@ jobs:
   build-chisel:
     name: Build Chisel
     runs-on: ubuntu-22.04
+    outputs:
+      chisel_version: ${{ steps.build.outputs.CHISEL_VERSION }}
     strategy:
       fail-fast: false
       matrix:
@@ -109,37 +111,33 @@ jobs:
             ${{ steps.archive.outputs.ARCHIVE_FILE }}
             ${{ steps.archive.outputs.ARCHIVE_FILE_SHA384 }}
 
-      - name: Upload archive to release
+  upload-release:
+    name: Upload to Release
+    if: ${{ github.event_name == 'release' }}
+    needs: build-chisel
+    runs-on: ubuntu-24.04
+    # This job only runs on release events (which can only be triggered by users
+    # with "write" access) and the only thing it does is to upload the artifacts
+    # to the release. It does not build anything.
+
+    # This job splits the privileged step below from the above job, allowing us to
+    # use the GITHUB_TOKEN safely, while also removing the need to have a bot account
+    # as a repo collaborator. 
+
+    permissions:
+      contents: write # required for uploading artifacts to a release.
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+
+      - name: Upload archives to release
         env:
-          CHISEL_VERSION: ${{ steps.build.outputs.CHISEL_VERSION }}
-          ARCHIVE_FILE: ${{ steps.archive.outputs.ARCHIVE_FILE }}
-          ARCHIVE_FILE_SHA384: ${{ steps.archive.outputs.ARCHIVE_FILE_SHA384 }}
-          # If triggered by a "release" event, this additional and final step
-          # of the job will upload the Chisel binaries (and checksums) to the corresponding
-          # GitHub release. This operation NEEDS "contents: write" permissions.
-          # Security concerns:
-          #  - Why a custom token instead of GITHUB_TOKEN?
-          #    - The GITHUB_TOKEN only has "readonly" permissions by default.
-          #  - Why not add "permissions: {contents:write}" to this workflow [1]?
-          #    - While this would elevate the GITHUB_TOKEN permissions to what we require, it
-          #      would do it for the entire job (ALL steps), which increases the attack surface unnecessarily.
-          #  - Why is it safer to use the ROCKSBOT_CHISEL_CONTENTS token?
-          #    1. it is limited to this step of the workflow (unlike GITHUB_TOKEN, which is always available)
-          #    2. this particular step only runs when the "event == release"
-          #    3. the step's script doesn't rely on 3rd party actions
-          #    4. the current workflow triggers are all maintainer-driven, except for "pull_request",
-          #       but the latter is designed not to use any secrets during execution from fork-based PRs
-          #        - NOTE: in fact, custom secrets are never passed to fork-based PR workflows, unlike GITHUB_TOKEN
-          #          which is available with "readonly" permissions [2]
-          # - How could this token be compromised?
-          #   - By unintentionally merging a change that allows this step to run unvetted scripts
-          #     (either via a "pull_request_target", use of an insecure 3rd party action, or malicious changes to the
-          #     current script)
-          # [1] https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#permissions
-          # [2] https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflows-in-forked-repositories
-          GITHUB_TOKEN: ${{ secrets.ROCKSBOT_CHISEL_CONTENTS }}
-        if: ${{ github.event_name == 'release' }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHISEL_VERSION: ${{ needs.build-chisel.outputs.chisel_version }}
         run: |
-          echo "Uploading $ARCHIVE_FILE to release $CHISEL_VERSION"
-          gh release upload $CHISEL_VERSION $ARCHIVE_FILE
-          gh release upload $CHISEL_VERSION $ARCHIVE_FILE_SHA384
+          for dir in chisel_*/; do
+            for file in "$dir"*; do
+              echo "Uploading $file to release $CHISEL_VERSION"
+              gh release upload "$CHISEL_VERSION" "$file" --repo "$GITHUB_REPOSITORY"
+            done
+          done

@@ -148,7 +148,7 @@ func Run(options *RunOptions) error {
 
 	// Fetch all packages, using the selection order.
 	packages := make(map[string]io.ReadSeekCloser)
-	var pkgInfos []*archive.PackageInfo
+	var pkgInfos []manifestutil.PackageInfo
 	for _, slice := range options.Selection.Slices {
 		if packages[slice.Package] != nil {
 			continue
@@ -353,7 +353,7 @@ func Run(options *RunOptions) error {
 }
 
 func generateManifests(targetDir string, selection *setup.Selection,
-	report *manifestutil.Report, pkgInfos []*archive.PackageInfo) error {
+	report *manifestutil.Report, pkgInfos []manifestutil.PackageInfo) error {
 	manifestSlices := manifestutil.FindPaths(selection.Slices)
 	if len(manifestSlices) == 0 {
 		// Nothing to do.
