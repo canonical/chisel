@@ -109,11 +109,15 @@ func Run(options *RunOptions) error {
 			extract[slice.Package] = extractPackage
 		}
 		arch := pkgArchive[slice.Package].Options().Arch
+		channel := options.Selection.Channels[slice.Package]
 		for targetPath, pathInfo := range slice.Contents {
 			if targetPath == "" {
 				continue
 			}
 			if len(pathInfo.Arch) > 0 && !slices.Contains(pathInfo.Arch, arch) {
+				continue
+			}
+			if !setup.MatchChannelPatterns(pathInfo.Channel, channel) {
 				continue
 			}
 			if preferredPkg, ok := prefers[targetPath]; ok && preferredPkg.Name != slice.Package {
@@ -271,8 +275,12 @@ func Run(options *RunOptions) error {
 	relPaths := map[string][]*setup.Slice{}
 	for _, slice := range options.Selection.Slices {
 		arch := pkgArchive[slice.Package].Options().Arch
+		channel := options.Selection.Channels[slice.Package]
 		for relPath, pathInfo := range slice.Contents {
 			if len(pathInfo.Arch) > 0 && !slices.Contains(pathInfo.Arch, arch) {
+				continue
+			}
+			if !setup.MatchChannelPatterns(pathInfo.Channel, channel) {
 				continue
 			}
 			if pathInfo.Kind == setup.CopyPath || pathInfo.Kind == setup.GlobPath ||

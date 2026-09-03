@@ -22,9 +22,7 @@ import (
 	"github.com/canonical/chisel/public/manifest"
 )
 
-var (
-	testKey = testutil.PGPKeys["key1"]
-)
+var testKey = testutil.PGPKeys["key1"]
 
 type slicerTest struct {
 	summary       string
@@ -46,7 +44,7 @@ var packageEntries = map[string][]testutil.TarEntry{
 		{Header: tar.Header{Name: "./usr/"}},
 		{Header: tar.Header{Name: "./usr/lib/"}},
 		{Header: tar.Header{Name: "./usr/lib/x86_64-linux-gnu/"}},
-		{Header: tar.Header{Name: "./usr/lib/x86_64-linux-gnu/libssl.so.3", Mode: 00755}},
+		{Header: tar.Header{Name: "./usr/lib/x86_64-linux-gnu/libssl.so.3", Mode: 0o0755}},
 		{Header: tar.Header{Name: "./usr/share/"}},
 		{Header: tar.Header{Name: "./usr/share/doc/"}},
 		{Header: tar.Header{Name: "./usr/share/doc/copyright-symlink-libssl3/"}},
@@ -59,7 +57,7 @@ var packageEntries = map[string][]testutil.TarEntry{
 		{Header: tar.Header{Name: "./etc/ssl/openssl.cnf"}},
 		{Header: tar.Header{Name: "./usr/"}},
 		{Header: tar.Header{Name: "./usr/bin/"}},
-		{Header: tar.Header{Name: "./usr/bin/openssl", Mode: 00755}},
+		{Header: tar.Header{Name: "./usr/bin/openssl", Mode: 0o0755}},
 		{Header: tar.Header{Name: "./usr/share/"}},
 		{Header: tar.Header{Name: "./usr/share/doc/"}},
 		{Header: tar.Header{Name: "./usr/share/doc/copyright-symlink-openssl/"}},
@@ -69,11 +67,11 @@ var packageEntries = map[string][]testutil.TarEntry{
 
 var testPackageCopyrightEntries = []testutil.TarEntry{
 	// Hardcoded copyright paths.
-	testutil.Dir(0755, "./usr/"),
-	testutil.Dir(0755, "./usr/share/"),
-	testutil.Dir(0755, "./usr/share/doc/"),
-	testutil.Dir(0755, "./usr/share/doc/test-package/"),
-	testutil.Reg(0644, "./usr/share/doc/test-package/copyright", "copyright"),
+	testutil.Dir(0o755, "./usr/"),
+	testutil.Dir(0o755, "./usr/share/"),
+	testutil.Dir(0o755, "./usr/share/doc/"),
+	testutil.Dir(0o755, "./usr/share/doc/test-package/"),
+	testutil.Reg(0o644, "./usr/share/doc/test-package/copyright", "copyright"),
 }
 
 var slicerTests = []slicerTest{{
@@ -275,7 +273,8 @@ var slicerTests = []slicerTest{{
 	summary: "Install two packages",
 	slices: []setup.SliceKey{
 		{"test-package", "myslice"},
-		{"other-package", "myslice"}},
+		{"other-package", "myslice"},
+	},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.PackageData["test-package"],
@@ -319,23 +318,24 @@ var slicerTests = []slicerTest{{
 	slices: []setup.SliceKey{
 		{"a-implicit-parent", "myslice"},
 		{"b-explicit-dir", "myslice"},
-		{"c-implicit-parent", "myslice"}},
+		{"c-implicit-parent", "myslice"},
+	},
 	pkgs: []*testutil.TestPackage{{
 		Name: "a-implicit-parent",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Dir(0755, "./dir/"),
-			testutil.Reg(0644, "./dir/file-1", "random"),
+			testutil.Dir(0o755, "./dir/"),
+			testutil.Reg(0o644, "./dir/file-1", "random"),
 		}),
 	}, {
 		Name: "b-explicit-dir",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Dir(01777, "./dir/"),
+			testutil.Dir(0o1777, "./dir/"),
 		}),
 	}, {
 		Name: "c-implicit-parent",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Dir(0766, "./dir/"),
-			testutil.Reg(0644, "./dir/file-2", "random"),
+			testutil.Dir(0o766, "./dir/"),
+			testutil.Reg(0o644, "./dir/file-2", "random"),
 		}),
 	}},
 	release: map[string]string{
@@ -377,7 +377,8 @@ var slicerTests = []slicerTest{{
 	summary: "Valid same file in two slices in different packages",
 	slices: []setup.SliceKey{
 		{"test-package", "myslice"},
-		{"other-package", "myslice"}},
+		{"other-package", "myslice"},
+	},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.PackageData["test-package"],
@@ -787,7 +788,7 @@ var slicerTests = []slicerTest{{
 		Version: "v1",
 		Arch:    "a1",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Reg(0644, "./file", "from foo"),
+			testutil.Reg(0o644, "./file", "from foo"),
 		}),
 		Archives: []string{"foo"},
 	}, {
@@ -796,7 +797,7 @@ var slicerTests = []slicerTest{{
 		Version: "v2",
 		Arch:    "a2",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Reg(0644, "./file", "from bar"),
+			testutil.Reg(0o644, "./file", "from bar"),
 		}),
 		Archives: []string{"bar"},
 	}, {
@@ -805,7 +806,7 @@ var slicerTests = []slicerTest{{
 		Version: "v3",
 		Arch:    "a3",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Reg(0644, "./other-file", "from bar"),
+			testutil.Reg(0o644, "./other-file", "from bar"),
 		}),
 		Archives: []string{"bar"},
 	}},
@@ -871,7 +872,7 @@ var slicerTests = []slicerTest{{
 		Version: "v1",
 		Arch:    "a1",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Reg(0644, "./file", "from foo"),
+			testutil.Reg(0o644, "./file", "from foo"),
 		}),
 		Archives: []string{"foo"},
 	}, {
@@ -880,7 +881,7 @@ var slicerTests = []slicerTest{{
 		Version: "v2",
 		Arch:    "a2",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Reg(0644, "./file", "from bar"),
+			testutil.Reg(0o644, "./file", "from bar"),
 		}),
 		Archives: []string{"bar"},
 	}},
@@ -936,7 +937,7 @@ var slicerTests = []slicerTest{{
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Reg(0644, "./file", "from foo"),
+			testutil.Reg(0o644, "./file", "from foo"),
 		}),
 		Archives: []string{"foo"},
 	}},
@@ -1019,7 +1020,7 @@ var slicerTests = []slicerTest{{
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Reg(0644, "./file", "from foo"),
+			testutil.Reg(0o644, "./file", "from foo"),
 		}),
 		Archives: []string{"foo"},
 	}},
@@ -1059,7 +1060,7 @@ var slicerTests = []slicerTest{{
 		Version: "v1",
 		Arch:    "a1",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Reg(0644, "./file", "from foo"),
+			testutil.Reg(0o644, "./file", "from foo"),
 		}),
 		Archives: []string{"foo"},
 	}},
@@ -1436,12 +1437,12 @@ var slicerTests = []slicerTest{{
 			// relative path. Since TrimLeft takes in a cutset instead of a
 			// prefix, the desired relative path was not produced.
 			// See https://github.com/canonical/chisel/pull/145.
-			testutil.Dir(0755, "./foo-bar/"),
+			testutil.Dir(0o755, "./foo-bar/"),
 		}),
 	}},
 	hackopt: func(c *C, opts *slicer.RunOptions) {
 		opts.TargetDir = filepath.Join(filepath.Clean(opts.TargetDir), "foo")
-		err := os.Mkdir(opts.TargetDir, 0755)
+		err := os.Mkdir(opts.TargetDir, 0o755)
 		c.Assert(err, IsNil)
 	},
 	release: map[string]string{
@@ -1507,13 +1508,14 @@ var slicerTests = []slicerTest{{
 	summary: "Valid hard link in two slices in the same package",
 	slices: []setup.SliceKey{
 		{"test-package", "slice1"},
-		{"test-package", "slice2"}},
+		{"test-package", "slice2"},
+	},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Dir(0755, "./"),
-			testutil.Reg(0644, "./file", "foo"),
-			testutil.Hrd(0644, "./hardlink", "./file"),
+			testutil.Dir(0o755, "./"),
+			testutil.Reg(0o644, "./file", "foo"),
+			testutil.Hrd(0o644, "./hardlink", "./file"),
 		}),
 	}},
 	release: map[string]string{
@@ -1540,14 +1542,15 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Hard link entries can be extracted without extracting the regular file",
 	slices: []setup.SliceKey{
-		{"test-package", "myslice"}},
+		{"test-package", "myslice"},
+	},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Dir(0755, "./"),
-			testutil.Reg(0644, "./file", "foo"),
-			testutil.Hrd(0644, "./hardlink1", "./file"),
-			testutil.Hrd(0644, "./hardlink2", "./file"),
+			testutil.Dir(0o755, "./"),
+			testutil.Reg(0o644, "./file", "foo"),
+			testutil.Hrd(0o644, "./hardlink1", "./file"),
+			testutil.Hrd(0o644, "./hardlink2", "./file"),
 		}),
 	}},
 	release: map[string]string{
@@ -1570,15 +1573,16 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Hard link identifier for different groups",
 	slices: []setup.SliceKey{
-		{"test-package", "myslice"}},
+		{"test-package", "myslice"},
+	},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Dir(0755, "./"),
-			testutil.Reg(0644, "./file1", "text for file1"),
-			testutil.Reg(0644, "./file2", "text for file2"),
-			testutil.Hrd(0644, "./hardlink1", "./file1"),
-			testutil.Hrd(0644, "./hardlink2", "./file2"),
+			testutil.Dir(0o755, "./"),
+			testutil.Reg(0o644, "./file1", "text for file1"),
+			testutil.Reg(0o644, "./file2", "text for file2"),
+			testutil.Hrd(0o644, "./hardlink1", "./file1"),
+			testutil.Hrd(0o644, "./hardlink2", "./file2"),
 		}),
 	}},
 	release: map[string]string{
@@ -1605,13 +1609,14 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Single hard link entry can be extracted without regular file and no hard links are created",
 	slices: []setup.SliceKey{
-		{"test-package", "myslice"}},
+		{"test-package", "myslice"},
+	},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Dir(0755, "./"),
-			testutil.Reg(0644, "./file", "foo"),
-			testutil.Hrd(0644, "./hardlink", "./file"),
+			testutil.Dir(0o755, "./"),
+			testutil.Reg(0o644, "./file", "foo"),
+			testutil.Hrd(0o644, "./hardlink", "./file"),
 		}),
 	}},
 	release: map[string]string{
@@ -1632,15 +1637,16 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Hard link to symlink does not follow symlink",
 	slices: []setup.SliceKey{
-		{"test-package", "myslice"}},
+		{"test-package", "myslice"},
+	},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Dir(0755, "./"),
-			testutil.Dir(0755, "./"),
-			testutil.Reg(0644, "./file", "foo"),
-			testutil.Lnk(0644, "./symlink", "./file"),
-			testutil.Hrd(0644, "./hardlink", "./symlink"),
+			testutil.Dir(0o755, "./"),
+			testutil.Dir(0o755, "./"),
+			testutil.Reg(0o644, "./file", "foo"),
+			testutil.Lnk(0o644, "./symlink", "./file"),
+			testutil.Hrd(0o644, "./hardlink", "./symlink"),
 		}),
 	}},
 	release: map[string]string{
@@ -1670,16 +1676,16 @@ var slicerTests = []slicerTest{{
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package1",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Dir(0755, "./"),
-			testutil.Reg(0644, "./file1", "foo"),
-			testutil.Hrd(0644, "./hardlink1", "./file1"),
+			testutil.Dir(0o755, "./"),
+			testutil.Reg(0o644, "./file1", "foo"),
+			testutil.Hrd(0o644, "./hardlink1", "./file1"),
 		}),
 	}, {
 		Name: "test-package2",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Dir(0755, "./"),
-			testutil.Reg(0644, "./file2", "foo"),
-			testutil.Hrd(0644, "./hardlink2", "./file2"),
+			testutil.Dir(0o755, "./"),
+			testutil.Reg(0o644, "./file2", "foo"),
+			testutil.Hrd(0o644, "./hardlink2", "./file2"),
 		}),
 	}},
 	release: map[string]string{
@@ -1715,13 +1721,14 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Mutations for hard links are forbidden",
 	slices: []setup.SliceKey{
-		{"test-package", "myslice"}},
+		{"test-package", "myslice"},
+	},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Dir(0755, "./"),
-			testutil.Reg(0644, "./file", "foo"),
-			testutil.Hrd(0644, "./hardlink", "./file"),
+			testutil.Dir(0o755, "./"),
+			testutil.Reg(0o644, "./file", "foo"),
+			testutil.Hrd(0o644, "./hardlink", "./file"),
 		}),
 	}},
 	release: map[string]string{
@@ -1740,13 +1747,14 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Hard links can be marked as mutable, but not mutated",
 	slices: []setup.SliceKey{
-		{"test-package", "myslice"}},
+		{"test-package", "myslice"},
+	},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Dir(0755, "./"),
-			testutil.Reg(0644, "./file", "foo"),
-			testutil.Hrd(0644, "./hardlink", "./file"),
+			testutil.Dir(0o755, "./"),
+			testutil.Reg(0o644, "./file", "foo"),
+			testutil.Hrd(0o644, "./hardlink", "./file"),
 		}),
 	}},
 	release: map[string]string{
@@ -1773,8 +1781,8 @@ var slicerTests = []slicerTest{{
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Dir(0755, "./"),
-			testutil.Hrd(0644, "./hardlink", "/etc/group"),
+			testutil.Dir(0o755, "./"),
+			testutil.Hrd(0o644, "./hardlink", "/etc/group"),
 		}),
 	}},
 	release: map[string]string{
@@ -1793,8 +1801,8 @@ var slicerTests = []slicerTest{{
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Dir(0755, "./"),
-			testutil.Reg(0644, "./../file", "hijacking system file"),
+			testutil.Dir(0o755, "./"),
+			testutil.Reg(0o644, "./../file", "hijacking system file"),
 		}),
 	}},
 	release: map[string]string{
@@ -1816,19 +1824,19 @@ var slicerTests = []slicerTest{{
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package1",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Dir(0755, "./"),
-			testutil.Reg(0644, "./file", "foo"),
+			testutil.Dir(0o755, "./"),
+			testutil.Reg(0o644, "./file", "foo"),
 		}),
 	}, {
 		Name: "test-package2",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Dir(0755, "./"),
-			testutil.Reg(0644, "./file", "bar"),
+			testutil.Dir(0o755, "./"),
+			testutil.Reg(0o644, "./file", "bar"),
 		}),
 	}, {
 		Name: "test-package3",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Dir(0755, "./"),
+			testutil.Dir(0o755, "./"),
 		}),
 	}},
 	release: map[string]string{
@@ -1877,18 +1885,18 @@ var slicerTests = []slicerTest{{
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package1",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Dir(0755, "./"),
+			testutil.Dir(0o755, "./"),
 			// Note that both implicit parents have different permissions.
-			testutil.Dir(0766, "./parent/"),
-			testutil.Reg(0644, "./parent/foo", "whatever"),
+			testutil.Dir(0o766, "./parent/"),
+			testutil.Reg(0o644, "./parent/foo", "whatever"),
 		}),
 	}, {
 		Name: "test-package2",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Dir(0755, "./"),
+			testutil.Dir(0o755, "./"),
 			// And here.
-			testutil.Dir(0755, "./parent/"),
-			testutil.Reg(0644, "./parent/bar", "whatever"),
+			testutil.Dir(0o755, "./parent/"),
+			testutil.Reg(0o644, "./parent/bar", "whatever"),
 		}),
 	}},
 	release: map[string]string{
@@ -2065,9 +2073,9 @@ func runSlicerTests(s *S, c *C, tests []slicerTest) {
 			releaseDir := c.MkDir()
 			for path, data := range test.release {
 				fpath := filepath.Join(releaseDir, path)
-				err := os.MkdirAll(filepath.Dir(fpath), 0755)
+				err := os.MkdirAll(filepath.Dir(fpath), 0o755)
 				c.Assert(err, IsNil)
-				err = os.WriteFile(fpath, testutil.Reindent(data), 0644)
+				err = os.WriteFile(fpath, testutil.Reindent(data), 0o644)
 				c.Assert(err, IsNil)
 			}
 
@@ -2245,9 +2253,9 @@ func readManifest(c *C, targetDir, manifestPath string) *manifest.Manifest {
 	// in the manifest itself.
 	s, err := os.Stat(path.Join(targetDir, manifestPath))
 	c.Assert(err, IsNil)
-	c.Assert(s.Mode(), Equals, fs.FileMode(0644))
+	c.Assert(s.Mode(), Equals, fs.FileMode(0o644))
 	err = mfest.IteratePaths(manifestPath, func(p *manifest.Path) error {
-		c.Assert(p.Mode, Equals, fmt.Sprintf("%#o", fs.FileMode(0644)))
+		c.Assert(p.Mode, Equals, fmt.Sprintf("%#o", fs.FileMode(0o644)))
 		return nil
 	})
 	c.Assert(err, IsNil)
