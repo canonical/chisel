@@ -12,10 +12,24 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/canonical/chisel/internal/deb"
+	"github.com/ulikunitz/xz"
+
 	"github.com/canonical/chisel/internal/fsutil"
 	"github.com/canonical/chisel/internal/strdist"
 )
+
+// TarOpener returns a reader over the uncompressed tar stream contained in
+// its input, hiding the container and compression details from Extract.
+type TarOpener func(pkgReader io.Reader) (io.ReadCloser, error)
+
+// OpenXZTar returns a reader over the decompressed XZ stream.
+func OpenXZTar(pkgReader io.Reader) (io.ReadCloser, error) {
+	xzReader, err := xz.NewReader(pkgReader)
+	if err != nil {
+		return nil, err
+	}
+	return io.NopCloser(xzReader), nil
+}
 
 type ExtractOptions struct {
 	Package   string
@@ -58,7 +72,7 @@ func getValidOptions(options *ExtractOptions) (*ExtractOptions, error) {
 	return options, nil
 }
 
-func Extract(pkgReader io.ReadSeeker, options *ExtractOptions) (err error) {
+func Extract(pkgReader io.ReadSeeker, opener TarOpener, options *ExtractOptions) (err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("cannot extract from package %q: %w", options.Package, err)
@@ -66,6 +80,10 @@ func Extract(pkgReader io.ReadSeeker, options *ExtractOptions) (err error) {
 	}()
 
 	logf("Extracting files from package %q...", options.Package)
+
+	if opener == nil {
+		return fmt.Errorf("internal error: no tar opener provided")
+	}
 
 	validOpts, err := getValidOptions(options)
 	if err != nil {
@@ -79,11 +97,11 @@ func Extract(pkgReader io.ReadSeeker, options *ExtractOptions) (err error) {
 		return err
 	}
 
-	return extractData(pkgReader, validOpts)
+	return extractData(pkgReader, opener, validOpts)
 }
 
-func extractData(pkgReader io.ReadSeeker, options *ExtractOptions) error {
-	dataReader, err := deb.DataReader(pkgReader)
+func extractData(pkgReader io.ReadSeeker, opener TarOpener, options *ExtractOptions) error {
+	dataReader, err := opener(pkgReader)
 	if err != nil {
 		return err
 	}
@@ -117,8 +135,8 @@ func extractData(pkgReader io.ReadSeeker, options *ExtractOptions) error {
 	// create them with the permissions defined in the tarball.
 	//
 	// The assumption is that the tar entries of the parent directories appear
-	// before the entry for the file itself. This is the case for .deb files but
-	// not for all tarballs.
+	// before the entry for the file itself. This is the case for the tarballs
+	// produced by common packaging tools but not for all tarballs.
 	tarDirMode := make(map[string]fs.FileMode)
 	tarReader := tar.NewReader(dataReader)
 	for {
@@ -265,7 +283,7 @@ func extractData(pkgReader io.ReadSeeker, options *ExtractOptions) error {
 		if err != nil {
 			return err
 		}
-		err = extractHardLinks(pkgReader, extractHardLinkOptions)
+		err = extractHardLinks(pkgReader, opener, extractHardLinkOptions)
 		if err != nil {
 			return err
 		}
@@ -299,8 +317,8 @@ type extractHardLinkOptions struct {
 
 // extractHardLinks iterates through the tarball a second time to extract the
 // hard links that were not extracted in the first pass.
-func extractHardLinks(pkgReader io.ReadSeeker, opts *extractHardLinkOptions) error {
-	dataReader, err := deb.DataReader(pkgReader)
+func extractHardLinks(pkgReader io.ReadSeeker, opener TarOpener, opts *extractHardLinkOptions) error {
+	dataReader, err := opener(pkgReader)
 	if err != nil {
 		return err
 	}

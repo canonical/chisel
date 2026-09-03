@@ -10,9 +10,9 @@ import (
 	"github.com/ulikunitz/xz"
 )
 
-// DataReader takes a Reader for the ar file belonging to a Debian package and
-// returns a Reader to the inner tarball.
-func DataReader(pkgReader io.ReadSeeker) (io.ReadCloser, error) {
+// OpenTar takes a Reader for the ar file belonging to a Debian package and
+// returns a Reader to the uncompressed inner tarball.
+func OpenTar(pkgReader io.Reader) (io.ReadCloser, error) {
 	arReader := ar.NewReader(pkgReader)
 	var dataReader io.ReadCloser
 	for dataReader == nil {
