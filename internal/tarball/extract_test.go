@@ -19,7 +19,7 @@ import (
 type extractTest struct {
 	summary string
 	pkgdata []byte
-	openTar tarball.OpenTarFunc
+	openTar tarball.TarOpener
 	options tarball.ExtractOptions
 	hackopt func(c *C, o *tarball.ExtractOptions)
 	result  map[string]string
@@ -545,7 +545,7 @@ func (s *S) TestExtract(c *C) {
 var extractCreateCallbackTests = []struct {
 	summary string
 	pkgdata []byte
-	openTar tarball.OpenTarFunc
+	openTar tarball.TarOpener
 	options tarball.ExtractOptions
 	calls   map[string][]tarball.ExtractInfo
 }{{

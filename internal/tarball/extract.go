@@ -18,14 +18,12 @@ import (
 	"github.com/canonical/chisel/internal/strdist"
 )
 
-// OpenTarFunc returns a reader over the uncompressed tar stream contained in
-// its input, hiding the container and compression details from Extract. An
-// implementation may unwrap a container before decompressing (see deb.OpenTar)
-// or decompress the input directly (see OpenXZ).
-type OpenTarFunc func(pkgReader io.Reader) (io.ReadCloser, error)
+// TarOpener returns a reader over the uncompressed tar stream contained in
+// its input, hiding the container and compression details from Extract.
+type TarOpener func(pkgReader io.Reader) (io.ReadCloser, error)
 
-// OpenXZ opens a plain XZ-compressed tarball.
-func OpenXZ(pkgReader io.Reader) (io.ReadCloser, error) {
+// OpenXZTar returns a reader over the decompressed XZ stream.
+func OpenXZTar(pkgReader io.Reader) (io.ReadCloser, error) {
 	xzReader, err := xz.NewReader(pkgReader)
 	if err != nil {
 		return nil, err
@@ -74,7 +72,7 @@ func getValidOptions(options *ExtractOptions) (*ExtractOptions, error) {
 	return options, nil
 }
 
-func Extract(pkgReader io.ReadSeeker, openTar OpenTarFunc, options *ExtractOptions) (err error) {
+func Extract(pkgReader io.ReadSeeker, opener TarOpener, options *ExtractOptions) (err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("cannot extract from package %q: %w", options.Package, err)
@@ -83,7 +81,7 @@ func Extract(pkgReader io.ReadSeeker, openTar OpenTarFunc, options *ExtractOptio
 
 	logf("Extracting files from package %q...", options.Package)
 
-	if openTar == nil {
+	if opener == nil {
 		return fmt.Errorf("internal error: no tar opener provided")
 	}
 
@@ -99,11 +97,11 @@ func Extract(pkgReader io.ReadSeeker, openTar OpenTarFunc, options *ExtractOptio
 		return err
 	}
 
-	return extractData(pkgReader, openTar, validOpts)
+	return extractData(pkgReader, opener, validOpts)
 }
 
-func extractData(pkgReader io.ReadSeeker, openTar OpenTarFunc, options *ExtractOptions) error {
-	dataReader, err := openTar(pkgReader)
+func extractData(pkgReader io.ReadSeeker, opener TarOpener, options *ExtractOptions) error {
+	dataReader, err := opener(pkgReader)
 	if err != nil {
 		return err
 	}
@@ -285,7 +283,7 @@ func extractData(pkgReader io.ReadSeeker, openTar OpenTarFunc, options *ExtractO
 		if err != nil {
 			return err
 		}
-		err = extractHardLinks(pkgReader, openTar, extractHardLinkOptions)
+		err = extractHardLinks(pkgReader, opener, extractHardLinkOptions)
 		if err != nil {
 			return err
 		}
@@ -319,8 +317,8 @@ type extractHardLinkOptions struct {
 
 // extractHardLinks iterates through the tarball a second time to extract the
 // hard links that were not extracted in the first pass.
-func extractHardLinks(pkgReader io.ReadSeeker, openTar OpenTarFunc, opts *extractHardLinkOptions) error {
-	dataReader, err := openTar(pkgReader)
+func extractHardLinks(pkgReader io.ReadSeeker, opener TarOpener, opts *extractHardLinkOptions) error {
+	dataReader, err := opener(pkgReader)
 	if err != nil {
 		return err
 	}
@@ -381,7 +379,7 @@ func extractHardLinks(pkgReader io.ReadSeeker, openTar OpenTarFunc, opts *extrac
 	}
 
 	// If there are pending links, that means the link targets do not come from
-	// this tarball.
+	// this package.
 	if len(opts.pendingLinks) > 0 {
 		var targets []string
 		for target := range opts.pendingLinks {
