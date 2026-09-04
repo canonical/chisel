@@ -86,11 +86,12 @@ func Write(options *WriteOptions, writer io.Writer) error {
 func manifestAddPackages(dbw *jsonwall.DBWriter, infos []PackageInfo) error {
 	for _, info := range infos {
 		err := dbw.Add(&manifest.Package{
-			Kind:    "package",
-			Name:    info.PkgName(),
-			Version: info.PkgVersion(),
-			Digest:  info.PkgDigest(),
-			Arch:    info.PkgArch(),
+			Kind:       "package",
+			Name:       info.PkgName(),
+			Version:    info.PkgVersion(),
+			Digest:     info.PkgDigest(),
+			DigestKind: string(info.PkgDigestKind()),
+			Arch:       info.PkgArch(),
 		})
 		if err != nil {
 			return err
@@ -272,13 +273,13 @@ func validatePackage(pkg PackageInfo) (err error) {
 	if pkg.PkgArch() == "" {
 		return fmt.Errorf("package %q missing arch", name)
 	}
-	// The manifest records the package digest as a SHA256 one. Fail rather
-	// than recording a digest of another kind under that name.
-	// TODO: record packages whose digest is not a SHA256 one, such as the
-	// ones coming from a store. This requires recording the digest kind in
-	// the manifest as well.
-	if pkg.PkgDigestKind() != cache.SHA256 || pkg.PkgDigest() == "" {
-		return fmt.Errorf("package %q missing sha256", name)
+	kind := pkg.PkgDigestKind()
+	err = cache.ValidateKind(kind)
+	if err != nil {
+		return fmt.Errorf("package %q: %s", name, err)
+	}
+	if pkg.PkgDigest() == "" {
+		return fmt.Errorf("package %q missing %s", name, kind)
 	}
 	if pkg.PkgVersion() == "" {
 		return fmt.Errorf("package %q missing version", name)
@@ -298,7 +299,27 @@ func Validate(mfest *manifest.Manifest) (err error) {
 
 	pkgExist := map[string]bool{}
 	err = mfest.IteratePackages(func(pkg *manifest.Package) error {
-		pkgExist[pkg.Name] = true
+		name := pkg.Name
+		if name == "" {
+			return fmt.Errorf("package name not set")
+		}
+		if pkg.Arch == "" {
+			return fmt.Errorf("package %q missing arch", name)
+		}
+		kind := cache.DigestKind(pkg.DigestKind)
+		if kind == "" {
+			return fmt.Errorf("package %q missing digest", name)
+		}
+		if err := cache.ValidateKind(kind); err != nil {
+			return fmt.Errorf("package %q: %s", name, err)
+		}
+		if pkg.Digest == "" {
+			return fmt.Errorf("package %q missing %s", name, kind)
+		}
+		if pkg.Version == "" {
+			return fmt.Errorf("package %q missing version", name)
+		}
+		pkgExist[name] = true
 		return nil
 	})
 	if err != nil {

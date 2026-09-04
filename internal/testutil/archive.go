@@ -6,6 +6,7 @@ import (
 	"io"
 
 	"github.com/canonical/chisel/internal/archive"
+	"github.com/canonical/chisel/internal/cache"
 )
 
 type TestArchive struct {
@@ -14,12 +15,22 @@ type TestArchive struct {
 }
 
 type TestPackage struct {
-	Name     string
-	Version  string
-	Hash     string
+	Name    string
+	Version string
+	Hash    string
+	// HashKind is the digest kind of Hash. When unset, Hash is treated as
+	// a sha256 digest.
+	HashKind string
 	Arch     string
 	Data     []byte
 	Archives []string
+}
+
+func (p *TestPackage) digestKind() cache.DigestKind {
+	if p.HashKind == "" {
+		return cache.SHA256
+	}
+	return cache.DigestKind(p.HashKind)
 }
 
 func (a *TestArchive) Options() *archive.Options {
@@ -32,10 +43,11 @@ func (a *TestArchive) Fetch(pkgName string) (io.ReadSeekCloser, *archive.Package
 		return nil, nil, fmt.Errorf("cannot find package %q in archive", pkgName)
 	}
 	info := &archive.PackageInfo{
-		Name:    pkg.Name,
-		Version: pkg.Version,
-		SHA256:  pkg.Hash,
-		Arch:    pkg.Arch,
+		Name:       pkg.Name,
+		Version:    pkg.Version,
+		Digest:     pkg.Hash,
+		DigestKind: pkg.digestKind(),
+		Arch:       pkg.Arch,
 	}
 	return ReadSeekNopCloser(bytes.NewReader(pkg.Data)), info, nil
 }
@@ -51,9 +63,10 @@ func (a *TestArchive) Info(pkgName string) (*archive.PackageInfo, error) {
 		return nil, fmt.Errorf("cannot find package %q in archive", pkgName)
 	}
 	return &archive.PackageInfo{
-		Name:    pkg.Name,
-		Version: pkg.Version,
-		SHA256:  pkg.Hash,
-		Arch:    pkg.Arch,
+		Name:       pkg.Name,
+		Version:    pkg.Version,
+		Digest:     pkg.Hash,
+		DigestKind: pkg.digestKind(),
+		Arch:       pkg.Arch,
 	}, nil
 }

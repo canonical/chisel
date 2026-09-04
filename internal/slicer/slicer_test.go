@@ -859,8 +859,8 @@ var slicerTests = []slicerTest{{
 		"/other-file": "file 0644 fa0c9cdb {other-package_myslice}",
 	},
 	manifestPkgs: map[string]string{
-		"test-package":  "test-package v1 a1 h1",
-		"other-package": "other-package v3 a3 h3",
+		"test-package":  "test-package v1 a1 sha256 h1",
+		"other-package": "other-package v3 a3 sha256 h3",
 	},
 }, {
 	summary: "Pinned archive bypasses higher priority",
@@ -928,7 +928,7 @@ var slicerTests = []slicerTest{{
 		"/file": "file 0644 fa0c9cdb {test-package_myslice}",
 	},
 	manifestPkgs: map[string]string{
-		"test-package": "test-package v2 a2 h2",
+		"test-package": "test-package v2 a2 sha256 h2",
 	},
 }, {
 	summary: "Pinned archive does not have the package",
@@ -1097,7 +1097,38 @@ var slicerTests = []slicerTest{{
 		"/file": "file 0644 7a3e00f5 {test-package_myslice}",
 	},
 	manifestPkgs: map[string]string{
-		"test-package": "test-package v1 a1 h1",
+		"test-package": "test-package v1 a1 sha256 h1",
+	},
+}, {
+	summary: "Package with sha512 digest is recorded in the manifest",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	pkgs: []*testutil.TestPackage{{
+		Name:     "test-package",
+		Hash:     "h1",
+		HashKind: "sha512",
+		Version:  "v1",
+		Arch:     "a1",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Reg(0o644, "./file", "from foo"),
+		}),
+	}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/file:
+		`,
+	},
+	filesystem: map[string]string{
+		"/file": "file 0644 7a3e00f5",
+	},
+	manifestPaths: map[string]string{
+		"/file": "file 0644 7a3e00f5 {test-package_myslice}",
+	},
+	manifestPkgs: map[string]string{
+		"test-package": "test-package v1 a1 sha512 h1",
 	},
 }, {
 	summary: "Multiple slices of same package",
@@ -1386,8 +1417,8 @@ var slicerTests = []slicerTest{{
 	`,
 	},
 	manifestPkgs: map[string]string{
-		"test-package":  "test-package v1 a1 h1",
-		"other-package": "other-package v2 a2 h2",
+		"test-package":  "test-package v1 a1 sha256 h1",
+		"other-package": "other-package v2 a2 sha256 h2",
 	},
 }, {
 	summary: "Two packages, only one is selected and recorded",
@@ -1422,7 +1453,7 @@ var slicerTests = []slicerTest{{
 	`,
 	},
 	manifestPkgs: map[string]string{
-		"test-package": "test-package v1 a1 h1",
+		"test-package": "test-package v1 a1 sha256 h1",
 	},
 }, {
 	summary: "Relative paths are properly trimmed during extraction",
@@ -2220,7 +2251,7 @@ func treeDumpManifestPaths(mfest *manifest.Manifest) (map[string]string, error) 
 func dumpManifestPkgs(mfest *manifest.Manifest) (map[string]string, error) {
 	result := map[string]string{}
 	err := mfest.IteratePackages(func(pkg *manifest.Package) error {
-		result[pkg.Name] = fmt.Sprintf("%s %s %s %s", pkg.Name, pkg.Version, pkg.Arch, pkg.Digest)
+		result[pkg.Name] = fmt.Sprintf("%s %s %s %s %s", pkg.Name, pkg.Version, pkg.Arch, pkg.DigestKind, pkg.Digest)
 		return nil
 	})
 	if err != nil {
