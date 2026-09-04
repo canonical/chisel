@@ -275,8 +275,7 @@ var slicerTests = []slicerTest{{
 	summary: "Install two packages",
 	slices: []setup.SliceKey{
 		{"test-package", "myslice"},
-		{"other-package", "myslice"},
-	},
+		{"other-package", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.PackageData["test-package"],
@@ -320,8 +319,7 @@ var slicerTests = []slicerTest{{
 	slices: []setup.SliceKey{
 		{"a-implicit-parent", "myslice"},
 		{"b-explicit-dir", "myslice"},
-		{"c-implicit-parent", "myslice"},
-	},
+		{"c-implicit-parent", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name: "a-implicit-parent",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
@@ -379,8 +377,7 @@ var slicerTests = []slicerTest{{
 	summary: "Valid same file in two slices in different packages",
 	slices: []setup.SliceKey{
 		{"test-package", "myslice"},
-		{"other-package", "myslice"},
-	},
+		{"other-package", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.PackageData["test-package"],
@@ -1510,8 +1507,7 @@ var slicerTests = []slicerTest{{
 	summary: "Valid hard link in two slices in the same package",
 	slices: []setup.SliceKey{
 		{"test-package", "slice1"},
-		{"test-package", "slice2"},
-	},
+		{"test-package", "slice2"}},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
@@ -1544,8 +1540,7 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Hard link entries can be extracted without extracting the regular file",
 	slices: []setup.SliceKey{
-		{"test-package", "myslice"},
-	},
+		{"test-package", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
@@ -1575,8 +1570,7 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Hard link identifier for different groups",
 	slices: []setup.SliceKey{
-		{"test-package", "myslice"},
-	},
+		{"test-package", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
@@ -1611,8 +1605,7 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Single hard link entry can be extracted without regular file and no hard links are created",
 	slices: []setup.SliceKey{
-		{"test-package", "myslice"},
-	},
+		{"test-package", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
@@ -1639,8 +1632,7 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Hard link to symlink does not follow symlink",
 	slices: []setup.SliceKey{
-		{"test-package", "myslice"},
-	},
+		{"test-package", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
@@ -1673,8 +1665,7 @@ var slicerTests = []slicerTest{{
 	summary: "Hard link identifiers are unique across packages",
 	slices: []setup.SliceKey{
 		{"test-package1", "myslice"},
-		{"test-package2", "myslice"},
-	},
+		{"test-package2", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package1",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
@@ -1723,8 +1714,7 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Mutations for hard links are forbidden",
 	slices: []setup.SliceKey{
-		{"test-package", "myslice"},
-	},
+		{"test-package", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
@@ -1749,8 +1739,7 @@ var slicerTests = []slicerTest{{
 }, {
 	summary: "Hard links can be marked as mutable, but not mutated",
 	slices: []setup.SliceKey{
-		{"test-package", "myslice"},
-	},
+		{"test-package", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{

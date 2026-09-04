@@ -490,11 +490,7 @@ var setupTests = []setupTest{{
 						/path3: {symlink: /link}
 		`,
 	},
-	selslices: []setup.SliceKey{
-		{"mypkg1", "myslice1"},
-		{"mypkg1", "myslice2"},
-		{"mypkg2", "myslice1"},
-	},
+	selslices: []setup.SliceKey{{"mypkg1", "myslice1"},{"mypkg1", "myslice2"},{"mypkg2", "myslice1"}},
 }, {
 	summary: "Conflicting paths across slices",
 	input: map[string]string{
@@ -5106,7 +5102,7 @@ func (s *S) TestPackageMarshalYAML(c *C) {
 }
 
 func (s *S) TestPackageYAMLFormat(c *C) {
-	tests := []struct {
+	var tests = []struct {
 		summary  string
 		input    map[string]string
 		expected map[string]string
