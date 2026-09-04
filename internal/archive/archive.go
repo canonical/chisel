@@ -368,16 +368,18 @@ func findDigest(release control.Section, path string, order []digestField) (dige
 }
 
 // packageDigestFields lists the checksum fields Chisel looks up in a package
-// section, in order of preference. Unlike index files, packages are fetched
-// by their named pool path, so the by-hash layout does not constrain this
-// order. SHA256 is preferred so that the digest recorded in the manifest
-// keeps matching the one consumers expect for as long as archives publish
-// it; the strongest available digest is used only when they do not.
+// section, in order of preference: sha256 first.
 var packageDigestFields = []digestField{
 	{"SHA256", cache.SHA256},
 	{"SHA512", cache.SHA512},
 }
 
+// packageDigest returns the digest recorded for the package in the section,
+// along with its kind. SHA256 is preferred over stronger digests so that
+// the digest used for verification, caching and the manifest keeps matching
+// the one consumers expect for as long as archives publish it. Unlike index
+// files, packages are fetched by their named pool path, so the by-hash
+// layout does not constrain the preference order.
 func packageDigest(section control.Section) (digest string, kind cache.DigestKind) {
 	for _, f := range packageDigestFields {
 		if d := section.Get(f.name); d != "" {
