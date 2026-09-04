@@ -306,8 +306,11 @@ func (s *httpSuite) TestFetchSHA512Digests(c *C) {
 
 func (s *httpSuite) TestFetchBothDigests(c *C) {
 	// An archive publishing both SHA256 and SHA512 sections (index table and
-	// package fields) must be handled, with the strongest digest preferred
-	// for verification, caching and the manifest.
+	// package fields) must be handled. For packages, SHA256 is preferred for
+	// verification, caching and the manifest, so the recorded digest keeps
+	// matching the one consumers expect; the strongest digest is used only
+	// when the archive does not publish SHA256. Index files still use the
+	// strongest digest, as required by the by-hash layout.
 	s.prepareArchiveAdjustRelease("stonking", "25.10", "amd64", []string{"main", "universe"},
 		[]string{"SHA256", "SHA512"}, nil)
 
@@ -330,15 +333,15 @@ func (s *httpSuite) TestFetchBothDigests(c *C) {
 		Name:       "mypkg1",
 		Version:    "1.1",
 		Arch:       "amd64",
-		Digest:     "27c6e88def3d3848f4a068040bddbf908ab90e33bf93fc24fd02af7ed6a1953151302f2c59306313f065163143b51f1000cd22d102b7a58d7efd6430f5e162fb",
-		DigestKind: cache.SHA512,
+		Digest:     "1f08ef04cfe7a8087ee38a1ea35fa1810246648136c3c42d5a61ad6503d85e05",
+		DigestKind: cache.SHA256,
 	})
 	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
 
 	// Pin the cache key: with both digests advertised, the package is cached
-	// under its strongest digest.
-	_, err = os.Stat(filepath.Join(options.CacheDir, "sha512",
-		"27c6e88def3d3848f4a068040bddbf908ab90e33bf93fc24fd02af7ed6a1953151302f2c59306313f065163143b51f1000cd22d102b7a58d7efd6430f5e162fb"))
+	// under its SHA256 digest.
+	_, err = os.Stat(filepath.Join(options.CacheDir, "sha256",
+		"1f08ef04cfe7a8087ee38a1ea35fa1810246648136c3c42d5a61ad6503d85e05"))
 	c.Assert(err, IsNil)
 }
 
