@@ -152,7 +152,7 @@ var setupTests = []setupTest{{
 							"/file/path2":  {Kind: "copy", Info: "/other/path"},
 							"/file/path3":  {Kind: "symlink", Info: "/other/path"},
 							"/file/path4":  {Kind: "text", Info: "content", Until: "mutate"},
-							"/file/path5":  {Kind: "copy", Mode: 0o755, Mutable: true},
+							"/file/path5":  {Kind: "copy", Mode: 0755, Mutable: true},
 							"/file/path6/": {Kind: "dir"},
 						},
 					},
@@ -4673,7 +4673,7 @@ var setupTests = []setupTest{{
 						/dir/file: {channel: ["0.3/stable"]}
 		`,
 	},
-	relerror: `slice mypkg_myslice has 'channel' for path /dir/file but package is not in a store`,
+	relerror: `slice mypkg_myslice has invalid 'channel' for path /dir/file: 'channel' requires 'store'`,
 }, {
 	summary: "Channel on an essential of a non-store package",
 	input: map[string]string{
@@ -4687,7 +4687,21 @@ var setupTests = []setupTest{{
 				other:
 		`,
 	},
-	relerror: `slice mypkg_myslice has 'channel' for essential mypkg_other but package is not in a store`,
+	relerror: `slice mypkg_myslice has invalid 'channel' for essential mypkg_other: 'channel' requires 'store'`,
+}, {
+	summary: "Channel on a package-level essential of a non-store package",
+	input: map[string]string{
+		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
+		"slices/mypkg.yaml": `
+			package: mypkg
+			essential:
+				mypkg_other: {channel: ["0.3/stable"]}
+			slices:
+				myslice:
+				other:
+		`,
+	},
+	relerror: `package "mypkg" has invalid 'channel' for essential mypkg_other: 'channel' requires 'store'`,
 }, {
 	summary: "Invalid channel on a path",
 	input: map[string]string{
@@ -4999,9 +5013,9 @@ func runParseReleaseTests(c *C, tests []setupTest) {
 		dir := c.MkDir()
 		for path, data := range test.input {
 			fpath := filepath.Join(dir, path)
-			err := os.MkdirAll(filepath.Dir(fpath), 0o755)
+			err := os.MkdirAll(filepath.Dir(fpath), 0755)
 			c.Assert(err, IsNil)
-			err = os.WriteFile(fpath, testutil.Reindent(data), 0o644)
+			err = os.WriteFile(fpath, testutil.Reindent(data), 0644)
 			c.Assert(err, IsNil)
 		}
 		// Ensure the "slices" directory always exists, even if no slice
@@ -5066,16 +5080,16 @@ func (s *S) TestPackageMarshalYAML(c *C) {
 		dir := c.MkDir()
 		// Write chisel.yaml.
 		fpath := filepath.Join(dir, "chisel.yaml")
-		err := os.WriteFile(fpath, testutil.Reindent(data), 0o644)
+		err := os.WriteFile(fpath, testutil.Reindent(data), 0644)
 		c.Assert(err, IsNil)
 		// Write the packages YAML.
 		for _, pkg := range test.release.Packages {
 			fpath = filepath.Join(dir, pkg.Path)
-			err = os.MkdirAll(filepath.Dir(fpath), 0o755)
+			err = os.MkdirAll(filepath.Dir(fpath), 0755)
 			c.Assert(err, IsNil)
 			pkgData, err := yaml.Marshal(pkg)
 			c.Assert(err, IsNil)
-			err = os.WriteFile(fpath, testutil.Reindent(string(pkgData)), 0o644)
+			err = os.WriteFile(fpath, testutil.Reindent(string(pkgData)), 0644)
 			c.Assert(err, IsNil)
 		}
 		// Ensure the "slices" directory always exists, even if no slice
@@ -5341,9 +5355,9 @@ func (s *S) TestPackageYAMLFormat(c *C) {
 		dir := c.MkDir()
 		for path, data := range test.input {
 			fpath := filepath.Join(dir, path)
-			err := os.MkdirAll(filepath.Dir(fpath), 0o755)
+			err := os.MkdirAll(filepath.Dir(fpath), 0755)
 			c.Assert(err, IsNil)
-			err = os.WriteFile(fpath, testutil.Reindent(data), 0o644)
+			err = os.WriteFile(fpath, testutil.Reindent(data), 0644)
 			c.Assert(err, IsNil)
 		}
 		// Ensure the "slices" directory always exists, even if no slice

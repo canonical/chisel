@@ -78,7 +78,7 @@ type yamlPackage struct {
 // 'channel' field. Every flavour of essential is considered, including
 // 'v3-essential', as they all end up parsed the same way.
 func (yp *yamlPackage) hasChannel() bool {
-	essentialsHaveChannel := func(essentials map[string]*yamlEssential) bool {
+	haveChannel := func(essentials map[string]*yamlEssential) bool {
 		for _, essential := range essentials {
 			if essential != nil && len(essential.Channel.List) > 0 {
 				return true
@@ -86,11 +86,11 @@ func (yp *yamlPackage) hasChannel() bool {
 		}
 		return false
 	}
-	if essentialsHaveChannel(yp.Essential.Values) || essentialsHaveChannel(yp.V3Essential) {
+	if haveChannel(yp.Essential.Values) || haveChannel(yp.V3Essential) {
 		return true
 	}
 	for _, slice := range yp.Slices {
-		if essentialsHaveChannel(slice.Essential.Values) || essentialsHaveChannel(slice.V3Essential) {
+		if haveChannel(slice.Essential.Values) || haveChannel(slice.V3Essential) {
 			return true
 		}
 		for _, path := range slice.Contents {
@@ -155,8 +155,10 @@ func (es yamlEssentialListMap) MarshalYAML() (any, error) {
 	return es.Values, nil
 }
 
-var _ yaml.Marshaler = yamlEssentialListMap{}
-var _ yaml.Unmarshaler = (*yamlEssentialListMap)(nil)
+var (
+	_ yaml.Marshaler   = yamlEssentialListMap{}
+	_ yaml.Unmarshaler = (*yamlEssentialListMap)(nil)
+)
 
 type yamlPath struct {
 	Dir      bool         `yaml:"make,omitempty"`
@@ -712,7 +714,7 @@ func parsePackage(release *Release, pkgName, pkgPath string, data []byte) (*Pack
 				}
 				if len(yamlPath.Channel.List) > 0 {
 					if pkg.Store == "" {
-						return nil, fmt.Errorf("slice %s_%s has 'channel' for path %s but package is not in a store", pkg.Name, sliceName, contPath)
+						return nil, fmt.Errorf("slice %s_%s has invalid 'channel' for path %s: 'channel' requires 'store'", pkg.Name, sliceName, contPath)
 					}
 					if err := validateChannelPatterns(yamlPath.Channel.List); err != nil {
 						return nil, fmt.Errorf("slice %s_%s has invalid 'channel' for path %s: %s", pkg.Name, sliceName, contPath, err)
@@ -937,17 +939,18 @@ var defaultMaintenance = map[string]Maintenance{
 // processes them to check they are valid and not duplicated and, if
 // successful, adds them to slice.
 func parseEssentials(yamlPkg *yamlPackage, yamlSlice *yamlSlice, pkgPath string, slice *Slice) error {
-	// validateChannels validates the 'channel' field of an essential entry. The
-	// patterns apply to the channel of the package holding the essential.
-	validateChannels := func(refName string, essentialInfo *yamlEssential) ([]string, error) {
+	// validateChannels validates the 'channel' field of an essential entry.
+	// The patterns apply to the channel of the package holding the essential,
+	// not to the one of the required slice.
+	validateChannels := func(essentialInfo *yamlEssential) ([]string, error) {
 		if essentialInfo == nil || len(essentialInfo.Channel.List) == 0 {
 			return nil, nil
 		}
 		if yamlPkg.Store == "" {
-			return nil, fmt.Errorf("slice %s has 'channel' for essential %s but package is not in a store", slice, refName)
+			return nil, errors.New("'channel' requires 'store'")
 		}
 		if err := validateChannelPatterns(essentialInfo.Channel.List); err != nil {
-			return nil, fmt.Errorf("slice %s has invalid 'channel' for essential %s: %s", slice, refName, err)
+			return nil, err
 		}
 		return essentialInfo.Channel.List, nil
 	}
@@ -970,9 +973,9 @@ func parseEssentials(yamlPkg *yamlPackage, yamlSlice *yamlSlice, pkgPath string,
 		if essentialInfo != nil {
 			archList = essentialInfo.Arch.List
 		}
-		channel, err := validateChannels(refName, essentialInfo)
+		channel, err := validateChannels(essentialInfo)
 		if err != nil {
-			return err
+			return fmt.Errorf("package %q has invalid 'channel' for essential %s: %s", yamlPkg.RealName, refName, err)
 		}
 		slice.Essential[sliceKey] = EssentialInfo{Arch: archList, Channel: channel}
 		return nil
@@ -995,9 +998,9 @@ func parseEssentials(yamlPkg *yamlPackage, yamlSlice *yamlSlice, pkgPath string,
 		if essentialInfo != nil {
 			archList = essentialInfo.Arch.List
 		}
-		channel, err := validateChannels(refName, essentialInfo)
+		channel, err := validateChannels(essentialInfo)
 		if err != nil {
-			return err
+			return fmt.Errorf("slice %s has invalid 'channel' for essential %s: %s", slice, refName, err)
 		}
 		slice.Essential[sliceKey] = EssentialInfo{Arch: archList, Channel: channel}
 		return nil
