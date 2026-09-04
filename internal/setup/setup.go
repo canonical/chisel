@@ -99,7 +99,7 @@ const (
 	GeneratePath PathKind = "generate"
 
 	// TODO Maybe in the future, for binary support.
-	// Base64Path PathKind = "base64"
+	//Base64Path PathKind = "base64"
 )
 
 type PathUntil string
@@ -160,7 +160,7 @@ func (s *Slice) String() string { return s.Package + "_" + s.Name }
 type Selection struct {
 	Release *Release
 	Slices  []*Slice
-	// Channels holds the resolved channel per store package name.
+	// Channels holds the selected channel per store package name.
 	Channels map[string]Channel
 }
 
@@ -520,10 +520,10 @@ func Select(release *Release, slices []SliceKey, arch string) (*Selection, error
 		return nil, err
 	}
 
-	// Resolve the channel of every store package, whether it is selected or
+	// Select the channel of every store package, whether it is selected or
 	// not, and before ordering, because ordering depends on the channel of the
 	// packages it traverses.
-	channels := resolveChannels(release)
+	channels := selectChannels(release)
 
 	selection := &Selection{
 		Release: release,
@@ -577,10 +577,10 @@ func Select(release *Release, slices []SliceKey, arch string) (*Selection, error
 	return selection, nil
 }
 
-// resolveChannels returns the channel of every store package of the release,
+// selectChannels returns the channel of every store package of the release,
 // derived from its 'default-track' with the default risk. Note the release
 // only defines a track, the risk is implicit.
-func resolveChannels(release *Release) map[string]Channel {
+func selectChannels(release *Release) map[string]Channel {
 	channels := make(map[string]Channel)
 	for _, pkg := range release.Packages {
 		if pkg.Store == "" {

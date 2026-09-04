@@ -490,7 +490,7 @@ var setupTests = []setupTest{{
 						/path3: {symlink: /link}
 		`,
 	},
-	selslices: []setup.SliceKey{{"mypkg1", "myslice1"},{"mypkg1", "myslice2"},{"mypkg2", "myslice1"}},
+	selslices: []setup.SliceKey{{"mypkg1", "myslice1"}, {"mypkg1", "myslice2"}, {"mypkg2", "myslice1"}},
 }, {
 	summary: "Conflicting paths across slices",
 	input: map[string]string{

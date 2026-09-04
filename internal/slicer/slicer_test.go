@@ -1665,7 +1665,8 @@ var slicerTests = []slicerTest{{
 	summary: "Hard link identifiers are unique across packages",
 	slices: []setup.SliceKey{
 		{"test-package1", "myslice"},
-		{"test-package2", "myslice"}},
+		{"test-package2", "myslice"},
+	},
 	pkgs: []*testutil.TestPackage{{
 		Name: "test-package1",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
