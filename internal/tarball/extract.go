@@ -86,10 +86,10 @@ func Extract(pkg PkgReader, options *ExtractOptions) (err error) {
 		return err
 	}
 
-	return extractData(pkg, validOpts)
+	return extractEntries(pkg, validOpts)
 }
 
-func extractData(pkg PkgReader, options *ExtractOptions) error {
+func extractEntries(pkg PkgReader, options *ExtractOptions) error {
 	tarStream, err := pkg.TarStream()
 	if err != nil {
 		return err
