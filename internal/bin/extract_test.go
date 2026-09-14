@@ -2,7 +2,6 @@ package bin_test
 
 import (
 	"archive/tar"
-	"bytes"
 
 	. "gopkg.in/check.v1"
 
@@ -15,14 +14,13 @@ import (
 var _ tarball.PkgReader = (*bin.Pkg)(nil)
 
 func (s *S) TestPkgTarStream(c *C) {
-	pkg := bin.OpenPkg(testutil.ReadSeekNopCloser(
-		bytes.NewReader(testutil.MustMakeBin([]testutil.TarEntry{
-			testutil.Dir(0o755, "./"),
-			testutil.Reg(0o644, "./file", "content"),
-		}))))
+	pkg := testutil.NewBinPkg(testutil.MustMakeBin([]testutil.TarEntry{
+		testutil.Dir(0o755, "./"),
+		testutil.Reg(0o644, "./file", "content"),
+	}))
 
 	// Each call returns a fresh stream over the same content.
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		tarStream, err := pkg.TarStream()
 		c.Assert(err, IsNil)
 		tarReader := tar.NewReader(tarStream)
@@ -34,8 +32,7 @@ func (s *S) TestPkgTarStream(c *C) {
 }
 
 func (s *S) TestPkgTarStreamInvalid(c *C) {
-	pkg := bin.OpenPkg(testutil.ReadSeekNopCloser(
-		bytes.NewReader([]byte("not an xz stream"))))
+	pkg := testutil.NewBinPkg([]byte("not an xz stream"))
 
 	_, err := pkg.TarStream()
 	c.Assert(err, ErrorMatches, "xz.*")

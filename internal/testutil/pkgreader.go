@@ -3,6 +3,9 @@ package testutil
 import (
 	"bytes"
 	"io"
+
+	"github.com/canonical/chisel/internal/bin"
+	"github.com/canonical/chisel/internal/deb"
 )
 
 // TestPkg is a tarball.PkgReader over an in-memory tar stream built from
@@ -27,4 +30,14 @@ func (p *TestPkg) TarStream() (io.ReadCloser, error) {
 
 func (p *TestPkg) Close() error {
 	return nil
+}
+
+// NewDebPkg returns a deb.Pkg over the given Debian package data.
+func NewDebPkg(data []byte) *deb.Pkg {
+	return deb.OpenPkg(ReadSeekNopCloser(bytes.NewReader(data)))
+}
+
+// NewBinPkg returns a bin.Pkg over the given bin package data.
+func NewBinPkg(data []byte) *bin.Pkg {
+	return bin.OpenPkg(ReadSeekNopCloser(bytes.NewReader(data)))
 }

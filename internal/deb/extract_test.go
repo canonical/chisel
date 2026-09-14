@@ -2,7 +2,6 @@ package deb_test
 
 import (
 	"archive/tar"
-	"bytes"
 
 	. "gopkg.in/check.v1"
 
@@ -15,8 +14,7 @@ import (
 var _ tarball.PkgReader = (*deb.Pkg)(nil)
 
 func (s *S) TestPkgTarStream(c *C) {
-	pkg := deb.OpenPkg(testutil.ReadSeekNopCloser(
-		bytes.NewReader(testutil.PackageData["test-package"])))
+	pkg := testutil.NewDebPkg(testutil.PackageData["test-package"])
 
 	// Each call returns a fresh stream over the same content.
 	for i := 0; i < 2; i++ {
@@ -31,8 +29,7 @@ func (s *S) TestPkgTarStream(c *C) {
 }
 
 func (s *S) TestPkgExtract(c *C) {
-	pkg := deb.OpenPkg(testutil.ReadSeekNopCloser(
-		bytes.NewReader(testutil.PackageData["test-package"])))
+	pkg := testutil.NewDebPkg(testutil.PackageData["test-package"])
 
 	dir := c.MkDir()
 	err := tarball.Extract(pkg, &tarball.ExtractOptions{
