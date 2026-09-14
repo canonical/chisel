@@ -18,7 +18,7 @@ func OpenPkg(reader io.ReadSeekCloser) *Pkg {
 }
 
 // TarStream returns a reader over the tar stream of the bin package,
-// reading from the current position.
+// from the start of the package.
 func (p *Pkg) TarStream() (io.ReadCloser, error) {
 	_, err := p.reader.Seek(0, io.SeekStart)
 	if err != nil {

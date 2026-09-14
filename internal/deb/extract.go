@@ -21,7 +21,7 @@ func OpenPkg(reader io.ReadSeekCloser) *Pkg {
 }
 
 // TarStream returns a reader over the data tarball of the Debian
-// package, reading from the current position.
+// package, from the start of the package.
 func (p *Pkg) TarStream() (io.ReadCloser, error) {
 	_, err := p.reader.Seek(0, io.SeekStart)
 	if err != nil {
