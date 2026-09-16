@@ -26,8 +26,7 @@ type PackageInfo interface {
 	// revisions.
 	PkgRevision() int
 	PkgArch() string
-	PkgDigestKind() cache.DigestKind
-	PkgDigest() string
+	PkgDigests() map[cache.DigestKind]string
 }
 
 const DefaultFilename = "manifest.wall"
@@ -85,13 +84,16 @@ func Write(options *WriteOptions, writer io.Writer) error {
 
 func manifestAddPackages(dbw *jsonwall.DBWriter, infos []PackageInfo) error {
 	for _, info := range infos {
+		digests := make(map[string]string, len(info.PkgDigests()))
+		for kind, digest := range info.PkgDigests() {
+			digests[string(kind)] = digest
+		}
 		err := dbw.Add(&manifest.Package{
-			Kind:       "package",
-			Name:       info.PkgName(),
-			Version:    info.PkgVersion(),
-			Digest:     info.PkgDigest(),
-			DigestKind: string(info.PkgDigestKind()),
-			Arch:       info.PkgArch(),
+			Kind:    "package",
+			Name:    info.PkgName(),
+			Version: info.PkgVersion(),
+			Digests: digests,
+			Arch:    info.PkgArch(),
 		})
 		if err != nil {
 			return err
@@ -273,13 +275,15 @@ func validatePackage(pkg PackageInfo) (err error) {
 	if pkg.PkgArch() == "" {
 		return fmt.Errorf("package %q missing arch", name)
 	}
-	kind := pkg.PkgDigestKind()
-	err = cache.ValidateKind(kind)
-	if err != nil {
-		return fmt.Errorf("package %q: %s", name, err)
+	digests := pkg.PkgDigests()
+	if len(digests) == 0 {
+		return fmt.Errorf("package %q missing digest", name)
 	}
-	if pkg.PkgDigest() == "" {
-		return fmt.Errorf("package %q missing %s", name, kind)
+	for kind := range digests {
+		err = cache.ValidateKind(kind)
+		if err != nil {
+			return fmt.Errorf("package %q: %s", name, err)
+		}
 	}
 	if pkg.PkgVersion() == "" {
 		return fmt.Errorf("package %q missing version", name)
@@ -306,15 +310,13 @@ func Validate(mfest *manifest.Manifest) (err error) {
 		if pkg.Arch == "" {
 			return fmt.Errorf("package %q missing arch", name)
 		}
-		kind := cache.DigestKind(pkg.DigestKind)
-		if kind == "" {
+		if len(pkg.Digests) == 0 {
 			return fmt.Errorf("package %q missing digest", name)
 		}
-		if err := cache.ValidateKind(kind); err != nil {
-			return fmt.Errorf("package %q: %s", name, err)
-		}
-		if pkg.Digest == "" {
-			return fmt.Errorf("package %q missing %s", name, kind)
+		for kind := range pkg.Digests {
+			if err := cache.ValidateKind(cache.DigestKind(kind)); err != nil {
+				return fmt.Errorf("package %q: %s", name, err)
+			}
 		}
 		if pkg.Version == "" {
 			return fmt.Errorf("package %q missing version", name)

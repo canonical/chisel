@@ -252,11 +252,10 @@ func (s *httpSuite) TestFetchPackage(c *C) {
 	pkg, info, err := testArchive.Fetch("mypkg1")
 	c.Assert(err, IsNil)
 	c.Assert(info, DeepEquals, &archive.PackageInfo{
-		Name:       "mypkg1",
-		Version:    "1.1",
-		Arch:       "amd64",
-		Digest:     "1f08ef04cfe7a8087ee38a1ea35fa1810246648136c3c42d5a61ad6503d85e05",
-		DigestKind: cache.SHA256,
+		Name:    "mypkg1",
+		Version: "1.1",
+		Arch:    "amd64",
+		Digests: map[cache.DigestKind]string{cache.SHA256: "1f08ef04cfe7a8087ee38a1ea35fa1810246648136c3c42d5a61ad6503d85e05"},
 	})
 	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
 
@@ -264,11 +263,10 @@ func (s *httpSuite) TestFetchPackage(c *C) {
 	pkg, info, err = testArchive.Fetch("mypkg4")
 	c.Assert(err, IsNil)
 	c.Assert(info, DeepEquals, &archive.PackageInfo{
-		Name:       "mypkg4",
-		Version:    "1.4",
-		Arch:       "amd64",
-		Digest:     "54af70097b30b33cfcbb6911ad3d0df86c2d458928169e348fa7873e4fc678e4",
-		DigestKind: cache.SHA256,
+		Name:    "mypkg4",
+		Version: "1.4",
+		Arch:    "amd64",
+		Digests: map[cache.DigestKind]string{cache.SHA256: "54af70097b30b33cfcbb6911ad3d0df86c2d458928169e348fa7873e4fc678e4"},
 	})
 	c.Assert(read(pkg), Equals, "mypkg4 1.4 data")
 }
@@ -295,22 +293,18 @@ func (s *httpSuite) TestFetchSHA512Digests(c *C) {
 	pkg, info, err := testArchive.Fetch("mypkg1")
 	c.Assert(err, IsNil)
 	c.Assert(info, DeepEquals, &archive.PackageInfo{
-		Name:       "mypkg1",
-		Version:    "1.1",
-		Arch:       "amd64",
-		Digest:     "27c6e88def3d3848f4a068040bddbf908ab90e33bf93fc24fd02af7ed6a1953151302f2c59306313f065163143b51f1000cd22d102b7a58d7efd6430f5e162fb",
-		DigestKind: cache.SHA512,
+		Name:    "mypkg1",
+		Version: "1.1",
+		Arch:    "amd64",
+		Digests: map[cache.DigestKind]string{cache.SHA512: "27c6e88def3d3848f4a068040bddbf908ab90e33bf93fc24fd02af7ed6a1953151302f2c59306313f065163143b51f1000cd22d102b7a58d7efd6430f5e162fb"},
 	})
 	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
 }
 
 func (s *httpSuite) TestFetchBothDigests(c *C) {
 	// An archive publishing both SHA256 and SHA512 sections (index table and
-	// package fields) must be handled. For packages, SHA256 is preferred for
-	// verification, caching and the manifest, so the recorded digest keeps
-	// matching the one consumers expect; the strongest digest is used only
-	// when the archive does not publish SHA256. Index files still use the
-	// strongest digest, as required by the by-hash layout.
+	// package fields) must be handled. All published digests are recorded in
+	// the manifest; the strongest one is used for verification and caching.
 	s.prepareArchiveAdjustRelease("stonking", "25.10", "amd64", []string{"main", "universe"},
 		[]string{"SHA256", "SHA512"}, nil)
 
@@ -330,18 +324,20 @@ func (s *httpSuite) TestFetchBothDigests(c *C) {
 	pkg, info, err := testArchive.Fetch("mypkg1")
 	c.Assert(err, IsNil)
 	c.Assert(info, DeepEquals, &archive.PackageInfo{
-		Name:       "mypkg1",
-		Version:    "1.1",
-		Arch:       "amd64",
-		Digest:     "1f08ef04cfe7a8087ee38a1ea35fa1810246648136c3c42d5a61ad6503d85e05",
-		DigestKind: cache.SHA256,
+		Name:    "mypkg1",
+		Version: "1.1",
+		Arch:    "amd64",
+		Digests: map[cache.DigestKind]string{
+			cache.SHA256: "1f08ef04cfe7a8087ee38a1ea35fa1810246648136c3c42d5a61ad6503d85e05",
+			cache.SHA512: "27c6e88def3d3848f4a068040bddbf908ab90e33bf93fc24fd02af7ed6a1953151302f2c59306313f065163143b51f1000cd22d102b7a58d7efd6430f5e162fb",
+		},
 	})
 	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
 
 	// Pin the cache key: with both digests advertised, the package is cached
-	// under its SHA256 digest.
-	_, err = os.Stat(filepath.Join(options.CacheDir, "sha256",
-		"1f08ef04cfe7a8087ee38a1ea35fa1810246648136c3c42d5a61ad6503d85e05"))
+	// under its strongest digest.
+	_, err = os.Stat(filepath.Join(options.CacheDir, "sha512",
+		"27c6e88def3d3848f4a068040bddbf908ab90e33bf93fc24fd02af7ed6a1953151302f2c59306313f065163143b51f1000cd22d102b7a58d7efd6430f5e162fb"))
 	c.Assert(err, IsNil)
 }
 
@@ -368,11 +364,10 @@ func (s *httpSuite) TestFetchPortsPackage(c *C) {
 	pkg, info, err := testArchive.Fetch("mypkg1")
 	c.Assert(err, IsNil)
 	c.Assert(info, DeepEquals, &archive.PackageInfo{
-		Name:       "mypkg1",
-		Version:    "1.1",
-		Arch:       "arm64",
-		Digest:     "1f08ef04cfe7a8087ee38a1ea35fa1810246648136c3c42d5a61ad6503d85e05",
-		DigestKind: cache.SHA256,
+		Name:    "mypkg1",
+		Version: "1.1",
+		Arch:    "arm64",
+		Digests: map[cache.DigestKind]string{cache.SHA256: "1f08ef04cfe7a8087ee38a1ea35fa1810246648136c3c42d5a61ad6503d85e05"},
 	})
 	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
 
@@ -380,11 +375,10 @@ func (s *httpSuite) TestFetchPortsPackage(c *C) {
 	pkg, info, err = testArchive.Fetch("mypkg4")
 	c.Assert(err, IsNil)
 	c.Assert(info, DeepEquals, &archive.PackageInfo{
-		Name:       "mypkg4",
-		Version:    "1.4",
-		Arch:       "arm64",
-		Digest:     "54af70097b30b33cfcbb6911ad3d0df86c2d458928169e348fa7873e4fc678e4",
-		DigestKind: cache.SHA256,
+		Name:    "mypkg4",
+		Version: "1.4",
+		Arch:    "arm64",
+		Digests: map[cache.DigestKind]string{cache.SHA256: "54af70097b30b33cfcbb6911ad3d0df86c2d458928169e348fa7873e4fc678e4"},
 	})
 	c.Assert(read(pkg), Equals, "mypkg4 1.4 data")
 }
@@ -421,22 +415,20 @@ func (s *httpSuite) TestFetchSecurityPackage(c *C) {
 	pkg, info, err := testArchive.Fetch("mypkg1")
 	c.Assert(err, IsNil)
 	c.Assert(info, DeepEquals, &archive.PackageInfo{
-		Name:       "mypkg1",
-		Version:    "1.1.2.2",
-		Arch:       "amd64",
-		Digest:     "5448585bdd916e5023eff2bc1bc3b30bcc6ee9db9c03e531375a6a11ddf0913c",
-		DigestKind: cache.SHA256,
+		Name:    "mypkg1",
+		Version: "1.1.2.2",
+		Arch:    "amd64",
+		Digests: map[cache.DigestKind]string{cache.SHA256: "5448585bdd916e5023eff2bc1bc3b30bcc6ee9db9c03e531375a6a11ddf0913c"},
 	})
 	c.Assert(read(pkg), Equals, "package from jammy-security")
 
 	pkg, info, err = testArchive.Fetch("mypkg2")
 	c.Assert(err, IsNil)
 	c.Assert(info, DeepEquals, &archive.PackageInfo{
-		Name:       "mypkg2",
-		Version:    "1.2",
-		Arch:       "amd64",
-		Digest:     "a4b4f3f3a8fa09b69e3ba23c60a41a1f8144691fd371a2455812572fd02e6f79",
-		DigestKind: cache.SHA256,
+		Name:    "mypkg2",
+		Version: "1.2",
+		Arch:    "amd64",
+		Digests: map[cache.DigestKind]string{cache.SHA256: "a4b4f3f3a8fa09b69e3ba23c60a41a1f8144691fd371a2455812572fd02e6f79"},
 	})
 	c.Assert(read(pkg), Equals, "mypkg2 1.2 data")
 }
@@ -678,11 +670,10 @@ var packageInfoTests = []struct {
 	summary: "Basic",
 	pkg:     "mypkg1",
 	info: &archive.PackageInfo{
-		Name:       "mypkg1",
-		Version:    "1.1",
-		Arch:       "amd64",
-		Digest:     "1f08ef04cfe7a8087ee38a1ea35fa1810246648136c3c42d5a61ad6503d85e05",
-		DigestKind: cache.SHA256,
+		Name:    "mypkg1",
+		Version: "1.1",
+		Arch:    "amd64",
+		Digests: map[cache.DigestKind]string{cache.SHA256: "1f08ef04cfe7a8087ee38a1ea35fa1810246648136c3c42d5a61ad6503d85e05"},
 	},
 }, {
 	summary: "Package not found in archive",

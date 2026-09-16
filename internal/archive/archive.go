@@ -26,19 +26,19 @@ type Archive interface {
 }
 
 type PackageInfo struct {
-	Name       string
-	Version    string
-	Arch       string
-	Digest     string
-	DigestKind cache.DigestKind
+	Name    string
+	Version string
+	Arch    string
+	Digests map[cache.DigestKind]string
 }
 
-func (p *PackageInfo) PkgName() string                 { return p.Name }
-func (p *PackageInfo) PkgVersion() string              { return p.Version }
-func (p *PackageInfo) PkgRevision() int                { return 0 }
-func (p *PackageInfo) PkgArch() string                 { return p.Arch }
-func (p *PackageInfo) PkgDigestKind() cache.DigestKind { return p.DigestKind }
-func (p *PackageInfo) PkgDigest() string               { return p.Digest }
+func (p *PackageInfo) PkgName() string    { return p.Name }
+func (p *PackageInfo) PkgVersion() string { return p.Version }
+func (p *PackageInfo) PkgRevision() int   { return 0 }
+func (p *PackageInfo) PkgArch() string    { return p.Arch }
+func (p *PackageInfo) PkgDigests() map[cache.DigestKind]string {
+	return p.Digests
+}
 
 type Options struct {
 	Label      string
@@ -147,13 +147,20 @@ func (a *ubuntuArchive) Fetch(pkg string) (io.ReadSeekCloser, *PackageInfo, erro
 		return nil, nil, err
 	}
 	path := section.Get("Filename")
-	digest, digestKind := packageDigest(section)
+	digests := packageDigests(section)
+	// The strongest published digest is used for verification and caching.
+	digest, digestKind := strongestDigest(digests)
+	if digest == "" {
+		// No digest advertised; fetch unverified and cache the package under
+		// its computed SHA256 digest.
+		digestKind = cache.SHA256
+	}
 	logf("Fetching %s...", path)
 	reader, err := index.fetch(path, digest, digestKind, fetchBulk)
 	if err != nil {
 		return nil, nil, err
 	}
-	info := sectionPackageInfo(section, digest, digestKind)
+	info := sectionPackageInfo(section, digests)
 	return reader, info, nil
 }
 
@@ -162,8 +169,11 @@ func (a *ubuntuArchive) Info(pkg string) (*PackageInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	digest, digestKind := packageDigest(section)
-	info := sectionPackageInfo(section, digest, digestKind)
+	digests := packageDigests(section)
+	if len(digests) == 0 {
+		return nil, fmt.Errorf("cannot find digest for package %q", pkg)
+	}
+	info := sectionPackageInfo(section, digests)
 	return info, nil
 }
 
@@ -340,61 +350,67 @@ func (index *ubuntuIndex) fetchRelease() error {
 	return nil
 }
 
-// digestField is an archive checksum field Chisel can verify. Its name
-// doubles as the by-hash directory name in the archive layout.
+// digestField is an archive checksum field Chisel can verify, along with
+// the digest kind it carries.
 type digestField struct {
 	name string
 	kind cache.DigestKind
 }
 
 // digestFields lists the checksum fields Chisel can verify, in order of
-// preference: strongest first. The order also matches the by-hash archive
-// layout, where only the by-hash directory of the strongest advertised hash
-// is guaranteed to exist.
+// preference: strongest first.
 var digestFields = []digestField{
 	{"SHA512", cache.SHA512},
 	{"SHA256", cache.SHA256},
 }
 
-// findDigest returns the digest recorded for path in the release, along with
-// the field it was found in, trying the given fields in order.
-func findDigest(release control.Section, path string, order []digestField) (digest string, field digestField) {
+func findDigest(release control.Section, path string, order []digestField) (digest string, field digestField, ok bool) {
 	for _, f := range order {
-		if d, _, ok := control.ParsePathInfo(release.Get(f.name), path); ok {
-			return d, f
+		if d, _, found := control.ParsePathInfo(release.Get(f.name), path); found {
+			return d, f, true
 		}
 	}
-	return "", digestField{}
+	return "", digestField{}, false
 }
 
 // packageDigestFields lists the checksum fields Chisel looks up in a package
-// section, in order of preference: sha256 first.
+// section, in order of preference: strongest first. The first field found is
+// used for verification and caching; all fields found are recorded in the
+// manifest. Only kinds Ubuntu archives publish are listed; digest kinds
+// weaker than SHA256 (e.g. MD5) and kinds Chisel supports for other sources
+// (e.g. SHA384, used by stores) are not looked up here.
 var packageDigestFields = []digestField{
-	{"SHA256", cache.SHA256},
 	{"SHA512", cache.SHA512},
+	{"SHA256", cache.SHA256},
 }
 
-// packageDigest returns the digest recorded for the package in the section,
-// along with its kind. SHA256 is preferred over stronger digests so that
-// the digest used for verification, caching and the manifest keeps matching
-// the one consumers expect for as long as archives publish it. Unlike index
-// files, packages are fetched by their named pool path, so the by-hash
-// layout does not constrain the preference order.
-func packageDigest(section control.Section) (digest string, kind cache.DigestKind) {
+// packageDigests returns every digest the section advertises, keyed by
+// digest kind, following packageDigestFields.
+func packageDigests(section control.Section) map[cache.DigestKind]string {
+	digests := make(map[cache.DigestKind]string)
 	for _, f := range packageDigestFields {
 		if d := section.Get(f.name); d != "" {
+			digests[f.kind] = d
+		}
+	}
+	return digests
+}
+
+// strongestDigest returns the strongest digest in digests, following
+// packageDigestFields, or the zero values when digests is empty.
+func strongestDigest(digests map[cache.DigestKind]string) (digest string, kind cache.DigestKind) {
+	for _, f := range packageDigestFields {
+		if d, ok := digests[f.kind]; ok {
 			return d, f.kind
 		}
 	}
-	// No digest advertised; fall back to SHA256 so the package can still be
-	// cached and retrieved by its computed digest.
-	return "", cache.SHA256
+	return "", ""
 }
 
 func (index *ubuntuIndex) fetchIndex() error {
 	packagesPath := fmt.Sprintf("%s/binary-%s/Packages", index.component, index.arch)
-	packagesDigest, field := findDigest(index.release, packagesPath, digestFields)
-	if packagesDigest == "" {
+	packagesDigest, field, ok := findDigest(index.release, packagesPath, digestFields)
+	if !ok {
 		return fmt.Errorf("%s is missing from %s %s component digests", packagesPath, index.suite, index.component)
 	}
 
@@ -411,8 +427,8 @@ func (index *ubuntuIndex) fetchIndex() error {
 		// hash the archive advertises, which is what findDigest prefers. If
 		// the archive advertises a hash stronger than any Chisel knows, the
 		// URL may 404 and the named-path fallback below applies.
-		packagesGzDigest, byHashField := findDigest(index.release, packagesGzPath, digestFields)
-		if packagesGzDigest != "" {
+		packagesGzDigest, byHashField, ok := findDigest(index.release, packagesGzPath, digestFields)
+		if ok {
 			packagesByHashPath := fmt.Sprintf("%s/binary-%s/by-hash/%s/%s", index.component, index.arch, byHashField.name, packagesGzDigest)
 			r, err := index.fetch(index.distPath(packagesByHashPath), packagesDigest, field.kind, fetchBulk|fetchGzip)
 			if err != nil && err != errNotFound {
@@ -531,13 +547,12 @@ func (index *ubuntuIndex) fetch(path, digest string, digestKind cache.DigestKind
 	return index.archive.cache.Open(digestKind, writer.Digest())
 }
 
-func sectionPackageInfo(section control.Section, digest string, digestKind cache.DigestKind) *PackageInfo {
+func sectionPackageInfo(section control.Section, digests map[cache.DigestKind]string) *PackageInfo {
 	return &PackageInfo{
-		Name:       section.Get("Package"),
-		Version:    section.Get("Version"),
-		Arch:       section.Get("Architecture"),
-		Digest:     digest,
-		DigestKind: digestKind,
+		Name:    section.Get("Package"),
+		Version: section.Get("Version"),
+		Arch:    section.Get("Architecture"),
+		Digests: digests,
 	}
 }
 

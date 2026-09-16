@@ -53,8 +53,8 @@ var readManifestTests = []struct {
 			{Kind: "path", Path: "/manifest/manifest.wall", Mode: "0644", Slices: []string{"pkg1_manifest"}, SHA256: "", FinalSHA256: "", Size: 0x0, Link: ""},
 		},
 		Packages: []*manifest.Package{
-			{Kind: "package", Name: "pkg1", Version: "v1", Digest: "hash1", DigestKind: "sha256", Arch: "arch1"},
-			{Kind: "package", Name: "pkg2", Version: "v2", Digest: "hash2", DigestKind: "sha256", Arch: "arch2"},
+			{Kind: "package", Name: "pkg1", Version: "v1", Digests: map[string]string{"sha256": "hash1"}, Arch: "arch1"},
+			{Kind: "package", Name: "pkg2", Version: "v2", Digests: map[string]string{"sha256": "hash2"}, Arch: "arch2"},
 		},
 		Slices: []*manifest.Slice{
 			{Kind: "slice", Name: "pkg1_manifest"},
@@ -79,7 +79,7 @@ var readManifestTests = []struct {
 	`,
 	mfest: &apachetestutil.ManifestContents{
 		Packages: []*manifest.Package{
-			{Kind: "package", Name: "pkg1", Version: "v1", Digest: "hash1", DigestKind: "sha512", Arch: "arch1"},
+			{Kind: "package", Name: "pkg1", Version: "v1", Digests: map[string]string{"sha512": "hash1"}, Arch: "arch1"},
 		},
 	},
 }, {
@@ -90,7 +90,7 @@ var readManifestTests = []struct {
 	`,
 	mfest: &apachetestutil.ManifestContents{
 		Packages: []*manifest.Package{
-			{Kind: "package", Name: "pkg1", Version: "v1", Digest: "hash1", DigestKind: "sha384", Arch: "arch1"},
+			{Kind: "package", Name: "pkg1", Version: "v1", Digests: map[string]string{"sha384": "hash1"}, Arch: "arch1"},
 		},
 	},
 }, {
@@ -99,7 +99,11 @@ var readManifestTests = []struct {
 		{"jsonwall":"1.0","schema":"1.0","count":1}
 		{"kind":"package","name":"pkg1","version":"v1","sha256":"hash1","sha512":"hash2","arch":"arch1"}
 	`,
-	error: `cannot read manifest: package "pkg1" has multiple digests recorded`,
+	mfest: &apachetestutil.ManifestContents{
+		Packages: []*manifest.Package{
+			{Kind: "package", Name: "pkg1", Version: "v1", Digests: map[string]string{"sha256": "hash1", "sha512": "hash2"}, Arch: "arch1"},
+		},
+	},
 }, {
 	summary: "Unknown schema",
 	input: `
@@ -164,23 +168,21 @@ var marshalPackageTests = []struct {
 }{{
 	summary: "SHA256 digest",
 	pkg: &manifest.Package{
-		Kind:       "package",
-		Name:       "pkg1",
-		Version:    "v1",
-		Digest:     "hash1",
-		DigestKind: "sha256",
-		Arch:       "arch1",
+		Kind:    "package",
+		Name:    "pkg1",
+		Version: "v1",
+		Digests: map[string]string{"sha256": "hash1"},
+		Arch:    "arch1",
 	},
 	expected: `{"kind":"package","name":"pkg1","version":"v1","sha256":"hash1","arch":"arch1"}`,
 }, {
 	summary: "SHA512 digest",
 	pkg: &manifest.Package{
-		Kind:       "package",
-		Name:       "pkg1",
-		Version:    "v1",
-		Digest:     "hash1",
-		DigestKind: "sha512",
-		Arch:       "arch1",
+		Kind:    "package",
+		Name:    "pkg1",
+		Version: "v1",
+		Digests: map[string]string{"sha512": "hash1"},
+		Arch:    "arch1",
 	},
 	expected: `{"kind":"package","name":"pkg1","version":"v1","sha512":"hash1","arch":"arch1"}`,
 }, {
@@ -193,24 +195,23 @@ var marshalPackageTests = []struct {
 	},
 	expected: `{"kind":"package","name":"pkg1","version":"v1","arch":"arch1"}`,
 }, {
-	summary: "Digest set without a digest kind",
+	summary: "Multiple digests recorded",
 	pkg: &manifest.Package{
 		Kind:    "package",
 		Name:    "pkg1",
 		Version: "v1",
-		Digest:  "hash1",
+		Digests: map[string]string{"sha256": "hash1", "sha512": "hash2"},
 		Arch:    "arch1",
 	},
-	error: `json: error calling MarshalJSON for type \*manifest\.Package: cannot marshal package "pkg1": digest set without a digest kind`,
+	expected: `{"kind":"package","name":"pkg1","version":"v1","sha256":"hash1","sha512":"hash2","arch":"arch1"}`,
 }, {
 	summary: "Unsupported digest kind",
 	pkg: &manifest.Package{
-		Kind:       "package",
-		Name:       "pkg1",
-		Version:    "v1",
-		Digest:     "hash1",
-		DigestKind: "md5",
-		Arch:       "arch1",
+		Kind:    "package",
+		Name:    "pkg1",
+		Version: "v1",
+		Digests: map[string]string{"md5": "hash1"},
+		Arch:    "arch1",
 	},
 	error: `json: error calling MarshalJSON for type \*manifest\.Package: cannot marshal package "pkg1": unsupported digest kind "md5"`,
 }}

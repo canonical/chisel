@@ -151,18 +151,16 @@ var generateManifestTests = []struct {
 	},
 	packageInfo: []manifestutil.PackageInfo{
 		&archive.PackageInfo{
-			Name:       "package1",
-			Version:    "v1",
-			Arch:       "a1",
-			Digest:     "s1",
-			DigestKind: cache.SHA256,
+			Name:    "package1",
+			Version: "v1",
+			Arch:    "a1",
+			Digests: map[cache.DigestKind]string{cache.SHA256: "s1"},
 		},
 		&archive.PackageInfo{
-			Name:       "package2",
-			Version:    "v2",
-			Arch:       "a2",
-			Digest:     "s2",
-			DigestKind: cache.SHA256,
+			Name:    "package2",
+			Version: "v2",
+			Arch:    "a2",
+			Digests: map[cache.DigestKind]string{cache.SHA256: "s2"},
 		},
 	},
 	expected: &apachetestutil.ManifestContents{
@@ -182,19 +180,17 @@ var generateManifestTests = []struct {
 			Slices: []string{"package1_slice1", "package2_slice2"},
 		}},
 		Packages: []*manifest.Package{{
-			Kind:       "package",
-			Name:       "package1",
-			Version:    "v1",
-			Digest:     "s1",
-			DigestKind: "sha256",
-			Arch:       "a1",
+			Kind:    "package",
+			Name:    "package1",
+			Version: "v1",
+			Digests: map[string]string{"sha256": "s1"},
+			Arch:    "a1",
 		}, {
-			Kind:       "package",
-			Name:       "package2",
-			Version:    "v2",
-			Digest:     "s2",
-			DigestKind: "sha256",
-			Arch:       "a2",
+			Kind:    "package",
+			Name:    "package2",
+			Version: "v2",
+			Digests: map[string]string{"sha256": "s2"},
+			Arch:    "a2",
 		}},
 		Slices: []*manifest.Slice{{
 			Kind: "slice",
@@ -232,11 +228,10 @@ var generateManifestTests = []struct {
 	},
 	packageInfo: []manifestutil.PackageInfo{
 		&archive.PackageInfo{
-			Name:       "package1",
-			Version:    "v1",
-			Arch:       "a1",
-			Digest:     "s512",
-			DigestKind: cache.SHA512,
+			Name:    "package1",
+			Version: "v1",
+			Arch:    "a1",
+			Digests: map[cache.DigestKind]string{cache.SHA512: "s512"},
 		},
 	},
 	expected: &apachetestutil.ManifestContents{
@@ -247,12 +242,11 @@ var generateManifestTests = []struct {
 			Slices: []string{"package1_slice1"},
 		}},
 		Packages: []*manifest.Package{{
-			Kind:       "package",
-			Name:       "package1",
-			Version:    "v1",
-			Digest:     "s512",
-			DigestKind: "sha512",
-			Arch:       "a1",
+			Kind:    "package",
+			Name:    "package1",
+			Version: "v1",
+			Digests: map[string]string{"sha512": "s512"},
+			Arch:    "a1",
 		}},
 		Slices: []*manifest.Slice{{
 			Kind: "slice",
@@ -279,11 +273,10 @@ var generateManifestTests = []struct {
 	},
 	packageInfo: []manifestutil.PackageInfo{
 		&archive.PackageInfo{
-			Name:       "package1",
-			Version:    "v1",
-			Arch:       "a1",
-			Digest:     "s384",
-			DigestKind: cache.SHA384,
+			Name:    "package1",
+			Version: "v1",
+			Arch:    "a1",
+			Digests: map[cache.DigestKind]string{cache.SHA384: "s384"},
 		},
 	},
 	expected: &apachetestutil.ManifestContents{
@@ -294,12 +287,11 @@ var generateManifestTests = []struct {
 			Slices: []string{"package1_slice1"},
 		}},
 		Packages: []*manifest.Package{{
-			Kind:       "package",
-			Name:       "package1",
-			Version:    "v1",
-			Digest:     "s384",
-			DigestKind: "sha384",
-			Arch:       "a1",
+			Kind:    "package",
+			Name:    "package1",
+			Version: "v1",
+			Digests: map[string]string{"sha384": "s384"},
+			Arch:    "a1",
 		}},
 		Slices: []*manifest.Slice{{
 			Kind: "slice",
@@ -499,11 +491,10 @@ var generateManifestTests = []struct {
 	},
 	packageInfo: []manifestutil.PackageInfo{
 		&archive.PackageInfo{
-			Name:       "package1",
-			Version:    "v1",
-			Arch:       "a1",
-			Digest:     "s1",
-			DigestKind: cache.SHA256,
+			Name:    "package1",
+			Version: "v1",
+			Arch:    "a1",
+			Digests: map[cache.DigestKind]string{cache.SHA256: "s1"},
 		},
 	},
 	expected: &apachetestutil.ManifestContents{
@@ -527,12 +518,11 @@ var generateManifestTests = []struct {
 			Inode:       1,
 		}},
 		Packages: []*manifest.Package{{
-			Kind:       "package",
-			Name:       "package1",
-			Version:    "v1",
-			Digest:     "s1",
-			DigestKind: "sha256",
-			Arch:       "a1",
+			Kind:    "package",
+			Name:    "package1",
+			Version: "v1",
+			Digests: map[string]string{"sha256": "s1"},
+			Arch:    "a1",
 		}},
 		Slices: []*manifest.Slice{{
 			Kind: "slice",
@@ -602,10 +592,9 @@ var generateManifestTests = []struct {
 	summary: "Invalid package: missing name",
 	packageInfo: []manifestutil.PackageInfo{
 		&archive.PackageInfo{
-			Version:    "v1",
-			Arch:       "a1",
-			Digest:     "s1",
-			DigestKind: cache.SHA256,
+			Version: "v1",
+			Arch:    "a1",
+			Digests: map[cache.DigestKind]string{cache.SHA256: "s1"},
 		},
 	},
 	error: `internal error: invalid manifest: package name not set`,
@@ -613,10 +602,9 @@ var generateManifestTests = []struct {
 	summary: "Invalid package: missing version",
 	packageInfo: []manifestutil.PackageInfo{
 		&archive.PackageInfo{
-			Name:       "package-1",
-			Arch:       "a1",
-			Digest:     "s1",
-			DigestKind: cache.SHA256,
+			Name:    "package-1",
+			Arch:    "a1",
+			Digests: map[cache.DigestKind]string{cache.SHA256: "s1"},
 		},
 	},
 	error: `internal error: invalid manifest: package "package-1" missing version`,
@@ -624,10 +612,9 @@ var generateManifestTests = []struct {
 	summary: "Invalid package: missing arch",
 	packageInfo: []manifestutil.PackageInfo{
 		&archive.PackageInfo{
-			Name:       "package-1",
-			Version:    "v1",
-			Digest:     "s1",
-			DigestKind: cache.SHA256,
+			Name:    "package-1",
+			Version: "v1",
+			Digests: map[cache.DigestKind]string{cache.SHA256: "s1"},
 		},
 	},
 	error: `internal error: invalid manifest: package "package-1" missing arch`,
@@ -635,22 +622,20 @@ var generateManifestTests = []struct {
 	summary: "Invalid package: missing digest",
 	packageInfo: []manifestutil.PackageInfo{
 		&archive.PackageInfo{
-			Name:       "package-1",
-			Version:    "v1",
-			Arch:       "a1",
-			DigestKind: cache.SHA256,
+			Name:    "package-1",
+			Version: "v1",
+			Arch:    "a1",
 		},
 	},
-	error: `internal error: invalid manifest: package "package-1" missing sha256`,
+	error: `internal error: invalid manifest: package "package-1" missing digest`,
 }, {
 	summary: "Invalid package: unsupported digest kind",
 	packageInfo: []manifestutil.PackageInfo{
 		&archive.PackageInfo{
-			Name:       "package-1",
-			Version:    "v1",
-			Arch:       "a1",
-			Digest:     "s1",
-			DigestKind: cache.DigestKind("md5"),
+			Name:    "package-1",
+			Version: "v1",
+			Arch:    "a1",
+			Digests: map[cache.DigestKind]string{cache.DigestKind("md5"): "s1"},
 		},
 	},
 	error: `internal error: invalid manifest: package "package-1": unsupported digest kind: "md5"`,
@@ -665,11 +650,10 @@ func (s *S) TestGenerateManifests(c *C) {
 		if test.packageInfo == nil {
 			test.packageInfo = []manifestutil.PackageInfo{
 				&archive.PackageInfo{
-					Name:       "package1",
-					Version:    "v1",
-					Arch:       "a1",
-					Digest:     "s1",
-					DigestKind: cache.SHA256,
+					Name:    "package1",
+					Version: "v1",
+					Arch:    "a1",
+					Digests: map[cache.DigestKind]string{cache.SHA256: "s1"},
 				},
 			}
 		}
@@ -786,7 +770,6 @@ var validateManifestTests = []struct {
 		{"kind":"package","name":"pkg1","version":"v1","sha256":"hash1","sha512":"hash2","arch":"arch1"}
 		{"kind":"slice","name":"pkg1_myslice"}
 	`,
-	error: `invalid manifest: cannot read manifest: package "pkg1" has multiple digests recorded`,
 }, {
 	summary: "Malformed jsonwall",
 	input: `

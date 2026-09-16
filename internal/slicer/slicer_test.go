@@ -15,6 +15,7 @@ import (
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/chisel/internal/archive"
+	"github.com/canonical/chisel/internal/cache"
 	"github.com/canonical/chisel/internal/manifestutil"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/slicer"
@@ -859,8 +860,8 @@ var slicerTests = []slicerTest{{
 		"/other-file": "file 0644 fa0c9cdb {other-package_myslice}",
 	},
 	manifestPkgs: map[string]string{
-		"test-package":  "test-package v1 a1 sha256 h1",
-		"other-package": "other-package v3 a3 sha256 h3",
+		"test-package":  "test-package v1 a1 sha256=h1",
+		"other-package": "other-package v3 a3 sha256=h3",
 	},
 }, {
 	summary: "Pinned archive bypasses higher priority",
@@ -928,7 +929,7 @@ var slicerTests = []slicerTest{{
 		"/file": "file 0644 fa0c9cdb {test-package_myslice}",
 	},
 	manifestPkgs: map[string]string{
-		"test-package": "test-package v2 a2 sha256 h2",
+		"test-package": "test-package v2 a2 sha256=h2",
 	},
 }, {
 	summary: "Pinned archive does not have the package",
@@ -1097,17 +1098,16 @@ var slicerTests = []slicerTest{{
 		"/file": "file 0644 7a3e00f5 {test-package_myslice}",
 	},
 	manifestPkgs: map[string]string{
-		"test-package": "test-package v1 a1 sha256 h1",
+		"test-package": "test-package v1 a1 sha256=h1",
 	},
 }, {
 	summary: "Package with sha512 digest is recorded in the manifest",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
-		Name:     "test-package",
-		Hash:     "h1",
-		HashKind: "sha512",
-		Version:  "v1",
-		Arch:     "a1",
+		Name:    "test-package",
+		Hashes:  map[cache.DigestKind]string{cache.SHA512: "h1"},
+		Version: "v1",
+		Arch:    "a1",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
 			testutil.Reg(0o644, "./file", "from foo"),
 		}),
@@ -1128,7 +1128,40 @@ var slicerTests = []slicerTest{{
 		"/file": "file 0644 7a3e00f5 {test-package_myslice}",
 	},
 	manifestPkgs: map[string]string{
-		"test-package": "test-package v1 a1 sha512 h1",
+		"test-package": "test-package v1 a1 sha512=h1",
+	},
+}, {
+	summary: "Package with multiple digests is recorded in the manifest",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	pkgs: []*testutil.TestPackage{{
+		Name: "test-package",
+		Hashes: map[cache.DigestKind]string{
+			cache.SHA256: "h256",
+			cache.SHA512: "h512",
+		},
+		Version: "v1",
+		Arch:    "a1",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Reg(0o644, "./file", "from foo"),
+		}),
+	}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/file:
+		`,
+	},
+	filesystem: map[string]string{
+		"/file": "file 0644 7a3e00f5",
+	},
+	manifestPaths: map[string]string{
+		"/file": "file 0644 7a3e00f5 {test-package_myslice}",
+	},
+	manifestPkgs: map[string]string{
+		"test-package": "test-package v1 a1 sha256=h256,sha512=h512",
 	},
 }, {
 	summary: "Multiple slices of same package",
@@ -1417,8 +1450,8 @@ var slicerTests = []slicerTest{{
 	`,
 	},
 	manifestPkgs: map[string]string{
-		"test-package":  "test-package v1 a1 sha256 h1",
-		"other-package": "other-package v2 a2 sha256 h2",
+		"test-package":  "test-package v1 a1 sha256=h1",
+		"other-package": "other-package v2 a2 sha256=h2",
 	},
 }, {
 	summary: "Two packages, only one is selected and recorded",
@@ -1453,7 +1486,7 @@ var slicerTests = []slicerTest{{
 	`,
 	},
 	manifestPkgs: map[string]string{
-		"test-package": "test-package v1 a1 sha256 h1",
+		"test-package": "test-package v1 a1 sha256=h1",
 	},
 }, {
 	summary: "Relative paths are properly trimmed during extraction",
@@ -2251,7 +2284,16 @@ func treeDumpManifestPaths(mfest *manifest.Manifest) (map[string]string, error) 
 func dumpManifestPkgs(mfest *manifest.Manifest) (map[string]string, error) {
 	result := map[string]string{}
 	err := mfest.IteratePackages(func(pkg *manifest.Package) error {
-		result[pkg.Name] = fmt.Sprintf("%s %s %s %s %s", pkg.Name, pkg.Version, pkg.Arch, pkg.DigestKind, pkg.Digest)
+		kinds := make([]string, 0, len(pkg.Digests))
+		for kind := range pkg.Digests {
+			kinds = append(kinds, kind)
+		}
+		sort.Strings(kinds)
+		digests := make([]string, 0, len(kinds))
+		for _, kind := range kinds {
+			digests = append(digests, kind+"="+pkg.Digests[kind])
+		}
+		result[pkg.Name] = fmt.Sprintf("%s %s %s %s", pkg.Name, pkg.Version, pkg.Arch, strings.Join(digests, ","))
 		return nil
 	})
 	if err != nil {
