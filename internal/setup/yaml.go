@@ -856,6 +856,16 @@ var defaultMaintenance = map[string]Maintenance{
 		Standard:  time.Date(2025, time.April, 17, 0, 0, 0, 0, time.UTC),
 		EndOfLife: time.Date(2026, time.January, 15, 0, 0, 0, 0, time.UTC),
 	},
+	"25.10": {
+		Standard:  time.Date(2025, time.October, 9, 0, 0, 0, 0, time.UTC),
+		EndOfLife: time.Date(2026, time.July, 9, 0, 0, 0, 0, time.UTC),
+	},
+	"26.04": {
+		Standard:  time.Date(2026, time.April, 23, 0, 0, 0, 0, time.UTC),
+		Expanded:  time.Date(2031, time.May, 29, 0, 0, 0, 0, time.UTC),
+		Legacy:    time.Date(2036, time.April, 23, 0, 0, 0, 0, time.UTC),
+		EndOfLife: time.Date(2038, time.April, 27, 0, 0, 0, 0, time.UTC),
+	},
 }
 
 // parseEssentials takes into account package-level and slice-level essentials,
