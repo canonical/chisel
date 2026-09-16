@@ -8,8 +8,7 @@ import (
 	"github.com/canonical/chisel/internal/deb"
 )
 
-// TestPkg is a tarball.PkgReader over an in-memory tar stream built from
-// the given entries.
+// TestPkg is a PkgReader over an in-memory tar stream.
 type TestPkg struct {
 	tarData []byte
 }
@@ -23,7 +22,6 @@ func NewTestPkg(entries ...TarEntry) *TestPkg {
 	return &TestPkg{tarData: data}
 }
 
-// TarStream returns a fresh reader over the tar stream.
 func (p *TestPkg) TarStream() (io.ReadCloser, error) {
 	return io.NopCloser(bytes.NewReader(p.tarData)), nil
 }

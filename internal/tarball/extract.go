@@ -16,10 +16,9 @@ import (
 	"github.com/canonical/chisel/internal/strdist"
 )
 
-// PkgReader provides the tar stream of a package. TarStream must
-// always provide a fresh reader, from the start.
 type PkgReader interface {
 	// TarStream returns a reader over the raw, unparsed tar stream.
+	// Each call returns a fresh stream, from its start.
 	TarStream() (io.ReadCloser, error)
 	io.Closer
 }

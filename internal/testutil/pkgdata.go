@@ -176,8 +176,6 @@ func compressBytesXZ(input []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// MakeBin returns the bytes of a bin package holding the given tar
-// entries: a plain XZ-compressed tarball.
 func MakeBin(entries []TarEntry) ([]byte, error) {
 	tarData, err := makeTar(entries)
 	if err != nil {

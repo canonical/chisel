@@ -10,18 +10,16 @@ import (
 	"github.com/ulikunitz/xz"
 )
 
-// Pkg reads the tar stream of a Debian package held in a seekable reader.
 type Pkg struct {
 	reader io.ReadSeekCloser
 }
 
-// OpenPkg wraps a seekable reader over Debian package data.
 func OpenPkg(reader io.ReadSeekCloser) *Pkg {
 	return &Pkg{reader: reader}
 }
 
-// TarStream returns a reader over the data tarball of the Debian
-// package, from the start of the package.
+// TarStream returns a ReadCloser to the inner tarball of
+// a Debian package.
 func (p *Pkg) TarStream() (io.ReadCloser, error) {
 	_, err := p.reader.Seek(0, io.SeekStart)
 	if err != nil {

@@ -10,7 +10,6 @@ import (
 	"github.com/canonical/chisel/internal/testutil"
 )
 
-// Compile-time check that Pkg implements tarball.PkgReader.
 var _ tarball.PkgReader = (*bin.Pkg)(nil)
 
 func (s *S) TestPkgTarStream(c *C) {
