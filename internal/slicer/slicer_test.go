@@ -1979,21 +1979,29 @@ var slicerTests = []slicerTest{{
 		"/dir/file": "file 0644 cc55e2ec {test-package_third}",
 	},
 }, {
-	summary: "Store package is not yet implemented",
-	slices:  []setup.SliceKey{{"bin-curl", "bin"}},
+	summary: "Store package fetching not yet implemented",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}, {"bin-store-pkg", "myslice"}},
+	arch:    "amd64",
 	release: map[string]string{
 		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
-		"slices/curl.yaml": `
-			package: curl
-			store: bin
-			default-track: latest
+		"slices/mydir/test-package.yaml": `
+			package: test-package
 			slices:
-				bin:
+				myslice:
 					contents:
-						/usr/bin/curl:
+						/dir/file:
+		`,
+		"slices/mydir/store-pkg.yaml": `
+			package: store-pkg
+			store: bin
+			default-track: 3.1
+			slices:
+				myslice:
+					contents:
+						/dir/store-file:
 		`,
 	},
-	error: `cannot fetch package "bin-curl" from store "bin": not implemented`,
+	error: `cannot fetch package "bin-store-pkg" from store "bin": not implemented`,
 }}
 
 func (s *S) TestRun(c *C) {
