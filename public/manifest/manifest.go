@@ -30,8 +30,8 @@ type packageJSON struct {
 	Name    string `json:"name,omitempty"`
 	Version string `json:"version,omitempty"`
 	SHA256  string `json:"sha256,omitempty"`
-	SHA384  string `json:"sha384,omitempty"`
 	SHA512  string `json:"sha512,omitempty"`
+	SHA384  string `json:"sha384,omitempty"`
 	Arch    string `json:"arch,omitempty"`
 }
 
@@ -46,10 +46,10 @@ func (p *Package) MarshalJSON() ([]byte, error) {
 		switch kind {
 		case "sha256":
 			pj.SHA256 = digest
-		case "sha384":
-			pj.SHA384 = digest
 		case "sha512":
 			pj.SHA512 = digest
+		case "sha384":
+			pj.SHA384 = digest
 		default:
 			return nil, fmt.Errorf("cannot marshal package %q: unsupported digest kind %q", p.Name, kind)
 		}
@@ -66,8 +66,8 @@ func (p *Package) UnmarshalJSON(data []byte) error {
 	digests := make(map[string]string)
 	for kind, digest := range map[string]string{
 		"sha256": pj.SHA256,
-		"sha384": pj.SHA384,
 		"sha512": pj.SHA512,
+		"sha384": pj.SHA384,
 	} {
 		if digest != "" {
 			digests[kind] = digest
