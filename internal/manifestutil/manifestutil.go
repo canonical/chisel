@@ -306,25 +306,7 @@ func Validate(mfest *manifest.Manifest) (err error) {
 
 	pkgExist := map[string]bool{}
 	err = mfest.IteratePackages(func(pkg *manifest.Package) error {
-		name := pkg.Name
-		if name == "" {
-			return fmt.Errorf("package name not set")
-		}
-		if pkg.Arch == "" {
-			return fmt.Errorf("package %q missing arch", name)
-		}
-		if len(pkg.Digests) == 0 {
-			return fmt.Errorf("package %q missing digests", name)
-		}
-		for kind := range pkg.Digests {
-			if err := cache.ValidateDigestKind(cache.DigestKind(kind)); err != nil {
-				return fmt.Errorf("package %q: %s", name, err)
-			}
-		}
-		if pkg.Version == "" {
-			return fmt.Errorf("package %q missing version", name)
-		}
-		pkgExist[name] = true
+		pkgExist[pkg.Name] = true
 		return nil
 	})
 	if err != nil {

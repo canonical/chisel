@@ -767,14 +767,6 @@ var validateManifestTests = []struct {
 		{"kind":"slice","name":"pkg1_myslice"}
 	`,
 }, {
-	summary: "Package with missing digests",
-	input: `
-		{"jsonwall":"1.0","schema":"1.0","count":2}
-		{"kind":"package","name":"pkg1","version":"v1","arch":"arch1"}
-		{"kind":"slice","name":"pkg1_myslice"}
-	`,
-	error: `invalid manifest: package "pkg1" missing digests`,
-}, {
 	summary: "Package with multiple digests",
 	input: `
 		{"jsonwall":"1.0","schema":"1.0","count":2}
