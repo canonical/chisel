@@ -280,7 +280,7 @@ func validatePackage(pkg PackageInfo) (err error) {
 		return fmt.Errorf("package %q missing digest", name)
 	}
 	for kind := range digests {
-		err = cache.ValidateKind(kind)
+		err = cache.ValidateDigestKind(kind)
 		if err != nil {
 			return fmt.Errorf("package %q: %s", name, err)
 		}
@@ -314,7 +314,7 @@ func Validate(mfest *manifest.Manifest) (err error) {
 			return fmt.Errorf("package %q missing digest", name)
 		}
 		for kind := range pkg.Digests {
-			if err := cache.ValidateKind(cache.DigestKind(kind)); err != nil {
+			if err := cache.ValidateDigestKind(cache.DigestKind(kind)); err != nil {
 				return fmt.Errorf("package %q: %s", name, err)
 			}
 		}

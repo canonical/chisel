@@ -274,12 +274,12 @@ func (s *httpSuite) TestFetchPackage(c *C) {
 func (s *httpSuite) TestFetchSHA512Digests(c *C) {
 	// Ubuntu 26.10+ publishes SHA512-only indices (no SHA256 section), so both
 	// the index digest and the package digest must be read from SHA512.
-	s.prepareArchiveAdjustRelease("stonking", "25.10", "amd64", []string{"main", "universe"},
+	s.prepareArchiveAdjustRelease("stonking", "26.10", "amd64", []string{"main", "universe"},
 		[]string{"SHA512"}, nil)
 
 	options := archive.Options{
 		Label:      "ubuntu",
-		Version:    "25.10",
+		Version:    "26.10",
 		Arch:       "amd64",
 		Suites:     []string{"stonking"},
 		Components: []string{"main", "universe"},
@@ -305,12 +305,12 @@ func (s *httpSuite) TestFetchBothDigests(c *C) {
 	// An archive publishing both SHA256 and SHA512 sections (index table and
 	// package fields) must be handled. All published digests are recorded in
 	// the manifest; the strongest one is used for verification and caching.
-	s.prepareArchiveAdjustRelease("stonking", "25.10", "amd64", []string{"main", "universe"},
+	s.prepareArchiveAdjustRelease("stonking", "26.10", "amd64", []string{"main", "universe"},
 		[]string{"SHA256", "SHA512"}, nil)
 
 	options := archive.Options{
 		Label:      "ubuntu",
-		Version:    "25.10",
+		Version:    "26.10",
 		Arch:       "amd64",
 		Suites:     []string{"stonking"},
 		Components: []string{"main", "universe"},

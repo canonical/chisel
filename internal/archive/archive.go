@@ -355,9 +355,8 @@ type digestField struct {
 }
 
 // digestFields lists the checksum fields Chisel looks up in archive index
-// and package files, in order of preference: strongest first. Only kinds
-// Ubuntu archives publish are listed; digest kinds weaker than SHA256
-// (e.g. MD5) are not looked up.
+// and package files, in order of preference: strongest first. Digest kinds
+// weaker than SHA256 (e.g. MD5) are not looked up.
 var digestFields = []digestField{
 	{"SHA512", cache.SHA512},
 	{"SHA256", cache.SHA256},

@@ -105,9 +105,7 @@ const (
 // strength: strongest first.
 var digestKinds = []DigestKind{SHA384, SHA512, SHA256}
 
-// ValidateKind returns an error unless kind is a digest kind Chisel
-// supports.
-func ValidateKind(kind DigestKind) error {
+func ValidateDigestKind(kind DigestKind) error {
 	if !slices.Contains(digestKinds, kind) {
 		return fmt.Errorf("unsupported digest kind: %q", kind)
 	}
