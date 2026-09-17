@@ -17,8 +17,8 @@ type TestArchive struct {
 type TestPackage struct {
 	Name    string
 	Version string
-	// Hashes holds the digests of the package, keyed by digest kind.
-	Hashes   map[cache.DigestKind]string
+	// Digests holds the digests of the package, keyed by digest kind.
+	Digests  map[cache.DigestKind]string
 	Arch     string
 	Data     []byte
 	Archives []string
@@ -36,7 +36,7 @@ func (a *TestArchive) Fetch(pkgName string) (io.ReadSeekCloser, *archive.Package
 	info := &archive.PackageInfo{
 		Name:    pkg.Name,
 		Version: pkg.Version,
-		Digests: pkg.Hashes,
+		Digests: pkg.Digests,
 		Arch:    pkg.Arch,
 	}
 	return ReadSeekNopCloser(bytes.NewReader(pkg.Data)), info, nil
@@ -55,7 +55,7 @@ func (a *TestArchive) Info(pkgName string) (*archive.PackageInfo, error) {
 	return &archive.PackageInfo{
 		Name:    pkg.Name,
 		Version: pkg.Version,
-		Digests: pkg.Hashes,
+		Digests: pkg.Digests,
 		Arch:    pkg.Arch,
 	}, nil
 }
