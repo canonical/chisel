@@ -277,12 +277,15 @@ func validatePackage(pkg PackageInfo) (err error) {
 	}
 	digests := pkg.PkgDigests()
 	if len(digests) == 0 {
-		return fmt.Errorf("package %q missing digest", name)
+		return fmt.Errorf("package %q missing digests", name)
 	}
-	for kind := range digests {
+	for kind, digest := range digests {
 		err = cache.ValidateDigestKind(kind)
 		if err != nil {
 			return fmt.Errorf("package %q: %s", name, err)
+		}
+		if digest == "" {
+			return fmt.Errorf("package %q has empty %s digest", name, kind)
 		}
 	}
 	if pkg.PkgVersion() == "" {
@@ -311,7 +314,7 @@ func Validate(mfest *manifest.Manifest) (err error) {
 			return fmt.Errorf("package %q missing arch", name)
 		}
 		if len(pkg.Digests) == 0 {
-			return fmt.Errorf("package %q missing digest", name)
+			return fmt.Errorf("package %q missing digests", name)
 		}
 		for kind := range pkg.Digests {
 			if err := cache.ValidateDigestKind(cache.DigestKind(kind)); err != nil {

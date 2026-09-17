@@ -301,8 +301,8 @@ func (s *httpSuite) TestFetchSHA512Digests(c *C) {
 	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
 }
 
-func (s *httpSuite) TestFetchBothDigests(c *C) {
-	// An archive publishing both SHA256 and SHA512 sections (index table and
+func (s *httpSuite) TestFetchMultipleDigests(c *C) {
+	// An archive publishing SHA256 and SHA512 sections (index table and
 	// package fields) must be handled. All published digests are recorded in
 	// the manifest; the strongest one is used for verification and caching.
 	s.prepareArchiveAdjustRelease("stonking", "26.10", "amd64", []string{"main", "universe"},
@@ -334,7 +334,7 @@ func (s *httpSuite) TestFetchBothDigests(c *C) {
 	})
 	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
 
-	// Pin the cache key: with both digests advertised, the package is cached
+	// Pin the cache key: with multiple digests advertised, the package is cached
 	// under its strongest digest.
 	_, err = os.Stat(filepath.Join(options.CacheDir, "sha512",
 		"27c6e88def3d3848f4a068040bddbf908ab90e33bf93fc24fd02af7ed6a1953151302f2c59306313f065163143b51f1000cd22d102b7a58d7efd6430f5e162fb"))

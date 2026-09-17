@@ -619,7 +619,7 @@ var generateManifestTests = []struct {
 	},
 	error: `internal error: invalid manifest: package "package-1" missing arch`,
 }, {
-	summary: "Invalid package: missing digest",
+	summary: "Invalid package: missing digests",
 	packageInfo: []manifestutil.PackageInfo{
 		&archive.PackageInfo{
 			Name:    "package-1",
@@ -627,7 +627,7 @@ var generateManifestTests = []struct {
 			Arch:    "a1",
 		},
 	},
-	error: `internal error: invalid manifest: package "package-1" missing digest`,
+	error: `internal error: invalid manifest: package "package-1" missing digests`,
 }, {
 	summary: "Invalid package: unsupported digest kind",
 	packageInfo: []manifestutil.PackageInfo{
@@ -639,6 +639,17 @@ var generateManifestTests = []struct {
 		},
 	},
 	error: `internal error: invalid manifest: package "package-1": unsupported digest kind: "md5"`,
+}, {
+	summary: "Invalid package: empty digest",
+	packageInfo: []manifestutil.PackageInfo{
+		&archive.PackageInfo{
+			Name:    "package-1",
+			Version: "v1",
+			Arch:    "a1",
+			Digests: map[cache.DigestKind]string{cache.SHA256: ""},
+		},
+	},
+	error: `internal error: invalid manifest: package "package-1" has empty sha256 digest`,
 }}
 
 func (s *S) TestGenerateManifests(c *C) {
@@ -756,13 +767,13 @@ var validateManifestTests = []struct {
 		{"kind":"slice","name":"pkg1_myslice"}
 	`,
 }, {
-	summary: "Package with missing digest",
+	summary: "Package with missing digests",
 	input: `
 		{"jsonwall":"1.0","schema":"1.0","count":2}
 		{"kind":"package","name":"pkg1","version":"v1","arch":"arch1"}
 		{"kind":"slice","name":"pkg1_myslice"}
 	`,
-	error: `invalid manifest: package "pkg1" missing digest`,
+	error: `invalid manifest: package "pkg1" missing digests`,
 }, {
 	summary: "Package with multiple digests",
 	input: `
