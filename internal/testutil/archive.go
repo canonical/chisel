@@ -17,7 +17,6 @@ type TestArchive struct {
 type TestPackage struct {
 	Name    string
 	Version string
-	// Digests holds the digests of the package, keyed by digest kind.
 	Digests  map[cache.DigestKind]string
 	Arch     string
 	Data     []byte
