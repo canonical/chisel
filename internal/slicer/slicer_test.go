@@ -784,25 +784,25 @@ var slicerTests = []slicerTest{{
 	slices:  []setup.SliceKey{{"test-package", "myslice"}, {"other-package", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name:    "test-package",
-		Hash:    "h1",
+		Hashes:  map[cache.DigestKind]string{cache.SHA256: "h1"},
 		Version: "v1",
 		Arch:    "a1",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Reg(0644, "./file", "from foo"),
+			testutil.Reg(0o644, "./file", "from foo"),
 		}),
 		Archives: []string{"foo"},
 	}, {
 		Name:    "test-package",
-		Hash:    "h2",
+		Hashes:  map[cache.DigestKind]string{cache.SHA256: "h2"},
 		Version: "v2",
 		Arch:    "a2",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Reg(0644, "./file", "from bar"),
+			testutil.Reg(0o644, "./file", "from bar"),
 		}),
 		Archives: []string{"bar"},
 	}, {
 		Name:    "other-package",
-		Hash:    "h3",
+		Hashes:  map[cache.DigestKind]string{cache.SHA256: "h3"},
 		Version: "v3",
 		Arch:    "a3",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
@@ -868,16 +868,16 @@ var slicerTests = []slicerTest{{
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name:    "test-package",
-		Hash:    "h1",
+		Hashes:  map[cache.DigestKind]string{cache.SHA256: "h1"},
 		Version: "v1",
 		Arch:    "a1",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Reg(0644, "./file", "from foo"),
+			testutil.Reg(0o644, "./file", "from foo"),
 		}),
 		Archives: []string{"foo"},
 	}, {
 		Name:    "test-package",
-		Hash:    "h2",
+		Hashes:  map[cache.DigestKind]string{cache.SHA256: "h2"},
 		Version: "v2",
 		Arch:    "a2",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
@@ -1056,7 +1056,7 @@ var slicerTests = []slicerTest{{
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name:    "test-package",
-		Hash:    "h1",
+		Hashes:  map[cache.DigestKind]string{cache.SHA256: "h1"},
 		Version: "v1",
 		Arch:    "a1",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
@@ -1424,13 +1424,13 @@ var slicerTests = []slicerTest{{
 	},
 	pkgs: []*testutil.TestPackage{{
 		Name:    "test-package",
-		Hash:    "h1",
+		Hashes:  map[cache.DigestKind]string{cache.SHA256: "h1"},
 		Version: "v1",
 		Arch:    "a1",
 		Data:    testutil.PackageData["test-package"],
 	}, {
 		Name:    "other-package",
-		Hash:    "h2",
+		Hashes:  map[cache.DigestKind]string{cache.SHA256: "h2"},
 		Version: "v2",
 		Arch:    "a2",
 		Data:    testutil.PackageData["other-package"],
@@ -1460,13 +1460,13 @@ var slicerTests = []slicerTest{{
 	},
 	pkgs: []*testutil.TestPackage{{
 		Name:    "test-package",
-		Hash:    "h1",
+		Hashes:  map[cache.DigestKind]string{cache.SHA256: "h1"},
 		Version: "v1",
 		Arch:    "a1",
 		Data:    testutil.PackageData["test-package"],
 	}, {
 		Name:    "other-package",
-		Hash:    "h2",
+		Hashes:  map[cache.DigestKind]string{cache.SHA256: "h2"},
 		Version: "v2",
 		Arch:    "a2",
 		Data:    testutil.PackageData["other-package"],
@@ -2118,8 +2118,8 @@ func runSlicerTests(s *S, c *C, tests []slicerTest) {
 				if pkg.Arch == "" {
 					pkg.Arch = "arch"
 				}
-				if pkg.Hash == "" {
-					pkg.Hash = "hash"
+				if pkg.Hashes == nil {
+					pkg.Hashes = map[cache.DigestKind]string{cache.SHA256: "hash"}
 				}
 				if pkg.Version == "" {
 					pkg.Version = "version"
