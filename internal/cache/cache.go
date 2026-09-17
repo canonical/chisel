@@ -101,8 +101,8 @@ const (
 	SHA384 DigestKind = "sha384"
 )
 
-// digestKinds lists the digest kinds Chisel supports, in order of strength:
-// strongest first.
+// digestKinds lists the digest kinds the cache supports, in order of
+// strength: strongest first.
 var digestKinds = []DigestKind{SHA384, SHA512, SHA256}
 
 // ValidateKind returns an error unless kind is a digest kind Chisel

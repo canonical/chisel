@@ -12,19 +12,14 @@ import (
 
 const Schema = "1.0"
 
-// Package describes a package installed in the target filesystem.
 type Package struct {
 	Kind    string
 	Name    string
 	Version string
-	// Digests holds the digests of the package, keyed by digest kind
-	// (e.g. "sha256"). It is empty when no digest is recorded.
 	Digests map[string]string
 	Arch    string
 }
 
-// packageJSON is the JSON encoding of a Package, with each digest recorded
-// under the field named after its kind.
 type packageJSON struct {
 	Kind    string `json:"kind"`
 	Name    string `json:"name,omitempty"`
