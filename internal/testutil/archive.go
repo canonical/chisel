@@ -15,8 +15,8 @@ type TestArchive struct {
 }
 
 type TestPackage struct {
-	Name    string
-	Version string
+	Name     string
+	Version  string
 	Digests  map[cache.DigestKind]string
 	Arch     string
 	Data     []byte
