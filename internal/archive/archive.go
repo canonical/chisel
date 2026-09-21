@@ -165,6 +165,47 @@ func (a *ubuntuArchive) Info(pkg string) (*PackageInfo, error) {
 	return info, nil
 }
 
+// setupIndexes fetches the release and package indexes of every suite and
+// component, registering the resulting indexes on the archive.
+func (a *ubuntuArchive) setupIndexes() error {
+	for _, suite := range a.options.Suites {
+		var release control.Section
+		for _, component := range a.options.Components {
+			index := &ubuntuIndex{
+				label:     a.options.Label,
+				version:   a.options.Version,
+				arch:      a.options.Arch,
+				suite:     suite,
+				component: component,
+				release:   release,
+				archive:   a,
+			}
+			if release == nil {
+				err := index.fetchRelease()
+				if err != nil {
+					return err
+				}
+				release = index.release
+				if !index.supportsArch(a.options.Arch) {
+					// Release does not support the specified architecture, do
+					// not add any of its indexes.
+					break
+				}
+				err = index.checkComponents(a.options.Components)
+				if err != nil {
+					return err
+				}
+			}
+			err := index.fetchIndex()
+			if err != nil {
+				return err
+			}
+			a.indexes = append(a.indexes, index)
+		}
+	}
+	return nil
+}
+
 const ubuntuURL = "http://archive.ubuntu.com/ubuntu/"
 const ubuntuOldReleasesURL = "http://old-releases.ubuntu.com/ubuntu/"
 const ubuntuPortsURL = "http://ports.ubuntu.com/ubuntu-ports/"
@@ -197,28 +238,37 @@ var proArchiveInfo = map[string]struct {
 	},
 }
 
-func archiveURL(pro, arch string, oldRelease bool) (string, *credentials, error) {
+// candidateArchiveURLs returns the candidate base URLs of the archive, in order of
+// preference, and the credentials used to access them, if any.
+//
+// Ubuntu releases are moved from the regular archive to
+// old-releases.ubuntu.com after their end of life, but not immediately:
+// until the move happens the release is only available from the regular
+// archive. For such releases both archives are returned, so that the
+// caller can fall back to the regular one when the release is not found
+// in the old-releases one.
+func candidateArchiveURLs(pro, arch string, oldRelease bool) ([]string, *credentials, error) {
 	if pro != "" {
 		archiveInfo, ok := proArchiveInfo[pro]
 		if !ok {
-			return "", nil, fmt.Errorf("invalid pro value: %q", pro)
+			return nil, nil, fmt.Errorf("invalid pro value: %q", pro)
 		}
 		url := archiveInfo.BaseURL
 		creds, err := findCredentials(url)
 		if err != nil {
-			return "", nil, err
+			return nil, nil, err
 		}
-		return url, creds, nil
+		return []string{url}, creds, nil
 	}
 
+	current := ubuntuURL
+	if arch != "amd64" && arch != "i386" {
+		current = ubuntuPortsURL
+	}
 	if oldRelease {
-		return ubuntuOldReleasesURL, nil, nil
+		return []string{ubuntuOldReleasesURL, current}, nil, nil
 	}
-
-	if arch == "amd64" || arch == "i386" {
-		return ubuntuURL, nil, nil
-	}
-	return ubuntuPortsURL, nil, nil
+	return []string{current}, nil, nil
 }
 
 func openUbuntu(options *Options) (Archive, error) {
@@ -232,58 +282,31 @@ func openUbuntu(options *Options) (Archive, error) {
 		return nil, fmt.Errorf("archive options missing version")
 	}
 
-	baseURL, creds, err := archiveURL(options.Pro, options.Arch, options.OldRelease)
+	candidates, creds, err := candidateArchiveURLs(options.Pro, options.Arch, options.OldRelease)
 	if err != nil {
 		return nil, err
 	}
 
-	archive := &ubuntuArchive{
-		options: *options,
-		cache: &cache.Cache{
-			Dir: options.CacheDir,
-		},
-		pubKeys: options.PubKeys,
-		baseURL: baseURL,
-		creds:   creds,
-	}
-
-	for _, suite := range options.Suites {
-		var release control.Section
-		for _, component := range options.Components {
-			index := &ubuntuIndex{
-				label:     options.Label,
-				version:   options.Version,
-				arch:      options.Arch,
-				suite:     suite,
-				component: component,
-				release:   release,
-				archive:   archive,
-			}
-			if release == nil {
-				err := index.fetchRelease()
-				if err != nil {
-					return nil, err
-				}
-				release = index.release
-				if !index.supportsArch(options.Arch) {
-					// Release does not support the specified architecture, do
-					// not add any of its indexes.
-					break
-				}
-				err = index.checkComponents(options.Components)
-				if err != nil {
-					return nil, err
-				}
-			}
-			err := index.fetchIndex()
-			if err != nil {
-				return nil, err
-			}
-			archive.indexes = append(archive.indexes, index)
+	// Try the candidate archives in order until the release is found.
+	for _, baseURL := range candidates {
+		archive := &ubuntuArchive{
+			options: *options,
+			cache:   &cache.Cache{Dir: options.CacheDir},
+			pubKeys: options.PubKeys,
+			baseURL: baseURL,
+			creds:   creds,
 		}
+		err := archive.setupIndexes()
+		if err == errNotFound {
+			// Release not in this archive, try the next candidate.
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		return archive, nil
 	}
-
-	return archive, nil
+	return nil, errNotFound
 }
 
 func (index *ubuntuIndex) fetchRelease() error {

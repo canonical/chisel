@@ -607,6 +607,82 @@ func (s *httpSuite) TestOpenUnmaintainedArchives(c *C) {
 	c.Assert(err, IsNil)
 }
 
+func (s *httpSuite) TestOpenOldReleaseFallback(c *C) {
+	s.prepareArchive("plucky", "25.04", "amd64", []string{"main"})
+
+	// The old-releases mirror 404s the release (it has not been physically
+	// moved yet); the current archive serves the prepared content.
+	do := func(req *http.Request) (*http.Response, error) {
+		if strings.HasPrefix(req.URL.String(), "http://old-releases.ubuntu.com/ubuntu/") {
+			s.requestResults = append(s.requestResults, requestResult{path: req.URL.Path, status: 404})
+			return &http.Response{
+				Body:       io.NopCloser(strings.NewReader("")),
+				StatusCode: 404,
+			}, nil
+		}
+		return s.Do(req)
+	}
+	restoreDo := archive.FakeDo(do)
+	defer restoreDo()
+
+	options := archive.Options{
+		Label:      "ubuntu",
+		Version:    "25.04",
+		Arch:       "amd64",
+		Suites:     []string{"plucky"},
+		Components: []string{"main"},
+		CacheDir:   c.MkDir(),
+		PubKeys:    []*packet.PublicKey{s.pubKey},
+		OldRelease: true,
+	}
+
+	testArchive, err := archive.Open(&options)
+	c.Assert(err, IsNil)
+
+	_, _, err = testArchive.Fetch("mypkg1")
+	c.Assert(err, IsNil)
+
+	// Exactly one 404 (the InRelease fetch from old-releases); all
+	// subsequent requests must be served by the current archive.
+	oldReleasesHits := 0
+	for _, r := range s.requestResults {
+		if r.status == 404 {
+			oldReleasesHits++
+		}
+	}
+	c.Assert(oldReleasesHits, Equals, 1)
+}
+
+func (s *httpSuite) TestOpenOldReleaseNotFound(c *C) {
+	// No candidate archive distributes the release: accept requests from
+	// any host and 404 them all.
+	s.base = ""
+	s.status = 404
+
+	options := archive.Options{
+		Label:      "ubuntu",
+		Version:    "25.04",
+		Arch:       "amd64",
+		Suites:     []string{"plucky"},
+		Components: []string{"main"},
+		CacheDir:   c.MkDir(),
+		PubKeys:    []*packet.PublicKey{s.pubKey},
+		OldRelease: true,
+	}
+
+	_, err := archive.Open(&options)
+	c.Assert(err, ErrorMatches, "cannot find archive data")
+
+	// Both candidates must have been tried, one InRelease fetch each.
+	suites := 0
+	for _, r := range s.requestResults {
+		if strings.HasSuffix(r.path, "/dists/plucky/InRelease") {
+			suites++
+		}
+	}
+	c.Assert(suites, Equals, 2)
+}
+
 type verifyArchiveReleaseTest struct {
 	summary string
 	pubKeys []*packet.PublicKey
