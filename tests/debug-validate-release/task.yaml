@@ -1,0 +1,4 @@
+summary: Validate a Chisel release statically
+
+execute: |
+  chisel debug validate-release --release ${OS}-${RELEASE} 2>&1 | MATCH "Release is valid."
