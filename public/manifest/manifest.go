@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 
 	"github.com/canonical/chisel/public/jsonwall"
 )
@@ -19,6 +20,8 @@ type Package struct {
 	// Digest holds the sha256 digest when present, and the sha512 digest
 	// otherwise. It is empty when neither is recorded.
 	Digest string
+	// Digests holds the digests of the package, keyed by digest kind
+	// (e.g. "sha256").
 	Digests map[string]string
 	Arch    string
 }
@@ -31,6 +34,30 @@ type packageJSON struct {
 	SHA512  string `json:"sha512,omitempty"`
 	SHA384  string `json:"sha384,omitempty"`
 	Arch    string `json:"arch,omitempty"`
+}
+
+type PackageOptions struct {
+	Name    string
+	Version string
+	Arch    string
+	Digests map[string]string
+}
+
+func NewPackage(opts *PackageOptions) *Package {
+	digests := make(map[string]string, len(opts.Digests))
+	maps.Copy(digests, opts.Digests)
+	digest := digests["sha256"]
+	if digest == "" {
+		digest = digests["sha512"]
+	}
+	return &Package{
+		Kind:    "package",
+		Name:    opts.Name,
+		Version: opts.Version,
+		Digest:  digest,
+		Digests: digests,
+		Arch:    opts.Arch,
+	}
 }
 
 func (p *Package) MarshalJSON() ([]byte, error) {
@@ -71,18 +98,12 @@ func (p *Package) UnmarshalJSON(data []byte) error {
 			digests[kind] = digest
 		}
 	}
-	digest := pj.SHA256
-	if digest == "" {
-		digest = pj.SHA512
-	}
-	*p = Package{
-		Kind:    pj.Kind,
+	*p = *NewPackage(&PackageOptions{
 		Name:    pj.Name,
 		Version: pj.Version,
-		Digest:  digest,
-		Digests: digests,
 		Arch:    pj.Arch,
-	}
+		Digests: digests,
+	})
 	return nil
 }
 

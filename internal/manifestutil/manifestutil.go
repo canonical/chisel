@@ -88,13 +88,13 @@ func manifestAddPackages(dbw *jsonwall.DBWriter, infos []PackageInfo) error {
 		for kind, digest := range info.PkgDigests() {
 			digests[string(kind)] = digest
 		}
-		err := dbw.Add(&manifest.Package{
-			Kind:    "package",
+		pkg := manifest.NewPackage(&manifest.PackageOptions{
 			Name:    info.PkgName(),
 			Version: info.PkgVersion(),
-			Digests: digests,
 			Arch:    info.PkgArch(),
+			Digests: digests,
 		})
+		err := dbw.Add(pkg)
 		if err != nil {
 			return err
 		}
