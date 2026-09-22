@@ -31,7 +31,10 @@ func (c Channel) String() string {
 	if c == (Channel{}) {
 		return ""
 	}
-	channel := c.Track + "/" + c.Risk
+	channel := c.Risk
+	if c.Track != "" {
+		channel = c.Track + "/" + channel
+	}
 	if c.Branch != "" {
 		channel += "/" + c.Branch
 	}
