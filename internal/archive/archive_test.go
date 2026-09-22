@@ -1,9 +1,7 @@
 package archive_test
 
 import (
-	"golang.org/x/crypto/openpgp/packet"
-	. "gopkg.in/check.v1"
-
+	"archive/tar"
 	"crypto/sha256"
 	"crypto/sha512"
 	"debug/elf"
@@ -17,6 +15,9 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+
+	"golang.org/x/crypto/openpgp/packet"
+	. "gopkg.in/check.v1"
 
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/archive/testarchive"
@@ -255,7 +256,7 @@ func (s *httpSuite) TestFetchPackage(c *C) {
 		Name:    "mypkg1",
 		Version: "1.1",
 		Arch:    "amd64",
-		SHA256:  "1f08ef04cfe7a8087ee38a1ea35fa1810246648136c3c42d5a61ad6503d85e05",
+		SHA256:  "ff175644a17301e047ac757681f6e16b1c410228d9fe50441bba8438a7c45fa2",
 	})
 	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
 
@@ -266,7 +267,7 @@ func (s *httpSuite) TestFetchPackage(c *C) {
 		Name:    "mypkg4",
 		Version: "1.4",
 		Arch:    "amd64",
-		SHA256:  "54af70097b30b33cfcbb6911ad3d0df86c2d458928169e348fa7873e4fc678e4",
+		SHA256:  "fe0b0023af4cd5786a2563faadf6ec31e48079a9b176356b008261c1590b6df9",
 	})
 	c.Assert(read(pkg), Equals, "mypkg4 1.4 data")
 }
@@ -322,13 +323,16 @@ func (s *httpSuite) TestFetchBothDigests(c *C) {
 		Name:    "mypkg1",
 		Version: "1.1",
 		Arch:    "amd64",
-		SHA256:  "1f08ef04cfe7a8087ee38a1ea35fa1810246648136c3c42d5a61ad6503d85e05",
+		SHA256:  "ff175644a17301e047ac757681f6e16b1c410228d9fe50441bba8438a7c45fa2",
 	})
 	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
 
 	// Pin the cache key: with both digests advertised, the package is cached
 	// under its strongest digest.
-	sha512Digest := fmt.Sprintf("%x", sha512.Sum512([]byte("mypkg1 1.1 data")))
+	sha512Digest := fmt.Sprintf("%x", sha512.Sum512(testutil.MustMakeDeb([]testutil.TarEntry{
+		testutil.Dir(0o755, "./"),
+		testutil.Reg(0o644, "./data", "mypkg1 1.1 data"),
+	})))
 	_, err = os.Stat(filepath.Join(options.CacheDir, "sha512", sha512Digest))
 	c.Assert(err, IsNil)
 }
@@ -359,7 +363,7 @@ func (s *httpSuite) TestFetchPortsPackage(c *C) {
 		Name:    "mypkg1",
 		Version: "1.1",
 		Arch:    "arm64",
-		SHA256:  "1f08ef04cfe7a8087ee38a1ea35fa1810246648136c3c42d5a61ad6503d85e05",
+		SHA256:  "ff175644a17301e047ac757681f6e16b1c410228d9fe50441bba8438a7c45fa2",
 	})
 	c.Assert(read(pkg), Equals, "mypkg1 1.1 data")
 
@@ -370,7 +374,7 @@ func (s *httpSuite) TestFetchPortsPackage(c *C) {
 		Name:    "mypkg4",
 		Version: "1.4",
 		Arch:    "arm64",
-		SHA256:  "54af70097b30b33cfcbb6911ad3d0df86c2d458928169e348fa7873e4fc678e4",
+		SHA256:  "fe0b0023af4cd5786a2563faadf6ec31e48079a9b176356b008261c1590b6df9",
 	})
 	c.Assert(read(pkg), Equals, "mypkg4 1.4 data")
 }
@@ -382,7 +386,10 @@ func (s *httpSuite) TestFetchSecurityPackage(c *C) {
 		err := release.Walk(func(item testarchive.Item) error {
 			if p, ok := item.(*testarchive.Package); ok && p.Name == "mypkg1" {
 				p.Version = fmt.Sprintf("%s.%d", p.Version, i)
-				p.Data = []byte("package from " + suite)
+				p.Data = testutil.MustMakeDeb([]testutil.TarEntry{
+					testutil.Dir(0o755, "./"),
+					testutil.Reg(0o644, "./data", "package from "+suite),
+				})
 			}
 			return nil
 		})
@@ -410,7 +417,7 @@ func (s *httpSuite) TestFetchSecurityPackage(c *C) {
 		Name:    "mypkg1",
 		Version: "1.1.2.2",
 		Arch:    "amd64",
-		SHA256:  "5448585bdd916e5023eff2bc1bc3b30bcc6ee9db9c03e531375a6a11ddf0913c",
+		SHA256:  "e3732bc52b8a11c8e749266c1eee5548ab02cbaaf84c826277e9ae245d1099b7",
 	})
 	c.Assert(read(pkg), Equals, "package from jammy-security")
 
@@ -420,7 +427,7 @@ func (s *httpSuite) TestFetchSecurityPackage(c *C) {
 		Name:    "mypkg2",
 		Version: "1.2",
 		Arch:    "amd64",
-		SHA256:  "a4b4f3f3a8fa09b69e3ba23c60a41a1f8144691fd371a2455812572fd02e6f79",
+		SHA256:  "0d229011ec711ef268779580130dc034409e42124d3c25b01e0b71eac90284ad",
 	})
 	c.Assert(read(pkg), Equals, "mypkg2 1.2 data")
 }
@@ -741,7 +748,7 @@ var packageInfoTests = []struct {
 		Name:    "mypkg1",
 		Version: "1.1",
 		Arch:    "amd64",
-		SHA256:  "1f08ef04cfe7a8087ee38a1ea35fa1810246648136c3c42d5a61ad6503d85e05",
+		SHA256:  "ff175644a17301e047ac757681f6e16b1c410228d9fe50441bba8438a7c45fa2",
 	},
 }, {
 	summary: "Package not found in archive",
@@ -776,12 +783,29 @@ func (s *httpSuite) TestPackageInfo(c *C) {
 	}
 }
 
-func read(r io.Reader) string {
-	data, err := io.ReadAll(r)
+func read(pkg tarball.PkgReader) string {
+	tarStream, err := pkg.TarStream()
 	if err != nil {
 		panic(err)
 	}
-	return string(data)
+	defer tarStream.Close()
+	tarReader := tar.NewReader(tarStream)
+	for {
+		tarHeader, err := tarReader.Next()
+		if err == io.EOF {
+			panic("no data file in package")
+		}
+		if err != nil {
+			panic(err)
+		}
+		if tarHeader.Name == "./data" {
+			data, err := io.ReadAll(tarReader)
+			if err != nil {
+				panic(err)
+			}
+			return string(data)
+		}
+	}
 }
 
 // fetchRequestStatus checks whether a request was made whose URL path

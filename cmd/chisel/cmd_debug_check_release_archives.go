@@ -13,7 +13,6 @@ import (
 
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/cache"
-	"github.com/canonical/chisel/internal/deb"
 	"github.com/canonical/chisel/internal/setup"
 )
 
@@ -150,7 +149,7 @@ func computePathObservations(release *setup.Release, archives map[string]archive
 			if err != nil {
 				return nil, err
 			}
-			dataReader, err := deb.DataReader(pkgReader)
+			dataReader, err := pkgReader.TarStream()
 			if err != nil {
 				return nil, err
 			}
