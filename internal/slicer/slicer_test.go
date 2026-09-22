@@ -1994,6 +1994,27 @@ var slicerTests = []slicerTest{{
 		`,
 	},
 	error: `cannot fetch package "bin-curl" from store "bin": not implemented`,
+}, {
+	summary: "Store package without a resolved channel",
+	slices:  []setup.SliceKey{{"bin-curl", "bin"}},
+	release: map[string]string{
+		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
+		"slices/curl.yaml": `
+			package: curl
+			store: bin
+			default-track: "0.2"
+			slices:
+				bin:
+					contents:
+						/usr/bin/curl:
+		`,
+	},
+	// A selection built by Select always holds the channel of its store
+	// packages, so the guard is exercised by dropping it here.
+	hackopt: func(c *C, opts *slicer.RunOptions) {
+		opts.Selection.Channels = nil
+	},
+	error: `internal error: slice bin-curl_bin has no channel`,
 }}
 
 func (s *S) TestRun(c *C) {
