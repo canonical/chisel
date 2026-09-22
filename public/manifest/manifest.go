@@ -16,6 +16,9 @@ type Package struct {
 	Kind    string
 	Name    string
 	Version string
+	// Digest holds the sha256 digest when present, and the sha512 digest
+	// otherwise. It is empty when neither is recorded.
+	Digest string
 	Digests map[string]string
 	Arch    string
 }
@@ -68,10 +71,15 @@ func (p *Package) UnmarshalJSON(data []byte) error {
 			digests[kind] = digest
 		}
 	}
+	digest := pj.SHA256
+	if digest == "" {
+		digest = pj.SHA512
+	}
 	*p = Package{
 		Kind:    pj.Kind,
 		Name:    pj.Name,
 		Version: pj.Version,
+		Digest:  digest,
 		Digests: digests,
 		Arch:    pj.Arch,
 	}

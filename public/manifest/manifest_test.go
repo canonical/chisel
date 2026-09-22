@@ -53,8 +53,8 @@ var readManifestTests = []struct {
 			{Kind: "path", Path: "/manifest/manifest.wall", Mode: "0644", Slices: []string{"pkg1_manifest"}, SHA256: "", FinalSHA256: "", Size: 0x0, Link: ""},
 		},
 		Packages: []*manifest.Package{
-			{Kind: "package", Name: "pkg1", Version: "v1", Digests: map[string]string{"sha256": "hash1"}, Arch: "arch1"},
-			{Kind: "package", Name: "pkg2", Version: "v2", Digests: map[string]string{"sha256": "hash2"}, Arch: "arch2"},
+			{Kind: "package", Name: "pkg1", Version: "v1", Digests: map[string]string{"sha256": "hash1"}, Digest: "hash1", Arch: "arch1"},
+			{Kind: "package", Name: "pkg2", Version: "v2", Digests: map[string]string{"sha256": "hash2"}, Digest: "hash2", Arch: "arch2"},
 		},
 		Slices: []*manifest.Slice{
 			{Kind: "slice", Name: "pkg1_manifest"},
@@ -79,7 +79,7 @@ var readManifestTests = []struct {
 	`,
 	mfest: &apachetestutil.ManifestContents{
 		Packages: []*manifest.Package{
-			{Kind: "package", Name: "pkg1", Version: "v1", Digests: map[string]string{"sha512": "hash1"}, Arch: "arch1"},
+			{Kind: "package", Name: "pkg1", Version: "v1", Digests: map[string]string{"sha512": "hash1"}, Digest: "hash1", Arch: "arch1"},
 		},
 	},
 }, {
@@ -101,7 +101,7 @@ var readManifestTests = []struct {
 	`,
 	mfest: &apachetestutil.ManifestContents{
 		Packages: []*manifest.Package{
-			{Kind: "package", Name: "pkg1", Version: "v1", Digests: map[string]string{"sha256": "hash1", "sha512": "hash2"}, Arch: "arch1"},
+			{Kind: "package", Name: "pkg1", Version: "v1", Digests: map[string]string{"sha256": "hash1", "sha512": "hash2"}, Digest: "hash1", Arch: "arch1"},
 		},
 	},
 }, {
