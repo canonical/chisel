@@ -105,6 +105,17 @@ var readManifestTests = []struct {
 		},
 	},
 }, {
+	summary: "Uppercase digest kind fields",
+	input: `
+		{"jsonwall":"1.0","schema":"1.0","count":1}
+		{"kind":"package","name":"pkg1","version":"v1","SHA256":"hash1","SHA512":"hash2","arch":"arch1"}
+	`,
+	mfest: &apachetestutil.ManifestContents{
+		Packages: []*manifest.Package{
+			{Kind: "package", Name: "pkg1", Version: "v1", Digests: map[string]string{"sha256": "hash1", "sha512": "hash2"}, Digest: "hash1", Arch: "arch1"},
+		},
+	},
+}, {
 	summary: "Unknown schema",
 	input: `
 		{"jsonwall":"1.0","schema":"2.0","count":1}
@@ -205,15 +216,15 @@ var marshalPackageTests = []struct {
 	},
 	expected: `{"kind":"package","name":"pkg1","version":"v1","sha256":"hash1","sha512":"hash2","arch":"arch1"}`,
 }, {
-	summary: "Unsupported digest kind",
+	summary: "Invalid digest kind",
 	pkg: &manifest.Package{
 		Kind:    "package",
 		Name:    "pkg1",
 		Version: "v1",
-		Digests: map[string]string{"md5": "hash1"},
+		Digests: map[string]string{"invalid": "hash1"},
 		Arch:    "arch1",
 	},
-	error: `json: error calling MarshalJSON for type \*manifest\.Package: cannot marshal package "pkg1": unsupported digest kind "md5"`,
+	error: `json: error calling MarshalJSON for type \*manifest\.Package: cannot marshal package "pkg1": unsupported digest kind "invalid"`,
 }}
 
 func (s *S) TestMarshalPackage(c *C) {

@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"maps"
 
 	"github.com/canonical/chisel/public/jsonwall"
 )
@@ -43,21 +42,39 @@ type PackageOptions struct {
 	Digests map[string]string
 }
 
-func NewPackage(opts *PackageOptions) *Package {
-	digests := make(map[string]string, len(opts.Digests))
-	maps.Copy(digests, opts.Digests)
-	digest := digests["sha256"]
+func NewPackage(opts *PackageOptions) (*Package, error) {
+	o, err := getValidOptions(opts)
+	if err != nil {
+		return nil, err
+	}
+	digest := o.Digests["sha256"]
 	if digest == "" {
-		digest = digests["sha512"]
+		digest = o.Digests["sha512"]
 	}
 	return &Package{
 		Kind:    "package",
-		Name:    opts.Name,
-		Version: opts.Version,
+		Name:    o.Name,
+		Version: o.Version,
 		Digest:  digest,
-		Digests: digests,
-		Arch:    opts.Arch,
+		Digests: o.Digests,
+		Arch:    o.Arch,
+	}, nil
+}
+
+func getValidOptions(options *PackageOptions) (*PackageOptions, error) {
+	optsCopy := *options
+	o := &optsCopy
+	digests := make(map[string]string, len(options.Digests))
+	for kind, digest := range options.Digests {
+		switch kind {
+		case "sha256", "sha512", "sha384":
+			digests[kind] = digest
+		default:
+			return nil, fmt.Errorf("cannot create package %q: unsupported digest kind %q", options.Name, kind)
+		}
 	}
+	o.Digests = digests
+	return o, nil
 }
 
 func (p *Package) MarshalJSON() ([]byte, error) {
@@ -98,12 +115,16 @@ func (p *Package) UnmarshalJSON(data []byte) error {
 			digests[kind] = digest
 		}
 	}
-	*p = *NewPackage(&PackageOptions{
+	pkg, err := NewPackage(&PackageOptions{
 		Name:    pj.Name,
 		Version: pj.Version,
 		Arch:    pj.Arch,
 		Digests: digests,
 	})
+	if err != nil {
+		return err
+	}
+	*p = *pkg
 	return nil
 }
 
