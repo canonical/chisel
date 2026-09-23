@@ -101,8 +101,7 @@ const (
 	SHA384 DigestKind = "sha384"
 )
 
-// digestKinds lists the digest kinds the cache supports, in order of
-// strength: strongest first.
+// digestKinds sorted in decreasing order of strength.
 var digestKinds = []DigestKind{SHA384, SHA512, SHA256}
 
 func ValidateDigestKind(kind DigestKind) error {

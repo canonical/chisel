@@ -788,7 +788,7 @@ var slicerTests = []slicerTest{{
 		Version: "v1",
 		Arch:    "a1",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Reg(0o644, "./file", "from foo"),
+			testutil.Reg(0644, "./file", "from foo"),
 		}),
 		Archives: []string{"foo"},
 	}, {
@@ -797,7 +797,7 @@ var slicerTests = []slicerTest{{
 		Version: "v2",
 		Arch:    "a2",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Reg(0o644, "./file", "from bar"),
+			testutil.Reg(0644, "./file", "from bar"),
 		}),
 		Archives: []string{"bar"},
 	}, {
@@ -872,7 +872,7 @@ var slicerTests = []slicerTest{{
 		Version: "v1",
 		Arch:    "a1",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
-			testutil.Reg(0o644, "./file", "from foo"),
+			testutil.Reg(0644, "./file", "from foo"),
 		}),
 		Archives: []string{"foo"},
 	}, {
@@ -2284,15 +2284,11 @@ func treeDumpManifestPaths(mfest *manifest.Manifest) (map[string]string, error) 
 func dumpManifestPkgs(mfest *manifest.Manifest) (map[string]string, error) {
 	result := map[string]string{}
 	err := mfest.IteratePackages(func(pkg *manifest.Package) error {
-		kinds := make([]string, 0, len(pkg.Digests))
-		for kind := range pkg.Digests {
-			kinds = append(kinds, kind)
+		digests := make([]string, 0, len(pkg.Digests))
+		for kind, digest := range pkg.Digests {
+			digests = append(digests, kind+"="+digest)
 		}
-		sort.Strings(kinds)
-		digests := make([]string, 0, len(kinds))
-		for _, kind := range kinds {
-			digests = append(digests, kind+"="+pkg.Digests[kind])
-		}
+		sort.Strings(digests)
 		result[pkg.Name] = fmt.Sprintf("%s %s %s %s", pkg.Name, pkg.Version, pkg.Arch, strings.Join(digests, ","))
 		return nil
 	})

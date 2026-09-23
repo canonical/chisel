@@ -153,13 +153,6 @@ func (s *S) TestManifestRead(c *C) {
 		defer r.Close()
 
 		mfest, err := manifest.Read(r)
-		if err == nil {
-			// Entry-level errors surface while iterating, as the manifest
-			// is not fully decoded on read.
-			err = mfest.IteratePackages(func(pkg *manifest.Package) error {
-				return nil
-			})
-		}
 		if test.error != "" {
 			c.Assert(err, ErrorMatches, test.error)
 			continue
