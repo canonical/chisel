@@ -3,6 +3,7 @@
 package manifest
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 
@@ -12,11 +13,122 @@ import (
 const Schema = "1.0"
 
 type Package struct {
+	Kind    string
+	Name    string
+	Version string
+	// Digest holds the sha256 digest when present, and the sha512 digest
+	// otherwise. It is empty when neither is recorded.
+	//
+	// Deprecated: Digest exists for historical compatibility. More than 
+	// one digest can be recorded for a package. Use Digests instead.
+	Digest string
+	// Digests holds the digests of the package, keyed by digest kind
+	// (e.g. "sha256").
+	Digests map[string]string
+	Arch    string
+}
+
+type packageJSON struct {
 	Kind    string `json:"kind"`
 	Name    string `json:"name,omitempty"`
 	Version string `json:"version,omitempty"`
-	Digest  string `json:"sha256,omitempty"`
+	SHA256  string `json:"sha256,omitempty"`
+	SHA512  string `json:"sha512,omitempty"`
+	SHA384  string `json:"sha384,omitempty"`
 	Arch    string `json:"arch,omitempty"`
+}
+
+type PackageOptions struct {
+	Name    string
+	Version string
+	Arch    string
+	Digests map[string]string
+}
+
+func NewPackage(opts *PackageOptions) (*Package, error) {
+	o, err := getValidOptions(opts)
+	if err != nil {
+		return nil, err
+	}
+	digest := o.Digests["sha256"]
+	if digest == "" {
+		digest = o.Digests["sha512"]
+	}
+	return &Package{
+		Kind:    "package",
+		Name:    o.Name,
+		Version: o.Version,
+		Digest:  digest,
+		Digests: o.Digests,
+		Arch:    o.Arch,
+	}, nil
+}
+
+func getValidOptions(options *PackageOptions) (*PackageOptions, error) {
+	optsCopy := *options
+	o := &optsCopy
+	digests := make(map[string]string, len(options.Digests))
+	for kind, digest := range options.Digests {
+		switch kind {
+		case "sha256", "sha512", "sha384":
+			digests[kind] = digest
+		default:
+			return nil, fmt.Errorf("cannot create package %q: unsupported digest kind %q", options.Name, kind)
+		}
+	}
+	o.Digests = digests
+	return o, nil
+}
+
+func (p *Package) MarshalJSON() ([]byte, error) {
+	pj := packageJSON{
+		Kind:    p.Kind,
+		Name:    p.Name,
+		Version: p.Version,
+		Arch:    p.Arch,
+	}
+	for kind, digest := range p.Digests {
+		switch kind {
+		case "sha256":
+			pj.SHA256 = digest
+		case "sha512":
+			pj.SHA512 = digest
+		case "sha384":
+			pj.SHA384 = digest
+		default:
+			return nil, fmt.Errorf("cannot marshal package %q: unsupported digest kind %q", p.Name, kind)
+		}
+	}
+	return json.Marshal(pj)
+}
+
+func (p *Package) UnmarshalJSON(data []byte) error {
+	var pj packageJSON
+	err := json.Unmarshal(data, &pj)
+	if err != nil {
+		return err
+	}
+	digests := make(map[string]string)
+	for kind, digest := range map[string]string{
+		"sha256": pj.SHA256,
+		"sha512": pj.SHA512,
+		"sha384": pj.SHA384,
+	} {
+		if digest != "" {
+			digests[kind] = digest
+		}
+	}
+	pkg, err := NewPackage(&PackageOptions{
+		Name:    pj.Name,
+		Version: pj.Version,
+		Arch:    pj.Arch,
+		Digests: digests,
+	})
+	if err != nil {
+		return err
+	}
+	*p = *pkg
+	return nil
 }
 
 type Slice struct {

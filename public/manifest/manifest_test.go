@@ -3,6 +3,7 @@
 package manifest_test
 
 import (
+	"encoding/json"
 	"os"
 	"path"
 	"slices"
@@ -52,8 +53,8 @@ var readManifestTests = []struct {
 			{Kind: "path", Path: "/manifest/manifest.wall", Mode: "0644", Slices: []string{"pkg1_manifest"}, SHA256: "", FinalSHA256: "", Size: 0x0, Link: ""},
 		},
 		Packages: []*manifest.Package{
-			{Kind: "package", Name: "pkg1", Version: "v1", Digest: "hash1", Arch: "arch1"},
-			{Kind: "package", Name: "pkg2", Version: "v2", Digest: "hash2", Arch: "arch2"},
+			{Kind: "package", Name: "pkg1", Version: "v1", Digests: map[string]string{"sha256": "hash1"}, Digest: "hash1", Arch: "arch1"},
+			{Kind: "package", Name: "pkg2", Version: "v2", Digests: map[string]string{"sha256": "hash2"}, Digest: "hash2", Arch: "arch2"},
 		},
 		Slices: []*manifest.Slice{
 			{Kind: "slice", Name: "pkg1_manifest"},
@@ -68,6 +69,50 @@ var readManifestTests = []struct {
 			{Kind: "content", Slice: "pkg1_myslice", Path: "/dir/hardlink"},
 			{Kind: "content", Slice: "pkg1_myslice", Path: "/dir/link/file"},
 			{Kind: "content", Slice: "pkg2_myotherslice", Path: "/dir/foo/bar/"},
+		},
+	},
+}, {
+	summary: "SHA512 package digest",
+	input: `
+		{"jsonwall":"1.0","schema":"1.0","count":1}
+		{"kind":"package","name":"pkg1","version":"v1","sha512":"hash1","arch":"arch1"}
+	`,
+	mfest: &apachetestutil.ManifestContents{
+		Packages: []*manifest.Package{
+			{Kind: "package", Name: "pkg1", Version: "v1", Digests: map[string]string{"sha512": "hash1"}, Digest: "hash1", Arch: "arch1"},
+		},
+	},
+}, {
+	summary: "SHA384 package digest",
+	input: `
+		{"jsonwall":"1.0","schema":"1.0","count":1}
+		{"kind":"package","name":"pkg1","version":"v1","sha384":"hash1","arch":"arch1"}
+	`,
+	mfest: &apachetestutil.ManifestContents{
+		Packages: []*manifest.Package{
+			{Kind: "package", Name: "pkg1", Version: "v1", Digests: map[string]string{"sha384": "hash1"}, Arch: "arch1"},
+		},
+	},
+}, {
+	summary: "Multiple digests recorded",
+	input: `
+		{"jsonwall":"1.0","schema":"1.0","count":1}
+		{"kind":"package","name":"pkg1","version":"v1","sha256":"hash1","sha512":"hash2","arch":"arch1"}
+	`,
+	mfest: &apachetestutil.ManifestContents{
+		Packages: []*manifest.Package{
+			{Kind: "package", Name: "pkg1", Version: "v1", Digests: map[string]string{"sha256": "hash1", "sha512": "hash2"}, Digest: "hash1", Arch: "arch1"},
+		},
+	},
+}, {
+	summary: "Uppercase digest kind fields",
+	input: `
+		{"jsonwall":"1.0","schema":"1.0","count":1}
+		{"kind":"package","name":"pkg1","version":"v1","SHA256":"hash1","SHA512":"hash2","arch":"arch1"}
+	`,
+	mfest: &apachetestutil.ManifestContents{
+		Packages: []*manifest.Package{
+			{Kind: "package", Name: "pkg1", Version: "v1", Digests: map[string]string{"sha256": "hash1", "sha512": "hash2"}, Digest: "hash1", Arch: "arch1"},
 		},
 	},
 }, {
@@ -116,5 +161,74 @@ func (s *S) TestManifestRead(c *C) {
 		if test.mfest != nil {
 			c.Assert(apachetestutil.DumpManifestContents(c, mfest), DeepEquals, test.mfest)
 		}
+	}
+}
+
+var marshalPackageTests = []struct {
+	summary  string
+	pkg      *manifest.Package
+	expected string
+	error    string
+}{{
+	summary: "SHA256 digest",
+	pkg: &manifest.Package{
+		Kind:    "package",
+		Name:    "pkg1",
+		Version: "v1",
+		Digests: map[string]string{"sha256": "hash1"},
+		Arch:    "arch1",
+	},
+	expected: `{"kind":"package","name":"pkg1","version":"v1","sha256":"hash1","arch":"arch1"}`,
+}, {
+	summary: "SHA512 digest",
+	pkg: &manifest.Package{
+		Kind:    "package",
+		Name:    "pkg1",
+		Version: "v1",
+		Digests: map[string]string{"sha512": "hash1"},
+		Arch:    "arch1",
+	},
+	expected: `{"kind":"package","name":"pkg1","version":"v1","sha512":"hash1","arch":"arch1"}`,
+}, {
+	summary: "No digest recorded",
+	pkg: &manifest.Package{
+		Kind:    "package",
+		Name:    "pkg1",
+		Version: "v1",
+		Arch:    "arch1",
+	},
+	expected: `{"kind":"package","name":"pkg1","version":"v1","arch":"arch1"}`,
+}, {
+	summary: "Multiple digests recorded",
+	pkg: &manifest.Package{
+		Kind:    "package",
+		Name:    "pkg1",
+		Version: "v1",
+		Digests: map[string]string{"sha256": "hash1", "sha512": "hash2"},
+		Arch:    "arch1",
+	},
+	expected: `{"kind":"package","name":"pkg1","version":"v1","sha256":"hash1","sha512":"hash2","arch":"arch1"}`,
+}, {
+	summary: "Invalid digest kind",
+	pkg: &manifest.Package{
+		Kind:    "package",
+		Name:    "pkg1",
+		Version: "v1",
+		Digests: map[string]string{"invalid": "hash1"},
+		Arch:    "arch1",
+	},
+	error: `json: error calling MarshalJSON for type \*manifest\.Package: cannot marshal package "pkg1": unsupported digest kind "invalid"`,
+}}
+
+func (s *S) TestMarshalPackage(c *C) {
+	for _, test := range marshalPackageTests {
+		c.Logf("Summary: %s", test.summary)
+		data, err := json.Marshal(test.pkg)
+		if test.error != "" {
+			c.Assert(err, ErrorMatches, test.error)
+			continue
+		}
+		c.Assert(err, IsNil)
+		c.Assert(string(data), Equals, test.expected)
 	}
 }
