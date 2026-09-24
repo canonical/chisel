@@ -18,6 +18,9 @@ type Package struct {
 	Version string
 	// Digest holds the sha256 digest when present, and the sha512 digest
 	// otherwise. It is empty when neither is recorded.
+	//
+	// Deprecated: Digest exists for historical compatibility. More than 
+	// one digest can be recorded for a package. Use Digests instead.
 	Digest string
 	// Digests holds the digests of the package, keyed by digest kind
 	// (e.g. "sha256").
