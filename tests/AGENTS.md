@@ -22,5 +22,5 @@ The `tests/` directory contains the Spread integration test suite. It exercises 
 - `debug-check-release-archives/` - Tests for the `chisel debug check-release-archives` command, validating archive configuration correctness.
 - `pro-archives/` - Tests covering Ubuntu Pro subscription archive support (fips, fips-updates, esm-apps, esm-infra).
 - `use-a-custom-chisel-release/` - Tests the ability to override the default chisel-releases with a custom release tree.
-- `unmaintained/` - Edge-case tests for packages whose support window has ended.
+- `unmaintained/` - Edge-case tests for releases whose support window has ended.
 - `unstable/` - Edge-case tests for packages from unstable or unsupported releases.
