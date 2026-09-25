@@ -1,6 +1,6 @@
 # Preface
 
-This is the index file for the `internal/` directory's knowledge base. It provides context about the core internal packages of Chisel, encompassing slice orchestration, package setup, extraction, archive fetching, caching, filesystem operations, manifest generation, and supporting utilities.
+This is the index file for the `internal/` directory's knowledge base. It provides context about the core internal packages of Chisel.
 
 Read the top-level `.kb/agents.md` file before continuing below.
 
@@ -30,7 +30,7 @@ flowchart LR
 - `deb/` - Debian package utilities: data tarball access, version comparison, and architecture handling.
 - `tarball/` - Extracts selected files from a package data tarball into a target directory.
 - `archive/` - Manages remote Ubuntu package archive sources over HTTP/HTTPS.
-- `cache/` - Content-addressable on-disk store keyed by SHA256 or SHA384 digest, with digest verification and last-use timestamps. It exposes expiry support, but Chisel does not invoke expiry automatically.
+- `cache/` - Content-addressable on-disk store keyed by SHA256 or SHA384 digest, with digest verification and last-use timestamps.
 - `fsutil/` - Core filesystem operations for writing files, directories, and symlinks into the target root filesystem.
 - `manifestutil/` - Generates the Chisel manifest.
 - `scripts/` - Executes Starlark mutation scripts defined in slice definitions.
