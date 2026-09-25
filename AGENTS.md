@@ -5,6 +5,11 @@ This repository hosts Chisel, a software tool for carving and cutting Debian pac
 Read the top-level `.kb/agents.md` file before continuing below.
 
 
+# Overview
+
+Chisel cuts fine-grained slices out of Debian packages. It takes a selection of slices defined in chisel-releases YAML, resolves their dependencies, downloads the corresponding packages from Ubuntu archives, extracts the selected files into a target root filesystem, runs Starlark mutation scripts, and generates a manifest for downstream tooling. The codebase is split across command entry points, an internals tree holding the carving pipeline, and public packages defining the manifest format.
+
+
 # Directory
 
 - `cmd/` - Binary entry points for the `chisel` application.

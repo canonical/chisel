@@ -7,7 +7,7 @@ Read the top-level `.kb/agents.md` before continuing below.
 
 # Overview
 
-Every directory in this repository, including the root, may have its own `AGENTS.md` file and `.kb/` subdirectory. The AGENTS.md file provides a general view for the directory, while more specific information is found in `.kb/*.md` files with dashed lowercase names (e.g. `.kb/special-relativity.md`).
+Every directory in this repository, including the root, may have its own `AGENTS.md` file and `.kb/` subdirectory. The `AGENTS.md` file provides a general view for the directory, while more specific information is found in `.kb/*.md` files with dashed lowercase names (e.g. `.kb/special-relativity.md`).
 
 The design of this structure has the following key goals:
 
@@ -21,13 +21,13 @@ The design of this structure has the following key goals:
 # Important
 
 - Read local `AGENTS.md` files upon navigating directories.
-- Keep the `.kb/*.md` files updated whenever there is something relevant to be documented or updated.
+- Keep the `AGENTS.md` and `.kb/*.md` files updated whenever there is something relevant to be documented or updated. The top-level `.kb/agents.md` must NOT be edited unless explicitly requested.
 - Follow the header conventions outlined below. Only the _Preface_ header is required, and the other headers should be omitted if empty or trivial.
 
 
 # Headers
 
-The following are the ONLY top-level headers allowed across the `.kb/*.md` files in this repository, to maintain semantic standardization across projects.
+The following are the ONLY top-level headers allowed across the `.kb/*.md` files in this repository, to maintain semantic standardization across projects. Keep the ordering of created sections the exact same you see below.
 Sub-headers are okay.
 
 - _Preface_ - A brief introduction outlining the scope and relevance of a specific `*.md` file. This section MUST be at the top of every `.kb/*.md` file so agents can easily grep for it, and the last line of this section MUST be "Read the top-level `.kb/agents.md` file before continuing below." so rules are followed.
@@ -42,4 +42,3 @@ For the _Directory_ and _Documents_ listings, format items as a dashed list star
 ```
 - `filename` - Terse summary.
 ```
-

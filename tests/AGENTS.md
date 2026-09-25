@@ -14,6 +14,10 @@ The `tests/` directory contains the integration test suite for the project. Thes
 - **No build tags**: Unlike Go-based integration test suites, these tests require no `//go:build` directives. They are entirely shell-driven.
 - **Pre-built binary**: Spread compiles and provisions the `chisel` binary as part of the test environment setup defined in `spread.yaml` at the repository root.
 
+# Architecture
+
+Each test scenario is a directory containing a `task.yaml` that defines the test steps as shell commands with assertions (typically `grep`-based). Spread handles multi-system provisioning, binary deployment, and test execution across different Ubuntu releases as configured in the root `spread.yaml`.
+
 # Directory
 
 - `basic/` - Core slice extraction scenario verifying that files are correctly written to the target root filesystem and that mutation scripts are applied.
@@ -24,7 +28,3 @@ The `tests/` directory contains the integration test suite for the project. Thes
 - `use-a-custom-chisel-release/` - Tests the ability to override the default chisel-releases with a custom release tree.
 - `unmaintained/` - Edge-case tests for packages whose support window has ended.
 - `unstable/` - Edge-case tests for packages from unstable or unsupported releases.
-
-# Architecture
-
-Each test scenario is a directory containing a `task.yaml` that defines the test steps as shell commands with assertions (typically `grep`-based). Spread handles multi-system provisioning, binary deployment, and test execution across different Ubuntu releases as configured in the root `spread.yaml`.
