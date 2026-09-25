@@ -6,17 +6,13 @@ Read the top-level `.kb/agents.md` file before continuing below.
 
 # Overview
 
-The `tests/` directory contains the integration test suite for the project. These tests exercise the actual `chisel` binary against real or mock Ubuntu package archives, verifying end-to-end behaviors such as slice extraction, manifest generation, and error handling. The suite is built on the [Spread](https://github.com/canonical/spread) framework for multi-system test execution.
+The `tests/` directory contains the Spread integration test suite. It exercises the `chisel` binary end to end, covering behavior that cannot be validated within individual Go packages.
 
 # Important
 
 - **Execution**: Integration tests are run with `spread`, not with `go test`. Each test scenario is a subdirectory containing a `task.yaml` with shell-based assertions.
 - **No build tags**: Unlike Go-based integration test suites, these tests require no `//go:build` directives. They are entirely shell-driven.
 - **Pre-built binary**: Spread compiles and provisions the `chisel` binary as part of the test environment setup defined in `spread.yaml` at the repository root.
-
-# Architecture
-
-Each test scenario is a directory containing a `task.yaml` that defines the test steps as shell commands with assertions (typically `grep`-based). Spread handles multi-system provisioning, binary deployment, and test execution across different Ubuntu releases as configured in the root `spread.yaml`.
 
 # Directory
 

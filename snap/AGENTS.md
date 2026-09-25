@@ -10,4 +10,4 @@ The `snap/` directory contains the configuration necessary to build and package 
 
 # Directory
 
-- `snapcraft.yaml` - The primary manifest file defining the snap package. It configures classic confinement, utilizes the Go plugin, and outlines the build steps which depend on `cmd/mkversion.sh` for version injection.
+- `snapcraft.yaml` - The primary manifest file defining the snap package. It configures strict confinement, utilizes the Go plugin, and outlines the build steps which depend on `cmd/mkversion.sh` for version injection.
