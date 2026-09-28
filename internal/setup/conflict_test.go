@@ -1,0 +1,206 @@
+package setup_test
+
+import (
+	"slices"
+	"strings"
+
+	. "gopkg.in/check.v1"
+
+	"github.com/canonical/chisel/internal/setup"
+)
+
+func (s *S) TestPathToSegments(c *C) {
+	tests := []struct {
+		path     string
+		segments []setup.PathSegment
+		err      string
+	}{{
+		path: "/foo/bar",
+		segments: []setup.PathSegment{
+			{Text: "/"},
+			{Text: "foo/"},
+			{Text: "bar"},
+		},
+	}, {
+		path: "/foo/",
+		segments: []setup.PathSegment{
+			{Text: "/"},
+			{Text: "foo/"},
+			{Text: ""},
+		},
+	}, {
+		path: "/",
+		segments: []setup.PathSegment{
+			{Text: "/"},
+			{Text: ""},
+		},
+	}, {
+		path: "/*",
+		segments: []setup.PathSegment{
+			{Text: "/"},
+			{Text: "*", HasGlob: true},
+		},
+	}, {
+		path: "/*/",
+		segments: []setup.PathSegment{
+			{Text: "/"},
+			{Text: "*/", HasGlob: true},
+			{Text: ""},
+		},
+	}, {
+		path: "/**",
+		segments: []setup.PathSegment{
+			{Text: "/"},
+			{Text: "**", HasGlob: true, HasDoubleGlob: true},
+		},
+	}, {
+		path: "/**/bar",
+		segments: []setup.PathSegment{
+			{Text: "/"},
+			{Text: "**/bar", HasGlob: true, HasDoubleGlob: true},
+		},
+	}, {
+		path: "/foo*/bar",
+		segments: []setup.PathSegment{
+			{Text: "/"},
+			{Text: "foo*/", HasGlob: true},
+			{Text: "bar"},
+		},
+	}, {
+		path: "/foo?/bar",
+		segments: []setup.PathSegment{
+			{Text: "/"},
+			{Text: "foo?/", HasGlob: true},
+			{Text: "bar"},
+		},
+	}, {
+		path: "/fo??/bar",
+		segments: []setup.PathSegment{
+			{Text: "/"},
+			{Text: "fo??/", HasGlob: true},
+			{Text: "bar"},
+		},
+	}, {
+		path: "/f*o?/bar",
+		segments: []setup.PathSegment{
+			{Text: "/"},
+			{Text: "f*o?/", HasGlob: true},
+			{Text: "bar"},
+		},
+	}, {
+		path: "/f*oo/f**/bar",
+		segments: []setup.PathSegment{
+			{Text: "/"},
+			{Text: "f*oo/", HasGlob: true},
+			{Text: "f**/bar", HasGlob: true, HasDoubleGlob: true},
+		},
+	}, {
+		path: "/foo**/bar/baz",
+		segments: []setup.PathSegment{
+			{Text: "/"},
+			{Text: "foo**/bar/baz", HasGlob: true, HasDoubleGlob: true},
+		},
+	}, {
+		path: "/foo/**/sub/**/bar",
+		segments: []setup.PathSegment{
+			{Text: "/"},
+			{Text: "foo/"},
+			{Text: "**/sub/**/bar", HasGlob: true, HasDoubleGlob: true},
+		},
+	}, {
+		path: "foo/bar",
+		err:  `internal error: path does not start with '/'`,
+	}}
+
+	for _, test := range tests {
+		c.Logf("Test: %q", test.path)
+		segments, err := setup.PathToSegments(test.path)
+		if test.err != "" {
+			c.Assert(err, ErrorMatches, test.err)
+			continue
+		}
+		c.Assert(err, IsNil)
+		c.Assert(segments, DeepEquals, test.segments)
+	}
+}
+
+func (s *S) TestConflictTree(c *C) {
+	sliceOne := &setup.Slice{
+		Package: "pkg1",
+		Name:    "path",
+		Contents: map[string]setup.PathInfo{
+			"/a/*/b": {Kind: setup.GlobPath},
+		},
+	}
+	sliceTwo := &setup.Slice{
+		Package: "pkg2",
+		Name:    "glob",
+		Contents: map[string]setup.PathInfo{
+			"/a/*": {Kind: setup.GlobPath},
+		},
+	}
+
+	pathOne := setup.PathSegmentSlice{
+		Slice:     sliceOne,
+		PathInfo:  setup.PathInfo{Kind: setup.GlobPath},
+		WholePath: "/a/*/b",
+	}
+	pathTwo := setup.PathSegmentSlice{
+		Slice:     sliceTwo,
+		PathInfo:  setup.PathInfo{Kind: setup.GlobPath},
+		WholePath: "/a/*",
+	}
+
+	tree := setup.NewConflictTree(map[string][]*setup.Slice{
+		"/a/*/b": {sliceOne},
+		"/a/*":   {sliceTwo},
+	})
+	err := tree.HasConflict()
+	c.Assert(err, IsNil)
+
+	expected := &setup.PathNode{
+		Segment: setup.PathSegment{Text: "/"},
+		Children: map[string]*setup.PathNode{
+			"a/": {
+				Segment:       setup.PathSegment{Text: "a/"},
+				SegmentSlices: []*setup.PathSegmentSlice{&pathOne, &pathTwo},
+				Children: map[string]*setup.PathNode{
+					"*": {
+						Segment:       setup.PathSegment{Text: "*", HasGlob: true},
+						SegmentSlices: []*setup.PathSegmentSlice{&pathTwo},
+					},
+					"*/": {
+						Segment:       setup.PathSegment{Text: "*/", HasGlob: true},
+						SegmentSlices: []*setup.PathSegmentSlice{&pathOne},
+						Children: map[string]*setup.PathNode{
+							"b": {
+								Segment:       setup.PathSegment{Text: "b"},
+								SegmentSlices: []*setup.PathSegmentSlice{&pathOne},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	assertTreeEquals(c, tree.Root, expected)
+}
+
+func assertTreeEquals(c *C, obtained, expected *setup.PathNode) {
+	c.Assert(obtained.Segment, DeepEquals, expected.Segment)
+
+	slices.SortFunc(obtained.SegmentSlices, func(a, b *setup.PathSegmentSlice) int {
+		return strings.Compare(a.Slice.String(), b.Slice.String())
+	})
+	slices.SortFunc(expected.SegmentSlices, func(a, b *setup.PathSegmentSlice) int {
+		return strings.Compare(a.Slice.String(), b.Slice.String())
+	})
+	c.Assert(obtained.SegmentSlices, DeepEquals, expected.SegmentSlices)
+
+	c.Assert(len(obtained.Children), Equals, len(expected.Children))
+	for name, expectedChild := range expected.Children {
+		obtainedChild, ok := obtained.Children[name]
+		c.Assert(ok, Equals, true)
+		assertTreeEquals(c, obtainedChild, expectedChild)
+	}
+}
