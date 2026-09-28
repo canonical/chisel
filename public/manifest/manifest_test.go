@@ -199,6 +199,16 @@ var marshalPackageTests = []struct {
 	},
 	expected: `{"kind":"package","name":"pkg1","version":"v1","arch":"arch1"}`,
 }, {
+	summary: "Digest only, no Digests",
+	pkg: &manifest.Package{
+		Kind:    "package",
+		Name:    "pkg1",
+		Version: "v1",
+		Digest:  "hash1",
+		Arch:    "arch1",
+	},
+	expected: `{"kind":"package","name":"pkg1","version":"v1","sha256":"hash1","arch":"arch1"}`,
+}, {
 	summary: "Multiple digests recorded",
 	pkg: &manifest.Package{
 		Kind:    "package",

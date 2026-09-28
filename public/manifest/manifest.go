@@ -80,7 +80,7 @@ func getValidOptions(options *PackageOptions) (*PackageOptions, error) {
 	return o, nil
 }
 
-func (p *Package) MarshalJSON() ([]byte, error) {
+func (p Package) MarshalJSON() ([]byte, error) {
 	pj := packageJSON{
 		Kind:    p.Kind,
 		Name:    p.Name,
@@ -98,6 +98,11 @@ func (p *Package) MarshalJSON() ([]byte, error) {
 		default:
 			return nil, fmt.Errorf("cannot marshal package %q: unsupported digest kind %q", p.Name, kind)
 		}
+	}
+	// Digest may hold a digest of another kind, so only record it when
+	// Digests is empty.
+	if len(p.Digests) == 0 && p.Digest != "" {
+		pj.SHA256 = p.Digest
 	}
 	return json.Marshal(pj)
 }
