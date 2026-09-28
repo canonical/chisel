@@ -1,6 +1,8 @@
 package main_test
 
 import (
+	"bytes"
+	"log"
 	"os"
 	"path/filepath"
 	"slices"
@@ -541,6 +543,69 @@ func (s *ChiselSuite) TestRun(c *C) {
 
 // makeChiselYaml returns a valid chisel.yaml that contains the archives
 // supplied.
+func (s *ChiselSuite) TestRunIgnoresProArchivesWithoutCredentials(c *C) {
+	var logBuf bytes.Buffer
+	chisel.SetLogger(log.New(&logBuf, "", 0))
+	defer chisel.SetLogger(nil)
+
+	// Build a chisel.yaml with a regular archive and an Ubuntu Pro archive.
+	chiselYaml := map[string]any{}
+	err := yaml.Unmarshal([]byte(testutil.Reindent(testutil.DefaultChiselYaml)), chiselYaml)
+	c.Assert(err, IsNil)
+	archivesYaml := chiselYaml["archives"].(map[string]any)
+	ubuntuArchive := archivesYaml["ubuntu"].(map[string]any)
+	ubuntuArchive["priority"] = 1
+	proArchive := deepCopyYAML(ubuntuArchive)
+	proArchive["priority"] = 2
+	proArchive["pro"] = "esm-apps"
+	archivesYaml["ubuntu-pro"] = proArchive
+	bs, err := yaml.Marshal(chiselYaml)
+	c.Assert(err, IsNil)
+
+	releaseDir := c.MkDir()
+	release := map[string]string{
+		"chisel.yaml": strings.ReplaceAll(string(bs), "T00:00:00Z", ""),
+		"slices/mydir/pkg-a.yaml": `
+			package: pkg-a
+			slices:
+				myslice:
+					contents:
+		`,
+	}
+	for path, data := range release {
+		fpath := filepath.Join(releaseDir, path)
+		err := os.MkdirAll(filepath.Dir(fpath), 0755)
+		c.Assert(err, IsNil)
+		err = os.WriteFile(fpath, testutil.Reindent(data), 0644)
+		c.Assert(err, IsNil)
+	}
+
+	restore := chisel.FakeArchiveOpen(func(options *archive.Options) (archive.Archive, error) {
+		if options.Pro != "" {
+			return nil, archive.ErrCredentialsNotFound
+		}
+		return &testutil.TestArchive{
+			Opts: *options,
+			Packages: map[string]*testutil.TestPackage{
+				"pkg-a": {
+					Name: "pkg-a",
+					Data: testutil.MustMakeDeb([]testutil.TarEntry{
+						testutil.Dir(0755, "./dir/"),
+					}),
+				},
+			},
+		}, nil
+	})
+	defer restore()
+
+	_, err = chisel.Parser().ParseArgs([]string{"debug", "check-release-archives", "--release", releaseDir})
+	c.Assert(err, IsNil)
+
+	logs := logBuf.String()
+	c.Assert(logs, Matches, "(?s).*Ubuntu Pro subscription not available, ignoring archives: ubuntu-pro\n.*")
+	c.Assert(strings.Contains(logs, "credentials not found"), Equals, false)
+}
+
 func makeChiselYaml(archives []string) string {
 	rawChiselYaml := testutil.Reindent(testutil.DefaultChiselYaml)
 

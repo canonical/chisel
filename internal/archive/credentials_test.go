@@ -1,6 +1,8 @@
 package archive_test
 
 import (
+	"bytes"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -252,12 +254,19 @@ func (s *S) TestFindCredentialsInDirMissingDir(c *C) {
 	var creds *archive.Credentials
 	var err error
 
+	var logBuf bytes.Buffer
+	archive.SetLogger(log.New(&logBuf, "", 0))
+	defer archive.SetLogger(c)
+
 	workDir := c.MkDir()
 	credsDir := filepath.Join(workDir, "auth.conf.d")
 
 	creds, err = archive.FindCredentialsInDir("https://example.com/foo/bar", credsDir)
 	c.Assert(err, ErrorMatches, "^credentials not found$")
 	c.Assert(creds, IsNil)
+	// A missing credentials directory is expected without Ubuntu Pro
+	// credentials and must not be logged as if it were an error.
+	c.Assert(logBuf.String(), Equals, "")
 
 	err = os.Mkdir(credsDir, 0755)
 	c.Assert(err, IsNil)

@@ -89,17 +89,19 @@ func findCredentials(repoURL string) (*credentials, error) {
 }
 
 // findCredentialsInDir searches for credentials for repoURL in configuration
-// files in credsDir directory. If the directory does not exist, empty
-// credentials structure with nil err is returned.
+// files in credsDir directory. If the directory does not exist,
+// ErrCredentialsNotFound is returned.
 // Only files that do not begin with dot and have either no or ".conf"
 // extension are searched. The files are searched in ascending lexicographic
 // order. The first file that contains machine declaration matching repoURL
-// ends the search. If no file contain matching machine declaration, empty
-// credentials structure with nil err is returned.
+// ends the search. If no file contain matching machine declaration,
+// ErrCredentialsNotFound is returned.
 func findCredentialsInDir(repoURL string, credsDir string) (*credentials, error) {
 	contents, err := os.ReadDir(credsDir)
 	if err != nil {
-		logf("Cannot open credentials directory %q: %v", credsDir, err)
+		if !os.IsNotExist(err) {
+			logf("Cannot open credentials directory %q: %v", credsDir, err)
+		}
 		return nil, ErrCredentialsNotFound
 	}
 

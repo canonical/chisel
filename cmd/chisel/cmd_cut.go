@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"slices"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/jessevdk/go-flags"
@@ -79,6 +81,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 	}
 
 	archives := make(map[string]archive.Archive)
+	var ignoredArchives []string
 	for archiveName, archiveInfo := range release.Archives {
 		openArchive, err := archive.Open(&archive.Options{
 			Label:      archiveName,
@@ -94,13 +97,14 @@ func (cmd *cmdCut) Execute(args []string) error {
 		})
 		if err != nil {
 			if err == archive.ErrCredentialsNotFound {
-				logf("Archive %q ignored: credentials not found", archiveName)
+				ignoredArchives = append(ignoredArchives, archiveName)
 				continue
 			}
 			return err
 		}
 		archives[archiveName] = openArchive
 	}
+	logIgnoredProArchives(ignoredArchives)
 
 	hasMaintainedArchive := false
 	for _, archive := range archives {
@@ -127,4 +131,14 @@ func (cmd *cmdCut) Execute(args []string) error {
 		TargetDir: cmd.RootDir,
 	})
 	return err
+}
+
+// logIgnoredProArchives logs a single message listing the Ubuntu Pro archives
+// that were ignored because no credentials were found for them.
+func logIgnoredProArchives(archiveNames []string) {
+	if len(archiveNames) == 0 {
+		return
+	}
+	sort.Strings(archiveNames)
+	logf("Ubuntu Pro subscription not available, ignoring archives: %s", strings.Join(archiveNames, ", "))
 }
