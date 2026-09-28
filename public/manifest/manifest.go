@@ -46,6 +46,10 @@ type PackageOptions struct {
 }
 
 func NewPackage(opts *PackageOptions) (*Package, error) {
+	return newPackage("package", opts)
+}
+
+func newPackage(kind string, opts *PackageOptions) (*Package, error) {
 	o, err := getValidOptions(opts)
 	if err != nil {
 		return nil, err
@@ -55,7 +59,7 @@ func NewPackage(opts *PackageOptions) (*Package, error) {
 		digest = o.Digests["sha512"]
 	}
 	return &Package{
-		Kind:    "package",
+		Kind:    kind,
 		Name:    o.Name,
 		Version: o.Version,
 		Digest:  digest,
@@ -65,12 +69,18 @@ func NewPackage(opts *PackageOptions) (*Package, error) {
 }
 
 func getValidOptions(options *PackageOptions) (*PackageOptions, error) {
+	if options == nil {
+		return nil, fmt.Errorf("cannot create package: options cannot be nil")
+	}
 	optsCopy := *options
 	o := &optsCopy
 	digests := make(map[string]string, len(options.Digests))
 	for kind, digest := range options.Digests {
 		switch kind {
 		case "sha256", "sha512", "sha384":
+			if digest == "" {
+				continue
+			}
 			digests[kind] = digest
 		default:
 			return nil, fmt.Errorf("cannot create package %q: unsupported digest kind %q", options.Name, kind)
@@ -123,7 +133,7 @@ func (p *Package) UnmarshalJSON(data []byte) error {
 			digests[kind] = digest
 		}
 	}
-	pkg, err := NewPackage(&PackageOptions{
+	pkg, err := newPackage(pj.Kind, &PackageOptions{
 		Name:    pj.Name,
 		Version: pj.Version,
 		Arch:    pj.Arch,
