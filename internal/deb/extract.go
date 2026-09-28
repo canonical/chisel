@@ -10,10 +10,22 @@ import (
 	"github.com/ulikunitz/xz"
 )
 
-// DataReader takes a Reader for the ar file belonging to a Debian package and
-// returns a Reader to the inner tarball.
-func DataReader(pkgReader io.ReadSeeker) (io.ReadCloser, error) {
-	arReader := ar.NewReader(pkgReader)
+type Pkg struct {
+	reader io.ReadSeekCloser
+}
+
+func OpenPkg(reader io.ReadSeekCloser) *Pkg {
+	return &Pkg{reader: reader}
+}
+
+// TarStream returns a ReadCloser to the inner tarball of
+// a Debian package.
+func (p *Pkg) TarStream() (io.ReadCloser, error) {
+	_, err := p.reader.Seek(0, io.SeekStart)
+	if err != nil {
+		return nil, err
+	}
+	arReader := ar.NewReader(p.reader)
 	var dataReader io.ReadCloser
 	for dataReader == nil {
 		arHeader, err := arReader.Next()
@@ -46,4 +58,8 @@ func DataReader(pkgReader io.ReadSeeker) (io.ReadCloser, error) {
 	}
 
 	return dataReader, nil
+}
+
+func (p *Pkg) Close() error {
+	return p.reader.Close()
 }

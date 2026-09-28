@@ -146,7 +146,7 @@ func Run(options *RunOptions) error {
 	}
 
 	// Fetch all packages, using the selection order.
-	packages := make(map[string]io.ReadSeekCloser)
+	packages := make(map[string]tarball.PkgReader)
 	var pkgInfos []manifestutil.PackageInfo
 	for _, slice := range options.Selection.Slices {
 		if packages[slice.Package] != nil {

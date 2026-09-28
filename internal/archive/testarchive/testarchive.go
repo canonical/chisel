@@ -106,7 +106,10 @@ func (p *Package) Section() []byte {
 
 func (p *Package) Content() []byte {
 	if len(p.Data) == 0 {
-		return []byte(p.Name + " " + p.Version + " data")
+		return testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0o755, "./"),
+			testutil.Reg(0o644, "./data", p.Name+" "+p.Version+" data"),
+		})
 	}
 	return p.Data
 }
