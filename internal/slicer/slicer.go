@@ -16,6 +16,7 @@ import (
 	"github.com/klauspost/compress/zstd"
 
 	"github.com/canonical/chisel/internal/archive"
+	"github.com/canonical/chisel/internal/deb"
 	"github.com/canonical/chisel/internal/fsutil"
 	"github.com/canonical/chisel/internal/manifestutil"
 	"github.com/canonical/chisel/internal/scripts"
@@ -76,6 +77,13 @@ func (cc *contentChecker) checkKnown(path string) error {
 }
 
 func Run(options *RunOptions) error {
+	if options.Selection.Arch == "" {
+		return fmt.Errorf("internal error: selection missing arch")
+	}
+	if err := deb.ValidateArch(options.Selection.Arch); err != nil {
+		return err
+	}
+
 	oldUmask := syscall.Umask(0)
 	defer func() {
 		syscall.Umask(oldUmask)
@@ -90,7 +98,7 @@ func Run(options *RunOptions) error {
 		targetDir = filepath.Join(dir, targetDir)
 	}
 
-	pkgFetchers, err := selectPkgFetchers(options.Archives, options.Selection)
+	remotePackages, err := selectRemotePackages(options.Archives, options.Selection)
 	if err != nil {
 		return err
 	}
@@ -108,12 +116,11 @@ func Run(options *RunOptions) error {
 			extractPackage = make(map[string][]tarball.ExtractInfo)
 			extract[slice.Package] = extractPackage
 		}
-		arch := pkgFetchers[slice.Package].Arch()
 		for targetPath, pathInfo := range slice.Contents {
 			if targetPath == "" {
 				continue
 			}
-			if len(pathInfo.Arch) > 0 && !slices.Contains(pathInfo.Arch, arch) {
+			if len(pathInfo.Arch) > 0 && !slices.Contains(pathInfo.Arch, options.Selection.Arch) {
 				continue
 			}
 			if preferredPkg, ok := prefers[targetPath]; ok && preferredPkg.Name != slice.Package {
@@ -153,7 +160,7 @@ func Run(options *RunOptions) error {
 			continue
 		}
 		pkg := options.Selection.Release.Packages[slice.Package]
-		reader, info, err := pkgFetchers[pkg.Name].Fetch()
+		reader, info, err := remotePackages[pkg.Name].Fetch()
 		if err != nil {
 			return err
 		}
@@ -270,9 +277,8 @@ func Run(options *RunOptions) error {
 	// them to the appropriate slices.
 	relPaths := map[string][]*setup.Slice{}
 	for _, slice := range options.Selection.Slices {
-		arch := pkgFetchers[slice.Package].Arch()
 		for relPath, pathInfo := range slice.Contents {
-			if len(pathInfo.Arch) > 0 && !slices.Contains(pathInfo.Arch, arch) {
+			if len(pathInfo.Arch) > 0 && !slices.Contains(pathInfo.Arch, options.Selection.Arch) {
 				continue
 			}
 			if pathInfo.Kind == setup.CopyPath || pathInfo.Kind == setup.GlobPath ||
@@ -488,4 +494,70 @@ func createFile(targetDir, relPath string, pathInfo setup.PathInfo) (*fsutil.Ent
 		Link:        linkTarget,
 		MakeParents: true,
 	})
+}
+
+// selectRemotePackages determines the remote package for each package in the selection.
+// For packages from an archive it selects the highest priority archive
+// containing the package unless a particular archive is pinned within the
+// package slices file. For packages from a store it selects the store
+// named in the package slices file. It returns a map of RemotePackage indexed
+// by package names.
+func selectRemotePackages(archives map[string]archive.Archive, selection *setup.Selection) (map[string]RemotePackage, error) {
+	sortedArchives := make([]*setup.Archive, 0, len(selection.Release.Archives))
+	for _, archive := range selection.Release.Archives {
+		if archive.Priority < 0 {
+			// Ignore negative priority archives unless a package specifically
+			// asks for it with the "archive" field.
+			continue
+		}
+		sortedArchives = append(sortedArchives, archive)
+	}
+	slices.SortFunc(sortedArchives, func(a, b *setup.Archive) int {
+		return b.Priority - a.Priority
+	})
+
+	remotePackages := make(map[string]RemotePackage)
+	for _, s := range selection.Slices {
+		if _, ok := remotePackages[s.Package]; ok {
+			continue
+		}
+		pkg := selection.Release.Packages[s.Package]
+		if pkg.Store != "" {
+			remotePackages[pkg.Name] = &binPackage{
+				name:     pkg.Name,
+				realName: pkg.RealName,
+				store:    pkg.Store,
+				// TODO: populate arch, track and risk when implementing
+				// fetching from the store.
+			}
+			continue
+		}
+
+		var candidates []*setup.Archive
+		if pkg.Archive == "" {
+			// If the package has not pinned any archive, choose the highest
+			// priority archive in which the package exists.
+			candidates = sortedArchives
+		} else {
+			candidates = []*setup.Archive{selection.Release.Archives[pkg.Archive]}
+		}
+
+		var chosen archive.Archive
+		for _, archiveInfo := range candidates {
+			archive := archives[archiveInfo.Name]
+			if archive != nil && archive.Exists(pkg.RealName) {
+				chosen = archive
+				break
+			}
+		}
+		if chosen == nil {
+			return nil, fmt.Errorf("cannot find package %q in archive(s)", pkg.RealName)
+		}
+		remotePackages[pkg.Name] = &debPackage{
+			archive: chosen,
+			name:    pkg.RealName,
+		}
+	}
+
+	return remotePackages, nil
 }

@@ -12,7 +12,7 @@ import (
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/chisel/internal/apachetestutil"
-	"github.com/canonical/chisel/internal/archive"
+	"github.com/canonical/chisel/internal/cache"
 	"github.com/canonical/chisel/internal/manifestutil"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/public/manifest"
@@ -119,6 +119,26 @@ var slice2 = &setup.Slice{
 	Name:    "slice2",
 }
 
+type testPackageInfo struct {
+	Name       string
+	RealName   string
+	Version    string
+	Revision   int
+	Arch       string
+	Store      string
+	DigestKind cache.DigestKind
+	Digest     string
+}
+
+func (p *testPackageInfo) PkgName() string                 { return p.Name }
+func (p *testPackageInfo) PkgRealName() string             { return p.RealName }
+func (p *testPackageInfo) PkgVersion() string              { return p.Version }
+func (p *testPackageInfo) PkgRevision() int                { return p.Revision }
+func (p *testPackageInfo) PkgArch() string                 { return p.Arch }
+func (p *testPackageInfo) PkgStore() string                { return p.Store }
+func (p *testPackageInfo) PkgDigestKind() cache.DigestKind { return p.DigestKind }
+func (p *testPackageInfo) PkgDigest() string               { return p.Digest }
+
 var generateManifestTests = []struct {
 	summary     string
 	report      *manifestutil.Report
@@ -149,17 +169,19 @@ var generateManifestTests = []struct {
 		},
 	},
 	packageInfo: []manifestutil.PackageInfo{
-		&archive.PackageInfo{
-			Name:    "package1",
-			Version: "v1",
-			Arch:    "a1",
-			SHA256:  "s1",
+		&testPackageInfo{
+			Name:       "package1",
+			Version:    "v1",
+			Arch:       "a1",
+			DigestKind: cache.SHA256,
+			Digest:     "s1",
 		},
-		&archive.PackageInfo{
-			Name:    "package2",
-			Version: "v2",
-			Arch:    "a2",
-			SHA256:  "s2",
+		&testPackageInfo{
+			Name:       "package2",
+			Version:    "v2",
+			Arch:       "a2",
+			DigestKind: cache.SHA256,
+			Digest:     "s2",
 		},
 	},
 	expected: &apachetestutil.ManifestContents{
@@ -211,6 +233,24 @@ var generateManifestTests = []struct {
 			Slice: "package2_slice2",
 			Path:  "/link",
 		}},
+	},
+}, {
+	summary:   "Package alias matches slice reference",
+	selection: []*setup.Slice{{Package: "bin-foo", Name: "libs"}},
+	report: &manifestutil.Report{
+		Entries: map[string]manifestutil.ReportEntry{},
+	},
+	packageInfo: []manifestutil.PackageInfo{&testPackageInfo{
+		Name:       "bin-foo",
+		RealName:   "foo",
+		Version:    "2.10",
+		Arch:       "amd64",
+		DigestKind: cache.SHA256,
+		Digest:     "sum",
+	}},
+	expected: &apachetestutil.ManifestContents{
+		Packages: []*manifest.Package{{Kind: "package", Name: "foo", Alias: "bin-foo", Version: "2.10", Arch: "amd64", Digest: "sum"}},
+		Slices:   []*manifest.Slice{{Kind: "slice", Name: "bin-foo_libs"}},
 	},
 }, {
 	summary: "Missing slice",
@@ -399,11 +439,12 @@ var generateManifestTests = []struct {
 		},
 	},
 	packageInfo: []manifestutil.PackageInfo{
-		&archive.PackageInfo{
-			Name:    "package1",
-			Version: "v1",
-			Arch:    "a1",
-			SHA256:  "s1",
+		&testPackageInfo{
+			Name:       "package1",
+			Version:    "v1",
+			Arch:       "a1",
+			DigestKind: cache.SHA256,
+			Digest:     "s1",
 		},
 	},
 	expected: &apachetestutil.ManifestContents{
@@ -500,43 +541,63 @@ var generateManifestTests = []struct {
 }, {
 	summary: "Invalid package: missing name",
 	packageInfo: []manifestutil.PackageInfo{
-		&archive.PackageInfo{
-			Version: "v1",
-			Arch:    "a1",
-			SHA256:  "s1",
+		&testPackageInfo{
+			Version:    "v1",
+			Arch:       "a1",
+			DigestKind: cache.SHA256,
+			Digest:     "s1",
 		},
 	},
 	error: `internal error: invalid manifest: package name not set`,
 }, {
 	summary: "Invalid package: missing version",
 	packageInfo: []manifestutil.PackageInfo{
-		&archive.PackageInfo{
-			Name:   "package-1",
-			Arch:   "a1",
-			SHA256: "s1",
+		&testPackageInfo{
+			Name:       "package-1",
+			Arch:       "a1",
+			DigestKind: cache.SHA256,
+			Digest:     "s1",
 		},
 	},
 	error: `internal error: invalid manifest: package "package-1" missing version`,
 }, {
 	summary: "Invalid package: missing arch",
 	packageInfo: []manifestutil.PackageInfo{
-		&archive.PackageInfo{
-			Name:    "package-1",
-			Version: "v1",
-			SHA256:  "s1",
+		&testPackageInfo{
+			Name:       "package-1",
+			Version:    "v1",
+			DigestKind: cache.SHA256,
+			Digest:     "s1",
 		},
 	},
 	error: `internal error: invalid manifest: package "package-1" missing arch`,
 }, {
 	summary: "Invalid package: missing sha256",
 	packageInfo: []manifestutil.PackageInfo{
-		&archive.PackageInfo{
+		&testPackageInfo{
 			Name:    "package-1",
 			Version: "v1",
 			Arch:    "a1",
 		},
 	},
 	error: `internal error: invalid manifest: package "package-1" missing sha256`,
+}, {
+	summary: "Duplicate package alias",
+	packageInfo: []manifestutil.PackageInfo{&testPackageInfo{
+		Name:       "bin-foo",
+		RealName:   "foo",
+		Version:    "v1",
+		Arch:       "a1",
+		DigestKind: cache.SHA256,
+		Digest:     "s1",
+	}, &testPackageInfo{
+		Name:       "bin-foo",
+		Version:    "v1",
+		Arch:       "a1",
+		DigestKind: cache.SHA256,
+		Digest:     "s2",
+	}},
+	error: `internal error: invalid manifest: package name or alias "bin-foo" is used more than once`,
 }}
 
 func (s *S) TestGenerateManifests(c *C) {
@@ -547,11 +608,12 @@ func (s *S) TestGenerateManifests(c *C) {
 		}
 		if test.packageInfo == nil {
 			test.packageInfo = []manifestutil.PackageInfo{
-				&archive.PackageInfo{
-					Name:    "package1",
-					Version: "v1",
-					Arch:    "a1",
-					SHA256:  "s1",
+				&testPackageInfo{
+					Name:       "package1",
+					Version:    "v1",
+					Arch:       "a1",
+					DigestKind: cache.SHA256,
+					Digest:     "s1",
 				},
 			}
 		}
@@ -613,6 +675,37 @@ var validateManifestTests = []struct {
 		{"kind":"slice","name":"pkg1_manifest"}
 	`,
 	error: `invalid manifest: slice pkg1_manifest refers to missing package "pkg1"`,
+}, {
+	summary: "Alias resolves slice reference",
+	input: `
+		{"jsonwall":"1.0","schema":"1.0","count":2}
+		{"kind":"package","name":"foo","alias":"bin-foo","version":"v1","sha256":"hash1","arch":"amd64"}
+		{"kind":"slice","name":"bin-foo_libs"}
+	`,
+}, {
+	summary: "Alias is not interchangeable with real name",
+	input: `
+		{"jsonwall":"1.0","schema":"1.0","count":2}
+		{"kind":"package","name":"foo","alias":"bin-foo","version":"v1","sha256":"hash1","arch":"amd64"}
+		{"kind":"slice","name":"foo_libs"}
+	`,
+	error: `invalid manifest: slice foo_libs refers to missing package "foo"`,
+}, {
+	summary: "Same real name from different providers",
+	input: `
+		{"jsonwall":"1.0","schema":"1.0","count":3}
+		{"kind":"package","name":"foo","alias":"bin-foo","version":"v2","sha256":"hash2","arch":"amd64"}
+		{"kind":"package","name":"foo","version":"v1","sha256":"hash1","arch":"amd64"}
+		{"kind":"slice","name":"bin-foo_libs"}
+	`,
+}, {
+	summary: "Duplicate alias is ambiguous",
+	input: `
+		{"jsonwall":"1.0","schema":"1.0","count":2}
+		{"kind":"package","name":"foo","alias":"bin-foo","version":"v1","sha256":"hash1","arch":"amd64"}
+		{"kind":"package","name":"other","alias":"bin-foo","version":"v2","sha256":"hash2","arch":"amd64"}
+	`,
+	error: `invalid manifest: package name or alias "bin-foo" is used more than once`,
 }, {
 	summary: "Path not found in contents",
 	input: `

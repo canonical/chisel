@@ -219,6 +219,11 @@ var slicerTests = []slicerTest{{
 	summary: "Conditional architecture",
 	arch:    "amd64",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	pkgs: []*testutil.TestPackage{{
+		Name: "test-package",
+		Arch: "all",
+		Data: testutil.PackageData["test-package"],
+	}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -246,6 +251,9 @@ var slicerTests = []slicerTest{{
 		"/dir/nested/copy-3": "file 0644 84237a05 {test-package_myslice}",
 		"/dir/text-file-1":   "file 0644 5b41362b {test-package_myslice}",
 		"/dir/text-file-3":   "file 0644 5b41362b {test-package_myslice}",
+	},
+	manifestPkgs: map[string]string{
+		"test-package": "test-package version all hash",
 	},
 }, {
 	summary: "Copyright is not installed implicitly",
@@ -2002,6 +2010,36 @@ var slicerTests = []slicerTest{{
 		`,
 	},
 	error: `cannot fetch package "bin-store-pkg" from store "bin": not implemented`,
+}, {
+	summary: "Selection missing architecture",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+		`,
+	},
+	hackopt: func(c *C, opts *slicer.RunOptions) {
+		opts.Selection.Arch = ""
+	},
+	error: `internal error: selection missing arch`,
+}, {
+	summary: "Selection has invalid architecture",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+		`,
+	},
+	hackopt: func(c *C, opts *slicer.RunOptions) {
+		opts.Selection.Arch = "foo"
+	},
+	error: `invalid package architecture: foo`,
 }}
 
 func (s *S) TestRun(c *C) {
@@ -2120,7 +2158,7 @@ func runSlicerTests(s *S, c *C, tests []slicerTest) {
 						Suites:     setupArchive.Suites,
 						Components: setupArchive.Components,
 						Pro:        setupArchive.Pro,
-						Arch:       test.arch,
+						Arch:       selection.Arch,
 					},
 					Packages: pkgs,
 				}

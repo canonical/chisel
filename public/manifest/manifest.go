@@ -14,6 +14,7 @@ const Schema = "1.0"
 type Package struct {
 	Kind    string `json:"kind"`
 	Name    string `json:"name,omitempty"`
+	Alias   string `json:"alias,omitempty"`
 	Version string `json:"version,omitempty"`
 	Digest  string `json:"sha256,omitempty"`
 	Arch    string `json:"arch,omitempty"`
