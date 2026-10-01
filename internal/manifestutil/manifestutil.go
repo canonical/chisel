@@ -88,8 +88,8 @@ func manifestAddPackages(dbw *jsonwall.DBWriter, infos []PackageInfo) error {
 			Kind:    "package",
 			Name:    info.PkgName(),
 			Version: info.PkgVersion(),
-			Arch:    info.PkgArch(),
 			Digest:  info.PkgDigest(),
+			Arch:    info.PkgArch(),
 		})
 		if err != nil {
 			return err

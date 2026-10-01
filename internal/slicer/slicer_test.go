@@ -2011,21 +2011,6 @@ var slicerTests = []slicerTest{{
 	},
 	error: `cannot fetch package "bin-store-pkg" from store "bin": not implemented`,
 }, {
-	summary: "Selection missing architecture",
-	slices:  []setup.SliceKey{{"test-package", "myslice"}},
-	release: map[string]string{
-		"slices/mydir/test-package.yaml": `
-			package: test-package
-			slices:
-				myslice:
-					contents:
-		`,
-	},
-	hackopt: func(c *C, opts *slicer.RunOptions) {
-		opts.Selection.Arch = ""
-	},
-	error: `internal error: selection missing arch`,
-}, {
 	summary: "Selection has invalid architecture",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
 	release: map[string]string{
@@ -2039,7 +2024,7 @@ var slicerTests = []slicerTest{{
 	hackopt: func(c *C, opts *slicer.RunOptions) {
 		opts.Selection.Arch = "foo"
 	},
-	error: `invalid package architecture: foo`,
+	error: `internal error: invalid package architecture: foo`,
 }}
 
 func (s *S) TestRun(c *C) {

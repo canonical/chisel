@@ -77,11 +77,8 @@ func (cc *contentChecker) checkKnown(path string) error {
 }
 
 func Run(options *RunOptions) error {
-	if options.Selection.Arch == "" {
-		return fmt.Errorf("internal error: selection missing arch")
-	}
 	if err := deb.ValidateArch(options.Selection.Arch); err != nil {
-		return err
+		return fmt.Errorf("internal error: %s", err)
 	}
 
 	oldUmask := syscall.Umask(0)
