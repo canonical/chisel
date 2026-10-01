@@ -11,7 +11,6 @@ import (
 // RemotePackageInfo describes a package as reported by its provider.
 type RemotePackageInfo struct {
 	Name       string
-	RealName   string
 	Version    string
 	Revision   int
 	Arch       string
@@ -21,7 +20,6 @@ type RemotePackageInfo struct {
 }
 
 func (p *RemotePackageInfo) PkgName() string                 { return p.Name }
-func (p *RemotePackageInfo) PkgRealName() string             { return p.RealName }
 func (p *RemotePackageInfo) PkgVersion() string              { return p.Version }
 func (p *RemotePackageInfo) PkgRevision() int                { return p.Revision }
 func (p *RemotePackageInfo) PkgArch() string                 { return p.Arch }
@@ -50,7 +48,6 @@ func (d *debPackage) Fetch() (io.ReadSeekCloser, *RemotePackageInfo, error) {
 	}
 	return reader, &RemotePackageInfo{
 		Name:       info.Name,
-		RealName:   info.Name,
 		Version:    info.Version,
 		Arch:       info.Arch,
 		DigestKind: cache.SHA256,
