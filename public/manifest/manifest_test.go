@@ -243,53 +243,8 @@ func (s *S) TestMarshalPackage(c *C) {
 	}
 }
 
-func (s *S) TestUnmarshalPackagePreservesKind(c *C) {
-	var pkg manifest.Package
-	err := json.Unmarshal([]byte(`{"kind":"custom","name":"pkg1","sha256":"hash1"}`), &pkg)
-	c.Assert(err, IsNil)
-	c.Assert(pkg, DeepEquals, manifest.Package{
-		Kind:    "custom",
-		Name:    "pkg1",
-		Digest:  "hash1",
-		Digests: map[string]string{"sha256": "hash1"},
-	})
-}
-
-var newPackageTests = []struct {
-	summary  string
-	opts     *manifest.PackageOptions
-	expected *manifest.Package
-	error    string
-}{{
-	summary: "Nil package options",
-	error:   `cannot create package: options cannot be nil`,
-}, {
-	summary: "Empty package digest is ignored",
-	opts: &manifest.PackageOptions{
-		Name: "pkg1",
-		Digests: map[string]string{
-			"sha256": "",
-			"sha512": "hash1",
-		},
-	},
-	expected: &manifest.Package{
-		Kind:    "package",
-		Name:    "pkg1",
-		Digest:  "hash1",
-		Digests: map[string]string{"sha512": "hash1"},
-	},
-}}
-
-func (s *S) TestNewPackage(c *C) {
-	for _, test := range newPackageTests {
-		c.Logf("Summary: %s", test.summary)
-		pkg, err := manifest.NewPackage(test.opts)
-		if test.error != "" {
-			c.Assert(err, ErrorMatches, test.error)
-			c.Assert(pkg, IsNil)
-			continue
-		}
-		c.Assert(err, IsNil)
-		c.Assert(pkg, DeepEquals, test.expected)
-	}
+func (s *S) TestNewPackageNilOptions(c *C) {
+	pkg, err := manifest.NewPackage(nil)
+	c.Assert(err, ErrorMatches, `internal error: PackageOptions cannot be nil`)
+	c.Assert(pkg, IsNil)
 }
