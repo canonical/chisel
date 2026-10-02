@@ -524,7 +524,7 @@ func selectRemotePackages(archives map[string]archive.Archive, selection *setup.
 				name:     pkg.Name,
 				realName: pkg.RealName,
 				store:    pkg.Store,
-				// TODO: populate arch, track and risk when implementing
+				// TODO: add track and risk when implementing
 				// fetching from the store.
 			}
 			continue
