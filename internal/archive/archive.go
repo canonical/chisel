@@ -29,15 +29,16 @@ type PackageInfo struct {
 	Name    string
 	Version string
 	Arch    string
-	SHA256  string
+	Digests map[cache.DigestKind]string
 }
 
-func (p *PackageInfo) PkgName() string                 { return p.Name }
-func (p *PackageInfo) PkgVersion() string              { return p.Version }
-func (p *PackageInfo) PkgRevision() int                { return 0 }
-func (p *PackageInfo) PkgArch() string                 { return p.Arch }
-func (p *PackageInfo) PkgDigestKind() cache.DigestKind { return cache.SHA256 }
-func (p *PackageInfo) PkgDigest() string               { return p.SHA256 }
+func (p *PackageInfo) PkgName() string    { return p.Name }
+func (p *PackageInfo) PkgVersion() string { return p.Version }
+func (p *PackageInfo) PkgRevision() int   { return 0 }
+func (p *PackageInfo) PkgArch() string    { return p.Arch }
+func (p *PackageInfo) PkgDigests() map[cache.DigestKind]string {
+	return p.Digests
+}
 
 type Options struct {
 	Label      string
@@ -146,13 +147,17 @@ func (a *ubuntuArchive) Fetch(pkg string) (io.ReadSeekCloser, *PackageInfo, erro
 		return nil, nil, err
 	}
 	path := section.Get("Filename")
-	digest, digestKind := packageDigest(section)
+	digests, strongestKind, ok := packageDigests(section)
+	if !ok {
+		return nil, nil, fmt.Errorf("cannot find digest for package %q", pkg)
+	}
+	digest := digests[strongestKind]
 	logf("Fetching %s...", path)
-	reader, err := index.fetch(path, digest, digestKind, fetchBulk)
+	reader, err := index.fetch(path, digest, strongestKind, fetchBulk)
 	if err != nil {
 		return nil, nil, err
 	}
-	info := sectionPackageInfo(section)
+	info := sectionPackageInfo(section, digests)
 	return reader, info, nil
 }
 
@@ -161,7 +166,11 @@ func (a *ubuntuArchive) Info(pkg string) (*PackageInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	info := sectionPackageInfo(section)
+	digests, _, ok := packageDigests(section)
+	if !ok {
+		return nil, fmt.Errorf("cannot find digest for package %q", pkg)
+	}
+	info := sectionPackageInfo(section, digests)
 	return info, nil
 }
 
@@ -361,48 +370,49 @@ func (index *ubuntuIndex) fetchRelease() error {
 	return nil
 }
 
-// digestField is an archive checksum field Chisel can verify. Its name
-// doubles as the by-hash directory name in the archive layout.
+// digestField is an archive checksum field Chisel can verify, along with
+// the digest kind it carries.
 type digestField struct {
 	name string
 	kind cache.DigestKind
 }
 
-// digestFields lists the checksum fields Chisel can verify, in order of
-// preference: strongest first. The order also matches the by-hash archive
-// layout, where only the by-hash directory of the strongest advertised hash
-// is guaranteed to exist.
+// digestFields lists the checksum fields Chisel looks up in archive index
+// and package files, in order of preference: strongest first. Digest kinds
+// weaker than SHA256 (e.g. MD5) are not looked up.
 var digestFields = []digestField{
 	{"SHA512", cache.SHA512},
 	{"SHA256", cache.SHA256},
 }
 
-// findDigest returns the digest recorded for path in the release, along with
-// the field it was found in, trying the given fields in order.
-func findDigest(release control.Section, path string, order []digestField) (digest string, field digestField) {
-	for _, f := range order {
-		if d, _, ok := control.ParsePathInfo(release.Get(f.name), path); ok {
-			return d, f
+func findDigest(release control.Section, path string) (digest string, field digestField, ok bool) {
+	for _, f := range digestFields {
+		if d, _, found := control.ParsePathInfo(release.Get(f.name), path); found {
+			return d, f, true
 		}
 	}
-	return "", digestField{}
+	return "", digestField{}, false
 }
 
-func packageDigest(section control.Section) (digest string, kind cache.DigestKind) {
+func packageDigests(section control.Section) (all map[cache.DigestKind]string, strongest cache.DigestKind, ok bool) {
+	all = make(map[cache.DigestKind]string)
 	for _, f := range digestFields {
 		if d := section.Get(f.name); d != "" {
-			return d, f.kind
+			all[f.kind] = d
+			if !ok {
+				// digestFields is ordered strongest first, so the first
+				// digest found is the strongest.
+				strongest, ok = f.kind, true
+			}
 		}
 	}
-	// No digest advertised; fall back to SHA256 so the package can still be
-	// cached and retrieved by its computed digest.
-	return "", cache.SHA256
+	return all, strongest, ok
 }
 
 func (index *ubuntuIndex) fetchIndex() error {
 	packagesPath := fmt.Sprintf("%s/binary-%s/Packages", index.component, index.arch)
-	packagesDigest, field := findDigest(index.release, packagesPath, digestFields)
-	if packagesDigest == "" {
+	packagesDigest, field, ok := findDigest(index.release, packagesPath)
+	if !ok {
 		return fmt.Errorf("%s is missing from %s %s component digests", packagesPath, index.suite, index.component)
 	}
 
@@ -419,8 +429,8 @@ func (index *ubuntuIndex) fetchIndex() error {
 		// hash the archive advertises, which is what findDigest prefers. If
 		// the archive advertises a hash stronger than any Chisel knows, the
 		// URL may 404 and the named-path fallback below applies.
-		packagesGzDigest, byHashField := findDigest(index.release, packagesGzPath, digestFields)
-		if packagesGzDigest != "" {
+		packagesGzDigest, byHashField, ok := findDigest(index.release, packagesGzPath)
+		if ok {
 			packagesByHashPath := fmt.Sprintf("%s/binary-%s/by-hash/%s/%s", index.component, index.arch, byHashField.name, packagesGzDigest)
 			r, err := index.fetch(index.distPath(packagesByHashPath), packagesDigest, field.kind, fetchBulk|fetchGzip)
 			if err != nil && err != errNotFound {
@@ -539,12 +549,12 @@ func (index *ubuntuIndex) fetch(path, digest string, digestKind cache.DigestKind
 	return index.archive.cache.Open(digestKind, writer.Digest())
 }
 
-func sectionPackageInfo(section control.Section) *PackageInfo {
+func sectionPackageInfo(section control.Section, digests map[cache.DigestKind]string) *PackageInfo {
 	return &PackageInfo{
 		Name:    section.Get("Package"),
 		Version: section.Get("Version"),
 		Arch:    section.Get("Architecture"),
-		SHA256:  section.Get("SHA256"),
+		Digests: digests,
 	}
 }
 

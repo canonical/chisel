@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"golang.org/x/crypto/sha3"
@@ -96,11 +97,19 @@ type DigestKind string
 
 const (
 	SHA256 DigestKind = "sha256"
-	SHA384 DigestKind = "sha384"
 	SHA512 DigestKind = "sha512"
+	SHA384 DigestKind = "sha384"
 )
 
-var digestKinds = []DigestKind{SHA256, SHA384, SHA512}
+// digestKinds sorted in decreasing order of strength.
+var digestKinds = []DigestKind{SHA384, SHA512, SHA256}
+
+func ValidateDigestKind(kind DigestKind) error {
+	if !slices.Contains(digestKinds, kind) {
+		return fmt.Errorf("unsupported digest kind: %q", kind)
+	}
+	return nil
+}
 
 var ErrMiss = fmt.Errorf("not cached")
 

@@ -26,8 +26,7 @@ type PackageInfo interface {
 	// revisions.
 	PkgRevision() int
 	PkgArch() string
-	PkgDigestKind() cache.DigestKind
-	PkgDigest() string
+	PkgDigests() map[cache.DigestKind]string
 }
 
 const DefaultFilename = "manifest.wall"
@@ -85,13 +84,20 @@ func Write(options *WriteOptions, writer io.Writer) error {
 
 func manifestAddPackages(dbw *jsonwall.DBWriter, infos []PackageInfo) error {
 	for _, info := range infos {
-		err := dbw.Add(&manifest.Package{
-			Kind:    "package",
+		digests := make(map[string]string, len(info.PkgDigests()))
+		for kind, digest := range info.PkgDigests() {
+			digests[string(kind)] = digest
+		}
+		pkg, err := manifest.NewPackage(&manifest.PackageOptions{
 			Name:    info.PkgName(),
 			Version: info.PkgVersion(),
-			Digest:  info.PkgDigest(),
 			Arch:    info.PkgArch(),
+			Digests: digests,
 		})
+		if err != nil {
+			return err
+		}
+		err = dbw.Add(pkg)
 		if err != nil {
 			return err
 		}
@@ -272,13 +278,18 @@ func validatePackage(pkg PackageInfo) (err error) {
 	if pkg.PkgArch() == "" {
 		return fmt.Errorf("package %q missing arch", name)
 	}
-	// The manifest records the package digest as a SHA256 one. Fail rather
-	// than recording a digest of another kind under that name.
-	// TODO: record packages whose digest is not a SHA256 one, such as the
-	// ones coming from a store. This requires recording the digest kind in
-	// the manifest as well.
-	if pkg.PkgDigestKind() != cache.SHA256 || pkg.PkgDigest() == "" {
-		return fmt.Errorf("package %q missing sha256", name)
+	digests := pkg.PkgDigests()
+	if len(digests) == 0 {
+		return fmt.Errorf("package %q missing digests", name)
+	}
+	for kind, digest := range digests {
+		err = cache.ValidateDigestKind(kind)
+		if err != nil {
+			return fmt.Errorf("package %q: %s", name, err)
+		}
+		if digest == "" {
+			return fmt.Errorf("package %q has empty %s digest", name, kind)
+		}
 	}
 	if pkg.PkgVersion() == "" {
 		return fmt.Errorf("package %q missing version", name)
