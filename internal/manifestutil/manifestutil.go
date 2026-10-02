@@ -16,8 +16,6 @@ import (
 	"github.com/canonical/chisel/public/manifest"
 )
 
-// PackageInfo describes a package as obtained from its source, abstracting
-// over archives, stores, and any other backend.
 type PackageInfo interface {
 	PkgName() string
 	PkgVersion() string
@@ -26,6 +24,7 @@ type PackageInfo interface {
 	// revisions.
 	PkgRevision() int
 	PkgArch() string
+	PkgStore() string
 	PkgDigestKind() cache.DigestKind
 	PkgDigest() string
 }

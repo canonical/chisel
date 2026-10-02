@@ -219,6 +219,11 @@ var slicerTests = []slicerTest{{
 	summary: "Conditional architecture",
 	arch:    "amd64",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	pkgs: []*testutil.TestPackage{{
+		Name: "test-package",
+		Arch: "all",
+		Data: testutil.PackageData["test-package"],
+	}},
 	release: map[string]string{
 		"slices/mydir/test-package.yaml": `
 			package: test-package
@@ -246,6 +251,9 @@ var slicerTests = []slicerTest{{
 		"/dir/nested/copy-3": "file 0644 84237a05 {test-package_myslice}",
 		"/dir/text-file-1":   "file 0644 5b41362b {test-package_myslice}",
 		"/dir/text-file-3":   "file 0644 5b41362b {test-package_myslice}",
+	},
+	manifestPkgs: map[string]string{
+		"test-package": "test-package version all hash",
 	},
 }, {
 	summary: "Copyright is not installed implicitly",
@@ -1979,21 +1987,44 @@ var slicerTests = []slicerTest{{
 		"/dir/file": "file 0644 cc55e2ec {test-package_third}",
 	},
 }, {
-	summary: "Store package is not yet implemented",
-	slices:  []setup.SliceKey{{"bin-curl", "bin"}},
+	summary: "Store package fetching not yet implemented",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}, {"bin-store-pkg", "myslice"}},
+	arch:    "amd64",
 	release: map[string]string{
 		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
-		"slices/curl.yaml": `
-			package: curl
-			store: bin
-			default-track: latest
+		"slices/mydir/test-package.yaml": `
+			package: test-package
 			slices:
-				bin:
+				myslice:
 					contents:
-						/usr/bin/curl:
+						/dir/file:
+		`,
+		"slices/mydir/store-pkg.yaml": `
+			package: store-pkg
+			store: bin
+			default-track: 3.1
+			slices:
+				myslice:
+					contents:
+						/dir/store-file:
 		`,
 	},
-	error: `cannot fetch package "bin-curl" from store "bin": not implemented`,
+	error: `cannot fetch package "bin-store-pkg" from store "bin": not implemented`,
+}, {
+	summary: "Selection has invalid architecture",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+		`,
+	},
+	hackopt: func(c *C, opts *slicer.RunOptions) {
+		opts.Selection.Arch = "foo"
+	},
+	error: `internal error: invalid package architecture: foo`,
 }}
 
 func (s *S) TestRun(c *C) {
@@ -2112,7 +2143,7 @@ func runSlicerTests(s *S, c *C, tests []slicerTest) {
 						Suites:     setupArchive.Suites,
 						Components: setupArchive.Components,
 						Pro:        setupArchive.Pro,
-						Arch:       test.arch,
+						Arch:       selection.Arch,
 					},
 					Packages: pkgs,
 				}
