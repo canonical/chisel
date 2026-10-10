@@ -2,6 +2,8 @@ package fsutil_test
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -332,16 +334,26 @@ func (s *S) TestCreate(c *C) {
 		c.Assert(testutil.TreeDump(dir), DeepEquals, test.result)
 
 		if options.Mode.IsRegular() && options.Link != "" {
-			// We should test hard link entries differently because
-			// fsutil.Create does not return hash or size when it creates hard
-			// links.
+			// Hard link entries are checked differently: the entry carries
+			// the hash and size of the content when the target is a regular
+			// file, and nothing when it is a symlink.
 			c.Assert(entry.Link, Equals, options.Link)
 			c.Assert(entry.Mode.IsRegular(), Equals, true)
 			pathInfo, err := os.Lstat(entry.Path)
 			c.Assert(err, IsNil)
 			linkInfo, err := os.Lstat(entry.Link)
 			c.Assert(err, IsNil)
-			os.SameFile(pathInfo, linkInfo)
+			c.Assert(os.SameFile(pathInfo, linkInfo), Equals, true)
+			if pathInfo.Mode().IsRegular() {
+				data, err := os.ReadFile(entry.Path)
+				c.Assert(err, IsNil)
+				sum := sha256.Sum256(data)
+				c.Assert(entry.SHA256, Equals, hex.EncodeToString(sum[:]))
+				c.Assert(entry.Size, Equals, len(data))
+			} else {
+				c.Assert(entry.SHA256, Equals, "")
+				c.Assert(entry.Size, Equals, 0)
+			}
 		} else {
 			// [fsutil.Create] does not return information about parent directories
 			// created implicitly. We only check for the requested path.
