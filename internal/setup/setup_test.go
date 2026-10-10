@@ -879,6 +879,18 @@ var setupTests = []setupTest{{
 	},
 	relerror: `slice mypkg_myslice mutable is not a regular file: /path`,
 }, {
+	summary: "Mutable path cannot have 'until' set to mutate",
+	input: map[string]string{
+		"slices/mydir/mypkg.yaml": `
+			package: mypkg
+			slices:
+				myslice:
+					contents:
+						/path: {text: data, mutable: true, until: mutate}
+		`,
+	},
+	relerror: `slice mypkg_myslice cannot have both 'mutable' and 'until: mutate' for path /path`,
+}, {
 	summary: "Until checks its value for validity",
 	input: map[string]string{
 		"slices/mydir/mypkg.yaml": `
