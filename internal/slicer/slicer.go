@@ -310,12 +310,13 @@ func Run(options *RunOptions) error {
 		}
 
 		// Do not add paths with "until: mutate".
-		if pathInfo.Until != setup.UntilMutate {
-			for _, slice := range slices {
-				err = report.Add(slice, entry)
-				if err != nil {
-					return err
-				}
+		for _, slice := range slices {
+			if slice.Contents[relPath].Until == setup.UntilMutate {
+				continue
+			}
+			err = report.Add(slice, entry)
+			if err != nil {
+				return err
 			}
 		}
 	}

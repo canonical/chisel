@@ -1351,7 +1351,32 @@ var slicerTests = []slicerTest{{
 		`,
 	},
 	filesystem:    map[string]string{"/file": "file 0644 2c26b46b"},
-	manifestPaths: map[string]string{"/file": "file 0644 2c26b46b {test-package_myslice1,test-package_myslice2}"},
+	manifestPaths: map[string]string{"/file": "file 0644 2c26b46b {test-package_myslice2}"},
+}, {
+	summary: "Extracted content in packages with until:mutate on one is attributed to the other",
+	slices: []setup.SliceKey{
+		{"test-package", "myslice1"},
+		{"test-package", "myslice2"},
+	},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice1:
+					contents:
+						/dir/file: {until: mutate}
+				myslice2:
+					contents:
+						/dir/file:
+		`,
+	},
+	filesystem: map[string]string{
+		"/dir/":     "dir 0755",
+		"/dir/file": "file 0644 cc55e2ec",
+	},
+	manifestPaths: map[string]string{
+		"/dir/file": "file 0644 cc55e2ec {test-package_myslice2}",
+	},
 }, {
 	summary: "Install two packages, both are recorded",
 	slices: []setup.SliceKey{
