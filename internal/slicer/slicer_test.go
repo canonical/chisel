@@ -455,6 +455,304 @@ var slicerTests = []slicerTest{{
 		"/foo/text-file-2": "file 0644 d98cf53e 5b41362b {test-package_myslice}",
 	},
 }, {
+	summary: "Copied file and directory take the listed mode",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/dir/: {mode: 0700}
+						/dir/file: {mode: 0600}
+						/other-dir/file-copy: {copy: /dir/file, mode: 0640}
+		`,
+	},
+	filesystem: map[string]string{
+		"/dir/":                "dir 0700",
+		"/dir/file":            "file 0600 cc55e2ec",
+		"/other-dir/":          "dir 0755",
+		"/other-dir/file-copy": "file 0640 cc55e2ec",
+	},
+	manifestPaths: map[string]string{
+		"/dir/":                "dir 0700 {test-package_myslice}",
+		"/dir/file":            "file 0600 cc55e2ec {test-package_myslice}",
+		"/other-dir/file-copy": "file 0640 cc55e2ec {test-package_myslice}",
+	},
+}, {
+	summary: "Same source copied twice, listed mode applies to one destination only",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/copy-a: {copy: /dir/file, mode: 0600}
+						/copy-b: {copy: /dir/file}
+		`,
+	},
+	filesystem: map[string]string{
+		"/copy-a": "file 0600 cc55e2ec",
+		"/copy-b": "file 0644 cc55e2ec",
+	},
+	manifestPaths: map[string]string{
+		"/copy-a": "file 0600 cc55e2ec {test-package_myslice}",
+		"/copy-b": "file 0644 cc55e2ec {test-package_myslice}",
+	},
+}, {
+	summary: "Hard link extracted on its own takes the listed mode",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	pkgs: []*testutil.TestPackage{{
+		Name: "test-package",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			testutil.Reg(0644, "./file", "foo"),
+			testutil.Hrd(0644, "./hardlink", "./file"),
+		}),
+	}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/hardlink: {mode: 0600}
+		`,
+	},
+	filesystem: map[string]string{
+		"/hardlink": "file 0600 2c26b46b",
+	},
+	manifestPaths: map[string]string{
+		"/hardlink": "file 0600 2c26b46b {test-package_myslice}",
+	},
+}, {
+	summary: "Hard link with a mode other than its target's is a file of its own",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	pkgs: []*testutil.TestPackage{{
+		Name: "test-package",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			testutil.Reg(0644, "./file", "foo"),
+			testutil.Hrd(0644, "./hardlink", "./file"),
+		}),
+	}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/file:
+						/hardlink: {mode: 0600}
+		`,
+	},
+	filesystem: map[string]string{
+		"/file":     "file 0644 2c26b46b",
+		"/hardlink": "file 0600 2c26b46b",
+	},
+	manifestPaths: map[string]string{
+		"/file":     "file 0644 2c26b46b {test-package_myslice}",
+		"/hardlink": "file 0600 2c26b46b {test-package_myslice}",
+	},
+}, {
+	summary: "Pending hard links with different modes do not share an inode",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	pkgs: []*testutil.TestPackage{{
+		Name: "test-package",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			testutil.Reg(0644, "./file", "foo"),
+			testutil.Hrd(0644, "./hardlink1", "./file"),
+			testutil.Hrd(0644, "./hardlink2", "./file"),
+		}),
+	}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/hardlink1: {mode: 0600}
+						/hardlink2:
+		`,
+	},
+	filesystem: map[string]string{
+		"/hardlink1": "file 0600 2c26b46b",
+		"/hardlink2": "file 0644 2c26b46b",
+	},
+	manifestPaths: map[string]string{
+		"/hardlink1": "file 0600 2c26b46b {test-package_myslice}",
+		"/hardlink2": "file 0644 2c26b46b {test-package_myslice}",
+	},
+}, {
+	summary: "Pending hard links with the same mode share an inode",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	pkgs: []*testutil.TestPackage{{
+		Name: "test-package",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			testutil.Reg(0644, "./file", "foo"),
+			testutil.Hrd(0644, "./hardlink1", "./file"),
+			testutil.Hrd(0644, "./hardlink2", "./file"),
+		}),
+	}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/hardlink1: {mode: 0600}
+						/hardlink2: {mode: 0600}
+		`,
+	},
+	filesystem: map[string]string{
+		"/hardlink1": "file 0600 2c26b46b <1>",
+		"/hardlink2": "file 0600 2c26b46b <1>",
+	},
+	manifestPaths: map[string]string{
+		"/hardlink1": "file 0600 2c26b46b <1> {test-package_myslice}",
+		"/hardlink2": "file 0600 2c26b46b <1> {test-package_myslice}",
+	},
+}, {
+	summary: "Hard link with the same listed mode as its target shares its inode",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	pkgs: []*testutil.TestPackage{{
+		Name: "test-package",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			testutil.Reg(0644, "./file", "foo"),
+			testutil.Hrd(0644, "./hardlink", "./file"),
+		}),
+	}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/file: {mode: 0600}
+						/hardlink: {mode: 0600}
+		`,
+	},
+	filesystem: map[string]string{
+		"/file":     "file 0600 2c26b46b <1>",
+		"/hardlink": "file 0600 2c26b46b <1>",
+	},
+	manifestPaths: map[string]string{
+		"/file":     "file 0600 2c26b46b <1> {test-package_myslice}",
+		"/hardlink": "file 0600 2c26b46b <1> {test-package_myslice}",
+	},
+}, {
+	summary: "Hard link with the same listed setuid mode as its target shares its inode",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	pkgs: []*testutil.TestPackage{{
+		Name: "test-package",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			testutil.Reg(0644, "./file", "foo"),
+			testutil.Hrd(0644, "./hardlink", "./file"),
+		}),
+	}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/file: {mode: 04755}
+						/hardlink: {mode: 04755}
+		`,
+	},
+	// The dump does not show the setuid bit; the shared inode is the point.
+	filesystem: map[string]string{
+		"/file":     "file 0755 2c26b46b <1>",
+		"/hardlink": "file 0755 2c26b46b <1>",
+	},
+	manifestPaths: map[string]string{
+		"/file":     "file 0755 2c26b46b <1> {test-package_myslice}",
+		"/hardlink": "file 0755 2c26b46b <1> {test-package_myslice}",
+	},
+}, {
+	summary: "Hard link without the setuid bit of its target is a file of its own",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	pkgs: []*testutil.TestPackage{{
+		Name: "test-package",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			testutil.Reg(0644, "./file", "foo"),
+			testutil.Hrd(0644, "./hardlink", "./file"),
+		}),
+	}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/file: {mode: 04755}
+						/hardlink: {mode: 0755}
+		`,
+	},
+	filesystem: map[string]string{
+		"/file":     "file 0755 2c26b46b",
+		"/hardlink": "file 0755 2c26b46b",
+	},
+	manifestPaths: map[string]string{
+		"/file":     "file 0755 2c26b46b {test-package_myslice}",
+		"/hardlink": "file 0755 2c26b46b {test-package_myslice}",
+	},
+}, {
+	summary: "Hard link with a listed mode under a directory the tarball does not carry",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	pkgs: []*testutil.TestPackage{{
+		Name: "test-package",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			testutil.Reg(0644, "./file", "foo"),
+			testutil.Hrd(0644, "./dir/hardlink", "./file"),
+		}),
+	}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/file:
+						/dir/hardlink: {mode: 0600}
+		`,
+	},
+	filesystem: map[string]string{
+		"/file":         "file 0644 2c26b46b",
+		"/dir/":         "dir 0755",
+		"/dir/hardlink": "file 0600 2c26b46b",
+	},
+	manifestPaths: map[string]string{
+		"/file":         "file 0644 2c26b46b {test-package_myslice}",
+		"/dir/hardlink": "file 0600 2c26b46b {test-package_myslice}",
+	},
+}, {
+	summary: "Listed mode on a path a glob also matches is a diverging mode",
+	slices: []setup.SliceKey{
+		{"test-package", "myslice1"},
+		{"test-package", "myslice2"},
+	},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice1:
+					contents:
+						/dir/fil*:
+				myslice2:
+					contents:
+						/dir/file: {mode: 0600}
+		`,
+	},
+	error: `cannot extract from package "test-package": path /dir/file requested twice with diverging mode: 0600 != 0000`,
+}, {
 	summary: "Script: use 'until' to remove file after mutate",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
 	release: map[string]string{
