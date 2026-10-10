@@ -518,6 +518,38 @@ var slicerTests = []slicerTest{{
 		"/dir/nested/file-copy": "file 0644 cc55e2ec {test-package_myslice}",
 	},
 }, {
+	summary: "Script: 'until' on a made directory that is also an implicit parent",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/dir/: {make: true, until: mutate}
+						/dir/file: {until: mutate}
+		`,
+	},
+	// Extracting /dir/file registers /dir/ as an implicit parent before the
+	// generated content is created, which must not hide the explicit entry.
+	filesystem:    map[string]string{},
+	manifestPaths: map[string]string{},
+}, {
+	summary: "Script: 'until' on a generated directory and its generated child",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/gen/: {make: true, until: mutate}
+						/gen/text: {text: data1, until: mutate}
+		`,
+	},
+	filesystem:    map[string]string{},
+	manifestPaths: map[string]string{},
+}, {
 	summary: "Script: writing same contents to existing file does not set the final hash in report",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
 	release: map[string]string{
