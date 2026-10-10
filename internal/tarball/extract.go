@@ -120,6 +120,14 @@ func extractData(pkgReader io.ReadSeeker, options *ExtractOptions) error {
 	// before the entry for the file itself. This is the case for .deb files but
 	// not for all tarballs.
 	tarDirMode := make(map[string]fs.FileMode)
+	// Entries extracted by this package at their own path. A hard link is
+	// only created against one of these: anything else at the link target
+	// came from another package.
+	extracted := make(map[string]bool)
+	// Where each hard link entry of the tarball points, so that a link that
+	// could not be created can find the content at the end of a chain of
+	// links once the whole tarball has been seen.
+	linkTargets := make(map[string]string)
 	tarReader := tar.NewReader(dataReader)
 	for {
 		tarHeader, err := tarReader.Next()
@@ -138,6 +146,11 @@ func extractData(pkgReader io.ReadSeeker, options *ExtractOptions) error {
 		sourceIsDir := sourcePath[len(sourcePath)-1] == '/'
 		if sourceIsDir {
 			tarDirMode[sourcePath] = tarHeader.FileInfo().Mode()
+		}
+		if tarHeader.Typeflag == tar.TypeLink {
+			if target, ok := sanitizeLinkTarget(tarHeader.Linkname); ok {
+				linkTargets[sourcePath] = target
+			}
 		}
 
 		// Find all globs and copies that require this source, and map them by
@@ -221,8 +234,24 @@ func extractData(pkgReader io.ReadSeeker, options *ExtractOptions) error {
 			}
 			link := tarHeader.Linkname
 			if tarHeader.Typeflag == tar.TypeLink {
+				relLinkPath, ok := sanitizeLinkTarget(tarHeader.Linkname)
+				if !ok {
+					return fmt.Errorf("invalid link target %s", tarHeader.Linkname)
+				}
+				if !extracted[relLinkPath] {
+					// The content was not extracted previously, so the
+					// hard link entry is dealt with once the whole
+					// tarball has been seen.
+					info := pendingHardLink{
+						path:         targetPath,
+						mode:         tarHeader.FileInfo().Mode(),
+						extractInfos: extractInfos,
+					}
+					pendingHardLinks[relLinkPath] = append(pendingHardLinks[relLinkPath], info)
+					continue
+				}
 				// A hard link requires the real path of the target file.
-				link = filepath.Join(options.TargetDir, link)
+				link = filepath.Join(options.TargetDir, relLinkPath)
 			}
 
 			// Create the entry itself.
@@ -236,22 +265,45 @@ func extractData(pkgReader io.ReadSeeker, options *ExtractOptions) error {
 				OverrideMode: true,
 			}
 			err := options.Create(extractInfos, createOptions)
-			if err != nil && os.IsNotExist(err) && tarHeader.Typeflag == tar.TypeLink {
-				// The hard link could not be created because the content
-				// was not extracted previously. Add this hard link entry
-				// to the pending list to extract later.
-				relLinkPath, ok := sanitizeTarPath(tarHeader.Linkname)
-				if !ok {
-					return fmt.Errorf("invalid link target %s", tarHeader.Linkname)
-				}
-				info := pendingHardLink{
-					path:         targetPath,
-					extractInfos: extractInfos,
-				}
-				pendingHardLinks[relLinkPath] = append(pendingHardLinks[relLinkPath], info)
-			} else if err != nil {
+			if err != nil {
 				return err
 			}
+			if targetPath == sourcePath {
+				extracted[targetPath] = true
+			}
+		}
+	}
+
+	// A pending link waits for the content at the end of its chain of links.
+	// When that content was extracted by this package the link is created
+	// against it now; otherwise the second pass extracts the content.
+	for linkPath, links := range pendingHardLinks {
+		endPath := linkPath
+		for i := 0; i < len(linkTargets); i++ {
+			next, ok := linkTargets[endPath]
+			if !ok {
+				break
+			}
+			endPath = next
+		}
+		if extracted[endPath] {
+			for _, link := range links {
+				createOptions := &fsutil.CreateOptions{
+					Root:        options.TargetDir,
+					Path:        link.path,
+					Mode:        link.mode,
+					Link:        filepath.Join(options.TargetDir, endPath),
+					MakeParents: true,
+				}
+				err := options.Create(link.extractInfos, createOptions)
+				if err != nil {
+					return err
+				}
+			}
+			delete(pendingHardLinks, linkPath)
+		} else if endPath != linkPath {
+			delete(pendingHardLinks, linkPath)
+			pendingHardLinks[endPath] = append(pendingHardLinks[endPath], links...)
 		}
 	}
 
@@ -289,6 +341,7 @@ func extractData(pkgReader io.ReadSeeker, options *ExtractOptions) error {
 
 type pendingHardLink struct {
 	path         string
+	mode         fs.FileMode
 	extractInfos []ExtractInfo
 }
 
@@ -325,18 +378,27 @@ func extractHardLinks(pkgReader io.ReadSeeker, opts *extractHardLinkOptions) err
 		if len(links) == 0 {
 			continue
 		}
+		if tarHeader.Typeflag == tar.TypeLink {
+			// Only a chain of links leading nowhere ends here.
+			return fmt.Errorf("cannot create hard link %s: %s is a hard link", links[0].path, sourcePath)
+		}
 
 		// For a target path, the first hard link will be created as a file with
 		// the content of the target path. If there are more pending hard links,
 		// the remaining ones will be created as hard links with the newly
 		// created file as their target.
 		absLink := filepath.Join(opts.TargetDir, links[0].path)
-		// Extract the content to the first hard link path.
+		// Extract the content to the first hard link path. A hard link to a
+		// symlink becomes a symlink with the same target.
 		createOptions := &fsutil.CreateOptions{
-			Root: opts.TargetDir,
-			Path: links[0].path,
-			Mode: tarHeader.FileInfo().Mode(),
-			Data: tarReader,
+			Root:        opts.TargetDir,
+			Path:        links[0].path,
+			Mode:        tarHeader.FileInfo().Mode(),
+			Data:        tarReader,
+			MakeParents: true,
+		}
+		if tarHeader.Typeflag == tar.TypeSymlink {
+			createOptions.Link = tarHeader.Linkname
 		}
 		err = opts.Create(links[0].extractInfos, createOptions)
 		if err != nil {
@@ -350,7 +412,8 @@ func extractHardLinks(pkgReader io.ReadSeeker, opts *extractHardLinkOptions) err
 				Path: link.path,
 				Mode: tarHeader.FileInfo().Mode(),
 				// Link to the first file extracted for the hard links.
-				Link: absLink,
+				Link:        absLink,
+				MakeParents: true,
 			}
 			err := opts.Create(link.extractInfos, createOptions)
 			if err != nil {
@@ -386,6 +449,15 @@ func parentDirs(path string) []string {
 		}
 	}
 	return parents
+}
+
+// sanitizeLinkTarget returns the clean path a hard link entry points at, which
+// the tarball may spell with or without the leading "./".
+func sanitizeLinkTarget(link string) (string, bool) {
+	if link == "" || link[0] == '/' {
+		return "", false
+	}
+	return filepath.Clean("/" + strings.TrimPrefix(link, "./")), true
 }
 
 // sanitizeTarPath removes the leading "./" from the source path in the tarball,
