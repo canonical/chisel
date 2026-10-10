@@ -428,6 +428,7 @@ var setupTests = []setupTest{{
 	},
 	selslices: []setup.SliceKey{{"mypkg1", "myslice1"}},
 	selection: &setup.Selection{
+		Arch: "amd64",
 		Slices: []*setup.Slice{{
 			Package: "mypkg1",
 			Name:    "myslice1",
@@ -451,6 +452,7 @@ var setupTests = []setupTest{{
 	},
 	selslices: []setup.SliceKey{{"mypkg2", "myslice2"}},
 	selection: &setup.Selection{
+		Arch: "amd64",
 		Slices: []*setup.Slice{{
 			Package: "mypkg1",
 			Name:    "myslice1",
@@ -1891,6 +1893,7 @@ var setupTests = []setupTest{{
 	},
 	selslices: []setup.SliceKey{{"mypkg", "myslice"}},
 	selection: &setup.Selection{
+		Arch: "amd64",
 		Slices: []*setup.Slice{{
 			Package: "mypkg",
 			Name:    "myslice",
@@ -2728,6 +2731,31 @@ var setupTests = []setupTest{{
 	prefers: map[string]string{
 		"/path": "mypkg2",
 		"/link": "mypkg1",
+	},
+}, {
+	summary: "Path 'prefer' ignores packages listing the path for another arch",
+	selslices: []setup.SliceKey{
+		{"mypkg1", "myslice1"},
+		{"mypkg2", "myslice1"},
+	},
+	input: map[string]string{
+		"slices/mydir/mypkg1.yaml": `
+			package: mypkg1
+			slices:
+				myslice1:
+					contents:
+						/path: {arch: arm64}
+		`,
+		"slices/mydir/mypkg2.yaml": `
+			package: mypkg2
+			slices:
+				myslice1:
+					contents:
+						/path: {prefer: mypkg1}
+		`,
+	},
+	prefers: map[string]string{
+		"/path": "mypkg2",
 	},
 }, {
 	summary: "Cannot specify same package in 'prefer'",
