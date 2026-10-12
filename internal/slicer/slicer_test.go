@@ -1986,7 +1986,8 @@ var slicerTests = []slicerTest{{
 		"slices/curl.yaml": `
 			package: curl
 			store: bin
-			default-track: latest
+			default-track: 1
+			channels: ["1/*"]
 			slices:
 				bin:
 					contents:

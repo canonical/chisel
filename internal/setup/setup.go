@@ -59,13 +59,14 @@ type Archive struct {
 
 // Package holds a collection of slices that represent parts of themselves.
 type Package struct {
-	Name         string // Unique across all known packages (e.g. "bin-curl")
-	RealName     string // Actual name as known in the archive or store (e.g. "curl")
-	Path         string
-	Archive      string
-	Store        string
-	DefaultTrack string
-	Slices       map[string]*Slice
+	Name            string // Unique across all known packages (e.g. "bin-curl")
+	RealName        string // Actual name as known in the archive or store (e.g. "curl")
+	Path            string
+	Archive         string
+	Store           string
+	DefaultTrack    string
+	ChannelPatterns []string // Channel patterns the package is compatible with.
+	Slices          map[string]*Slice
 }
 
 // Slice holds the details about a package slice.

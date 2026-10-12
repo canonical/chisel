@@ -4091,6 +4091,7 @@ var setupTests = []setupTest{{
 			package: mypkg
 			store: bin
 			default-track: "3.0"
+			channels: ["3.0/*"]
 		`,
 	},
 	release: &setup.Release{
@@ -4115,12 +4116,13 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"bin-mypkg": {
-				RealName:     "mypkg",
-				Name:         "bin-mypkg",
-				Path:         "bin-slices/mypkg.yaml",
-				Store:        "bin",
-				DefaultTrack: "3.0",
-				Slices:       map[string]*setup.Slice{},
+				RealName:        "mypkg",
+				Name:            "bin-mypkg",
+				Path:            "bin-slices/mypkg.yaml",
+				Store:           "bin",
+				DefaultTrack:    "3.0",
+				ChannelPatterns: []string{"3.0/*"},
+				Slices:          map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -4138,7 +4140,7 @@ var setupTests = []setupTest{{
 			default-track: "3.0"
 		`,
 	},
-	relerror: `cannot parse package "mypkg": 'store' and 'default-track' are unsupported before format v3`,
+	relerror: `cannot parse package "mypkg": 'store', 'default-track' and 'channels' are unsupported before format v3`,
 }, {
 	summary: "Store and archive are mutually exclusive",
 	input: map[string]string{
@@ -4193,6 +4195,179 @@ var setupTests = []setupTest{{
 		`,
 	},
 	relerror: `cannot parse package "mypkg": store "non-existing" not defined in release`,
+}, {
+	summary: "Store package with multiple channels is parsed correctly",
+	input: map[string]string{
+		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
+		"bin-slices/mypkg.yaml": `
+			package: mypkg
+			store: bin
+			default-track: "2"
+			channels: ["2/*", "3/*", "4/edge"]
+		`,
+	},
+	release: &setup.Release{
+		Format: "v3",
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
+			},
+		},
+		Stores: map[string]*setup.Store{
+			"bin": {
+				Name:          "bin",
+				Kind:          "bin",
+				Version:       "26.10",
+				DefaultPrefix: "bin-",
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"bin-mypkg": {
+				RealName:        "mypkg",
+				Name:            "bin-mypkg",
+				Path:            "bin-slices/mypkg.yaml",
+				Store:           "bin",
+				DefaultTrack:    "2",
+				ChannelPatterns: []string{"2/*", "3/*", "4/edge"},
+				Slices:          map[string]*setup.Slice{},
+			},
+		},
+		Maintenance: &setup.Maintenance{
+			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
+		},
+	},
+}, {
+	summary: "Store package with single channel value is parsed correctly",
+	input: map[string]string{
+		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
+		"bin-slices/mypkg.yaml": `
+			package: mypkg
+			store: bin
+			default-track: "2"
+			channels: 2/stable
+		`,
+	},
+	release: &setup.Release{
+		Format: "v3",
+		Archives: map[string]*setup.Archive{
+			"ubuntu": {
+				Name:       "ubuntu",
+				Version:    "22.04",
+				Suites:     []string{"jammy"},
+				Components: []string{"main", "universe"},
+				PubKeys:    []*packet.PublicKey{testKey.PubKey},
+				Maintained: true,
+			},
+		},
+		Stores: map[string]*setup.Store{
+			"bin": {
+				Name:          "bin",
+				Kind:          "bin",
+				Version:       "26.10",
+				DefaultPrefix: "bin-",
+			},
+		},
+		Packages: map[string]*setup.Package{
+			"bin-mypkg": {
+				RealName:        "mypkg",
+				Name:            "bin-mypkg",
+				Path:            "bin-slices/mypkg.yaml",
+				Store:           "bin",
+				DefaultTrack:    "2",
+				ChannelPatterns: []string{"2/stable"},
+				Slices:          map[string]*setup.Slice{},
+			},
+		},
+		Maintenance: &setup.Maintenance{
+			Standard:  time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC),
+			EndOfLife: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
+		},
+	},
+}, {
+	summary: "Store package missing channels",
+	input: map[string]string{
+		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
+		"bin-slices/mypkg.yaml": `
+			package: mypkg
+			store: bin
+			default-track: "3.0"
+		`,
+	},
+	relerror: `cannot parse package "bin-mypkg": 'store' requires 'channels'`,
+}, {
+	summary: "Store package with empty channels list",
+	input: map[string]string{
+		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
+		"bin-slices/mypkg.yaml": `
+			package: mypkg
+			store: bin
+			default-track: "3.0"
+			channels: []
+		`,
+	},
+	relerror: `cannot parse package "bin-mypkg": 'store' requires 'channels'`,
+}, {
+	summary: "channels without store",
+	input: map[string]string{
+		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
+		"bin-slices/mypkg.yaml": `
+			package: mypkg
+			channels: ["3.0/*"]
+		`,
+	},
+	relerror: `cannot parse package "mypkg": 'channels' requires 'store'`,
+}, {
+	summary: "channels used with older format (v1/v2) is not allowed",
+	input: map[string]string{
+		"chisel.yaml": strings.ReplaceAll(testutil.DefaultChiselYaml, "format: v1", "format: v2"),
+		"slices/mypkg.yaml": `
+			package: mypkg
+			channels: ["3.0/*"]
+		`,
+	},
+	relerror: `cannot parse package "mypkg": 'store', 'default-track' and 'channels' are unsupported before format v3`,
+}, {
+	summary: "channels with invalid value report the package context",
+	input: map[string]string{
+		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
+		"bin-slices/mypkg.yaml": `
+			package: mypkg
+			store: bin
+			default-track: "3.0"
+			channels: ["3.0/foo"]
+		`,
+	},
+	relerror: `cannot parse package "bin-mypkg": invalid 'channels' value: "3\.0/foo": unknown risk "foo", must be one of stable, candidate, beta, edge`,
+}, {
+	summary: "channels not matching default track",
+	input: map[string]string{
+		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
+		"bin-slices/mypkg.yaml": `
+			package: mypkg
+			store: bin
+			default-track: "2"
+			channels: ["3.0/*"]
+		`,
+	},
+	relerror: `cannot parse package "bin-mypkg": 'channels' must match the default channel "2/stable"`,
+}, {
+	summary: "channels excluding the default risk",
+	input: map[string]string{
+		"chisel.yaml": testutil.DefaultChiselYamlWithStores,
+		"bin-slices/mypkg.yaml": `
+			package: mypkg
+			store: bin
+			default-track: "2"
+			channels: ["2/!stable"]
+		`,
+	},
+	relerror: `cannot parse package "bin-mypkg": 'channels' must match the default channel "2/stable"`,
 }, {
 	summary: "Store missing version",
 	input: map[string]string{
@@ -4286,6 +4461,7 @@ var setupTests = []setupTest{{
 			package: curl
 			store: bin
 			default-track: "3.0"
+			channels: ["3.0/*"]
 			slices:
 				bins:
 					contents:
@@ -4335,11 +4511,12 @@ var setupTests = []setupTest{{
 				},
 			},
 			"bin-curl": {
-				RealName:     "curl",
-				Name:         "bin-curl",
-				Path:         "bin-slices/curl.yaml",
-				Store:        "bin",
-				DefaultTrack: "3.0",
+				RealName:        "curl",
+				Name:            "bin-curl",
+				Path:            "bin-slices/curl.yaml",
+				Store:           "bin",
+				DefaultTrack:    "3.0",
+				ChannelPatterns: []string{"3.0/*"},
 				Slices: map[string]*setup.Slice{
 					"bins": {
 						Package: "bin-curl",
@@ -4364,6 +4541,7 @@ var setupTests = []setupTest{{
 			package: mypkg
 			store: bin
 			default-track: "3.0"
+			channels: ["3.0/*"]
 		`,
 	},
 	release: &setup.Release{
@@ -4388,12 +4566,13 @@ var setupTests = []setupTest{{
 		},
 		Packages: map[string]*setup.Package{
 			"bin-mypkg": {
-				RealName:     "mypkg",
-				Name:         "bin-mypkg",
-				Path:         "slices/mypkg.yaml",
-				Store:        "bin",
-				DefaultTrack: "3.0",
-				Slices:       map[string]*setup.Slice{},
+				RealName:        "mypkg",
+				Name:            "bin-mypkg",
+				Path:            "slices/mypkg.yaml",
+				Store:           "bin",
+				DefaultTrack:    "3.0",
+				ChannelPatterns: []string{"3.0/*"},
+				Slices:          map[string]*setup.Slice{},
 			},
 		},
 		Maintenance: &setup.Maintenance{
@@ -4455,6 +4634,7 @@ var setupTests = []setupTest{{
 			package: curl
 			store: bin
 			default-track: "3.0"
+			channels: ["3.0/*"]
 			slices:
 				bins:
 					contents:
@@ -4504,11 +4684,12 @@ var setupTests = []setupTest{{
 				},
 			},
 			"bin-curl": {
-				RealName:     "curl",
-				Name:         "bin-curl",
-				Path:         "slices/bins/curl.yaml",
-				Store:        "bin",
-				DefaultTrack: "3.0",
+				RealName:        "curl",
+				Name:            "bin-curl",
+				Path:            "slices/bins/curl.yaml",
+				Store:           "bin",
+				DefaultTrack:    "3.0",
+				ChannelPatterns: []string{"3.0/*"},
 				Slices: map[string]*setup.Slice{
 					"bins": {
 						Package: "bin-curl",
@@ -4554,6 +4735,7 @@ var setupTests = []setupTest{{
 			package: mypkg
 			store: bin
 			default-track: "3.0"
+			channels: ["3.0/*"]
 			slices:
 				myslice:
 					contents:
@@ -4935,6 +5117,7 @@ func (s *S) TestPackageYAMLFormat(c *C) {
 				package: mypkg
 				store: bin
 				default-track: "3.0"
+				channels: 3.0/*
 				slices:
 					myslice:
 						contents:
@@ -4949,6 +5132,7 @@ func (s *S) TestPackageYAMLFormat(c *C) {
 				package: mypkg
 				store: bin
 				default-track: "3.0"
+				channels: 3.0/*
 				slices:
 					myslice:
 						contents:

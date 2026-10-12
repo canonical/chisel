@@ -123,12 +123,13 @@ func selectPackageSlices(release *setup.Release, queries []string) (packages []*
 		} else {
 			releasePkg := release.Packages[pkgName]
 			pkg = &setup.Package{
-				Name:         releasePkg.Name,
-				RealName:     releasePkg.RealName,
-				Archive:      releasePkg.Archive,
-				Store:        releasePkg.Store,
-				DefaultTrack: releasePkg.DefaultTrack,
-				Slices:       make(map[string]*setup.Slice),
+				Name:            releasePkg.Name,
+				RealName:        releasePkg.RealName,
+				Archive:         releasePkg.Archive,
+				Store:           releasePkg.Store,
+				DefaultTrack:    releasePkg.DefaultTrack,
+				ChannelPatterns: releasePkg.ChannelPatterns,
+				Slices:          make(map[string]*setup.Slice),
 			}
 			for _, sliceName := range pkgSlices[pkgName] {
 				pkg.Slices[sliceName] = releasePkg.Slices[sliceName]
