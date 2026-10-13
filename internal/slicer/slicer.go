@@ -90,7 +90,7 @@ func Run(options *RunOptions) error {
 		targetDir = filepath.Join(dir, targetDir)
 	}
 
-	pkgArchive, err := selectPkgArchives(options.Archives, options.Selection)
+	pkgRemotes, err := selectPkgRemotes(options.Archives, options.Selection)
 	if err != nil {
 		return err
 	}
@@ -108,7 +108,7 @@ func Run(options *RunOptions) error {
 			extractPackage = make(map[string][]tarball.ExtractInfo)
 			extract[slice.Package] = extractPackage
 		}
-		arch := pkgArchive[slice.Package].Options().Arch
+		arch := pkgRemotes[slice.Package].Arch()
 		for targetPath, pathInfo := range slice.Contents {
 			if targetPath == "" {
 				continue
@@ -153,7 +153,7 @@ func Run(options *RunOptions) error {
 			continue
 		}
 		pkg := options.Selection.Release.Packages[slice.Package]
-		reader, info, err := pkgArchive[slice.Package].Fetch(pkg.RealName)
+		reader, info, err := pkgRemotes[pkg.Name].Fetch()
 		if err != nil {
 			return err
 		}
@@ -270,7 +270,7 @@ func Run(options *RunOptions) error {
 	// them to the appropriate slices.
 	relPaths := map[string][]*setup.Slice{}
 	for _, slice := range options.Selection.Slices {
-		arch := pkgArchive[slice.Package].Options().Arch
+		arch := pkgRemotes[slice.Package].Arch()
 		for relPath, pathInfo := range slice.Contents {
 			if len(pathInfo.Arch) > 0 && !slices.Contains(pathInfo.Arch, arch) {
 				continue
@@ -490,10 +490,12 @@ func createFile(targetDir, relPath string, pathInfo setup.PathInfo) (*fsutil.Ent
 	})
 }
 
-// selectPkgArchives selects the highest priority archive containing the package
-// unless a particular archive is pinned within the slice definition file. It
-// returns a map of archives indexed by package names.
-func selectPkgArchives(archives map[string]archive.Archive, selection *setup.Selection) (map[string]archive.Archive, error) {
+// selectPkgRemotes determines the remote for each package in the selection.
+// For packages from an archive it selects the highest priority archive
+// containing the package unless a particular archive is pinned within the
+// package slices file. Packages from a store are not supported yet.
+// It returns a map of PackageRemote indexed by package names.
+func selectPkgRemotes(archives map[string]archive.Archive, selection *setup.Selection) (map[string]PackageRemote, error) {
 	sortedArchives := make([]*setup.Archive, 0, len(selection.Release.Archives))
 	for _, archive := range selection.Release.Archives {
 		if archive.Priority < 0 {
@@ -507,9 +509,9 @@ func selectPkgArchives(archives map[string]archive.Archive, selection *setup.Sel
 		return b.Priority - a.Priority
 	})
 
-	pkgArchive := make(map[string]archive.Archive)
+	pkgRemotes := make(map[string]PackageRemote)
 	for _, s := range selection.Slices {
-		if _, ok := pkgArchive[s.Package]; ok {
+		if _, ok := pkgRemotes[s.Package]; ok {
 			continue
 		}
 		pkg := selection.Release.Packages[s.Package]
@@ -538,7 +540,10 @@ func selectPkgArchives(archives map[string]archive.Archive, selection *setup.Sel
 		if chosen == nil {
 			return nil, fmt.Errorf("cannot find package %q in archive(s)", pkg.RealName)
 		}
-		pkgArchive[pkg.Name] = chosen
+		pkgRemotes[pkg.Name] = &archiveRemote{
+			archive: chosen,
+			name:    pkg.RealName,
+		}
 	}
-	return pkgArchive, nil
+	return pkgRemotes, nil
 }

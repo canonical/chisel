@@ -12,7 +12,7 @@ import (
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/chisel/internal/apachetestutil"
-	"github.com/canonical/chisel/internal/archive"
+	"github.com/canonical/chisel/internal/cache"
 	"github.com/canonical/chisel/internal/manifestutil"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/public/manifest"
@@ -119,6 +119,24 @@ var slice2 = &setup.Slice{
 	Name:    "slice2",
 }
 
+type testPackageInfo struct {
+	Name       string
+	Version    string
+	Revision   int
+	Arch       string
+	Store      string
+	DigestKind cache.DigestKind
+	Digest     string
+}
+
+func (p *testPackageInfo) PkgName() string                 { return p.Name }
+func (p *testPackageInfo) PkgVersion() string              { return p.Version }
+func (p *testPackageInfo) PkgRevision() int                { return p.Revision }
+func (p *testPackageInfo) PkgArch() string                 { return p.Arch }
+func (p *testPackageInfo) PkgStore() string                { return p.Store }
+func (p *testPackageInfo) PkgDigestKind() cache.DigestKind { return p.DigestKind }
+func (p *testPackageInfo) PkgDigest() string               { return p.Digest }
+
 var generateManifestTests = []struct {
 	summary     string
 	report      *manifestutil.Report
@@ -149,17 +167,19 @@ var generateManifestTests = []struct {
 		},
 	},
 	packageInfo: []manifestutil.PackageInfo{
-		&archive.PackageInfo{
-			Name:    "package1",
-			Version: "v1",
-			Arch:    "a1",
-			SHA256:  "s1",
+		&testPackageInfo{
+			Name:       "package1",
+			Version:    "v1",
+			Arch:       "a1",
+			DigestKind: cache.SHA256,
+			Digest:     "s1",
 		},
-		&archive.PackageInfo{
-			Name:    "package2",
-			Version: "v2",
-			Arch:    "a2",
-			SHA256:  "s2",
+		&testPackageInfo{
+			Name:       "package2",
+			Version:    "v2",
+			Arch:       "a2",
+			DigestKind: cache.SHA256,
+			Digest:     "s2",
 		},
 	},
 	expected: &apachetestutil.ManifestContents{
@@ -399,11 +419,12 @@ var generateManifestTests = []struct {
 		},
 	},
 	packageInfo: []manifestutil.PackageInfo{
-		&archive.PackageInfo{
-			Name:    "package1",
-			Version: "v1",
-			Arch:    "a1",
-			SHA256:  "s1",
+		&testPackageInfo{
+			Name:       "package1",
+			Version:    "v1",
+			Arch:       "a1",
+			DigestKind: cache.SHA256,
+			Digest:     "s1",
 		},
 	},
 	expected: &apachetestutil.ManifestContents{
@@ -500,37 +521,40 @@ var generateManifestTests = []struct {
 }, {
 	summary: "Invalid package: missing name",
 	packageInfo: []manifestutil.PackageInfo{
-		&archive.PackageInfo{
-			Version: "v1",
-			Arch:    "a1",
-			SHA256:  "s1",
+		&testPackageInfo{
+			Version:    "v1",
+			Arch:       "a1",
+			DigestKind: cache.SHA256,
+			Digest:     "s1",
 		},
 	},
 	error: `internal error: invalid manifest: package name not set`,
 }, {
 	summary: "Invalid package: missing version",
 	packageInfo: []manifestutil.PackageInfo{
-		&archive.PackageInfo{
-			Name:   "package-1",
-			Arch:   "a1",
-			SHA256: "s1",
+		&testPackageInfo{
+			Name:       "package-1",
+			Arch:       "a1",
+			DigestKind: cache.SHA256,
+			Digest:     "s1",
 		},
 	},
 	error: `internal error: invalid manifest: package "package-1" missing version`,
 }, {
 	summary: "Invalid package: missing arch",
 	packageInfo: []manifestutil.PackageInfo{
-		&archive.PackageInfo{
-			Name:    "package-1",
-			Version: "v1",
-			SHA256:  "s1",
+		&testPackageInfo{
+			Name:       "package-1",
+			Version:    "v1",
+			DigestKind: cache.SHA256,
+			Digest:     "s1",
 		},
 	},
 	error: `internal error: invalid manifest: package "package-1" missing arch`,
 }, {
 	summary: "Invalid package: missing sha256",
 	packageInfo: []manifestutil.PackageInfo{
-		&archive.PackageInfo{
+		&testPackageInfo{
 			Name:    "package-1",
 			Version: "v1",
 			Arch:    "a1",
@@ -547,11 +571,12 @@ func (s *S) TestGenerateManifests(c *C) {
 		}
 		if test.packageInfo == nil {
 			test.packageInfo = []manifestutil.PackageInfo{
-				&archive.PackageInfo{
-					Name:    "package1",
-					Version: "v1",
-					Arch:    "a1",
-					SHA256:  "s1",
+				&testPackageInfo{
+					Name:       "package1",
+					Version:    "v1",
+					Arch:       "a1",
+					DigestKind: cache.SHA256,
+					Digest:     "s1",
 				},
 			}
 		}
