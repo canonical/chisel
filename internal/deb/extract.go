@@ -47,3 +47,13 @@ func DataReader(pkgReader io.ReadSeeker) (io.ReadCloser, error) {
 
 	return dataReader, nil
 }
+
+func OpenTar(pkgReader io.ReadSeeker) func() (io.ReadCloser, error) {
+	return func() (io.ReadCloser, error) {
+		_, err := pkgReader.Seek(0, io.SeekStart)
+		if err != nil {
+			return nil, err
+		}
+		return DataReader(pkgReader)
+	}
+}

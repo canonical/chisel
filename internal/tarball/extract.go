@@ -12,7 +12,6 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/canonical/chisel/internal/deb"
 	"github.com/canonical/chisel/internal/fsutil"
 	"github.com/canonical/chisel/internal/strdist"
 )
@@ -58,7 +57,11 @@ func getValidOptions(options *ExtractOptions) (*ExtractOptions, error) {
 	return options, nil
 }
 
-func Extract(pkgReader io.ReadSeeker, options *ExtractOptions) (err error) {
+// OpenTarFunc opens a fresh reader over a package's inner tar stream.
+// Each call must return a stream from its start.
+type OpenTarFunc func() (io.ReadCloser, error)
+
+func Extract(openTar OpenTarFunc, options *ExtractOptions) (err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("cannot extract from package %q: %w", options.Package, err)
@@ -79,15 +82,15 @@ func Extract(pkgReader io.ReadSeeker, options *ExtractOptions) (err error) {
 		return err
 	}
 
-	return extractData(pkgReader, validOpts)
+	return extractEntries(openTar, validOpts)
 }
 
-func extractData(pkgReader io.ReadSeeker, options *ExtractOptions) error {
-	dataReader, err := deb.DataReader(pkgReader)
+func extractEntries(openTar OpenTarFunc, options *ExtractOptions) error {
+	tarStream, err := openTar()
 	if err != nil {
 		return err
 	}
-	defer dataReader.Close()
+	defer tarStream.Close()
 
 	oldUmask := syscall.Umask(0)
 	defer func() {
@@ -117,10 +120,10 @@ func extractData(pkgReader io.ReadSeeker, options *ExtractOptions) error {
 	// create them with the permissions defined in the tarball.
 	//
 	// The assumption is that the tar entries of the parent directories appear
-	// before the entry for the file itself. This is the case for .deb files but
-	// not for all tarballs.
+	// before the entry for the file itself. This is the case for the tarballs
+	// produced by common packaging tools but not for all tarballs.
 	tarDirMode := make(map[string]fs.FileMode)
-	tarReader := tar.NewReader(dataReader)
+	tarReader := tar.NewReader(tarStream)
 	for {
 		tarHeader, err := tarReader.Next()
 		if err == io.EOF {
@@ -261,11 +264,7 @@ func extractData(pkgReader io.ReadSeeker, options *ExtractOptions) error {
 			ExtractOptions: options,
 			pendingLinks:   pendingHardLinks,
 		}
-		_, err := pkgReader.Seek(0, io.SeekStart)
-		if err != nil {
-			return err
-		}
-		err = extractHardLinks(pkgReader, extractHardLinkOptions)
+		err := extractHardLinks(openTar, extractHardLinkOptions)
 		if err != nil {
 			return err
 		}
@@ -299,14 +298,14 @@ type extractHardLinkOptions struct {
 
 // extractHardLinks iterates through the tarball a second time to extract the
 // hard links that were not extracted in the first pass.
-func extractHardLinks(pkgReader io.ReadSeeker, opts *extractHardLinkOptions) error {
-	dataReader, err := deb.DataReader(pkgReader)
+func extractHardLinks(openTar OpenTarFunc, opts *extractHardLinkOptions) error {
+	tarStream, err := openTar()
 	if err != nil {
 		return err
 	}
-	defer dataReader.Close()
+	defer tarStream.Close()
 
-	tarReader := tar.NewReader(dataReader)
+	tarReader := tar.NewReader(tarStream)
 	for {
 		tarHeader, err := tarReader.Next()
 		if err == io.EOF {
