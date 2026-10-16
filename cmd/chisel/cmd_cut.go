@@ -1,8 +1,11 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"slices"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/jessevdk/go-flags"
@@ -79,6 +82,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 	}
 
 	archives := make(map[string]archive.Archive)
+	var ignoredProArchives []string
 	for archiveName, archiveInfo := range release.Archives {
 		openArchive, err := archive.Open(&archive.Options{
 			Label:      archiveName,
@@ -93,7 +97,11 @@ func (cmd *cmdCut) Execute(args []string) error {
 			OldRelease: archiveInfo.OldRelease,
 		})
 		if err != nil {
-			if err == archive.ErrCredentialsNotFound {
+			if archiveInfo.Pro != "" && errors.Is(err, archive.ErrCredentialsNotFound) {
+				ignoredProArchives = append(ignoredProArchives, archiveName)
+				continue
+			}
+			if errors.Is(err, archive.ErrCredentialsNotFound) {
 				logf("Archive %q ignored: credentials not found", archiveName)
 				continue
 			}
@@ -101,6 +109,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 		}
 		archives[archiveName] = openArchive
 	}
+	logIgnoredProArchives(ignoredProArchives)
 
 	hasMaintainedArchive := false
 	for _, archive := range archives {
@@ -127,4 +136,12 @@ func (cmd *cmdCut) Execute(args []string) error {
 		TargetDir: cmd.RootDir,
 	})
 	return err
+}
+
+func logIgnoredProArchives(archiveNames []string) {
+	if len(archiveNames) == 0 {
+		return
+	}
+	sort.Strings(archiveNames)
+	logf("Ubuntu Pro archives without credentials ignored: %s", strings.Join(archiveNames, ", "))
 }

@@ -73,29 +73,33 @@ func parseRepoURL(repoURL string) (creds *credentials, query *credentialsQuery, 
 	return
 }
 
-const defaultCredsDir = "/etc/apt/auth.conf.d"
+var defaultCredsDir = "/etc/apt/auth.conf.d"
 
 var ErrCredentialsNotFound = errors.New("credentials not found")
 
 // findCredentials searches credentials for repoURL in configuration files in
 // directory specified by CHISEL_AUTH_DIR environment variable if it's
-// non-empty, otherwise /etc/apt/auth.conf.d.
+// non-empty, otherwise /etc/apt/auth.conf.d. A missing default directory is
+// the normal state of a system without Ubuntu Pro credentials and is not
+// logged; a directory set via CHISEL_AUTH_DIR that cannot be read is.
 func findCredentials(repoURL string) (*credentials, error) {
 	credsDir := defaultCredsDir
 	if v := os.Getenv("CHISEL_AUTH_DIR"); v != "" {
 		credsDir = v
+	} else if _, err := os.Stat(credsDir); errors.Is(err, os.ErrNotExist) {
+		return nil, ErrCredentialsNotFound
 	}
 	return findCredentialsInDir(repoURL, credsDir)
 }
 
 // findCredentialsInDir searches for credentials for repoURL in configuration
-// files in credsDir directory. If the directory does not exist, empty
-// credentials structure with nil err is returned.
+// files in credsDir directory. If the directory cannot be read, the error is
+// logged and ErrCredentialsNotFound is returned.
 // Only files that do not begin with dot and have either no or ".conf"
 // extension are searched. The files are searched in ascending lexicographic
 // order. The first file that contains machine declaration matching repoURL
-// ends the search. If no file contain matching machine declaration, empty
-// credentials structure with nil err is returned.
+// ends the search. If no file contain matching machine declaration,
+// ErrCredentialsNotFound is returned.
 func findCredentialsInDir(repoURL string, credsDir string) (*credentials, error) {
 	contents, err := os.ReadDir(credsDir)
 	if err != nil {

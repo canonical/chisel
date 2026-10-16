@@ -20,4 +20,12 @@ type Credentials = credentials
 var FindCredentials = findCredentials
 var FindCredentialsInDir = findCredentialsInDir
 
+func FakeDefaultCredsDir(dir string) (restore func()) {
+	_defaultCredsDir := defaultCredsDir
+	defaultCredsDir = dir
+	return func() {
+		defaultCredsDir = _defaultCredsDir
+	}
+}
+
 var ProArchiveInfo = proArchiveInfo

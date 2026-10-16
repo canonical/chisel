@@ -63,6 +63,7 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 	}
 
 	archives := make(map[string]archive.Archive)
+	var ignoredProArchives []string
 	for archiveName, archiveInfo := range release.Archives {
 		openArchive, err := archiveOpen(&archive.Options{
 			Label:      archiveName,
@@ -76,7 +77,11 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 			Maintained: archiveInfo.Maintained,
 			OldRelease: archiveInfo.OldRelease,
 		})
-		if err == archive.ErrCredentialsNotFound {
+		if archiveInfo.Pro != "" && errors.Is(err, archive.ErrCredentialsNotFound) {
+			ignoredProArchives = append(ignoredProArchives, archiveName)
+			continue
+		}
+		if errors.Is(err, archive.ErrCredentialsNotFound) {
 			logf("Archive %q ignored: credentials not found\n", archiveName)
 			continue
 		} else if err != nil {
@@ -84,6 +89,7 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 		}
 		archives[archiveName] = openArchive
 	}
+	logIgnoredProArchives(ignoredProArchives)
 
 	pathObs, err := computePathObservations(release, archives)
 	if err != nil {
