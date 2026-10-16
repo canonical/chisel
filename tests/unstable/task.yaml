@@ -22,10 +22,10 @@ execute: |
   yq -i '.maintenance.end-of-life = "2200-01-01"' ./release-${RELEASE}/chisel.yaml
 
   ! OUTPUT=$(chisel cut --release ./release-${RELEASE} --root ${ROOTFS} hello_bins 2>&1)
-  echo "$OUTPUT" | grep "this release is in the \"unstable\" maintenance status, see https://documentation.ubuntu.com/chisel/en/latest/reference/chisel-releases/chisel.yaml/#maintenance for details"
+  echo "$OUTPUT" | grep "this release is in the \"unstable\" maintenance status, see https://ubuntu.com/chisel/docs/latest/reference/chisel-releases/chisel.yaml/#maintenance for details"
 
   OUTPUT=$(chisel cut --release ./release-${RELEASE} --root ${ROOTFS} --ignore=unstable hello_bins 2>&1)
-  echo "$OUTPUT" | grep "Warning: This release is in the \"unstable\" maintenance status. See https://documentation.ubuntu.com/chisel/en/latest/reference/chisel-releases/chisel.yaml/#maintenance to be safe"
+  echo "$OUTPUT" | grep "Warning: This release is in the \"unstable\" maintenance status. See https://ubuntu.com/chisel/docs/latest/reference/chisel-releases/chisel.yaml/#maintenance to be safe"
 
   test -f ${ROOTFS}/usr/bin/hello
   test -f ${ROOTFS}/usr/share/doc/hello/copyright
