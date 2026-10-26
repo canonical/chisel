@@ -90,6 +90,18 @@ func Run(options *RunOptions) error {
 		targetDir = filepath.Join(dir, targetDir)
 	}
 
+	// Check the target directory before fetching any packages, so that the
+	// error names it instead of surfacing later while extracting a package.
+	targetInfo, err := os.Stat(targetDir)
+	if os.IsNotExist(err) {
+		return fmt.Errorf("target directory does not exist: %s", targetDir)
+	} else if err != nil {
+		return err
+	}
+	if !targetInfo.IsDir() {
+		return fmt.Errorf("target is not a directory: %s", targetDir)
+	}
+
 	pkgArchive, err := selectPkgArchives(options.Archives, options.Selection)
 	if err != nil {
 		return err

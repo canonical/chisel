@@ -635,6 +635,40 @@ var slicerTests = []slicerTest{{
 		c.Assert(err, IsNil)
 	},
 }, {
+	summary: "Target directory must exist",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/dir/file:
+		`,
+	},
+	hackopt: func(c *C, opts *slicer.RunOptions) {
+		opts.TargetDir = filepath.Join(opts.TargetDir, "missing")
+	},
+	error: `target directory does not exist: .*/missing`,
+}, {
+	summary: "Target directory must be a directory",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/dir/file:
+		`,
+	},
+	hackopt: func(c *C, opts *slicer.RunOptions) {
+		opts.TargetDir = filepath.Join(opts.TargetDir, "file")
+		err := os.WriteFile(opts.TargetDir, nil, 0644)
+		c.Assert(err, IsNil)
+	},
+	error: `target is not a directory: .*/file`,
+}, {
 	summary: "Can list parent directories of normal paths",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
 	release: map[string]string{
