@@ -62,6 +62,10 @@ func (s *fakeCommandSuite) TestFakeCommandConflictEcho(c *check.C) {
 }
 
 func (s *fakeCommandSuite) TestFakeShellchecksWhenAvailable(c *check.C) {
+	shellcheckedMu.Lock()
+	clear(shellchecked)
+	shellcheckedMu.Unlock()
+
 	tmpDir := c.MkDir()
 	fakeShellcheck := FakeCommand(c, "shellcheck", fmt.Sprintf(`cat > %s/input`, tmpDir))
 	defer fakeShellcheck.Restore()
