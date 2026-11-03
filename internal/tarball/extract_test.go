@@ -695,7 +695,7 @@ func (s *S) TestExtractOwnership(c *C) {
 
 	info, err := os.Lstat(filepath.Join(dir, "usr/sbin/unix_chkpwd"))
 	c.Assert(err, IsNil)
-	c.Assert(info.Mode()&fs.ModeSetgid, Not(Equals), 0)
+	c.Assert(info.Mode()&fs.ModeSetgid != 0, Equals, true)
 	stat, ok := info.Sys().(*syscall.Stat_t)
 	c.Assert(ok, Equals, true)
 	dirInfo, err := os.Lstat(filepath.Join(dir, "usr/sbin"))

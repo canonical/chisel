@@ -608,3 +608,34 @@ func (s *S) TestCreateOwnership(c *C) {
 	c.Assert(gotUid, Equals, selfUid)
 	c.Assert(gotGid, Equals, selfGid)
 }
+
+func (s *S) TestCreateOwnershipModeRestore(c *C) {
+	// Chown strips the setuid and setgid mode bits of entries whose
+	// ownership it changes, and open does not create files with those
+	// bits in the first place, so applying ownership re-applies the
+	// requested mode to preserve them.
+	selfUid, selfGid := os.Getuid(), os.Getgid()
+	uid, gid := selfUid, selfGid
+	if os.Geteuid() == 0 {
+		// Use a group different from the current one so that the
+		// ownership change is an actual change.
+		gid = 42
+	}
+	dir := c.MkDir()
+	mode := fs.FileMode(0755) | fs.ModeSetgid
+	_, err := fsutil.Create(&fsutil.CreateOptions{
+		Root: dir,
+		Path: "file",
+		Mode: mode,
+		Data: bytes.NewBufferString("data"),
+		Uid:  &uid,
+		Gid:  &gid,
+	})
+	c.Assert(err, IsNil)
+	info, err := os.Lstat(filepath.Join(dir, "file"))
+	c.Assert(err, IsNil)
+	c.Assert(info.Mode(), Equals, mode)
+	gotUid, gotGid := entryOwnership(filepath.Join(dir, "file"))
+	c.Assert(gotUid, Equals, uid)
+	c.Assert(gotGid, Equals, gid)
+}

@@ -189,6 +189,11 @@ func CreateWriter(options *CreateOptions) (io.WriteCloser, *Entry, error) {
 // current user namespace (EINVAL, e.g. under unshare) are logged
 // once and otherwise ignored, so unprivileged cuts keep working
 // with the entries owned by the current process user and group.
+//
+// After a successful ownership change the mode is re-applied:
+// chown strips the setuid and setgid mode bits of entries whose
+// ownership it changes, and open does not create files with those
+// bits in the first place.
 func applyOwnership(path string, o *CreateOptions) error {
 	uid, gid := -1, -1
 	if o.Uid != nil {
@@ -207,7 +212,10 @@ func applyOwnership(path string, o *CreateOptions) error {
 		})
 		return nil
 	}
-	return err
+	if err != nil {
+		return err
+	}
+	return os.Chmod(path, o.Mode)
 }
 
 var warnOwnership sync.Once
