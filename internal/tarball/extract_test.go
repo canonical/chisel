@@ -717,3 +717,76 @@ func (s *S) TestExtractOwnership(c *C) {
 		c.Assert(c.GetTestLog(), Matches, "(?s).*WARNING: cannot preserve file ownership.*")
 	}
 }
+
+func (s *S) TestExtractOwnershipHardLinks(c *C) {
+	// When the content entry of a hard link is not extracted in the
+	// first pass, the content is extracted in a second pass to the
+	// link path as a regular file, and the ownership recorded in the
+	// package tarball is preserved for it too.
+	shadowGid := 42
+	entries := []testutil.TarEntry{{
+		Header: tar.Header{
+			Typeflag: tar.TypeDir,
+			Name:     "./",
+			Mode:     0755,
+			Uname:    "root",
+			Gname:    "root",
+			Format:   tar.FormatGNU,
+		},
+	}, {
+		Header: tar.Header{
+			Typeflag: tar.TypeReg,
+			Name:     "./file",
+			Mode:     0644,
+			Uid:      0,
+			Gid:      shadowGid,
+			Uname:    "root",
+			Gname:    "shadow",
+			Format:   tar.FormatGNU,
+		},
+		Content: []byte("text for file"),
+	}, {
+		Header: tar.Header{
+			Typeflag: tar.TypeLink,
+			Name:     "./hardlink",
+			Mode:     0644,
+			Uid:      0,
+			Gid:      shadowGid,
+			Uname:    "root",
+			Gname:    "shadow",
+			Format:   tar.FormatGNU,
+			Linkname: "./file",
+		},
+	}}
+	pkgdata, err := testutil.MakeDeb(entries)
+	c.Assert(err, IsNil)
+
+	dir := c.MkDir()
+	options := tarball.ExtractOptions{
+		Package:   "test-package",
+		TargetDir: dir,
+		Extract: map[string][]tarball.ExtractInfo{
+			"/hardlink": []tarball.ExtractInfo{{
+				Path: "/hardlink",
+			}},
+		},
+	}
+	err = tarball.Extract(bytes.NewReader(pkgdata), &options)
+	c.Assert(err, IsNil)
+
+	info, err := os.Lstat(filepath.Join(dir, "hardlink"))
+	c.Assert(err, IsNil)
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	c.Assert(ok, Equals, true)
+	if os.Geteuid() == 0 {
+		// The ownership recorded for the content entry is applied to
+		// the file created in its place.
+		c.Assert(stat.Uid, Equals, uint32(0))
+		c.Assert(stat.Gid, Equals, uint32(shadowGid))
+	} else {
+		// Without sufficient privilege the file is owned by the
+		// current process user and group.
+		c.Assert(stat.Uid, Equals, uint32(os.Getuid()))
+		c.Assert(stat.Gid, Equals, uint32(os.Getgid()))
+	}
+}

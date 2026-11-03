@@ -371,6 +371,16 @@ func extractHardLinks(pkgReader io.ReadSeeker, opts *extractHardLinkOptions) err
 			Mode: tarHeader.FileInfo().Mode(),
 			Data: tarReader,
 		}
+		// The first hard link holds the content of the entry as a newly
+		// created file, so the special ownership recorded in the tarball
+		// is preserved for it, as in the first pass. The remaining hard
+		// links share the inode, and therefore the ownership, of that
+		// file.
+		if tarHeader.Uid != 0 || tarHeader.Gid != 0 {
+			uid, gid := tarHeader.Uid, tarHeader.Gid
+			createOptions.Uid = &uid
+			createOptions.Gid = &gid
+		}
 		err = opts.Create(links[0].extractInfos, createOptions)
 		if err != nil {
 			return err
