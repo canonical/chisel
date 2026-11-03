@@ -33,15 +33,8 @@ type CreateOptions struct {
 	// Uid and Gid, if not nil, are applied to the created entry with
 	// os.Chown, so the entry faithfully reflects the ownership recorded
 	// in the source package. A nil value leaves the corresponding id
-	// unchanged. Ownership is applied to newly created entries, and to
-	// pre-existing ones only when OverrideMode is true. It is never
-	// applied to symlinks (their ownership has no meaningful effect),
-	// nor to hard links (they share the inode, and therefore the
-	// ownership, of their already-created target). Applying ownership
-	// requires sufficient privilege (e.g. running as root) and ids
-	// mapped in the current user namespace; otherwise a warning is
-	// logged once and the entry keeps the ownership of the
-	// current process user and group.
+	// unchanged. See applyOwnership for how and when ownership is
+	// applied.
 	Uid *int
 	Gid *int
 }
@@ -185,6 +178,12 @@ func CreateWriter(options *CreateOptions) (io.WriteCloser, *Entry, error) {
 }
 
 // applyOwnership applies the Uid/Gid of the created entry, if any.
+// Ownership is applied to newly created entries, and to pre-existing
+// ones only when OverrideMode is true. It is never applied to symlinks
+// (their ownership has no meaningful effect), nor to hard links (they
+// share the inode, and therefore the ownership, of their
+// already-created target).
+//
 // Ownership changes that fail because of insufficient privilege
 // (EPERM) or because the requested ids are not mapped in the
 // current user namespace (EINVAL, e.g. under unshare) are logged
