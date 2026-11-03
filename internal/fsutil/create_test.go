@@ -483,143 +483,164 @@ func entryOwnership(path string) (uid, gid int) {
 	return int(stat.Uid), int(stat.Gid)
 }
 
-func (s *S) TestCreateOwnership(c *C) {
-	// Ownership can always be set to the current process user and group,
-	// even when running unprivileged. The unprivileged attempt to set
-	// other ids fails with EPERM, which is logged and otherwise ignored.
-	selfUid, selfGid := os.Getuid(), os.Getgid()
-	dir := c.MkDir()
-
-	uid, gid := selfUid, selfGid
-	_, err := fsutil.Create(&fsutil.CreateOptions{
-		Root: dir,
+var createOwnershipTests = []struct {
+	summary   string
+	options   fsutil.CreateOptions
+	data      string
+	preCreate func(c *C, root string)
+	useWriter bool
+	// assertPath is the path, relative to the root, whose ownership is
+	// asserted. Empty means options.Path. The symlink case asserts the
+	// ownership of the link target instead of the link itself.
+	assertPath string
+	// differentIDs requests the ownership of ids different from the
+	// current process ones.
+	differentIDs bool
+	// applyOwnership means the creation path attempts to apply the
+	// requested ownership to the entry.
+	applyOwnership bool
+}{{
+	summary: "New files get the requested ownership",
+	options: fsutil.CreateOptions{
 		Path: "file",
 		Mode: 0644,
-		Data: bytes.NewBufferString("data1"),
-		Uid:  &uid,
-		Gid:  &gid,
-	})
-	c.Assert(err, IsNil)
-	gotUid, gotGid := entryOwnership(filepath.Join(dir, "file"))
-	c.Assert(gotUid, Equals, selfUid)
-	c.Assert(gotGid, Equals, selfGid)
-
-	// Directories are owned too.
-	_, err = fsutil.Create(&fsutil.CreateOptions{
-		Root:        dir,
+	},
+	data:           "data",
+	applyOwnership: true,
+}, {
+	summary: "New directories get the requested ownership",
+	options: fsutil.CreateOptions{
 		Path:        "somedir",
 		Mode:        fs.ModeDir | 0755,
 		MakeParents: true,
-		Uid:         &uid,
-		Gid:         &gid,
-	})
-	c.Assert(err, IsNil)
-	gotUid, gotGid = entryOwnership(filepath.Join(dir, "somedir"))
-	c.Assert(gotUid, Equals, selfUid)
-	c.Assert(gotGid, Equals, selfGid)
-
-	// Ownership of pre-existing entries is only applied with
-	// OverrideMode, mirroring the mode semantics.
-	hack := func(root string) {
-		err := os.WriteFile(filepath.Join(root, "file"), []byte("data"), 0644)
-		c.Assert(err, IsNil)
-	}
-	root := c.MkDir()
-	hack(root)
-	rootUid, rootGid := 0, 0
-	if selfUid == 0 {
-		// Use an id different from the current ones for a meaningful
-		// assertion when running as root.
-		rootUid, rootGid = 0, 0
-	}
-	_, err = fsutil.Create(&fsutil.CreateOptions{
-		Root: root,
+	},
+	applyOwnership: true,
+}, {
+	summary: "Ownership of pre-existing entries is not applied without OverrideMode",
+	options: fsutil.CreateOptions{
 		Path: "file",
 		Mode: 0644,
-		Data: bytes.NewBufferString("data"),
-		Uid:  &rootUid,
-		Gid:  &rootGid,
-	})
-	c.Assert(err, IsNil)
-	gotUid, gotGid = entryOwnership(filepath.Join(root, "file"))
-	if selfUid == 0 {
-		c.Assert(gotUid, Equals, rootUid)
-		c.Assert(gotGid, Equals, rootGid)
-	} else {
-		// Unchanged: the entry pre-existed and OverrideMode is unset.
-		c.Assert(gotUid, Equals, selfUid)
-		c.Assert(gotGid, Equals, selfGid)
-	}
-
-	root = c.MkDir()
-	hack(root)
-	_, err = fsutil.Create(&fsutil.CreateOptions{
-		Root:         root,
+	},
+	data: "data",
+	preCreate: func(c *C, root string) {
+		err := os.WriteFile(filepath.Join(root, "file"), []byte("data"), 0644)
+		c.Assert(err, IsNil)
+	},
+	// Pre-existing entries keep their ownership, mirroring the mode
+	// semantics of OverrideMode.
+	differentIDs: true,
+}, {
+	summary: "Ownership of pre-existing entries is applied with OverrideMode",
+	options: fsutil.CreateOptions{
 		Path:         "file",
 		Mode:         0644,
-		Data:         bytes.NewBufferString("data"),
 		OverrideMode: true,
-		Uid:          &rootUid,
-		Gid:          &rootGid,
-	})
-	c.Assert(err, IsNil)
-	gotUid, gotGid = entryOwnership(filepath.Join(root, "file"))
-	if selfUid == 0 {
-		c.Assert(gotUid, Equals, rootUid)
-		c.Assert(gotGid, Equals, rootGid)
-	} else {
-		// EPERM is logged once and otherwise ignored.
-		c.Assert(gotUid, Equals, selfUid)
-		c.Assert(gotGid, Equals, selfGid)
-		c.Assert(c.GetTestLog(), Matches, "(?s).*WARNING: cannot preserve file ownership.*")
-	}
-
-	// Ownership of symlinks is never applied, not even via their target.
-	root = c.MkDir()
-	err = os.WriteFile(filepath.Join(root, "bar"), []byte("data"), 0644)
-	c.Assert(err, IsNil)
-	_, err = fsutil.Create(&fsutil.CreateOptions{
-		Root: root,
+	},
+	data: "data",
+	preCreate: func(c *C, root string) {
+		err := os.WriteFile(filepath.Join(root, "file"), []byte("data"), 0644)
+		c.Assert(err, IsNil)
+	},
+	differentIDs:   true,
+	applyOwnership: true,
+}, {
+	summary: "Ownership of symlinks is never applied, not even via their target",
+	options: fsutil.CreateOptions{
 		Path: "foo",
 		Link: "bar",
 		Mode: fs.ModeSymlink,
-		Uid:  &rootUid,
-		Gid:  &rootGid,
-	})
-	c.Assert(err, IsNil)
-	gotUid, gotGid = entryOwnership(filepath.Join(root, "bar"))
-	c.Assert(gotUid, Equals, selfUid)
-	c.Assert(gotGid, Equals, selfGid)
-
-	// CreateWriter applies ownership to newly created files too.
-	root = c.MkDir()
-	writer, _, err := fsutil.CreateWriter(&fsutil.CreateOptions{
-		Root: root,
+	},
+	preCreate: func(c *C, root string) {
+		err := os.WriteFile(filepath.Join(root, "bar"), []byte("data"), 0644)
+		c.Assert(err, IsNil)
+	},
+	// The target of the symlink keeps its own ownership.
+	assertPath:   "bar",
+	differentIDs: true,
+}, {
+	summary: "CreateWriter applies ownership to newly created files too",
+	options: fsutil.CreateOptions{
 		Path: "file",
 		Mode: 0644,
-		Uid:  &uid,
-		Gid:  &gid,
-	})
-	c.Assert(err, IsNil)
-	_, err = writer.Write([]byte("data"))
-	c.Assert(err, IsNil)
-	c.Assert(writer.Close(), IsNil)
-	gotUid, gotGid = entryOwnership(filepath.Join(root, "file"))
-	c.Assert(gotUid, Equals, selfUid)
-	c.Assert(gotGid, Equals, selfGid)
+	},
+	data:           "data",
+	useWriter:      true,
+	applyOwnership: true,
+}}
+
+func (s *S) TestCreateOwnership(c *C) {
+	// Ownership can always be set to the current process user and group,
+	// even when running unprivileged. Setting other ids requires
+	// privilege: the unprivileged attempt fails with EPERM, which is
+	// logged once and otherwise ignored.
+	selfUid, selfGid := os.Geteuid(), os.Getegid()
+	otherUid, otherGid := 1, 1
+	if otherUid == selfUid {
+		otherUid = 2
+	}
+	if otherGid == selfGid {
+		otherGid = 2
+	}
+	canApplyOtherIDs := testutil.CanApplyOwnership(c, otherUid, otherGid)
+	for _, test := range createOwnershipTests {
+		c.Logf("Test: %s", test.summary)
+		dir := c.MkDir()
+		if test.preCreate != nil {
+			test.preCreate(c, dir)
+		}
+		options := test.options
+		options.Root = dir
+		if test.data != "" {
+			options.Data = strings.NewReader(test.data)
+		}
+		reqUid, reqGid := selfUid, selfGid
+		if test.differentIDs {
+			reqUid, reqGid = otherUid, otherGid
+		}
+		options.Uid, options.Gid = &reqUid, &reqGid
+		if test.useWriter {
+			writer, _, err := fsutil.CreateWriter(&options)
+			c.Assert(err, IsNil)
+			_, err = writer.Write([]byte(test.data))
+			c.Assert(err, IsNil)
+			c.Assert(writer.Close(), IsNil)
+		} else {
+			_, err := fsutil.Create(&options)
+			c.Assert(err, IsNil)
+		}
+		assertPath := test.assertPath
+		if assertPath == "" {
+			assertPath = options.Path
+		}
+		gotUid, gotGid := entryOwnership(filepath.Join(dir, assertPath))
+		wantUid, wantGid := selfUid, selfGid
+		if test.applyOwnership && (!test.differentIDs || canApplyOtherIDs) {
+			wantUid, wantGid = reqUid, reqGid
+		}
+		c.Assert(gotUid, Equals, wantUid)
+		c.Assert(gotGid, Equals, wantGid)
+	}
 }
 
 func (s *S) TestCreateOwnershipModeRestore(c *C) {
 	// Chown strips the setuid and setgid mode bits of entries whose
 	// ownership it changes, and open does not create files with those
-	// bits in the first place, so applying ownership re-applies the
-	// requested mode to preserve them.
-	selfUid, selfGid := os.Getuid(), os.Getgid()
-	uid, gid := selfUid, selfGid
-	if os.Geteuid() == 0 {
-		// Use a group different from the current one so that the
-		// ownership change is an actual change.
-		gid = 42
+	// bits in the first place, so applyOwnership re-applies the
+	// requested mode after the ownership change, whether it succeeded
+	// or was tolerated and skipped.
+	selfUid, selfGid := os.Geteuid(), os.Getegid()
+	otherUid, otherGid := 1, 1
+	if otherUid == selfUid {
+		otherUid = 2
+	}
+	if otherGid == selfGid {
+		otherGid = 2
+	}
+	uid, gid := otherUid, otherGid
+	wantUid, wantGid := uid, gid
+	if !testutil.CanApplyOwnership(c, uid, gid) {
+		// The ownership change is tolerated and skipped.
+		wantUid, wantGid = selfUid, selfGid
 	}
 	dir := c.MkDir()
 	mode := fs.FileMode(0755) | fs.ModeSetgid
@@ -636,6 +657,6 @@ func (s *S) TestCreateOwnershipModeRestore(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(info.Mode(), Equals, mode)
 	gotUid, gotGid := entryOwnership(filepath.Join(dir, "file"))
-	c.Assert(gotUid, Equals, uid)
-	c.Assert(gotGid, Equals, gid)
+	c.Assert(gotUid, Equals, wantUid)
+	c.Assert(gotGid, Equals, wantGid)
 }

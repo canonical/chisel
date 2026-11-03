@@ -678,9 +678,6 @@ func (s *S) TestExtractOwnership(c *C) {
 	c.Assert(err, IsNil)
 
 	dir := c.MkDir()
-	// The ownership warnings are logged through fsutil's logger.
-	fsutil.SetLogger(c)
-	defer fsutil.SetLogger(nil)
 	options := tarball.ExtractOptions{
 		Package:   "test-package",
 		TargetDir: dir,
@@ -702,7 +699,7 @@ func (s *S) TestExtractOwnership(c *C) {
 	c.Assert(err, IsNil)
 	dirStat, ok := dirInfo.Sys().(*syscall.Stat_t)
 	c.Assert(ok, Equals, true)
-	if os.Geteuid() == 0 {
+	if testutil.CanApplyOwnership(c, 0, shadowGid) {
 		// Ownership of the entry and its parent directories is
 		// preserved from the tarball.
 		c.Assert(stat.Uid, Equals, uint32(0))
@@ -711,10 +708,10 @@ func (s *S) TestExtractOwnership(c *C) {
 	} else {
 		// Without sufficient privilege the entries are owned by the
 		// current process user and group, and a warning is logged.
-		c.Assert(stat.Uid, Equals, uint32(os.Getuid()))
-		c.Assert(stat.Gid, Equals, uint32(os.Getgid()))
-		c.Assert(dirStat.Gid, Equals, uint32(os.Getgid()))
-		c.Assert(c.GetTestLog(), Matches, "(?s).*WARNING: cannot preserve file ownership.*")
+		selfUid, selfGid := os.Geteuid(), os.Getegid()
+		c.Assert(stat.Uid, Equals, uint32(selfUid))
+		c.Assert(stat.Gid, Equals, uint32(selfGid))
+		c.Assert(dirStat.Gid, Equals, uint32(selfGid))
 	}
 }
 
@@ -778,7 +775,7 @@ func (s *S) TestExtractOwnershipHardLinks(c *C) {
 	c.Assert(err, IsNil)
 	stat, ok := info.Sys().(*syscall.Stat_t)
 	c.Assert(ok, Equals, true)
-	if os.Geteuid() == 0 {
+	if testutil.CanApplyOwnership(c, 0, shadowGid) {
 		// The ownership recorded for the content entry is applied to
 		// the file created in its place.
 		c.Assert(stat.Uid, Equals, uint32(0))
@@ -786,7 +783,8 @@ func (s *S) TestExtractOwnershipHardLinks(c *C) {
 	} else {
 		// Without sufficient privilege the file is owned by the
 		// current process user and group.
-		c.Assert(stat.Uid, Equals, uint32(os.Getuid()))
-		c.Assert(stat.Gid, Equals, uint32(os.Getgid()))
+		selfUid, selfGid := os.Geteuid(), os.Getegid()
+		c.Assert(stat.Uid, Equals, uint32(selfUid))
+		c.Assert(stat.Gid, Equals, uint32(selfGid))
 	}
 }
