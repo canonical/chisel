@@ -38,8 +38,9 @@ type CreateOptions struct {
 	// applied to symlinks (their ownership has no meaningful effect),
 	// nor to hard links (they share the inode, and therefore the
 	// ownership, of their already-created target). Applying ownership
-	// requires sufficient privilege (e.g. running as root); otherwise a
-	// warning is logged once and the entry keeps the ownership of the
+	// requires sufficient privilege (e.g. running as root) and ids
+	// mapped in the current user namespace; otherwise a warning is
+	// logged once and the entry keeps the ownership of the
 	// current process user and group.
 	Uid *int
 	Gid *int
@@ -184,9 +185,11 @@ func CreateWriter(options *CreateOptions) (io.WriteCloser, *Entry, error) {
 }
 
 // applyOwnership applies the Uid/Gid of the created entry, if any.
-// Ownership changes that fail due to lack of privilege are logged once
-// and otherwise ignored, so unprivileged cuts keep working with the
-// entries owned by the current process user and group.
+// Ownership changes that fail because of insufficient privilege
+// (EPERM) or because the requested ids are not mapped in the
+// current user namespace (EINVAL, e.g. under unshare) are logged
+// once and otherwise ignored, so unprivileged cuts keep working
+// with the entries owned by the current process user and group.
 func applyOwnership(path string, o *CreateOptions) error {
 	uid, gid := -1, -1
 	if o.Uid != nil {
@@ -199,9 +202,9 @@ func applyOwnership(path string, o *CreateOptions) error {
 		return nil
 	}
 	err := os.Chown(path, uid, gid)
-	if errors.Is(err, syscall.EPERM) {
+	if errors.Is(err, syscall.EPERM) || errors.Is(err, syscall.EINVAL) {
 		warnOwnership.Do(func() {
-			logf("WARNING: cannot preserve file ownership without sufficient privilege: entries will be owned by the current user and group")
+			logf("WARNING: cannot preserve file ownership without sufficient privilege or unmapped ids: entries will be owned by the current user and group")
 		})
 		return nil
 	}
