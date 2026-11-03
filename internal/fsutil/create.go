@@ -190,10 +190,10 @@ func CreateWriter(options *CreateOptions) (io.WriteCloser, *Entry, error) {
 // once and otherwise ignored, so unprivileged cuts keep working
 // with the entries owned by the current process user and group.
 //
-// After a successful ownership change the mode is re-applied:
-// chown strips the setuid and setgid mode bits of entries whose
-// ownership it changes, and open does not create files with those
-// bits in the first place.
+// The requested mode is re-applied after the ownership change,
+// tolerated or not: chown strips the setuid and setgid mode bits
+// of entries whose ownership it changes, and open does not create
+// files with those bits in the first place.
 func applyOwnership(path string, o *CreateOptions) error {
 	uid, gid := -1, -1
 	if o.Uid != nil {
@@ -210,7 +210,7 @@ func applyOwnership(path string, o *CreateOptions) error {
 		warnOwnership.Do(func() {
 			logf("WARNING: cannot preserve file ownership without sufficient privilege or unmapped ids: entries will be owned by the current user and group")
 		})
-		return nil
+		err = nil
 	}
 	if err != nil {
 		return err
