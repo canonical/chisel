@@ -127,7 +127,7 @@ func extractData(pkgReader io.ReadSeeker, options *ExtractOptions) error {
 	// The assumption is that the tar entries of the parent directories appear
 	// before the entry for the file itself. This is the case for .deb files but
 	// not for all tarballs.
-	tarDirs := make(map[string]tarDirInfo)
+	tarDirInfos := make(map[string]tarDirInfo)
 	tarReader := tar.NewReader(dataReader)
 	for {
 		tarHeader, err := tarReader.Next()
@@ -145,7 +145,7 @@ func extractData(pkgReader io.ReadSeeker, options *ExtractOptions) error {
 
 		sourceIsDir := sourcePath[len(sourcePath)-1] == '/'
 		if sourceIsDir {
-			tarDirs[sourcePath] = tarDirInfo{
+			tarDirInfos[sourcePath] = tarDirInfo{
 				mode: tarHeader.FileInfo().Mode(),
 				uid:  tarHeader.Uid,
 				gid:  tarHeader.Gid,
@@ -215,11 +215,11 @@ func extractData(pkgReader io.ReadSeeker, options *ExtractOptions) error {
 				if path == "/" {
 					continue
 				}
-				dirInfo, ok := tarDirs[path]
+				dirInfo, ok := tarDirInfos[path]
 				if !ok {
 					continue
 				}
-				delete(tarDirs, path)
+				delete(tarDirInfos, path)
 
 				createOptions := &fsutil.CreateOptions{
 					Root:        options.TargetDir,
