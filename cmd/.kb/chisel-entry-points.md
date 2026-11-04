@@ -1,14 +1,36 @@
 # Preface
 
-This document serves as the local knowledge base index for the `cmd/` directory. It outlines the scope and purpose of the entry points for the `chisel` binary.
+This document covers the CLI entry points for the `chisel` binary in the `cmd/` directory.
 
-Read the top-level `.kb/agents.md` file before continuing below.
+IMPORTANT: Read the `.kb/agents.md` file.
 
-# Overview
 
-The `cmd/` directory contains the main binary entry points for the `chisel` application. Instead of housing core business logic, this directory is responsible for initializing the application, wiring up the CLI subsystem, and handling version information. Core logic is deferred to the packages in `internal/`.
+# Laws
 
-# Directory
+## §1 - CLI boundary
+
+Do not add core business logic to `cmd/`; commands only wire up flags and arguments and delegate to the packages in `internal/`.
+
+
+# Concepts
+
+## Scope
+
+The `cmd/` directory contains the main binary entry points for the `chisel` application, responsible for initializing the application, wiring up the CLI subsystem, and handling version information.
+
+## Debug commands
+
+The `debug` subcommand group has no stability guarantee: its commands may be removed without notice and may not work on non-development systems, so they are registered as hidden.
+
+## Version injection
+
+The application version is injected at build time by `mkversion.sh` (via `go:generate`), which writes the generated `version_generated.go`.
+
+## Testing hooks
+
+Tests override the `Stdin`/`Stdout`/`Stderr`/`ReadPassword` variables instead of touching the `os` streams directly.
+
+## Contents
 
 - `chisel/` - Contains the primary executable entry point for the `chisel` application.
 - `chisel/main.go` - Application bootstrap and CLI initialization.

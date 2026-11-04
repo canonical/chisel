@@ -1,14 +1,17 @@
 # Preface
 
-This is the index file for the `internal/` directory's knowledge base. It provides context about the core internal packages of Chisel.
+This document covers the core internal packages and the carving pipeline in the `internal/` directory.
 
-Read the top-level `.kb/agents.md` file before continuing below.
+IMPORTANT: Read the `.kb/agents.md` file.
 
-# Overview
+
+# Concepts
+
+## Scope
 
 The `internal/` directory houses the core business logic, components, and utilities of Chisel. It coordinates slice selection, dependency resolution, package fetching, file extraction, filesystem mutations, and manifest output. These packages are not part of Chisel's public API and must not be imported by external consumers.
 
-# Architecture
+## Pipeline
 
 Chisel's carving pipeline is coordinated by `slicer/`:
 
@@ -23,7 +26,7 @@ flowchart LR
     Mutate --> Manifest["Generate requested manifests"]
 ```
 
-# Directory
+## Contents
 
 - `slicer/` - Main orchestrator for a Chisel run. Receives a slice selection, drives all other internal packages (setup, archive, cache, deb, fsutil, scripts, manifestutil) to completion, and writes the final filesystem and manifest.
 - `setup/` - Parses chisel-releases YAML definitions into the `Release` model and resolves slice dependencies, path conflicts, and package contention.
