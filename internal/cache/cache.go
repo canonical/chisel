@@ -177,9 +177,11 @@ func (c *Cache) Open(digestKind DigestKind, digest string) (io.ReadSeekCloser, e
 	} else if err != nil {
 		return nil, fmt.Errorf("cannot open cache file: %v", err)
 	}
-	// Use mtime as last reuse time.
+	// Use mtime as last reuse time. If the entry was expired since it was
+	// opened, the open file is still readable and there is nothing to update.
 	now := time.Now()
-	if err := os.Chtimes(filePath, now, now); err != nil {
+	if err := os.Chtimes(filePath, now, now); err != nil && !os.IsNotExist(err) {
+		file.Close()
 		return nil, fmt.Errorf("cannot update cached file timestamp: %v", err)
 	}
 	return file, nil
