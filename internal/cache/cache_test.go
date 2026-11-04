@@ -1,8 +1,8 @@
 package cache_test
 
 import (
-	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -305,32 +305,119 @@ func (s *S) TestCacheExpireNoDigestKindDirs(c *C) {
 	c.Assert(err, IsNil)
 }
 
-func (s *S) TestCacheExpireConcurrent(c *C) {
+func (s *S) TestCacheExpireOnlyOwnEntries(c *C) {
 	cc := cache.Cache{Dir: c.MkDir()}
 	dir := filepath.Join(cc.Dir, "sha256")
 	err := os.MkdirAll(dir, 0755)
 	c.Assert(err, IsNil)
 
+	// Names Chisel writes: entries and leftovers of unfinished writes.
+	own := []string{
+		data1Digest,
+		data2Digest + ".tmp",
+		"tmp.123456",
+	}
+	// Anything else, including digests of another kind or length, upper
+	// case digests, and a directory named after a digest.
+	other := []string{
+		"README",
+		data3Digest + ".partial",
+		strings.ToUpper(data2Digest),
+		data3Digest[:63],
+		data3Digest + data3Digest,
+		"tmp.abc",
+	}
 	expiredTime := time.Now().Add(-2 * time.Hour)
-	for i := 0; i < 2000; i++ {
-		name := filepath.Join(dir, fmt.Sprintf("%064x", i))
-		err := os.WriteFile(name, nil, 0644)
+	for _, name := range append(own, other...) {
+		path := filepath.Join(dir, name)
+		err := os.WriteFile(path, nil, 0644)
 		c.Assert(err, IsNil)
-		err = os.Chtimes(name, expiredTime, expiredTime)
+		err = os.Chtimes(path, expiredTime, expiredTime)
+		c.Assert(err, IsNil)
+	}
+	digestDir := filepath.Join(dir, data3Digest)
+	err = os.Mkdir(digestDir, 0755)
+	c.Assert(err, IsNil)
+	err = os.WriteFile(filepath.Join(digestDir, "file"), nil, 0644)
+	c.Assert(err, IsNil)
+	err = os.Chtimes(digestDir, expiredTime, expiredTime)
+	c.Assert(err, IsNil)
+
+	err = cc.Expire(time.Hour)
+	c.Assert(err, IsNil)
+
+	for _, name := range own {
+		_, err := os.Stat(filepath.Join(dir, name))
+		c.Assert(os.IsNotExist(err), Equals, true, Commentf("%s", name))
+	}
+	for _, name := range append(other, data3Digest) {
+		_, err := os.Stat(filepath.Join(dir, name))
+		c.Assert(err, IsNil, Commentf("%s", name))
+	}
+}
+
+func (s *S) TestCacheExpireKeepsGoing(c *C) {
+	if os.Getuid() == 0 {
+		c.Skip("root can remove files from a read-only directory")
+	}
+	cc := cache.Cache{Dir: c.MkDir()}
+	err := cc.Write(cache.SHA256, data1Digest, []byte("data1"))
+	c.Assert(err, IsNil)
+	w := cc.Create(cache.SHA512, "")
+	_, err = w.Write([]byte("sha512data1"))
+	c.Assert(err, IsNil)
+	err = w.Close()
+	c.Assert(err, IsNil)
+
+	sha256Entry := filepath.Join(cc.Dir, "sha256", data1Digest)
+	sha512Entry := filepath.Join(cc.Dir, "sha512", w.Digest())
+	expiredTime := time.Now().Add(-2 * time.Hour)
+	for _, path := range []string{sha256Entry, sha512Entry} {
+		err := os.Chtimes(path, expiredTime, expiredTime)
 		c.Assert(err, IsNil)
 	}
 
-	// Expiries running at the same time remove entries the others have
-	// listed too, and must not fail because of it.
-	errs := make(chan error, 4)
-	for i := 0; i < 4; i++ {
-		go func() { errs <- cc.Expire(time.Hour) }()
-	}
-	for i := 0; i < 4; i++ {
-		c.Assert(<-errs, IsNil)
-	}
+	// The sha256 entry cannot be removed, which must not keep the sha512
+	// entry from being expired.
+	sha256Dir := filepath.Join(cc.Dir, "sha256")
+	err = os.Chmod(sha256Dir, 0555)
+	c.Assert(err, IsNil)
+	defer func() {
+		err := os.Chmod(sha256Dir, 0755)
+		c.Assert(err, IsNil)
+	}()
 
+	err = cc.Expire(time.Hour)
+	c.Assert(err, ErrorMatches, "cannot expire cache entry: remove .*/sha256/"+data1Digest+": permission denied")
+
+	_, err = os.Stat(sha256Entry)
+	c.Assert(err, IsNil)
+	_, err = os.Stat(sha512Entry)
+	c.Assert(os.IsNotExist(err), Equals, true)
+}
+
+func (s *S) TestCacheExpireVanishedEntry(c *C) {
+	cc := cache.Cache{Dir: c.MkDir()}
+	err := cc.Write(cache.SHA256, data1Digest, []byte("data1"))
+	c.Assert(err, IsNil)
+	dir := filepath.Join(cc.Dir, "sha256")
+	path := filepath.Join(dir, data1Digest)
+	expiredTime := time.Now().Add(-2 * time.Hour)
+	err = os.Chtimes(path, expiredTime, expiredTime)
+	c.Assert(err, IsNil)
+
+	// Listed and then removed by someone else before it was looked at.
 	entries, err := os.ReadDir(dir)
 	c.Assert(err, IsNil)
-	c.Assert(entries, HasLen, 0)
+	c.Assert(entries, HasLen, 1)
+	finfo, err := os.Stat(path)
+	c.Assert(err, IsNil)
+	err = os.Remove(path)
+	c.Assert(err, IsNil)
+	err = cache.ExpireEntry(path, entries[0], time.Now().Add(-time.Hour))
+	c.Assert(err, IsNil)
+
+	// Looked at and then removed by someone else before it was removed.
+	err = cache.ExpireEntry(path, fs.FileInfoToDirEntry(finfo), time.Now().Add(-time.Hour))
+	c.Assert(err, IsNil)
 }
