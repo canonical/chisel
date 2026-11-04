@@ -30,7 +30,7 @@ flowchart LR
 - `deb/` - Debian package utilities: data tarball access, version comparison, and architecture handling.
 - `tarball/` - Extracts selected files from a package data tarball into a target directory.
 - `archive/` - Manages remote Ubuntu package archive sources over HTTP/HTTPS.
-- `cache/` - Content-addressable on-disk store keyed by SHA256 or SHA384 digest, with digest verification and last-use timestamps.
+- `cache/` - Content-addressable on-disk store keyed by SHA256 or SHA384 digest, with digest verification, last-use timestamps, and expiry of entries left unused.
 - `fsutil/` - Core filesystem operations for writing files, directories, and symlinks into the target root filesystem.
 - `manifestutil/` - Generates the Chisel manifest.
 - `scripts/` - Executes Starlark mutation scripts defined in slice definitions.

@@ -1,0 +1,45 @@
+summary: Cut expires cache entries unused for a week, unless told otherwise
+
+execute: |
+  cache_dir=${XDG_CACHE_HOME:-$HOME/.cache}/chisel
+  rootfs_folder=rootfs_${RELEASE}
+
+  EXTRA_OPTIONS=""
+  if [ "$RELEASE" = "23.10" -o "$RELEASE" = "20.04" ]; then
+    EXTRA_OPTIONS="--ignore=unmaintained "
+  fi
+
+  mkdir -p ${rootfs_folder}_1 ${rootfs_folder}_2 ${rootfs_folder}_3
+  chisel cut --release ${OS}-${RELEASE} --root ${rootfs_folder}_1 \
+    $EXTRA_OPTIONS base-passwd_data
+
+  # Find the cached base-passwd deb (under the strongest digest the archive
+  # offers) and backdate it. Add a stale entry that no cut uses, and a file
+  # Chisel did not write.
+  used=""
+  for f in ${cache_dir}/sha*/*; do
+    if [ "$(dpkg-deb -f "$f" Package 2>/dev/null)" = "base-passwd" ]; then
+      used=$f
+    fi
+  done
+  test -n "$used"
+  stale=${cache_dir}/sha256/$(echo stale | sha256sum | cut -d' ' -f1)
+  echo stale > $stale
+  foreign=${cache_dir}/sha256/notes
+  echo notes > $foreign
+  touch -d "8 days ago" $used $stale $foreign
+
+  # Nothing is expired when expiry is disabled.
+  CHISEL_CACHE_EXPIRY=0 chisel cut --release ${OS}-${RELEASE} \
+    --root ${rootfs_folder}_2 $EXTRA_OPTIONS base-passwd_data
+  test -e $stale
+
+  chisel cut --release ${OS}-${RELEASE} --root ${rootfs_folder}_3 \
+    $EXTRA_OPTIONS base-passwd_data
+
+  # The stale entry is gone, and the file Chisel did not write is kept. The
+  # deb was used again, so it is kept, with a fresh timestamp.
+  test ! -e $stale
+  test -e $foreign
+  test -e $used
+  test $(( $(date +%s) - $(stat -c %Y $used) )) -lt 3600

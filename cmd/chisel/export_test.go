@@ -22,6 +22,10 @@ func FakeIsStdinTTY(t bool) (restore func()) {
 
 var FindSlices = findSlices
 
+var CacheExpiry = cacheExpiry
+
+var ExpireCache = expireCache
+
 func FakeArchiveOpen(f func(_ *archive.Options) (archive.Archive, error)) (restore func()) {
 	oldArchiveOpen := archiveOpen
 	archiveOpen = f
