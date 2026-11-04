@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	. "gopkg.in/check.v1"
 	"gopkg.in/yaml.v3"
@@ -520,6 +521,16 @@ func (s *ChiselSuite) TestRun(c *C) {
 		})
 		defer restore()
 
+		// A cache entry no command has used for a while.
+		stale := filepath.Join(os.Getenv("XDG_CACHE_HOME"), "chisel", "sha256", strings.Repeat("0", 64))
+		err = os.MkdirAll(filepath.Dir(stale), 0755)
+		c.Assert(err, IsNil)
+		err = os.WriteFile(stale, nil, 0644)
+		c.Assert(err, IsNil)
+		lastUsed := time.Now().Add(-8 * 24 * time.Hour)
+		err = os.Chtimes(stale, lastUsed, lastUsed)
+		c.Assert(err, IsNil)
+
 		cliArgs := []string{"debug", "check-release-archives", "--release", releaseDir}
 		if test.arch != "" {
 			cliArgs = slices.Concat(cliArgs, []string{"--arch", test.arch})
@@ -531,6 +542,9 @@ func (s *ChiselSuite) TestRun(c *C) {
 		} else {
 			c.Assert(err, IsNil)
 		}
+		// Once the packages are fetched, the cache is expired.
+		_, err = os.Stat(stale)
+		c.Assert(os.IsNotExist(err), Equals, true)
 		if test.stdout != "" {
 			test.stdout = string(testutil.Reindent(test.stdout))
 			test.stdout = strings.TrimSpace(test.stdout) + "\n"

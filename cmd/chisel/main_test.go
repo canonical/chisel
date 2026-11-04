@@ -44,6 +44,9 @@ func (s *BaseChiselSuite) SetUpTest(c *C) {
 
 	s.AddCleanup(chisel.FakeIsStdoutTTY(false))
 	s.AddCleanup(chisel.FakeIsStdinTTY(false))
+
+	// Commands expire the cache, so keep them away from the real one.
+	s.AddCleanup(fakeEnv("XDG_CACHE_HOME", c.MkDir()))
 }
 
 func (s *BaseChiselSuite) TearDownTest(c *C) {
@@ -73,6 +76,18 @@ func fakeVersion(v string) (restore func()) {
 	old := cmd.Version
 	cmd.Version = v
 	return func() { cmd.Version = old }
+}
+
+func fakeEnv(name, value string) (restore func()) {
+	old, ok := os.LookupEnv(name)
+	os.Setenv(name, value)
+	return func() {
+		if ok {
+			os.Setenv(name, old)
+		} else {
+			os.Unsetenv(name)
+		}
+	}
 }
 
 type ChiselSuite struct {

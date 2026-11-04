@@ -17,7 +17,7 @@ The `tests/` directory contains the Spread integration test suite. It exercises 
 # Directory
 
 - `basic/` - Core slice extraction scenario verifying that files are correctly written to the target root filesystem and that mutation scripts are applied.
-- `cache-expiry/` - Verifies that a cut expires cache entries unused for a week and keeps the ones it reads.
+- `cache-expiry/` - Verifies that a cut expires cache entries unused for a week, keeps the ones it reads and files Chisel did not write, and that `CHISEL_CACHE_EXPIRY=0` disables expiry.
 - `find/` - Tests for the `chisel find` command, covering search by slice name and package.
 - `info/` - Tests for the `chisel info` command, verifying detailed slice metadata output.
 - `debug-check-release-archives/` - Tests detection of package-content conflicts that cannot be identified from slice definitions alone.
