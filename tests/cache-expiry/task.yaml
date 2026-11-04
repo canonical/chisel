@@ -13,10 +13,10 @@ execute: |
   chisel cut --release ${OS}-${RELEASE} --root ${rootfs_folder}_1 \
     $EXTRA_OPTIONS base-passwd_data
 
-  # Find the cached base-passwd deb and backdate it, and add a stale entry
-  # that no cut uses.
+  # Find the cached base-passwd deb (under the strongest digest the archive
+  # offers) and backdate it, and add a stale entry that no cut uses.
   used=""
-  for f in ${cache_dir}/sha256/*; do
+  for f in ${cache_dir}/sha*/*; do
     if [ "$(dpkg-deb -f "$f" Package 2>/dev/null)" = "base-passwd" ]; then
       used=$f
     fi
