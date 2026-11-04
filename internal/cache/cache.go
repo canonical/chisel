@@ -199,7 +199,12 @@ func (c *Cache) Expire(timeout time.Duration) error {
 			return fmt.Errorf("cannot list cache directory: %v", err)
 		}
 		for _, entry := range entries {
+			// Entries may vanish while listing, e.g. renamed from .tmp by
+			// a writer or removed by a concurrent expiry.
 			finfo, err := entry.Info()
+			if os.IsNotExist(err) {
+				continue
+			}
 			if err != nil {
 				return err
 			}
@@ -207,7 +212,7 @@ func (c *Cache) Expire(timeout time.Duration) error {
 				continue
 			}
 			err = os.Remove(filepath.Join(digestKindDir, finfo.Name()))
-			if err != nil {
+			if err != nil && !os.IsNotExist(err) {
 				return fmt.Errorf("cannot expire cache entry: %v", err)
 			}
 		}

@@ -1,0 +1,36 @@
+summary: Cache entries that no cut has used for a week are expired
+
+execute: |
+  cache_dir=${XDG_CACHE_HOME:-$HOME/.cache}/chisel
+  rootfs_folder=rootfs_${RELEASE}
+
+  EXTRA_OPTIONS=""
+  if [ "$RELEASE" = "23.10" -o "$RELEASE" = "20.04" ]; then
+    EXTRA_OPTIONS="--ignore=unmaintained "
+  fi
+
+  mkdir -p ${rootfs_folder}_1 ${rootfs_folder}_2
+  chisel cut --release ${OS}-${RELEASE} --root ${rootfs_folder}_1 \
+    $EXTRA_OPTIONS base-passwd_data
+
+  # Find the cached base-passwd deb and backdate it, and add a stale entry
+  # that no cut uses.
+  used=""
+  for f in ${cache_dir}/sha256/*; do
+    if [ "$(dpkg-deb -f "$f" Package 2>/dev/null)" = "base-passwd" ]; then
+      used=$f
+    fi
+  done
+  test -n "$used"
+  stale=${cache_dir}/sha256/$(echo stale | sha256sum | cut -d' ' -f1)
+  echo stale > $stale
+  touch -d "8 days ago" $used $stale
+
+  chisel cut --release ${OS}-${RELEASE} --root ${rootfs_folder}_2 \
+    $EXTRA_OPTIONS base-passwd_data
+
+  # The stale entry is gone. The deb was used again, so it is kept, with a
+  # fresh timestamp.
+  test ! -e $stale
+  test -e $used
+  test $(( $(date +%s) - $(stat -c %Y $used) )) -lt 3600

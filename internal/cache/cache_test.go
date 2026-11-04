@@ -1,6 +1,7 @@
 package cache_test
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -302,4 +303,34 @@ func (s *S) TestCacheExpireNoDigestKindDirs(c *C) {
 	// No digest kind directories exist at all.
 	err := cc.Expire(time.Hour)
 	c.Assert(err, IsNil)
+}
+
+func (s *S) TestCacheExpireConcurrent(c *C) {
+	cc := cache.Cache{Dir: c.MkDir()}
+	dir := filepath.Join(cc.Dir, "sha256")
+	err := os.MkdirAll(dir, 0755)
+	c.Assert(err, IsNil)
+
+	expiredTime := time.Now().Add(-2 * time.Hour)
+	for i := 0; i < 2000; i++ {
+		name := filepath.Join(dir, fmt.Sprintf("%064x", i))
+		err := os.WriteFile(name, nil, 0644)
+		c.Assert(err, IsNil)
+		err = os.Chtimes(name, expiredTime, expiredTime)
+		c.Assert(err, IsNil)
+	}
+
+	// Expiries running at the same time remove entries the others have
+	// listed too, and must not fail because of it.
+	errs := make(chan error, 4)
+	for i := 0; i < 4; i++ {
+		go func() { errs <- cc.Expire(time.Hour) }()
+	}
+	for i := 0; i < 4; i++ {
+		c.Assert(<-errs, IsNil)
+	}
+
+	entries, err := os.ReadDir(dir)
+	c.Assert(err, IsNil)
+	c.Assert(entries, HasLen, 0)
 }
