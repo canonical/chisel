@@ -62,6 +62,7 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 		return err
 	}
 
+	cacheDir := cache.DefaultDir("chisel")
 	archives := make(map[string]archive.Archive)
 	for archiveName, archiveInfo := range release.Archives {
 		openArchive, err := archiveOpen(&archive.Options{
@@ -71,7 +72,7 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 			Suites:     archiveInfo.Suites,
 			Components: archiveInfo.Components,
 			Pro:        archiveInfo.Pro,
-			CacheDir:   cache.DefaultDir("chisel"),
+			CacheDir:   cacheDir,
 			PubKeys:    archiveInfo.PubKeys,
 			Maintained: archiveInfo.Maintained,
 			OldRelease: archiveInfo.OldRelease,
@@ -89,6 +90,7 @@ func (cmd *cmdDebugCheckReleaseArchives) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
+	expireCache(cacheDir)
 
 	var issues []any
 	type pathConflict struct {

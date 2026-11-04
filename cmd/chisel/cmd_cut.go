@@ -20,6 +20,10 @@ to create a new filesystem tree in the root location.
 
 By default it fetches the slices for the same Ubuntu version as the
 current host, unless the --release flag is used.
+
+Packages and archive indexes are cached, and cache entries that have not
+been used for 7 days are removed after the cut. Set CHISEL_CACHE_EXPIRY
+to a number of days to change that, or to 0 to keep all entries.
 `
 
 var cutDescs = map[string]string{
@@ -28,9 +32,6 @@ var cutDescs = map[string]string{
 	"arch":    "Package architecture",
 	"ignore":  "Conditions to ignore (e.g. unmaintained, unstable)",
 }
-
-// cacheExpiry is how long a cache entry can go unused before a cut removes it.
-const cacheExpiry = 7 * 24 * time.Hour
 
 type cmdCut struct {
 	Release string   `long:"release" value-name:"<dir>"`
@@ -134,11 +135,6 @@ func (cmd *cmdCut) Execute(args []string) error {
 		return err
 	}
 
-	// Reading an entry refreshes its timestamp, so this only drops what no
-	// cut has used for a while. Failing to clean up is not a failed cut.
-	cc := &cache.Cache{Dir: cacheDir}
-	if err := cc.Expire(cacheExpiry); err != nil {
-		logf("Warning: cannot expire cache entries: %v", err)
-	}
+	expireCache(cacheDir)
 	return nil
 }
