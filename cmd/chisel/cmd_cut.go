@@ -29,6 +29,9 @@ var cutDescs = map[string]string{
 	"ignore":  "Conditions to ignore (e.g. unmaintained, unstable)",
 }
 
+// cacheExpiry is how long a cache entry can go unused before a cut removes it.
+const cacheExpiry = 7 * 24 * time.Hour
+
 type cmdCut struct {
 	Release string   `long:"release" value-name:"<dir>"`
 	RootDir string   `long:"root" value-name:"<dir>" required:"yes"`
@@ -78,6 +81,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 		return err
 	}
 
+	cacheDir := cache.DefaultDir("chisel")
 	archives := make(map[string]archive.Archive)
 	for archiveName, archiveInfo := range release.Archives {
 		openArchive, err := archive.Open(&archive.Options{
@@ -87,7 +91,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 			Suites:     archiveInfo.Suites,
 			Components: archiveInfo.Components,
 			Pro:        archiveInfo.Pro,
-			CacheDir:   cache.DefaultDir("chisel"),
+			CacheDir:   cacheDir,
 			PubKeys:    archiveInfo.PubKeys,
 			Maintained: archiveInfo.Maintained,
 			OldRelease: archiveInfo.OldRelease,
@@ -126,5 +130,15 @@ func (cmd *cmdCut) Execute(args []string) error {
 		Archives:  archives,
 		TargetDir: cmd.RootDir,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Reading an entry refreshes its timestamp, so this only drops what no
+	// cut has used for a while. Failing to clean up is not a failed cut.
+	cc := &cache.Cache{Dir: cacheDir}
+	if err := cc.Expire(cacheExpiry); err != nil {
+		logf("Warning: cannot expire cache entries: %v", err)
+	}
+	return nil
 }
