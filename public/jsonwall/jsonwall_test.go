@@ -199,14 +199,22 @@ func (s *S) TestDataTypeTable(c *C) {
 			c.Assert(db.Schema(), Equals, test.options.Schema)
 		}
 		for _, op := range test.getOps {
-			err := db.Get(op.get)
+			// Get decodes the matching entry into the provided value, so
+			// search values from the test table must be copied to stay
+			// intact across repeated runs.
+			get := op.get
+			if value, ok := get.(*DataType); ok {
+				valueCopy := *value
+				get = &valueCopy
+			}
+			err := db.Get(get)
 			if op.notFound {
 				c.Assert(err, Equals, jsonwall.ErrNotFound)
 			} else if op.getError != "" {
 				c.Assert(err, ErrorMatches, op.getError)
 			} else {
 				c.Assert(err, IsNil)
-				c.Assert(op.get, DeepEquals, op.result)
+				c.Assert(get, DeepEquals, op.result)
 			}
 		}
 		for _, op := range test.iterOps {
