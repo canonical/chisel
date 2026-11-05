@@ -50,6 +50,7 @@ jobs:
           set -ex
           # Install the chisel snap from the artifact built in the previous job
           sudo snap install --dangerous ${{ needs.build.outputs.chisel-snap }}
+          sudo snap connect chisel:host-os-release
 
           # Make sure chisel is installed
           echo "version=$(chisel version)" | tee -a "$GITHUB_OUTPUT"
