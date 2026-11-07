@@ -486,6 +486,26 @@ var extractTests = []extractTest{{
 		},
 	},
 	error: `cannot extract from package "test-package": cannot create path /[a-z0-9\-\/]*/file outside of root /[a-z0-9\-\/]*`,
+}, {
+	summary: "Extract from uncompressed data.tar",
+	pkgdata: testutil.MustMakeUncompressedDeb([]testutil.TarEntry{
+		testutil.Dir(0755, "./"),
+		testutil.Reg(0644, "./file", "data"),
+		testutil.Hrd(0644, "./hardlink", "./file"),
+	}),
+	options: tarball.ExtractOptions{
+		Extract: map[string][]tarball.ExtractInfo{
+			// The target of the hard link is not selected, so the extractor
+			// has to read the data member a second time.
+			"/hardlink": []tarball.ExtractInfo{{
+				Path: "/hardlink",
+			}},
+		},
+	},
+	result: map[string]string{
+		"/hardlink": "file 0644 3a6eb079",
+	},
+	notCreated: []string{},
 }}
 
 func (s *S) TestExtract(c *C) {
