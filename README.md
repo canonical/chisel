@@ -212,6 +212,8 @@ public-keys:
             -----END PGP PUBLIC KEY BLOCK-----
 ```
 
+<a id="slice-definitions"></a>
+
 #### Package slices files
 
 There can be only **one package slices file** for each Ubuntu package, per
