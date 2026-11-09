@@ -21,15 +21,15 @@ var shortCheckReleaseArchivesHelp = "Check the release's archives"
 
 var longCheckReleaseArchivesHelp = `
 The check-release-archives command downloads all the packages for a given
-release to check that there are no issues which are not handled in the slice
-definition files (SDFs).
+release to check that there are no issues which are not handled in the package
+slices files.
 
 Types of issues:
 - "path-conflict". When multiple packages provide different content for the
 same path. For example, for parent directories which are not listed explicitly
-in the SDFs, Chisel will try to preserve permissions by using the mode from the
-package's tarball. If several packages have different permissions for the same
-directory, that could lead to a conflict.
+in the package slices files, Chisel will try to preserve permissions by using
+the mode from the package's tarball. If several packages have different
+permissions for the same directory, that could lead to a conflict.
 `
 
 var checkReleaseArchivesDescs = map[string]string{

@@ -112,7 +112,7 @@ var infoTests = []infoTest{{
 	summary: "No slices found",
 	input:   infoRelease,
 	query:   []string{"foo", "bar_foo"},
-	err:     `no slice definitions found for: "foo", "bar_foo"`,
+	err:     `no slices or packages found for: "foo", "bar_foo"`,
 }, {
 	summary: "Some slices found, others not found",
 	input:   infoRelease,
@@ -125,7 +125,7 @@ var infoTests = []infoTest{{
 					/dir/file: {}
 					/dir/sub-dir/: {make: true, mode: 0644}
 	`,
-	err: `no slice definitions found for: "foo", "bar_foo"`,
+	err: `no slices or packages found for: "foo", "bar_foo"`,
 }, {
 	summary: "No args",
 	input:   infoRelease,
@@ -134,12 +134,12 @@ var infoTests = []infoTest{{
 	summary: "Empty, whitespace args",
 	input:   infoRelease,
 	query:   []string{"", "    "},
-	err:     `no slice definitions found for: "", "    "`,
+	err:     `no slices or packages found for: "", "    "`,
 }, {
 	summary: "Ignore invalid slice names",
 	input:   infoRelease,
 	query:   []string{"foo_bar_foo", "a_b", "7_c", "a_b c", "a_b x_y"},
-	err:     `no slice definitions found for: "foo_bar_foo", "a_b", "7_c", "a_b c", "a_b x_y"`,
+	err:     `no slices or packages found for: "foo_bar_foo", "a_b", "7_c", "a_b c", "a_b x_y"`,
 }}
 
 var infoRelease = map[string]string{

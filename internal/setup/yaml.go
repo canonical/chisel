@@ -483,7 +483,7 @@ func parsePackage(release *Release, pkgName, pkgPath string, data []byte) (*Pack
 	dec.KnownFields(false)
 	err := dec.Decode(&yamlPkg)
 	if err != nil {
-		return nil, fmt.Errorf("cannot parse package %q slice definitions: %v", pkgName, err)
+		return nil, fmt.Errorf("cannot parse package slices file for %q: %v", pkgName, err)
 	}
 	pkg.Store = yamlPkg.Store
 	pkg.DefaultTrack = yamlPkg.DefaultTrack
