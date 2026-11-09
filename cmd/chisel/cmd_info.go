@@ -20,7 +20,7 @@ composed of package names, slice names, or a combination of both. The
 default output format is YAML. When multiple arguments are provided,
 the output is a list of YAML documents separated by a "---" line.
 
-Slice definitions are shown verbatim according to their definition in
+Packages and slices are shown verbatim according to their definition in
 the selected release. For example, globs are not expanded.
 `
 
@@ -67,7 +67,7 @@ func (cmd *infoCmd) Execute(args []string) error {
 		for i := range notFound {
 			notFound[i] = strconv.Quote(notFound[i])
 		}
-		return fmt.Errorf("no slice definitions found for: %s", strings.Join(notFound, ", "))
+		return fmt.Errorf("no slices or packages found for: %s", strings.Join(notFound, ", "))
 	}
 
 	return nil

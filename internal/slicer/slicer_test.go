@@ -974,7 +974,7 @@ var slicerTests = []slicerTest{{
 		`,
 	},
 	// Although archive "foo" does have the package, since archive "bar" has
-	// been pinned in the slice definition, no other archives will be checked.
+	// been pinned in the package slices file, no other archives will be checked.
 	error: `cannot find package "test-package" in archive\(s\)`,
 }, {
 	summary: "No archives have the package",

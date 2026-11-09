@@ -33,7 +33,7 @@ flowchart LR
 - `cache/` - Content-addressable on-disk store keyed by SHA256 or SHA384 digest, with digest verification and last-use timestamps.
 - `fsutil/` - Core filesystem operations for writing files, directories, and symlinks into the target root filesystem.
 - `manifestutil/` - Generates the Chisel manifest.
-- `scripts/` - Executes Starlark mutation scripts defined in slice definitions.
+- `scripts/` - Executes Starlark mutation scripts defined in slices.
 - `control/` - Parser for Debian control files (the metadata sections embedded in `.deb` archives).
 - `strdist/` - String distance and glob matching utilities. Implements a configurable edit-distance algorithm (`Distance`) with pluggable cost functions, and a `GlobPath` function that uses that algorithm to match file paths against patterns supporting `?`, `*`, and `**` wildcards.
 - `pgputil/` - Decodes and validates PGP signatures on package archive metadata. Wraps `golang.org/x/crypto/openpgp`.

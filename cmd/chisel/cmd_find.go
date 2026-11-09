@@ -14,7 +14,7 @@ import (
 
 var shortFindHelp = "Find existing slices"
 var longFindHelp = `
-The find command queries the slice definitions for matching slices.
+The find command queries the release for matching slices.
 Globs (* and ?) are allowed in the query.
 
 By default it fetches the slices for the same Ubuntu version as the

@@ -19,7 +19,7 @@ The `tests/` directory contains the Spread integration test suite. It exercises 
 - `basic/` - Core slice extraction scenario verifying that files are correctly written to the target root filesystem and that mutation scripts are applied.
 - `find/` - Tests for the `chisel find` command, covering search by slice name and package.
 - `info/` - Tests for the `chisel info` command, verifying detailed slice metadata output.
-- `debug-check-release-archives/` - Tests detection of package-content conflicts that cannot be identified from slice definitions alone.
+- `debug-check-release-archives/` - Tests detection of package-content conflicts that cannot be identified from package slices files alone.
 - `pro-archives/` - Tests covering Ubuntu Pro subscription archive support (fips, fips-updates, esm-apps, esm-infra).
 - `use-a-custom-chisel-release/` - Tests the ability to override the default chisel-releases with a custom release tree.
 - `unmaintained/` - Tests for releases whose support window has ended.

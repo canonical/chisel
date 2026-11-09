@@ -1525,7 +1525,7 @@ var setupTests = []setupTest{{
 			package: a
 		`,
 	},
-	relerror: `invalid slice definition filename: "a.yaml"`,
+	relerror: `invalid package slices file name: "a.yaml"`,
 }, {
 	summary: "Invalid slice name - too short",
 	input: map[string]string{
@@ -1782,7 +1782,7 @@ var setupTests = []setupTest{{
 				slice2:
 		`,
 	},
-	relerror: `cannot parse package "mypkg" slice definitions: repeats mypkg_slice2 in essential fields`,
+	relerror: `cannot parse package slices file for "mypkg": repeats mypkg_slice2 in essential fields`,
 }, {
 	summary: "Duplicated package essentials",
 	input: map[string]string{
@@ -1796,7 +1796,7 @@ var setupTests = []setupTest{{
 				slice2:
 		`,
 	},
-	relerror: `cannot parse package "mypkg" slice definitions: repeats mypkg_slice1 in essential fields`,
+	relerror: `cannot parse package slices file for "mypkg": repeats mypkg_slice1 in essential fields`,
 }, {
 	summary: "Bad slice reference in slice essential",
 	input: map[string]string{

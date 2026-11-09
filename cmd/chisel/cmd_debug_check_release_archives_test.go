@@ -337,7 +337,7 @@ var checkReleaseArchivesTests = []checkReleaseArchivesTest{{
 	// agree on the mode.
 	err: "issues found in the release archives",
 }, {
-	summary: "Mode path conflict handled in the slice definition",
+	summary: "Mode path conflict handled in the slice",
 	release: map[string]string{
 		"chisel.yaml": makeChiselYaml([]string{"ubuntu"}),
 		"slices/mydir/pkg-a.yaml": `
@@ -370,7 +370,7 @@ var checkReleaseArchivesTests = []checkReleaseArchivesTest{{
 	}},
 	stdout: "",
 }, {
-	summary: "Symlink path conflict handled in the slice definition",
+	summary: "Symlink path conflict handled in the slice",
 	release: map[string]string{
 		"chisel.yaml": makeChiselYaml([]string{"ubuntu"}),
 		"slices/mydir/pkg-a.yaml": `

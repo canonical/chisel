@@ -400,12 +400,12 @@ func readRelease(baseDir string) (*Release, error) {
 	if err != nil {
 		return nil, err
 	}
-	// In format v3, bin slice definitions must be stored in a separate
+	// In format v3, bin package slices files must be stored in a separate
 	// "bin-slices/" directory. This is a backwards compatibility mechanism
 	// for Chisel versions that do not support stores: those old versions only
 	// read "slices/" and are unaware of "bin-slices/", so they are not
-	// affected by the new store fields. From format v4 onwards, bin slice
-	// definitions live in "slices/" alongside regular ones, so "bin-slices/"
+	// affected by the new store fields. From format v4 onwards, bin package
+	// slices files live in "slices/" alongside regular ones, so "bin-slices/"
 	// is not read.
 	if release.Format == "v3" {
 		binSlicesDir := filepath.Join(baseDir, "bin-slices")
@@ -438,7 +438,7 @@ func readSlices(release *Release, baseDir, dirName string) error {
 		}
 		match := apacheutil.FnameExp.FindStringSubmatch(entry.Name())
 		if match == nil {
-			return fmt.Errorf("invalid slice definition filename: %q", entry.Name())
+			return fmt.Errorf("invalid package slices file name: %q", entry.Name())
 		}
 
 		pkgName := match[1]
@@ -446,7 +446,7 @@ func readSlices(release *Release, baseDir, dirName string) error {
 		data, err := os.ReadFile(pkgPath)
 		if err != nil {
 			// Errors from package os generally include the path.
-			return fmt.Errorf("cannot read slice definition file: %v", err)
+			return fmt.Errorf("cannot read package slices file: %v", err)
 		}
 
 		pkg, err := parsePackage(release, pkgName, stripBase(baseDir, pkgPath), data)

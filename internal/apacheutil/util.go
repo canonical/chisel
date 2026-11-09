@@ -14,7 +14,7 @@ type SliceKey struct {
 
 func (s SliceKey) String() string { return s.Package + "_" + s.Slice }
 
-// FnameExp matches the slice definition file basename.
+// FnameExp matches the package slices file basename.
 var FnameExp = regexp.MustCompile(`^([a-z0-9](?:-?[.a-z0-9+]){1,})\.yaml$`)
 
 // SnameExp matches only the slice name, without the leading package name.

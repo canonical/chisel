@@ -24,7 +24,7 @@ set of dependencies to other internal and external slices.
 This image depicts a simple case, where both packages A and B are deconstructed
 into multiple slices. At a package level, B depends on A, but in reality, there
 might be files in A that B doesn’t actually need (eg. A_slice3 isn’t needed for
-B to function properly). With this slice definition in place, Chisel is able to
+B to function properly). With these slices in place, Chisel is able to
 extract a highly-customized and specialized Slice of the Ubuntu distribution,
 which one could see as a block of stone from which we can carve and extract
 small and relevant parts we need to run our applications. It is ideal to
@@ -64,7 +64,7 @@ chisel cut --release ubuntu-22.04 --root myrootfs/ libgcc-s1_libs libssl3_libs
 
 In this example, Chisel would look into the Ubuntu Jammy archives, fetch the
 provided packages and install only the desired slices into the *myrootfs*
-folder, according to the slice definitions available in the
+folder, according to the package slices files available in the
 ["ubuntu-22.04" chisel-releases branch](<https://github.com/canonical/chisel-releases/tree/ubuntu-22.04>).
 
 ## Support for Pro archives
@@ -212,17 +212,19 @@ public-keys:
             -----END PGP PUBLIC KEY BLOCK-----
 ```
 
-#### Slice definitions
+<a id="slice-definitions"></a>
 
-There can be only **one slice definitions file** for each Ubuntu package, per
-Chisel release. All of the slice definitions files must be placed under a
+#### Package slices files
+
+There can be only **one package slices file** for each Ubuntu package, per
+Chisel release. All of the package slices files must be placed under a
 "slices" folder, and follow the same structure. For example:
 
 *slices/B.yaml*:
 
 ```yaml
 # (req) Name of the package.
-# The slice definition file should be named accordingly (eg. "openssl.yaml")
+# The package slices file should be named accordingly (eg. "openssl.yaml")
 
 package: B
 
@@ -275,7 +277,7 @@ slices:
             /etc/mypkg.d/:   {make: true}
 ```
 
-To find more examples of real slice definitions files (and contribute your own),
+To find more examples of real package slices files (and contribute your own),
 please go to <https://github.com/canonical/chisel-releases>.
 
 ##### Path kinds
