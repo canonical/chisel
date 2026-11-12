@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -285,7 +286,11 @@ func Run(options *RunOptions) error {
 			relPaths[relPath] = append(relPaths[relPath], slice)
 		}
 	}
-	for relPath, slices := range relPaths {
+	// Create paths in sorted order so that a directory is always created
+	// before its children. Otherwise, a child could create its parent with
+	// the default mode first, and the listed mode would not be applied.
+	for _, relPath := range slices.Sorted(maps.Keys(relPaths)) {
+		slices := relPaths[relPath]
 		until := setup.UntilMutate
 		for _, slice := range slices {
 			if slice.Contents[relPath].Until == setup.UntilNone {
