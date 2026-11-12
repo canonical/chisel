@@ -110,6 +110,42 @@ var slicerTests = []slicerTest{{
 		"/other-dir/file": "symlink ../dir/file {test-package_myslice}",
 	},
 }, {
+	summary: "Generated directory keeps its mode when it has generated children",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/gen/:          {make: true, mode: 0700}
+						/gen/a:         {text: data1}
+						/gen/b:         {text: data1}
+						/gen/c:         {text: data1}
+						/gen/d:         {symlink: a}
+						/gen/sub/:      {make: true, mode: 0750}
+						/gen/sub/file:  {text: data1}
+		`,
+	},
+	filesystem: map[string]string{
+		"/gen/":         "dir 0700",
+		"/gen/a":        "file 0644 5b41362b",
+		"/gen/b":        "file 0644 5b41362b",
+		"/gen/c":        "file 0644 5b41362b",
+		"/gen/d":        "symlink a",
+		"/gen/sub/":     "dir 0750",
+		"/gen/sub/file": "file 0644 5b41362b",
+	},
+	manifestPaths: map[string]string{
+		"/gen/":         "dir 0700 {test-package_myslice}",
+		"/gen/a":        "file 0644 5b41362b {test-package_myslice}",
+		"/gen/b":        "file 0644 5b41362b {test-package_myslice}",
+		"/gen/c":        "file 0644 5b41362b {test-package_myslice}",
+		"/gen/d":        "symlink a {test-package_myslice}",
+		"/gen/sub/":     "dir 0750 {test-package_myslice}",
+		"/gen/sub/file": "file 0644 5b41362b {test-package_myslice}",
+	},
+}, {
 	summary: "Glob extraction",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
 	release: map[string]string{
