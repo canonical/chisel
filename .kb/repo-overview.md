@@ -19,6 +19,10 @@ Chisel's operation and logic, including validation, must not rely on package con
 
 Do not break compatibility of the chisel-releases format or the public manifest packages, backward or forward, without a compelling reason.
 
+## §4 - License boundary
+
+Packages in `public/` and their dependencies must remain Apache-2.0 licensed, verified by `go run .github/scripts/external-packages-license-check.go`.
+
 
 # Concepts
 
@@ -29,20 +33,3 @@ Chisel cuts fine-grained slices out of Debian packages: it takes a selection of 
 ## Compatibility guidance
 
 When introducing a new feature or fixing a bug, consider both backward and forward compatibility: new behavior must keep working with previous Chisel releases, and parsing of release YAML files must accept or reject values so that future format evolutions remain possible.
-
-## Contents
-
-- `cmd/` - Binary entry points for the `chisel` application.
-- `internal/` - Core internal packages: slice orchestration, setup, extraction, archive, cache, and supporting utilities.
-- `public/` - Public API packages for external consumers.
-- `snap/` - Snap packaging configuration for Chisel.
-- `tests/` - End-to-end integration test suite.
-- `docs/` - Documentation assets.
-- `go.mod` - Go module definition.
-- `go.sum` - Go dependency checksums.
-- `spread.yaml` - Spread test configuration.
-- `workshop.yaml` - Workshop configuration.
-- `.golangci.yaml` - golangci-lint configuration.
-- `README.md` - Project readme.
-- `SECURITY.md` - Security policy.
-- `LICENSE` - Project license.
