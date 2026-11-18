@@ -1,12 +1,15 @@
 package tarball_test
 
 import (
+	"archive/tar"
 	"bytes"
+	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 
 	. "gopkg.in/check.v1"
 
@@ -626,5 +629,162 @@ func (s *S) TestExtractCreateCallback(c *C) {
 		c.Assert(err, IsNil)
 
 		c.Assert(createExtractInfos, DeepEquals, test.calls)
+	}
+}
+
+func (s *S) TestExtractOwnership(c *C) {
+	// Entries are created with the ownership recorded in the package
+	// tarball (e.g. the setgid-shadow group of the PAM chkpwd helpers).
+	// Applying ownership requires sufficient privilege (e.g. running as
+	// root); otherwise a warning is logged once and the entries keep the
+	// ownership of the current process user and group.
+	shadowGid := 42
+	entries := []testutil.TarEntry{{
+		Header: tar.Header{
+			Typeflag: tar.TypeDir,
+			Name:     "./usr/",
+			Mode:     0755,
+			Uid:      0,
+			Gid:      shadowGid,
+			Uname:    "root",
+			Gname:    "shadow",
+			Format:   tar.FormatGNU,
+		},
+	}, {
+		Header: tar.Header{
+			Typeflag: tar.TypeDir,
+			Name:     "./usr/sbin/",
+			Mode:     0755,
+			Uid:      0,
+			Gid:      shadowGid,
+			Uname:    "root",
+			Gname:    "shadow",
+			Format:   tar.FormatGNU,
+		},
+	}, {
+		Header: tar.Header{
+			Typeflag: tar.TypeReg,
+			Name:     "./usr/sbin/unix_chkpwd",
+			Mode:     02755,
+			Uid:      0,
+			Gid:      shadowGid,
+			Uname:    "root",
+			Gname:    "shadow",
+			Format:   tar.FormatGNU,
+		},
+		Content: []byte("chkpwd-binary-content"),
+	}}
+	pkgdata, err := testutil.MakeDeb(entries)
+	c.Assert(err, IsNil)
+
+	dir := c.MkDir()
+	options := tarball.ExtractOptions{
+		Package:   "test-package",
+		TargetDir: dir,
+		Extract: map[string][]tarball.ExtractInfo{
+			"/usr/sbin/unix_chkpwd": []tarball.ExtractInfo{{
+				Path: "/usr/sbin/unix_chkpwd",
+			}},
+		},
+	}
+	err = tarball.Extract(bytes.NewReader(pkgdata), &options)
+	c.Assert(err, IsNil)
+
+	info, err := os.Lstat(filepath.Join(dir, "usr/sbin/unix_chkpwd"))
+	c.Assert(err, IsNil)
+	c.Assert(info.Mode()&fs.ModeSetgid != 0, Equals, true)
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	c.Assert(ok, Equals, true)
+	dirInfo, err := os.Lstat(filepath.Join(dir, "usr/sbin"))
+	c.Assert(err, IsNil)
+	dirStat, ok := dirInfo.Sys().(*syscall.Stat_t)
+	c.Assert(ok, Equals, true)
+	if testutil.CanApplyOwnership(c, 0, shadowGid) {
+		// Ownership of the entry and its parent directories is
+		// preserved from the tarball.
+		c.Assert(stat.Uid, Equals, uint32(0))
+		c.Assert(stat.Gid, Equals, uint32(shadowGid))
+		c.Assert(dirStat.Gid, Equals, uint32(shadowGid))
+	} else {
+		// Without sufficient privilege the entries are owned by the
+		// current process user and group, and a warning is logged.
+		selfUid, selfGid := os.Geteuid(), os.Getegid()
+		c.Assert(stat.Uid, Equals, uint32(selfUid))
+		c.Assert(stat.Gid, Equals, uint32(selfGid))
+		c.Assert(dirStat.Gid, Equals, uint32(selfGid))
+	}
+}
+
+func (s *S) TestExtractOwnershipHardLinks(c *C) {
+	// When the content entry of a hard link is not extracted in the
+	// first pass, the content is extracted in a second pass to the
+	// link path as a regular file, and the ownership recorded in the
+	// package tarball is preserved for it too.
+	shadowGid := 42
+	entries := []testutil.TarEntry{{
+		Header: tar.Header{
+			Typeflag: tar.TypeDir,
+			Name:     "./",
+			Mode:     0755,
+			Uname:    "root",
+			Gname:    "root",
+			Format:   tar.FormatGNU,
+		},
+	}, {
+		Header: tar.Header{
+			Typeflag: tar.TypeReg,
+			Name:     "./file",
+			Mode:     0644,
+			Uid:      0,
+			Gid:      shadowGid,
+			Uname:    "root",
+			Gname:    "shadow",
+			Format:   tar.FormatGNU,
+		},
+		Content: []byte("text for file"),
+	}, {
+		Header: tar.Header{
+			Typeflag: tar.TypeLink,
+			Name:     "./hardlink",
+			Mode:     0644,
+			Uid:      0,
+			Gid:      shadowGid,
+			Uname:    "root",
+			Gname:    "shadow",
+			Format:   tar.FormatGNU,
+			Linkname: "./file",
+		},
+	}}
+	pkgdata, err := testutil.MakeDeb(entries)
+	c.Assert(err, IsNil)
+
+	dir := c.MkDir()
+	options := tarball.ExtractOptions{
+		Package:   "test-package",
+		TargetDir: dir,
+		Extract: map[string][]tarball.ExtractInfo{
+			"/hardlink": []tarball.ExtractInfo{{
+				Path: "/hardlink",
+			}},
+		},
+	}
+	err = tarball.Extract(bytes.NewReader(pkgdata), &options)
+	c.Assert(err, IsNil)
+
+	info, err := os.Lstat(filepath.Join(dir, "hardlink"))
+	c.Assert(err, IsNil)
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	c.Assert(ok, Equals, true)
+	if testutil.CanApplyOwnership(c, 0, shadowGid) {
+		// The ownership recorded for the content entry is applied to
+		// the file created in its place.
+		c.Assert(stat.Uid, Equals, uint32(0))
+		c.Assert(stat.Gid, Equals, uint32(shadowGid))
+	} else {
+		// Without sufficient privilege the file is owned by the
+		// current process user and group.
+		selfUid, selfGid := os.Geteuid(), os.Getegid()
+		c.Assert(stat.Uid, Equals, uint32(selfUid))
+		c.Assert(stat.Gid, Equals, uint32(selfGid))
 	}
 }

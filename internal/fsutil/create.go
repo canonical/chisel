@@ -3,6 +3,7 @@ package fsutil
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"hash"
 	"io"
@@ -10,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"syscall"
 )
 
 type CreateOptions struct {
@@ -27,6 +30,13 @@ type CreateOptions struct {
 	// If OverrideMode is true and entry already exists, update the mode. Does
 	// not affect symlinks.
 	OverrideMode bool
+	// Uid and Gid, if not nil, are applied to the created entry with
+	// os.Chown, so the entry faithfully reflects the ownership recorded
+	// in the source package. A nil value leaves the corresponding id
+	// unchanged. See applyOwnership for how and when ownership is
+	// applied.
+	Uid *int
+	Gid *int
 }
 
 type Entry struct {
@@ -143,9 +153,16 @@ func CreateWriter(options *CreateOptions) (io.WriteCloser, *Entry, error) {
 		}
 	}
 
+	_, existedErr := os.Lstat(path)
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, o.Mode)
 	if err != nil {
 		return nil, nil, err
+	}
+	if existedErr != nil {
+		if err := applyOwnership(path, o); err != nil {
+			file.Close()
+			return nil, nil, err
+		}
 	}
 	entry := &Entry{
 		Path: path,
@@ -160,17 +177,67 @@ func CreateWriter(options *CreateOptions) (io.WriteCloser, *Entry, error) {
 	return wp, entry, nil
 }
 
+// applyOwnership applies the Uid/Gid of the created entry, if any.
+// Ownership is applied to newly created entries, and to pre-existing
+// ones only when OverrideMode is true. It is never applied to symlinks
+// (their ownership has no meaningful effect), nor to hard links (they
+// share the inode, and therefore the ownership, of their
+// already-created target).
+//
+// Ownership changes that fail because of insufficient privilege
+// (EPERM) or because the requested ids are not mapped in the
+// current user namespace (EINVAL, e.g. under unshare) are logged
+// once and otherwise ignored, so unprivileged cuts keep working
+// with the entries owned by the current process user and group.
+//
+// The requested mode is re-applied after the ownership change,
+// tolerated or not: chown strips the setuid and setgid mode bits
+// of entries whose ownership it changes, and open does not create
+// files with those bits in the first place.
+func applyOwnership(path string, o *CreateOptions) error {
+	uid, gid := -1, -1
+	if o.Uid != nil {
+		uid = *o.Uid
+	}
+	if o.Gid != nil {
+		gid = *o.Gid
+	}
+	if uid == -1 && gid == -1 {
+		return nil
+	}
+	err := os.Chown(path, uid, gid)
+	if errors.Is(err, syscall.EPERM) || errors.Is(err, syscall.EINVAL) {
+		warnOwnership.Do(func() {
+			logf("WARNING: cannot preserve file ownership without sufficient privilege or unmapped ids: entries will be owned by the current user and group")
+		})
+		err = nil
+	}
+	if err != nil {
+		return err
+	}
+	return os.Chmod(path, o.Mode)
+}
+
+var warnOwnership sync.Once
+
 func createDir(o *CreateOptions) error {
 	debugf("Creating directory: %s (mode %#o)", o.Path, o.Mode)
 	path, err := absPath(o.Root, o.Path)
 	if err != nil {
 		return err
 	}
+	_, existedErr := os.Lstat(path)
 	err = os.Mkdir(path, o.Mode)
 	if os.IsExist(err) {
+		if existedErr == nil && o.OverrideMode {
+			return applyOwnership(path, o)
+		}
 		return nil
 	}
-	return err
+	if err != nil {
+		return err
+	}
+	return applyOwnership(path, o)
 }
 
 func createFile(o *CreateOptions) error {
@@ -179,6 +246,7 @@ func createFile(o *CreateOptions) error {
 	if err != nil {
 		return err
 	}
+	_, existedErr := os.Lstat(path)
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, o.Mode)
 	if err != nil {
 		return err
@@ -188,7 +256,13 @@ func createFile(o *CreateOptions) error {
 	if copyErr != nil {
 		return copyErr
 	}
-	return err
+	if err != nil {
+		return err
+	}
+	if existedErr != nil || o.OverrideMode {
+		return applyOwnership(path, o)
+	}
+	return nil
 }
 
 func createSymlink(o *CreateOptions) error {

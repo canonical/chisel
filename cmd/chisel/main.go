@@ -14,6 +14,7 @@ import (
 
 	"github.com/canonical/chisel/internal/archive"
 	"github.com/canonical/chisel/internal/deb"
+	"github.com/canonical/chisel/internal/fsutil"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/slicer"
 	"github.com/canonical/chisel/internal/tarball"
@@ -326,6 +327,7 @@ func (e *exitStatus) Error() string {
 func run() error {
 	archive.SetLogger(log.Default())
 	deb.SetLogger(log.Default())
+	fsutil.SetLogger(log.Default())
 	setup.SetLogger(log.Default())
 	slicer.SetLogger(log.Default())
 	tarball.SetLogger(log.Default())

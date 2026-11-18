@@ -34,6 +34,14 @@ type ExtractInfo struct {
 	Context  any
 }
 
+// tarDirInfo holds the mode and ownership of a directory as recorded in
+// the package tarball.
+type tarDirInfo struct {
+	mode fs.FileMode
+	uid  int
+	gid  int
+}
+
 func getValidOptions(options *ExtractOptions) (*ExtractOptions, error) {
 	for extractPath, extractInfos := range options.Extract {
 		isGlob := strings.ContainsAny(extractPath, "*?")
@@ -114,12 +122,12 @@ func extractData(pkgReader io.ReadSeeker, options *ExtractOptions) error {
 	pendingHardLinks := make(map[string][]pendingHardLink)
 
 	// When creating a file we will iterate through its parent directories and
-	// create them with the permissions defined in the tarball.
+	// create them with the permissions and ownership defined in the tarball.
 	//
 	// The assumption is that the tar entries of the parent directories appear
 	// before the entry for the file itself. This is the case for .deb files but
 	// not for all tarballs.
-	tarDirMode := make(map[string]fs.FileMode)
+	tarDirInfos := make(map[string]tarDirInfo)
 	tarReader := tar.NewReader(dataReader)
 	for {
 		tarHeader, err := tarReader.Next()
@@ -137,7 +145,11 @@ func extractData(pkgReader io.ReadSeeker, options *ExtractOptions) error {
 
 		sourceIsDir := sourcePath[len(sourcePath)-1] == '/'
 		if sourceIsDir {
-			tarDirMode[sourcePath] = tarHeader.FileInfo().Mode()
+			tarDirInfos[sourcePath] = tarDirInfo{
+				mode: tarHeader.FileInfo().Mode(),
+				uid:  tarHeader.Uid,
+				gid:  tarHeader.Gid,
+			}
 		}
 
 		// Find all globs and copies that require this source, and map them by
@@ -196,23 +208,34 @@ func extractData(pkgReader io.ReadSeeker, options *ExtractOptions) error {
 			if mode != 0 {
 				tarHeader.Mode = int64(mode)
 			}
-			// Create the parent directories using the permissions from the tarball.
+			// Create the parent directories using the permissions and
+			// ownership from the tarball.
 			parents := parentDirs(targetPath)
 			for _, path := range parents {
 				if path == "/" {
 					continue
 				}
-				mode, ok := tarDirMode[path]
+				dirInfo, ok := tarDirInfos[path]
 				if !ok {
 					continue
 				}
-				delete(tarDirMode, path)
+				delete(tarDirInfos, path)
 
 				createOptions := &fsutil.CreateOptions{
 					Root:        options.TargetDir,
 					Path:        path,
-					Mode:        mode,
+					Mode:        dirInfo.mode,
 					MakeParents: true,
+				}
+				// Only special ownership (any non-root user or a
+				// non-root group) needs to be applied explicitly:
+				// root-owned entries already end up root-owned when
+				// cutting as root, and cannot be chowned when cutting
+				// as a regular user.
+				if dirInfo.uid != 0 || dirInfo.gid != 0 {
+					uid, gid := dirInfo.uid, dirInfo.gid
+					createOptions.Uid = &uid
+					createOptions.Gid = &gid
 				}
 				err := options.Create(nil, createOptions)
 				if err != nil {
@@ -225,7 +248,12 @@ func extractData(pkgReader io.ReadSeeker, options *ExtractOptions) error {
 				link = filepath.Join(options.TargetDir, link)
 			}
 
-			// Create the entry itself.
+			// Create the entry itself, preserving any special
+			// ownership recorded in the tarball (e.g. the
+			// setgid-shadow group of the PAM chkpwd helpers).
+			// Root-owned entries are skipped: they already end up
+			// root-owned when cutting as root, and cannot be chowned
+			// when cutting as a regular user.
 			createOptions := &fsutil.CreateOptions{
 				Root:         options.TargetDir,
 				Path:         targetPath,
@@ -234,6 +262,11 @@ func extractData(pkgReader io.ReadSeeker, options *ExtractOptions) error {
 				Link:         link,
 				MakeParents:  true,
 				OverrideMode: true,
+			}
+			if tarHeader.Uid != 0 || tarHeader.Gid != 0 {
+				uid, gid := tarHeader.Uid, tarHeader.Gid
+				createOptions.Uid = &uid
+				createOptions.Gid = &gid
 			}
 			err := options.Create(extractInfos, createOptions)
 			if err != nil && os.IsNotExist(err) && tarHeader.Typeflag == tar.TypeLink {
@@ -337,6 +370,16 @@ func extractHardLinks(pkgReader io.ReadSeeker, opts *extractHardLinkOptions) err
 			Path: links[0].path,
 			Mode: tarHeader.FileInfo().Mode(),
 			Data: tarReader,
+		}
+		// The first hard link holds the content of the entry as a newly
+		// created file, so the special ownership recorded in the tarball
+		// is preserved for it, as in the first pass. The remaining hard
+		// links share the inode, and therefore the ownership, of that
+		// file.
+		if tarHeader.Uid != 0 || tarHeader.Gid != 0 {
+			uid, gid := tarHeader.Uid, tarHeader.Gid
+			createOptions.Uid = &uid
+			createOptions.Gid = &gid
 		}
 		err = opts.Create(links[0].extractInfos, createOptions)
 		if err != nil {
