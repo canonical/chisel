@@ -122,9 +122,41 @@ func compressBytesZstd(input []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func MakeDeb(entries []TarEntry) ([]byte, error) {
+func makeDebWithData(name string, data []byte) ([]byte, error) {
 	var buf bytes.Buffer
+	writer := ar.NewWriter(&buf)
+	if err := writer.WriteGlobalHeader(); err != nil {
+		return nil, err
+	}
+	dataHeader := ar.Header{
+		Name: name,
+		Mode: 0644,
+		Size: int64(len(data)),
+	}
+	if err := writer.WriteHeader(&dataHeader); err != nil {
+		return nil, err
+	}
+	if _, err := writer.Write(data); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
 
+// MustMakeUncompressedDeb is like MustMakeDeb but stores the entries in a
+// plain data.tar member, as dpkg-deb -Znone does.
+func MustMakeUncompressedDeb(entries []TarEntry) []byte {
+	tarData, err := makeTar(entries)
+	if err != nil {
+		panic(err)
+	}
+	data, err := makeDebWithData("data.tar", tarData)
+	if err != nil {
+		panic(err)
+	}
+	return data
+}
+
+func MakeDeb(entries []TarEntry) ([]byte, error) {
 	tarData, err := makeTar(entries)
 	if err != nil {
 		return nil, err
@@ -133,23 +165,7 @@ func MakeDeb(entries []TarEntry) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	writer := ar.NewWriter(&buf)
-	if err := writer.WriteGlobalHeader(); err != nil {
-		return nil, err
-	}
-	dataHeader := ar.Header{
-		Name: "data.tar.zst",
-		Mode: 0644,
-		Size: int64(len(compTarData)),
-	}
-	if err := writer.WriteHeader(&dataHeader); err != nil {
-		return nil, err
-	}
-	if _, err = writer.Write(compTarData); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+	return makeDebWithData("data.tar.zst", compTarData)
 }
 
 func MustMakeDeb(entries []TarEntry) []byte {

@@ -24,6 +24,8 @@ func DataReader(pkgReader io.ReadSeeker) (io.ReadCloser, error) {
 			return nil, err
 		}
 		switch arHeader.Name {
+		case "data.tar":
+			dataReader = io.NopCloser(arReader)
 		case "data.tar.gz":
 			gzipReader, err := gzip.NewReader(arReader)
 			if err != nil {
