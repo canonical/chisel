@@ -6,6 +6,7 @@ import (
 	"io"
 
 	"github.com/canonical/chisel/internal/archive"
+	"github.com/canonical/chisel/internal/cache"
 )
 
 type TestArchive struct {
@@ -16,7 +17,7 @@ type TestArchive struct {
 type TestPackage struct {
 	Name     string
 	Version  string
-	Hash     string
+	Digests  map[cache.DigestKind]string
 	Arch     string
 	Data     []byte
 	Archives []string
@@ -34,7 +35,7 @@ func (a *TestArchive) Fetch(pkgName string) (io.ReadSeekCloser, *archive.Package
 	info := &archive.PackageInfo{
 		Name:    pkg.Name,
 		Version: pkg.Version,
-		SHA256:  pkg.Hash,
+		Digests: pkg.Digests,
 		Arch:    pkg.Arch,
 	}
 	return ReadSeekNopCloser(bytes.NewReader(pkg.Data)), info, nil
@@ -53,7 +54,7 @@ func (a *TestArchive) Info(pkgName string) (*archive.PackageInfo, error) {
 	return &archive.PackageInfo{
 		Name:    pkg.Name,
 		Version: pkg.Version,
-		SHA256:  pkg.Hash,
+		Digests: pkg.Digests,
 		Arch:    pkg.Arch,
 	}, nil
 }

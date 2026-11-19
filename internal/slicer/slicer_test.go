@@ -15,6 +15,7 @@ import (
 	. "gopkg.in/check.v1"
 
 	"github.com/canonical/chisel/internal/archive"
+	"github.com/canonical/chisel/internal/cache"
 	"github.com/canonical/chisel/internal/manifestutil"
 	"github.com/canonical/chisel/internal/setup"
 	"github.com/canonical/chisel/internal/slicer"
@@ -783,7 +784,7 @@ var slicerTests = []slicerTest{{
 	slices:  []setup.SliceKey{{"test-package", "myslice"}, {"other-package", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name:    "test-package",
-		Hash:    "h1",
+		Digests: map[cache.DigestKind]string{cache.SHA256: "h1"},
 		Version: "v1",
 		Arch:    "a1",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
@@ -792,7 +793,7 @@ var slicerTests = []slicerTest{{
 		Archives: []string{"foo"},
 	}, {
 		Name:    "test-package",
-		Hash:    "h2",
+		Digests: map[cache.DigestKind]string{cache.SHA256: "h2"},
 		Version: "v2",
 		Arch:    "a2",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
@@ -801,7 +802,7 @@ var slicerTests = []slicerTest{{
 		Archives: []string{"bar"},
 	}, {
 		Name:    "other-package",
-		Hash:    "h3",
+		Digests: map[cache.DigestKind]string{cache.SHA256: "h3"},
 		Version: "v3",
 		Arch:    "a3",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
@@ -859,15 +860,15 @@ var slicerTests = []slicerTest{{
 		"/other-file": "file 0644 fa0c9cdb {other-package_myslice}",
 	},
 	manifestPkgs: map[string]string{
-		"test-package":  "test-package v1 a1 h1",
-		"other-package": "other-package v3 a3 h3",
+		"test-package":  "test-package v1 a1 sha256=h1",
+		"other-package": "other-package v3 a3 sha256=h3",
 	},
 }, {
 	summary: "Pinned archive bypasses higher priority",
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name:    "test-package",
-		Hash:    "h1",
+		Digests: map[cache.DigestKind]string{cache.SHA256: "h1"},
 		Version: "v1",
 		Arch:    "a1",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
@@ -876,7 +877,7 @@ var slicerTests = []slicerTest{{
 		Archives: []string{"foo"},
 	}, {
 		Name:    "test-package",
-		Hash:    "h2",
+		Digests: map[cache.DigestKind]string{cache.SHA256: "h2"},
 		Version: "v2",
 		Arch:    "a2",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
@@ -928,7 +929,7 @@ var slicerTests = []slicerTest{{
 		"/file": "file 0644 fa0c9cdb {test-package_myslice}",
 	},
 	manifestPkgs: map[string]string{
-		"test-package": "test-package v2 a2 h2",
+		"test-package": "test-package v2 a2 sha256=h2",
 	},
 }, {
 	summary: "Pinned archive does not have the package",
@@ -1055,7 +1056,7 @@ var slicerTests = []slicerTest{{
 	slices:  []setup.SliceKey{{"test-package", "myslice"}},
 	pkgs: []*testutil.TestPackage{{
 		Name:    "test-package",
-		Hash:    "h1",
+		Digests: map[cache.DigestKind]string{cache.SHA256: "h1"},
 		Version: "v1",
 		Arch:    "a1",
 		Data: testutil.MustMakeDeb([]testutil.TarEntry{
@@ -1097,7 +1098,70 @@ var slicerTests = []slicerTest{{
 		"/file": "file 0644 7a3e00f5 {test-package_myslice}",
 	},
 	manifestPkgs: map[string]string{
-		"test-package": "test-package v1 a1 h1",
+		"test-package": "test-package v1 a1 sha256=h1",
+	},
+}, {
+	summary: "Package with sha512 digest is recorded in the manifest",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	pkgs: []*testutil.TestPackage{{
+		Name:    "test-package",
+		Digests: map[cache.DigestKind]string{cache.SHA512: "h1"},
+		Version: "v1",
+		Arch:    "a1",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Reg(0o644, "./file", "from foo"),
+		}),
+	}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/file:
+		`,
+	},
+	filesystem: map[string]string{
+		"/file": "file 0644 7a3e00f5",
+	},
+	manifestPaths: map[string]string{
+		"/file": "file 0644 7a3e00f5 {test-package_myslice}",
+	},
+	manifestPkgs: map[string]string{
+		"test-package": "test-package v1 a1 sha512=h1",
+	},
+}, {
+	summary: "Package with multiple digests is recorded in the manifest",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	pkgs: []*testutil.TestPackage{{
+		Name: "test-package",
+		Digests: map[cache.DigestKind]string{
+			cache.SHA256: "h256",
+			cache.SHA512: "h512",
+		},
+		Version: "v1",
+		Arch:    "a1",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Reg(0o644, "./file", "from foo"),
+		}),
+	}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/file:
+		`,
+	},
+	filesystem: map[string]string{
+		"/file": "file 0644 7a3e00f5",
+	},
+	manifestPaths: map[string]string{
+		"/file": "file 0644 7a3e00f5 {test-package_myslice}",
+	},
+	manifestPkgs: map[string]string{
+		"test-package": "test-package v1 a1 sha256=h256,sha512=h512",
 	},
 }, {
 	summary: "Multiple slices of same package",
@@ -1360,13 +1424,13 @@ var slicerTests = []slicerTest{{
 	},
 	pkgs: []*testutil.TestPackage{{
 		Name:    "test-package",
-		Hash:    "h1",
+		Digests: map[cache.DigestKind]string{cache.SHA256: "h1"},
 		Version: "v1",
 		Arch:    "a1",
 		Data:    testutil.PackageData["test-package"],
 	}, {
 		Name:    "other-package",
-		Hash:    "h2",
+		Digests: map[cache.DigestKind]string{cache.SHA256: "h2"},
 		Version: "v2",
 		Arch:    "a2",
 		Data:    testutil.PackageData["other-package"],
@@ -1386,8 +1450,8 @@ var slicerTests = []slicerTest{{
 	`,
 	},
 	manifestPkgs: map[string]string{
-		"test-package":  "test-package v1 a1 h1",
-		"other-package": "other-package v2 a2 h2",
+		"test-package":  "test-package v1 a1 sha256=h1",
+		"other-package": "other-package v2 a2 sha256=h2",
 	},
 }, {
 	summary: "Two packages, only one is selected and recorded",
@@ -1396,13 +1460,13 @@ var slicerTests = []slicerTest{{
 	},
 	pkgs: []*testutil.TestPackage{{
 		Name:    "test-package",
-		Hash:    "h1",
+		Digests: map[cache.DigestKind]string{cache.SHA256: "h1"},
 		Version: "v1",
 		Arch:    "a1",
 		Data:    testutil.PackageData["test-package"],
 	}, {
 		Name:    "other-package",
-		Hash:    "h2",
+		Digests: map[cache.DigestKind]string{cache.SHA256: "h2"},
 		Version: "v2",
 		Arch:    "a2",
 		Data:    testutil.PackageData["other-package"],
@@ -1422,7 +1486,7 @@ var slicerTests = []slicerTest{{
 	`,
 	},
 	manifestPkgs: map[string]string{
-		"test-package": "test-package v1 a1 h1",
+		"test-package": "test-package v1 a1 sha256=h1",
 	},
 }, {
 	summary: "Relative paths are properly trimmed during extraction",
@@ -2054,8 +2118,8 @@ func runSlicerTests(s *S, c *C, tests []slicerTest) {
 				if pkg.Arch == "" {
 					pkg.Arch = "arch"
 				}
-				if pkg.Hash == "" {
-					pkg.Hash = "hash"
+				if pkg.Digests == nil {
+					pkg.Digests = map[cache.DigestKind]string{cache.SHA256: "hash"}
 				}
 				if pkg.Version == "" {
 					pkg.Version = "version"
@@ -2220,7 +2284,12 @@ func treeDumpManifestPaths(mfest *manifest.Manifest) (map[string]string, error) 
 func dumpManifestPkgs(mfest *manifest.Manifest) (map[string]string, error) {
 	result := map[string]string{}
 	err := mfest.IteratePackages(func(pkg *manifest.Package) error {
-		result[pkg.Name] = fmt.Sprintf("%s %s %s %s", pkg.Name, pkg.Version, pkg.Arch, pkg.Digest)
+		digests := make([]string, 0, len(pkg.Digests))
+		for kind, digest := range pkg.Digests {
+			digests = append(digests, kind+"="+digest)
+		}
+		sort.Strings(digests)
+		result[pkg.Name] = fmt.Sprintf("%s %s %s %s", pkg.Name, pkg.Version, pkg.Arch, strings.Join(digests, ","))
 		return nil
 	})
 	if err != nil {
