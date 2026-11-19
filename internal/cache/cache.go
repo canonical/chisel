@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"hash"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"time"
 
 	"golang.org/x/crypto/sha3"
@@ -102,6 +104,15 @@ const (
 
 var digestKinds = []DigestKind{SHA256, SHA384, SHA512}
 
+// entryNames matches the names Chisel writes in the directory of each digest
+// kind: an entry named after its digest, or a temporary file left behind by a
+// write that did not finish.
+var entryNames = map[DigestKind]*regexp.Regexp{
+	SHA256: regexp.MustCompile(`^([0-9a-f]{64}(\.tmp)?|tmp\.[0-9]+)$`),
+	SHA384: regexp.MustCompile(`^([0-9a-f]{96}(\.tmp)?|tmp\.[0-9]+)$`),
+	SHA512: regexp.MustCompile(`^([0-9a-f]{128}(\.tmp)?|tmp\.[0-9]+)$`),
+}
+
 var ErrMiss = fmt.Errorf("not cached")
 
 func (c *Cache) filePath(digestKind DigestKind, digest string) string {
@@ -166,9 +177,11 @@ func (c *Cache) Open(digestKind DigestKind, digest string) (io.ReadSeekCloser, e
 	} else if err != nil {
 		return nil, fmt.Errorf("cannot open cache file: %v", err)
 	}
-	// Use mtime as last reuse time.
+	// Use mtime as last reuse time. If the entry was expired since it was
+	// opened, the open file is still readable and there is nothing to update.
 	now := time.Now()
-	if err := os.Chtimes(filePath, now, now); err != nil {
+	if err := os.Chtimes(filePath, now, now); err != nil && !os.IsNotExist(err) {
+		file.Close()
 		return nil, fmt.Errorf("cannot update cached file timestamp: %v", err)
 	}
 	return file, nil
@@ -187,8 +200,12 @@ func (c *Cache) Read(digestKind DigestKind, digest string) ([]byte, error) {
 	return data, nil
 }
 
+// Expire removes the entries that were last used longer than timeout ago.
+// Only files Chisel wrote are considered. A failure on one entry does not
+// stop the others from being expired, and the first failure is returned.
 func (c *Cache) Expire(timeout time.Duration) error {
 	expired := time.Now().Add(-timeout)
+	var firstErr error
 	for _, digestKind := range digestKinds {
 		digestKindDir := filepath.Join(c.Dir, string(digestKind))
 		entries, err := os.ReadDir(digestKindDir)
@@ -196,21 +213,41 @@ func (c *Cache) Expire(timeout time.Duration) error {
 			continue
 		}
 		if err != nil {
-			return fmt.Errorf("cannot list cache directory: %v", err)
+			if firstErr == nil {
+				firstErr = fmt.Errorf("cannot list cache directory: %v", err)
+			}
+			continue
 		}
 		for _, entry := range entries {
-			finfo, err := entry.Info()
-			if err != nil {
-				return err
-			}
-			if finfo.ModTime().After(expired) {
+			if !entry.Type().IsRegular() || !entryNames[digestKind].MatchString(entry.Name()) {
 				continue
 			}
-			err = os.Remove(filepath.Join(digestKindDir, finfo.Name()))
-			if err != nil {
-				return fmt.Errorf("cannot expire cache entry: %v", err)
+			err := expireEntry(filepath.Join(digestKindDir, entry.Name()), entry, expired)
+			if err != nil && firstErr == nil {
+				firstErr = err
 			}
 		}
+	}
+	return firstErr
+}
+
+// expireEntry removes the entry at path if it was last used before expired.
+// Entries may vanish meanwhile, renamed from .tmp by a writer or removed by a
+// concurrent expiry, and that is not an error.
+func expireEntry(path string, entry fs.DirEntry, expired time.Time) error {
+	finfo, err := entry.Info()
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("cannot expire cache entry: %v", err)
+	}
+	if finfo.ModTime().After(expired) {
+		return nil
+	}
+	err = os.Remove(path)
+	if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("cannot expire cache entry: %v", err)
 	}
 	return nil
 }

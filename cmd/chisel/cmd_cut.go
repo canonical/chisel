@@ -20,6 +20,10 @@ to create a new filesystem tree in the root location.
 
 By default it fetches the slices for the same Ubuntu version as the
 current host, unless the --release flag is used.
+
+Packages and archive indexes are cached, and cache entries that have not
+been used for 7 days are removed after the cut. Set CHISEL_CACHE_EXPIRY
+to a number of days to change that, or to 0 to keep all entries.
 `
 
 var cutDescs = map[string]string{
@@ -78,6 +82,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 		return err
 	}
 
+	cacheDir := cache.DefaultDir("chisel")
 	archives := make(map[string]archive.Archive)
 	for archiveName, archiveInfo := range release.Archives {
 		openArchive, err := archive.Open(&archive.Options{
@@ -87,7 +92,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 			Suites:     archiveInfo.Suites,
 			Components: archiveInfo.Components,
 			Pro:        archiveInfo.Pro,
-			CacheDir:   cache.DefaultDir("chisel"),
+			CacheDir:   cacheDir,
 			PubKeys:    archiveInfo.PubKeys,
 			Maintained: archiveInfo.Maintained,
 			OldRelease: archiveInfo.OldRelease,
@@ -126,5 +131,10 @@ func (cmd *cmdCut) Execute(args []string) error {
 		Archives:  archives,
 		TargetDir: cmd.RootDir,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+
+	expireCache(cacheDir)
+	return nil
 }
