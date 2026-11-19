@@ -2,6 +2,8 @@ package setup
 
 type YAMLPath = yamlPath
 
+var ValidateChannelPatterns = validateChannelPatterns
+
 type PathSegment = segment
 type PathSegmentSlice = segmentSlice
 type PathNode = node
