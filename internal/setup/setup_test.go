@@ -4606,7 +4606,9 @@ func (s *S) TestParseRelease(c *C) {
 		}
 		t.input = m
 		if t.release != nil {
-			t.release.Format = "v2"
+			releaseCopy := *t.release
+			releaseCopy.Format = "v2"
+			t.release = &releaseCopy
 		}
 		v2FormatTests = append(v2FormatTests, t)
 	}
@@ -4644,7 +4646,9 @@ func (s *S) TestParseRelease(c *C) {
 		}
 		t.input = m
 		if t.release != nil {
-			t.release.Format = "v3"
+			releaseCopy := *t.release
+			releaseCopy.Format = "v3"
+			t.release = &releaseCopy
 		}
 		v3FormatTests = append(v3FormatTests, t)
 	}

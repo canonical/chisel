@@ -17,6 +17,7 @@ import (
 type createTest struct {
 	summary string
 	options fsutil.CreateOptions
+	data    string
 	hackopt func(c *C, dir string, opts *fsutil.CreateOptions)
 	result  map[string]string
 	error   string
@@ -26,10 +27,10 @@ var createTests = []createTest{{
 	summary: "Create a file and its parent directory",
 	options: fsutil.CreateOptions{
 		Path:        "foo/bar",
-		Data:        bytes.NewBufferString("data1"),
 		Mode:        0444,
 		MakeParents: true,
 	},
+	data: "data1",
 	result: map[string]string{
 		"/foo/":    "dir 0755",
 		"/foo/bar": "file 0444 5b41362b",
@@ -92,8 +93,8 @@ var createTests = []createTest{{
 		Path: "foo",
 		// Mode should be ignored for existing entry.
 		Mode: 0644,
-		Data: bytes.NewBufferString("changed"),
 	},
+	data: "changed",
 	hackopt: func(c *C, dir string, opts *fsutil.CreateOptions) {
 		c.Assert(os.WriteFile(filepath.Join(dir, "foo"), []byte("data"), 0666), IsNil)
 	},
@@ -197,9 +198,9 @@ var createTests = []createTest{{
 	options: fsutil.CreateOptions{
 		Path:         "foo",
 		Mode:         0775,
-		Data:         bytes.NewBufferString("whatever"),
 		OverrideMode: true,
 	},
+	data: "whatever",
 	hackopt: func(c *C, dir string, opts *fsutil.CreateOptions) {
 		err := os.WriteFile(filepath.Join(dir, "foo"), []byte("data"), 0666)
 		c.Assert(err, IsNil)
@@ -277,8 +278,8 @@ var createTests = []createTest{{
 		Root: "/root",
 		Path: "../file",
 		Mode: 0666,
-		Data: bytes.NewBufferString("hijacking system file"),
 	},
+	data:  "hijacking system file",
 	error: `cannot create path /file outside of root /root/`,
 }, {
 	summary: "Hardlink cannot escape Root",
@@ -317,6 +318,9 @@ func (s *S) TestCreate(c *C) {
 		options := test.options
 		if options.Root == "" {
 			options.Root = dir
+		}
+		if test.data != "" {
+			options.Data = bytes.NewBufferString(test.data)
 		}
 		if test.hackopt != nil {
 			test.hackopt(c, dir, &options)
