@@ -127,6 +127,7 @@ func Run(options *RunOptions) error {
 				}
 				extractPackage[sourcePath] = append(extractPackage[sourcePath], tarball.ExtractInfo{
 					Path:    targetPath,
+					Mode:    pathInfo.Mode,
 					Context: slice,
 				})
 			} else {
