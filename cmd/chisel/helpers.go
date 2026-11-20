@@ -22,23 +22,23 @@ func parseReleaseInfo(release string) (label, version string, err error) {
 }
 
 func readReleaseInfo() (label, version string, err error) {
-	data, err := os.ReadFile("/etc/lsb-release")
+	data, err := os.ReadFile("/etc/os-release")
 	if err == nil {
-		const labelPrefix = "DISTRIB_ID="
-		const versionPrefix = "DISTRIB_RELEASE="
+		const labelPrefix = "ID="
+		const versionPrefix = "VERSION_ID="
 		for _, line := range strings.Split(string(data), "\n") {
 			switch {
 			case strings.HasPrefix(line, labelPrefix):
-				label = strings.ToLower(line[len(labelPrefix):])
+				label = strings.ToLower(strings.Trim(line[len(labelPrefix):], `"'`))
 			case strings.HasPrefix(line, versionPrefix):
-				version = line[len(versionPrefix):]
+				version = strings.Trim(line[len(versionPrefix):], `"'`)
 			}
 			if label != "" && version != "" {
 				return label, version, nil
 			}
 		}
 	}
-	return "", "", fmt.Errorf("cannot infer release via /etc/lsb-release, see the --release option")
+	return "", "", fmt.Errorf("cannot infer release via /etc/os-release, see the --release option")
 }
 
 // obtainRelease returns the Chisel release information matching the provided string,
