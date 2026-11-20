@@ -8,6 +8,7 @@ import (
 
 	"github.com/blakesmith/ar"
 	"github.com/klauspost/compress/zstd"
+	"github.com/ulikunitz/xz"
 )
 
 var PackageData = map[string][]byte{}
@@ -107,6 +108,15 @@ func makeTar(entries []TarEntry) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// MustMakeTar returns the tar stream holding the given entries.
+func MustMakeTar(entries []TarEntry) []byte {
+	data, err := makeTar(entries)
+	if err != nil {
+		panic(err)
+	}
+	return data
+}
+
 func compressBytesZstd(input []byte) ([]byte, error) {
 	var buf bytes.Buffer
 	writer, err := zstd.NewWriter(&buf)
@@ -154,6 +164,37 @@ func MakeDeb(entries []TarEntry) ([]byte, error) {
 
 func MustMakeDeb(entries []TarEntry) []byte {
 	data, err := MakeDeb(entries)
+	if err != nil {
+		panic(err)
+	}
+	return data
+}
+
+func compressBytesXZ(input []byte) ([]byte, error) {
+	var buf bytes.Buffer
+	writer, err := xz.NewWriter(&buf)
+	if err != nil {
+		return nil, err
+	}
+	if _, err = writer.Write(input); err != nil {
+		return nil, err
+	}
+	if err = writer.Close(); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func MakeBin(entries []TarEntry) ([]byte, error) {
+	tarData, err := makeTar(entries)
+	if err != nil {
+		return nil, err
+	}
+	return compressBytesXZ(tarData)
+}
+
+func MustMakeBin(entries []TarEntry) []byte {
+	data, err := MakeBin(entries)
 	if err != nil {
 		panic(err)
 	}

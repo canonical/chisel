@@ -16,6 +16,7 @@ import (
 	"github.com/klauspost/compress/zstd"
 
 	"github.com/canonical/chisel/internal/archive"
+	"github.com/canonical/chisel/internal/deb"
 	"github.com/canonical/chisel/internal/fsutil"
 	"github.com/canonical/chisel/internal/manifestutil"
 	"github.com/canonical/chisel/internal/scripts"
@@ -146,7 +147,7 @@ func Run(options *RunOptions) error {
 	}
 
 	// Fetch all packages, using the selection order.
-	packages := make(map[string]io.ReadSeekCloser)
+	packages := make(map[string]tarball.OpenTarFunc)
 	var pkgInfos []manifestutil.PackageInfo
 	for _, slice := range options.Selection.Slices {
 		if packages[slice.Package] != nil {
@@ -158,7 +159,7 @@ func Run(options *RunOptions) error {
 			return err
 		}
 		defer reader.Close()
-		packages[slice.Package] = reader
+		packages[slice.Package] = deb.OpenTar(reader)
 		pkgInfos = append(pkgInfos, info)
 	}
 
@@ -235,17 +236,16 @@ func Run(options *RunOptions) error {
 
 	// Extract all packages, also using the selection order.
 	for _, slice := range options.Selection.Slices {
-		reader := packages[slice.Package]
-		if reader == nil {
+		openTar := packages[slice.Package]
+		if openTar == nil {
 			continue
 		}
-		err := tarball.Extract(reader, &tarball.ExtractOptions{
+		err := tarball.Extract(openTar, &tarball.ExtractOptions{
 			Package:   slice.Package,
 			Extract:   extract[slice.Package],
 			TargetDir: targetDir,
 			Create:    create,
 		})
-		reader.Close()
 		packages[slice.Package] = nil
 		if err != nil {
 			return err
