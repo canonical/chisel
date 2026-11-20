@@ -1662,6 +1662,54 @@ var slicerTests = []slicerTest{{
 		"/hardlink": "symlink ./file <1> {test-package_myslice}",
 	},
 }, {
+	summary: "Hard link target path provided by another package extracted first",
+	slices: []setup.SliceKey{
+		{"test-package2", "myslice"},
+		{"test-package1", "myslice"},
+	},
+	pkgs: []*testutil.TestPackage{{
+		Name: "test-package1",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			testutil.Reg(0644, "./file", "foo"),
+			testutil.Hrd(0644, "./hardlink", "./file"),
+		}),
+	}, {
+		Name: "test-package2",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			testutil.Reg(0644, "./file", "bar"),
+		}),
+	}},
+	release: map[string]string{
+		"slices/mydir/test-package1.yaml": `
+			package: test-package1
+			slices:
+				myslice:
+					essential:
+						- test-package2_myslice
+					contents:
+						/hardlink:
+		`,
+		"slices/mydir/test-package2.yaml": `
+			package: test-package2
+			slices:
+				myslice:
+					contents:
+						/file:
+		`,
+	},
+	// test-package2 is extracted first, so its /file is on disk when the
+	// hard link is extracted. The link carries test-package1's content.
+	filesystem: map[string]string{
+		"/file":     "file 0644 fcde2b2e",
+		"/hardlink": "file 0644 2c26b46b",
+	},
+	manifestPaths: map[string]string{
+		"/file":     "file 0644 fcde2b2e {test-package2_myslice}",
+		"/hardlink": "file 0644 2c26b46b {test-package1_myslice}",
+	},
+}, {
 	summary: "Hard link identifiers are unique across packages",
 	slices: []setup.SliceKey{
 		{"test-package1", "myslice"},

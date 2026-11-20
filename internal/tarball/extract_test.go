@@ -440,6 +440,171 @@ var extractTests = []extractTest{{
 	},
 	notCreated: []string{},
 }, {
+	summary: "Hard link to a hard link",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		testutil.Dir(0755, "./"),
+		testutil.Reg(0644, "./file", "foo"),
+		testutil.Hrd(0644, "./hardlink1", "./file"),
+		testutil.Hrd(0644, "./hardlink2", "./hardlink1"),
+	}),
+	options: tarball.ExtractOptions{
+		Extract: map[string][]tarball.ExtractInfo{
+			"/**": []tarball.ExtractInfo{{
+				Path: "/**",
+			}},
+		},
+	},
+	result: map[string]string{
+		"/file":      "file 0644 2c26b46b <1>",
+		"/hardlink1": "file 0644 2c26b46b <1>",
+		"/hardlink2": "file 0644 2c26b46b <1>",
+	},
+	notCreated: []string{},
+}, {
+	summary: "Hard link to a hard link whose target is not extracted",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		testutil.Dir(0755, "./"),
+		testutil.Reg(0644, "./file", "foo"),
+		testutil.Hrd(0644, "./hardlink1", "./file"),
+		testutil.Hrd(0644, "./hardlink2", "./hardlink1"),
+	}),
+	options: tarball.ExtractOptions{
+		Extract: map[string][]tarball.ExtractInfo{
+			"/hardlink1": []tarball.ExtractInfo{{
+				Path: "/hardlink1",
+			}},
+			"/hardlink2": []tarball.ExtractInfo{{
+				Path: "/hardlink2",
+			}},
+		},
+	},
+	result: map[string]string{
+		"/hardlink1": "file 0644 2c26b46b <1>",
+		"/hardlink2": "file 0644 2c26b46b <1>",
+	},
+	notCreated: []string{},
+}, {
+	summary: "Hard link target spelled without the leading dot slash",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		testutil.Dir(0755, "./"),
+		testutil.Reg(0644, "./file", "foo"),
+		testutil.Hrd(0644, "./hardlink", "file"),
+	}),
+	options: tarball.ExtractOptions{
+		Extract: map[string][]tarball.ExtractInfo{
+			"/**": []tarball.ExtractInfo{{
+				Path: "/**",
+			}},
+		},
+	},
+	result: map[string]string{
+		"/file":     "file 0644 2c26b46b <1>",
+		"/hardlink": "file 0644 2c26b46b <1>",
+	},
+	notCreated: []string{},
+}, {
+	summary: "Hard link to a symlink that is not extracted",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		testutil.Dir(0755, "./"),
+		testutil.Lnk(0644, "./symlink", "./file"),
+		testutil.Hrd(0644, "./hardlink", "./symlink"),
+	}),
+	options: tarball.ExtractOptions{
+		Extract: map[string][]tarball.ExtractInfo{
+			"/hardlink": []tarball.ExtractInfo{{
+				Path: "/hardlink",
+			}},
+		},
+	},
+	result: map[string]string{
+		"/hardlink": "symlink ./file",
+	},
+	notCreated: []string{},
+}, {
+	summary: "Hard link to a hard link listed before its target link",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		testutil.Dir(0755, "./"),
+		testutil.Reg(0644, "./file", "foo"),
+		testutil.Hrd(0644, "./hardlink2", "./hardlink1"),
+		testutil.Hrd(0644, "./hardlink1", "./file"),
+	}),
+	options: tarball.ExtractOptions{
+		Extract: map[string][]tarball.ExtractInfo{
+			"/hardlink2": []tarball.ExtractInfo{{
+				Path: "/hardlink2",
+			}},
+		},
+	},
+	result: map[string]string{
+		"/hardlink2": "file 0644 2c26b46b",
+	},
+	notCreated: []string{},
+}, {
+	summary: "Hard link to a hard link whose target is extracted links to the target",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		testutil.Dir(0755, "./"),
+		testutil.Reg(0644, "./file", "foo"),
+		testutil.Hrd(0644, "./hardlink1", "./file"),
+		testutil.Hrd(0644, "./hardlink2", "./hardlink1"),
+	}),
+	options: tarball.ExtractOptions{
+		Extract: map[string][]tarball.ExtractInfo{
+			"/file": []tarball.ExtractInfo{{
+				Path: "/file",
+			}},
+			"/hardlink2": []tarball.ExtractInfo{{
+				Path: "/hardlink2",
+			}},
+		},
+	},
+	result: map[string]string{
+		"/file":      "file 0644 2c26b46b <1>",
+		"/hardlink2": "file 0644 2c26b46b <1>",
+	},
+	notCreated: []string{},
+}, {
+	summary: "Hard link target spelled with a non-canonical path",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		testutil.Dir(0755, "./"),
+		testutil.Dir(0755, "./dir/"),
+		testutil.Reg(0644, "./dir/file", "foo"),
+		testutil.Hrd(0644, "./hardlink1", "./dir//file"),
+		testutil.Hrd(0644, "./hardlink2", "./dir/../dir/file"),
+	}),
+	options: tarball.ExtractOptions{
+		Extract: map[string][]tarball.ExtractInfo{
+			"/**": []tarball.ExtractInfo{{
+				Path: "/**",
+			}},
+		},
+	},
+	result: map[string]string{
+		"/dir/":      "dir 0755",
+		"/dir/file":  "file 0644 2c26b46b <1>",
+		"/hardlink1": "file 0644 2c26b46b <1>",
+		"/hardlink2": "file 0644 2c26b46b <1>",
+	},
+	notCreated: []string{},
+}, {
+	summary: "Deferred hard link under a directory the tarball does not carry",
+	pkgdata: testutil.MustMakeDeb([]testutil.TarEntry{
+		testutil.Dir(0755, "./"),
+		testutil.Reg(0644, "./file", "foo"),
+		testutil.Hrd(0644, "./dir/hardlink", "./file"),
+	}),
+	options: tarball.ExtractOptions{
+		Extract: map[string][]tarball.ExtractInfo{
+			"/dir/hardlink": []tarball.ExtractInfo{{
+				Path: "/dir/hardlink",
+			}},
+		},
+	},
+	result: map[string]string{
+		"/dir/":         "dir 0755",
+		"/dir/hardlink": "file 0644 2c26b46b",
+	},
+	notCreated: []string{"/dir/"},
+}, {
 	summary: "Explicit extraction overrides existing file",
 	pkgdata: testutil.PackageData["test-package"],
 	options: tarball.ExtractOptions{
