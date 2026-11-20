@@ -57,6 +57,7 @@ func Create(options *CreateOptions) (*Entry, error) {
 	}
 
 	var hash string
+	var size int
 	if o.MakeParents {
 		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 			return nil, err
@@ -73,9 +74,25 @@ func Create(options *CreateOptions) (*Entry, error) {
 				}
 			}
 			err = createHardLink(o)
+			if err == nil {
+				// A link to a regular file carries that content, so hash it
+				// from disk and the entry can stand on its own if the target
+				// is not reported. A link to a symlink has no content.
+				var info fs.FileInfo
+				info, err = os.Lstat(path)
+				if err == nil && info.Mode().IsRegular() {
+					hash, size, err = hashFile(path)
+					if os.IsPermission(err) {
+						// The content is not readable, so the entry has no
+						// hash of its own.
+						hash, size, err = "", 0, nil
+					}
+				}
+			}
 		} else {
 			err = createFile(o)
 			hash = hex.EncodeToString(rp.h.Sum(nil))
+			size = rp.size
 		}
 	case fs.ModeDir:
 		err = createDir(o)
@@ -114,10 +131,25 @@ func Create(options *CreateOptions) (*Entry, error) {
 		Path:   path,
 		Mode:   mode,
 		SHA256: hash,
-		Size:   rp.size,
+		Size:   size,
 		Link:   o.Link,
 	}
 	return entry, nil
+}
+
+// hashFile returns the SHA256 and size of the content at path.
+func hashFile(path string) (string, int, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return "", 0, err
+	}
+	defer file.Close()
+	h := sha256.New()
+	n, err := io.Copy(h, file)
+	if err != nil {
+		return "", 0, err
+	}
+	return hex.EncodeToString(h.Sum(nil)), int(n), nil
 }
 
 // CreateWriter handles the creation of a regular file and collects the

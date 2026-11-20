@@ -1662,6 +1662,57 @@ var slicerTests = []slicerTest{{
 		"/hardlink": "symlink ./file <1> {test-package_myslice}",
 	},
 }, {
+	summary: "Hard link whose target has until:mutate",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	pkgs: []*testutil.TestPackage{{
+		Name: "test-package",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			testutil.Reg(0644, "./file", "foo"),
+			testutil.Hrd(0644, "./hardlink", "./file"),
+		}),
+	}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/file: {until: mutate}
+						/hardlink:
+		`,
+	},
+	// The target is not in the manifest, so the link is a regular file there.
+	filesystem: map[string]string{
+		"/hardlink": "file 0644 2c26b46b",
+	},
+	manifestPaths: map[string]string{
+		"/hardlink": "file 0644 2c26b46b {test-package_myslice}",
+	},
+}, {
+	summary: "Hard link to a symlink that has until:mutate",
+	slices:  []setup.SliceKey{{"test-package", "myslice"}},
+	pkgs: []*testutil.TestPackage{{
+		Name: "test-package",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			testutil.Reg(0644, "./file", "foo"),
+			testutil.Lnk(0644, "./symlink", "./file"),
+			testutil.Hrd(0644, "./hardlink", "./symlink"),
+		}),
+	}},
+	release: map[string]string{
+		"slices/mydir/test-package.yaml": `
+			package: test-package
+			slices:
+				myslice:
+					contents:
+						/symlink: {until: mutate}
+						/hardlink:
+		`,
+	},
+	error: `cannot extract from package "test-package": cannot add hard link /hardlink to report: target /symlink not previously added`,
+}, {
 	summary: "Hard link identifiers are unique across packages",
 	slices: []setup.SliceKey{
 		{"test-package1", "myslice"},
