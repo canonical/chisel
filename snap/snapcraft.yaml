@@ -59,6 +59,13 @@ plugs:
     read:
       - /etc/apt/auth.conf.d
       - /etc/apt/auth.conf.d/90ubuntu-advantage
+  # The snap's /usr comes from the base snap, so the host's os-release is
+  # only reachable through hostfs.
+  host-os-release:
+    interface: system-files
+    read:
+      - /var/lib/snapd/hostfs/etc/os-release
+      - /var/lib/snapd/hostfs/usr/lib/os-release
 
 apps:
   chisel:
@@ -67,3 +74,4 @@ apps:
       - network
       - home
       - etc-apt-auth-conf-d
+      - host-os-release

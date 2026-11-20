@@ -29,3 +29,7 @@ func FakeArchiveOpen(f func(_ *archive.Options) (archive.Archive, error)) (resto
 		archiveOpen = oldArchiveOpen
 	}
 }
+
+var ParseOSRelease = parseOSRelease
+
+var ReadOSRelease = readOSRelease
