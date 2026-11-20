@@ -66,10 +66,10 @@ func (cmd *cmdCut) Execute(args []string) error {
 	if time.Now().Before(release.Maintenance.Standard) {
 		if slices.Contains(cmd.Ignore, "unstable") {
 			logf(`Warning: This release is in the "unstable" maintenance status. ` +
-				`See https://documentation.ubuntu.com/chisel/en/latest/reference/chisel-releases/chisel.yaml/#maintenance to be safe`)
+				`See https://ubuntu.com/chisel/docs/latest/reference/chisel-releases/chisel.yaml/#maintenance to be safe`)
 		} else {
 			return fmt.Errorf(`this release is in the "unstable" maintenance status, ` +
-				`see https://documentation.ubuntu.com/chisel/en/latest/reference/chisel-releases/chisel.yaml/#maintenance for details`)
+				`see https://ubuntu.com/chisel/docs/latest/reference/chisel-releases/chisel.yaml/#maintenance for details`)
 		}
 	}
 
@@ -113,11 +113,11 @@ func (cmd *cmdCut) Execute(args []string) error {
 		if slices.Contains(cmd.Ignore, "unmaintained") {
 			logf(`Warning: No archive has "maintained" maintenance status. ` +
 				`Consider the different Ubuntu Pro subscriptions to be safe. ` +
-				`See https://documentation.ubuntu.com/chisel/en/latest/reference/chisel-releases/chisel.yaml/#maintenance for details.`)
+				`See https://ubuntu.com/chisel/docs/latest/reference/chisel-releases/chisel.yaml/#maintenance for details.`)
 		} else {
 			return fmt.Errorf(`no archive has "maintained" maintenance status, ` +
 				`consider the different Ubuntu Pro subscriptions to be safe, ` +
-				`see https://documentation.ubuntu.com/chisel/en/latest/reference/chisel-releases/chisel.yaml/#maintenance for details`)
+				`see https://ubuntu.com/chisel/docs/latest/reference/chisel-releases/chisel.yaml/#maintenance for details`)
 		}
 	}
 
