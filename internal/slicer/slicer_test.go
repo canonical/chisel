@@ -1869,6 +1869,50 @@ var slicerTests = []slicerTest{{
 		"/text": "file 0644 2c26b46b {test-package1_myslice}",
 	},
 }, {
+	summary: "Preferred package lists the path only for another arch",
+	arch:    "i386",
+	slices: []setup.SliceKey{
+		{"test-package1", "myslice"},
+		{"test-package2", "myslice"},
+	},
+	pkgs: []*testutil.TestPackage{{
+		Name: "test-package1",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			testutil.Reg(0644, "./file", "foo"),
+		}),
+	}, {
+		Name: "test-package2",
+		Data: testutil.MustMakeDeb([]testutil.TarEntry{
+			testutil.Dir(0755, "./"),
+			testutil.Reg(0644, "./file", "bar"),
+		}),
+	}},
+	release: map[string]string{
+		"slices/mydir/test-package1.yaml": `
+			package: test-package1
+			slices:
+				myslice:
+					contents:
+						/file: {arch: amd64}
+		`,
+		"slices/mydir/test-package2.yaml": `
+			package: test-package2
+			slices:
+				myslice:
+					contents:
+						/file: {prefer: test-package1}
+		`,
+	},
+	// test-package1 does not list /file for i386, so test-package2 is the
+	// only package providing it and must extract it.
+	filesystem: map[string]string{
+		"/file": "file 0644 fcde2b2e",
+	},
+	manifestPaths: map[string]string{
+		"/file": "file 0644 fcde2b2e {test-package2_myslice}",
+	},
+}, {
 	summary: "Warning when implicit parent directories conflict",
 	slices: []setup.SliceKey{
 		{"test-package1", "myslice"},

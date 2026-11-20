@@ -153,6 +153,9 @@ func (s *Slice) String() string { return s.Package + "_" + s.Name }
 type Selection struct {
 	Release *Release
 	Slices  []*Slice
+	// Arch is the architecture the selection was made for. Paths listed for
+	// other architectures do not take part in it.
+	Arch string
 }
 
 // Prefers uses the prefer relationships and returns a map from each path to
@@ -166,7 +169,10 @@ func (s *Selection) Prefers() (map[string]*Package, error) {
 
 	pathPreferredPkg := make(map[string]*Package)
 	for _, slice := range s.Slices {
-		for path := range slice.Contents {
+		for path, info := range slice.Contents {
+			if len(info.Arch) > 0 && s.Arch != "" && !slices.Contains(info.Arch, s.Arch) {
+				continue
+			}
 			_, hasPrefers := prefers[preferKey{preferSource, path, ""}]
 			if !hasPrefers {
 				continue
@@ -482,6 +488,7 @@ func Select(release *Release, slices []SliceKey, arch string) (*Selection, error
 
 	selection := &Selection{
 		Release: release,
+		Arch:    arch,
 	}
 
 	sorted, err := order(release.Packages, slices, arch)
