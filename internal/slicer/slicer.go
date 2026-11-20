@@ -35,6 +35,9 @@ type pathData struct {
 	until    setup.PathUntil
 	mutable  bool
 	hardLink bool
+	// implicit is set when the path is only known as the parent of another
+	// known path and no slice has listed it yet.
+	implicit bool
 }
 
 type contentChecker struct {
@@ -439,12 +442,12 @@ func addKnownPath(knownPaths map[string]pathData, path string, data pathData) {
 		slashPath += "/"
 	}
 	for {
-		if _, ok := knownPaths[slashPath]; ok {
+		if old, ok := knownPaths[slashPath]; ok && !old.implicit {
 			break
 		}
 		knownPaths[slashPath] = data
-		// The parents have empty data.
-		data = pathData{}
+		// The parents have empty data until a slice lists them explicitly.
+		data = pathData{implicit: true}
 		cleanPath = filepath.Dir(cleanPath)
 		if cleanPath == "/" {
 			break
