@@ -666,6 +666,9 @@ func parsePackage(release *Release, pkgName, pkgPath string, data []byte) (*Pack
 			if mutable && kinds[0] != TextPath && (kinds[0] != CopyPath || isDir) {
 				return nil, fmt.Errorf("slice %s_%s mutable is not a regular file: %s", pkg.Name, sliceName, contPath)
 			}
+			if mutable && until == UntilMutate {
+				return nil, fmt.Errorf("slice %s_%s cannot have both 'mutable' and 'until: mutate' for path %s", pkg.Name, sliceName, contPath)
+			}
 			slice.Contents[contPath] = PathInfo{
 				Kind:     kinds[0],
 				Info:     info,
